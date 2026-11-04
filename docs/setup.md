@@ -68,7 +68,16 @@ and marker, not an adversarial integrity audit of every extracted working file.
 
 ## Current Boundary
 
-The product's source modules are not implemented yet. Mac UI framework, memory
-provider, final DSH runtime contracts and account integration remain decisions
-from the planning baseline. The repository and its selected basic development
-stack are ready for the first implementation work package.
+The product's business modules are not implemented yet. Following the setup,
+complete planning and type-only interfaces were added under
+[`src/contracts/`](../src/contracts/index.ts), with
+[public semantics](planning/module-contracts.md) and
+[development sequencing](planning/development-plan.md). This does not activate
+plugins or choose a provider. Mac UI framework, memory provider, native DSH
+bindings and account integration remain unverified choices. The repository and
+basic toolchain are prepared for the next bounded work package.
+
+Contract 0.2 additionally reserves source/view eligibility, immutable delivery
+targets and Core-owned resource/maintenance ports. Their type checks run locally;
+no schema migration, storage service, provider activation or account change was
+performed to reserve them.

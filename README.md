@@ -2,9 +2,10 @@
 
 A modular, DSH-backed Dafeiyu desktop companion for the selected Mac.
 
-Current scope: local Git repository, development environment, retained planning
-baseline and a local source-reference library. Product behavior is not implemented
-or installed in DSH yet. No QQ/Bilibili account has been connected.
+Current scope: full product/module planning, type-only public interfaces,
+development environment and a local source-reference library. Business modules
+are not implemented or installed in DSH yet. No QQ/Bilibili account has been
+connected.
 
 ## Start Here
 
@@ -23,15 +24,27 @@ project's Node, pnpm and Python virtual environment without replacing global too
 | --- | --- |
 | [AGENTS.md](AGENTS.md) | Development collaboration and reference-source boundaries |
 | [Setup record](docs/setup.md) | Current environment, verification and outstanding app setup |
-| [Planning baseline](docs/planning/README.md) | Retained plan v0.7, modular design and research history |
+| [Current handover](docs/handover/README.md) | Latest work checkpoint, verification limits and immediate restart action |
+| [Development plan](docs/planning/development-plan.md) | Complete planning, staged implementation and acceptance gates |
+| [Module contracts](docs/planning/module-contracts.md) | Public operations and deferred-module integration semantics |
+| [Contract types](src/contracts/index.ts) | Type-only interfaces for all planned product modules |
+| [Core resource port](src/contracts/resources.ts) | Artifact ownership, scoped access and retention interface |
+| [Core maintenance port](src/contracts/maintenance.ts) | Durable export/backup/restore interface; Console remains a client |
+| [Planning index](docs/planning/README.md) | Current product/module plans and retained research history |
 | [Reference library](references/README.md) | Upstream checkout handling and reproduction |
 | [Reference manifest](references/manifest.json) | Exact downloaded commits, paths, licenses and status |
 | `scripts/` | Repository-owned environment/reference preparation and diagnostics |
 
-The planning baseline predates this bootstrap. Statements there about a target
-repository not yet being created are historical; this README and the setup record
-own current preparation status. Architecture proposals have not become accepted
-implementation requirements merely because they were copied here.
+The retained planning snapshots predate this bootstrap. Statements there about
+a target repository not yet being created are historical; this README and the
+setup record own current preparation status. Full planning and reserved module
+interfaces are confirmed requirements. Specific architecture and provider
+bindings remain drafts until reviewed and verified.
+
+Product contract 0.2 includes source eligibility versions, dependency-bound view
+leases, fixed channel/account/recipient targets, Core resource ownership and
+Core maintenance transactions. These are interface repairs, not activated
+runtime services. See the module contracts for protocol and recovery obligations.
 
 ## Development Environment
 
@@ -85,6 +98,8 @@ git status --short --untracked-files=all
 ```
 
 The environment check verifies actual runtime selection, compiler/package presence,
-SDK imports, Python and recorded reference Git/archive identity. Archive checks
+SDK imports, Python and recorded reference Git/archive identity. Type checking
+also covers the shared product interfaces and compile-only boundary examples;
+it does not validate runtime input or activate a provider. Archive checks
 validate the marker and cached archive checksum, not every extracted working file. It does not establish DSH
 plugin activation, desktop UX, memory quality or QQ/Bilibili behavior.

@@ -4,8 +4,10 @@ Communicate in Chinese; maintain source code and repository documentation in
 English unless the user requests otherwise.
 
 This repository develops a modular DSH-backed Dafeiyu companion. Current scope
-is repository/environment preparation and a local upstream-source library.
-Product implementation and architecture acceptance remain distinct.
+includes complete product/module planning, shared interface skeletons,
+repository/environment preparation and a local upstream-source library.
+Business implementation, interface drafting and architecture acceptance remain
+distinct.
 
 Read README.md and docs/planning/plan.md before target implementation. The
 planning snapshot records proposals and open choices; it is not proof of runtime

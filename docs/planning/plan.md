@@ -1,12 +1,12 @@
 # Project Plan: DeepSeek Harness Dafeiyu
 
 - Project ID: `dsh-dafeiyu`
-- Revision: v0.7 — modular architecture and native DSH packaging
+- Revision: v0.9 — reviewed source, view, delivery, resource and maintenance boundaries
 - Prepared: 2026-11-04, Asia/Ho_Chi_Minh
 - Status: Overall-design proposal; implementation and acceptance remain open
-- Current work: Consolidate final planning, starting with module and maintenance boundaries; no target implementation.
-- Continuity: This plan, the [module design](modular-design.md), and the [reference study](reference-study.md).
-- Previous proposal: [v0.6 snapshot](snapshots/plan-v0.6.md), with earlier revisions retained under `snapshots/`.
+- Current work: Plan the complete product and maintain module interface skeletons; business implementations may be deferred.
+- Continuity: This plan, [module design](modular-design.md), [module contracts](module-contracts.md), [development plan](development-plan.md), and [reference study](reference-study.md).
+- Retained source baseline: [v0.7 snapshot](snapshots/plan-v0.7.md), with earlier revisions retained under `snapshots/`.
 
 ## Direction And User Correction
 
@@ -32,7 +32,7 @@ decisions; a feature list or an upstream default does not become our requirement
 ## Synthesis And Main Design Decisions
 
 The recommendation remains one DSH-hosted companion core and a supervised Mac
-client. This revision adds explicit assistance commitments, evidence-based
+client. Earlier revisions added explicit assistance commitments, evidence-based
 interest development, bounded context construction, and a common execution and
 delivery record. v0.6 further distinguishes observation from judgment, current
 state from history, and self-chosen plans from infrastructure wake-ups. These
@@ -64,11 +64,20 @@ has a small QQ account available. The Mac and DSH run it locally; shutting down
 the Mac stops activity. Server hosting and official QQ bot identities are outside
 this selected operating model.
 
-The user now requires a modular product and prefers DSH-native plugin integration
-to simplify maintenance. Modularity is confirmed; the proposed module boundaries
-and packaging in [modular-design.md](modular-design.md) are not yet accepted.
-This final-planning phase consolidates choices and verification obligations;
-it does not reopen reference collection or begin target implementation.
+The user requires a modular product and prefers DSH-native plugin integration
+to simplify maintenance. The user further confirmed complete planning now:
+business implementation may be deferred, but module interfaces must be reserved.
+All confirmed capabilities therefore need ownership, operations, dependencies,
+absence behavior and integration obligations before staged implementation.
+The particular boundaries and packaging in [modular-design.md](modular-design.md)
+remain design proposals. [Module contracts](module-contracts.md) and type-only
+skeletons make those proposals concrete without activating business modules.
+
+The user authorized repairs to five reviewed contract gaps. Product contract
+0.2 now defines source eligibility versions, dependency-bound view/use admission,
+immutable delivery targets, Core-owned artifacts and Core-owned maintenance
+transactions. These are planning/interface changes, not business implementation
+or evidence that native DSH/provider behavior has passed acceptance.
 
 The corrected build direction is confirmed. The architecture, toolkit, storage
 binding, model choices, life behavior and visual treatment below are proposals.
@@ -265,6 +274,15 @@ If memory is a separate service, application-state and memory commits are not
 one SQLite transaction: use stable source/action IDs, durable outbox work,
 idempotent acknowledgments and reconciliation before claiming the join complete.
 
+Core original evidence is immutable; Memory owns its mirrored source's eligibility
+revision and tombstone. Source status can be queried before a memory exists, and
+an absent-source withdrawal can block late ingestion. Derived context/history,
+life views and artifacts bind exact material to dependency versions. Consumers
+obtain bounded use leases rather than rely on events; withdrawal closes new use
+and reports actual outstanding handoffs. Epoch changes after restore/replacement
+invalidate prior views and leases. Native contexts containing invalid sources
+must be reprojected/rebound or blocked through supported host mechanisms.
+
 A normal path is: preserve input or action evidence → interpret meaning → propose
 memory changes → check target, scope, source and revision → commit → retrieve an
 appropriate view when needed. Semantic interpretation belongs to the model;
@@ -457,6 +475,12 @@ has one identity across channels so changing focus or reconnecting cannot create
 a second copy. Starting with ordinary text keeps account continuity testable;
 voice and richer media remain extensions of the same message contract.
 
+Each persisted delivery target fixes the Core binding ID/revision, channel/scene,
+transport account and recipient. A queued attempt cannot follow a later rebind.
+Historical reconciliation uses the original target; receipt acceptance cannot
+silently update a new account's attempt. Core owns the attempt, QQ the transport
+evidence. Both must agree on the immutable target before a send or receipt update.
+
 ## Technology Choices To Resolve
 
 | Choice | Working recommendation | Compared alternative and decision condition |
@@ -505,6 +529,15 @@ Back up data with its schema/version and source references. Package rollback
 must account for state migrations; keep prior data before converting, retain
 failure evidence and do not overwrite newer memories merely to reinstall old
 code. Exact backup destination/cadence and retention policy remain undecided.
+
+Core resource ports own artifact metadata, bytes, access and retention; providers
+use holder references and scoped reads instead of private paths. Core maintenance
+ports own durable export/backup/restore intent, per-owner steps and reconciliation.
+Console is a client. The operational/resource/backup and actual-outcome ledgers
+are protected from companion-domain import. Current Memory withdrawal guards
+are merged before restored state is admitted, and uncertain sends are reconciled
+against retained outcomes rather than replayed. Unavailable guards/providers
+leave recovery blocked instead of creating a replacement Bank or claiming success.
 Paths, ports, timezone, accounts and run bindings come from trusted configuration.
 Use the configured timezone, initially the current environment's Asia/Ho_Chi_Minh,
 rather than inherit another project's Beijing settings or tariff assumptions.
@@ -517,12 +550,18 @@ Reuse host execution and mature protocol/storage/rendering components where fit
 is established. Custom development is the user's selected product direction;
 it is not justified by claiming no usable plugins exist.
 
-The implementation destination has not been chosen. This PM Advisor repository
-continues to own planning and reference records; it is not automatically the
-new product's source/runtime directory. No new target repository, source layout,
-dependencies, native binary or account connection was created in this revision.
-Do not alter PM Advisor's product requirements or reusable Skill to encode this
-engagement's design choices.
+The target repository is now Codex-Pet; the [repository README](../../README.md)
+and [setup record](../setup.md) own current preparation status. The original
+PM Advisor planning record is retained as historical material. Current product,
+module and development records are maintained here; no other repository or
+reusable Skill is changed to encode this project's decisions.
+
+Complete planning covers later implementation slices as well as the first flow.
+Room integration is specified as an optional Desktop sub-capability now, with
+implementation and release timing still open. All candidate assistance cases
+share a defined commitment boundary. Selecting one first does not remove the
+other contracts. Unselected voice/media and additional channels retain explicit
+extension seams without becoming selected product requirements.
 
 ## Delivery And Evidence Proposal
 
@@ -535,7 +574,7 @@ attention controls. A desktop-only chat demo cannot establish that release.
 
 | Stage | Reviewable result | Acceptance evidence and stop conditions |
 | --- | --- | --- |
-| Design contracts | Product-owned identity, memory, activity/receipt, channel and helper boundaries; toolkit/storage decision with measured limitations | User reviews the whole experience. Unresolved DSH bindings or Mac interaction keep dependent choices provisional. |
+| Design contracts | Complete module catalogue; public identity, memory, activity/receipt, channel, helper and maintenance contracts; type-only interface skeletons | Every planned capability has an integration/absence contract, including deferred modules. User reviews the whole experience. Unresolved host/provider bindings keep dependent implementation provisional. |
 | First coherent companion | Our core, DSH execution, desktop chat and durable identity/memory work together | Desktop chat survives compaction/restart; replacement execution session preserves the fish's identity and knowledge. A second independent pet chatbot fails this stage. |
 | Ordinary QQ continuity | Available small account and main-account friend chat bind to the same companion | Real two-way delivery, source/owner scoping, corrections across entrances, disconnect and uncertain-send recovery. User completes login/QR confirmation. |
 | Autonomous life | Our coordinator uses an established Bilibili connector and a local body/view where selected | An actual bounded activity produces provenance, a useful memory and an optional single-channel share. Room activity receipts and external activity receipts remain distinguishable. |
@@ -575,13 +614,16 @@ modified. None of these observations proves the new implementation works.
 
 The [reference study](reference-study.md) identifies pinned commits for six
 focused source studies, including the user-confirmed Mnemosyne 2.0 repository,
-other inspected documents, transfer lessons and evidence limits. This revision
-involved public document/source research and document checks only, with no upstream test run,
-DSH execution, account login, message, installation or model request.
+other inspected documents, transfer lessons and evidence limits. That research
+belongs to the retained baseline. v0.8 adds the user's complete-planning rule,
+module contracts and type-only skeletons. v0.9 repairs the five reviewed boundary
+gaps in contract 0.2 and adds explicit acceptance cases. These revisions do not run upstream applications,
+DSH execution, account login, messages, installations or model requests.
 
 The user's own-product direction, local carrier and ordinary QQ account are
-settled. Modularity is now an explicit requirement, with DSH-native plugin
-integration preferred. Further product decisions are the assistant's concrete everyday duties,
+settled. Complete planning and reserved interfaces for deferred modules are
+explicit requirements, with DSH-native plugin integration preferred. Further
+product decisions are the assistant's concrete everyday duties,
 character/relationship, whether an expanded room is wanted, contact/resource
 limits and Bilibili account setup. These do not reopen the corrected build goal.
 
@@ -589,8 +631,9 @@ Technical decisions remain: installed DSH extension contracts, Mac shell and
 renderer, storage binding, privacy/scenario scopes and a bounded implementation
 work package. Current evidence supports this overall design proposal, not a
 deployment-ready selection of libraries or account setup. The next human decision
-is whether v0.7's one-bundle module boundaries, data ownership, failure behavior
-and maintenance contracts provide the desired modular product while preserving
+is whether the proposed bundle/module boundaries, public contracts, data ownership,
+failure behavior and maintenance contracts provide the desired modular product while preserving
 the unified companion, native DSH execution, temporal memory and autonomous life.
-That content decision would not install dependencies or connect accounts. This
-is a proposed architecture; it is neither implemented nor accepted.
+That content decision would not install dependencies or connect accounts.
+Business behavior remains unimplemented. The interfaces are a compile-checked
+draft, not accepted host/provider bindings or runtime proof.
