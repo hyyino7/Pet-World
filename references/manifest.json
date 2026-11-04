@@ -1,0 +1,789 @@
+{
+  "schema_version": 1,
+  "purpose": "Read-only upstream source references, not runtime plugins",
+  "entries": [
+    {
+      "repository": "2332239652/dsh-bilibili-retrieval",
+      "url": "https://github.com/2332239652/dsh-bilibili-retrieval.git",
+      "path": "references/sources/2332239652/dsh-bilibili-retrieval",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/2332239652--dsh-bilibili-retrieval.log",
+      "commit": "5ffb27e040dc0e5d5461d6df913226a22b06aa9a",
+      "tracked_files": 26,
+      "clean": true,
+      "license_files": [
+        "LICENSE"
+      ],
+      "lfs_smudge_skipped": true,
+      "downloaded_at": "2026-11-04T11:06:54.522196+00:00",
+      "checkout_type": "git",
+      "submodules_initialized": false,
+      "submodule_paths": []
+    },
+    {
+      "repository": "Alterssss/dsh-bili-whale",
+      "url": "https://github.com/Alterssss/dsh-bili-whale.git",
+      "path": "references/sources/Alterssss/dsh-bili-whale",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/Alterssss--dsh-bili-whale.log",
+      "commit": "8b0009f8ce2ebdc421afcb2e727b19ac18912ec6",
+      "tracked_files": 126,
+      "clean": true,
+      "license_files": [
+        "LICENSE",
+        "NOTICE.md"
+      ],
+      "lfs_smudge_skipped": true,
+      "downloaded_at": "2026-11-04T11:06:54.719149+00:00",
+      "checkout_type": "git",
+      "submodules_initialized": false,
+      "submodule_paths": []
+    },
+    {
+      "repository": "AstrBotDevs/AstrBot",
+      "url": "https://github.com/AstrBotDevs/AstrBot.git",
+      "path": "references/sources/AstrBotDevs/AstrBot",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/AstrBotDevs--AstrBot.log",
+      "commit": "f926af99ec5f8bd85b64413f8bfad55da76ef73b",
+      "tracked_files": 1926,
+      "clean": true,
+      "license_files": [
+        "FIRST_NOTICE.en-US.md",
+        "FIRST_NOTICE.ja-JP.md",
+        "FIRST_NOTICE.md",
+        "FIRST_NOTICE.ru-RU.md",
+        "LICENSE"
+      ],
+      "lfs_smudge_skipped": true,
+      "downloaded_at": "2026-11-04T11:08:59.781060+00:00",
+      "checkout_type": "git",
+      "submodules_initialized": false,
+      "submodule_paths": []
+    },
+    {
+      "repository": "CZX2244/dsh-bilibili",
+      "url": "https://github.com/CZX2244/dsh-bilibili.git",
+      "path": "references/sources/CZX2244/dsh-bilibili",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/CZX2244--dsh-bilibili.log",
+      "commit": "c53af9dee30cf04ee759ac6857d5803196fb2a95",
+      "tracked_files": 23,
+      "clean": true,
+      "license_files": [
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md"
+      ],
+      "lfs_smudge_skipped": true,
+      "downloaded_at": "2026-11-04T11:06:54.724933+00:00",
+      "checkout_type": "git",
+      "submodules_initialized": false,
+      "submodule_paths": []
+    },
+    {
+      "repository": "LittleBlackTong/dsh-plugin-heartbeat",
+      "url": "https://github.com/LittleBlackTong/dsh-plugin-heartbeat.git",
+      "path": "references/sources/LittleBlackTong/dsh-plugin-heartbeat",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/LittleBlackTong--dsh-plugin-heartbeat.log",
+      "commit": "a13557510607911c68e2759fb1b57ccf8430b895",
+      "tracked_files": 53,
+      "clean": true,
+      "license_files": [
+        "LICENSE"
+      ],
+      "lfs_smudge_skipped": true,
+      "downloaded_at": "2026-11-04T11:07:02.467336+00:00",
+      "checkout_type": "git",
+      "submodules_initialized": false,
+      "submodule_paths": []
+    },
+    {
+      "repository": "LittleBlackTong/dsh-plugin-memory",
+      "url": "https://github.com/LittleBlackTong/dsh-plugin-memory.git",
+      "path": "references/sources/LittleBlackTong/dsh-plugin-memory",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/LittleBlackTong--dsh-plugin-memory.log",
+      "commit": "7bf77d30de57597941ec8c357c9636e44d89c2ad",
+      "tracked_files": 81,
+      "clean": true,
+      "license_files": [
+        "LICENSE"
+      ],
+      "lfs_smudge_skipped": true,
+      "downloaded_at": "2026-11-04T11:07:08.806454+00:00",
+      "checkout_type": "git",
+      "submodules_initialized": false,
+      "submodule_paths": []
+    },
+    {
+      "repository": "Mai-with-u/MaiBot",
+      "url": "https://github.com/Mai-with-u/MaiBot.git",
+      "path": "references/sources/Mai-with-u/MaiBot",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/Mai-with-u--MaiBot.log",
+      "commit": "c6429547af711555e3d4d1b8d04b413572cb616c",
+      "tracked_files": 2039,
+      "clean": true,
+      "license_files": [
+        "LICENSE"
+      ],
+      "lfs_smudge_skipped": true,
+      "downloaded_at": "2026-11-04T11:08:48.113975+00:00",
+      "checkout_type": "git",
+      "submodules_initialized": false,
+      "submodule_paths": []
+    },
+    {
+      "repository": "MerZlin/dsh-pet-indesktop",
+      "url": "https://github.com/MerZlin/dsh-pet-indesktop.git",
+      "path": "references/sources/MerZlin/dsh-pet-indesktop",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/MerZlin--dsh-pet-indesktop.log",
+      "commit": "34d810b1eadd98d00e7cb9b3b51428a45b5bf03e",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Command '['git', '-c', 'core.hooksPath=/dev/null', 'clone', '--depth', '1', '--single-branch', '--no-tags', 'https://github.com/MerZlin/dsh-pet-indesktop.git', '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/MerZlin/dsh-pet-indesktop']' timed out after 600 seconds"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/MerZlin/dsh-pet-indesktop/tar.gz/34d810b1eadd98d00e7cb9b3b51428a45b5bf03e",
+      "archive_path": ".cache/reference-archives/MerZlin--dsh-pet-indesktop-34d810b1eadd98d00e7cb9b3b51428a45b5bf03e.tar.gz",
+      "archive_sha256": "3222ee47f154ebce16fe6038980cfc30cf460fe4966b1d9d47c85fbab45a171f",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:12.156466+00:00",
+      "source_files": 1247,
+      "license_files": [
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "repository": "Mieksido/surfcore",
+      "url": "https://github.com/Mieksido/surfcore.git",
+      "path": "references/sources/Mieksido/surfcore",
+      "requested_ref": "0deb8261afe4c31b3127759ee4de36a1439cf422",
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/Mieksido--surfcore.log",
+      "commit": "0deb8261afe4c31b3127759ee4de36a1439cf422",
+      "tracked_files": 699,
+      "clean": true,
+      "license_files": [
+        "LICENSE"
+      ],
+      "lfs_smudge_skipped": true,
+      "downloaded_at": "2026-11-04T11:08:39.616745+00:00",
+      "checkout_type": "git",
+      "submodules_initialized": false,
+      "submodule_paths": []
+    },
+    {
+      "repository": "Mieksido/surfpet",
+      "url": "https://github.com/Mieksido/surfpet.git",
+      "path": "references/sources/Mieksido/surfpet",
+      "requested_ref": "d825d236a2afb760c15b9332eee3a8ccad1958a4",
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/Mieksido--surfpet.log",
+      "commit": "d825d236a2afb760c15b9332eee3a8ccad1958a4",
+      "tracked_files": 43,
+      "clean": true,
+      "license_files": [
+        "LICENSE"
+      ],
+      "lfs_smudge_skipped": true,
+      "downloaded_at": "2026-11-04T11:08:41.179520+00:00",
+      "checkout_type": "git",
+      "submodules_initialized": false,
+      "submodule_paths": []
+    },
+    {
+      "repository": "NapNeko/NapCatQQ",
+      "url": "https://github.com/NapNeko/NapCatQQ.git",
+      "path": "references/sources/NapNeko/NapCatQQ",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/NapNeko--NapCatQQ.log",
+      "commit": "98d781d19815d1625b24d717ce280ecf0a4f6d0c",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Command '['git', '-c', 'core.hooksPath=/dev/null', 'clone', '--depth', '1', '--single-branch', '--no-tags', 'https://github.com/NapNeko/NapCatQQ.git', '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/NapNeko/NapCatQQ']' timed out after 600 seconds"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/NapNeko/NapCatQQ/tar.gz/98d781d19815d1625b24d717ce280ecf0a4f6d0c",
+      "archive_path": ".cache/reference-archives/NapNeko--NapCatQQ-98d781d19815d1625b24d717ce280ecf0a4f6d0c.tar.gz",
+      "archive_sha256": "5e85f403218898f281126bf2bd527aa88251cdc1d87685c78c7d10875e549bfe",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:03.444864+00:00",
+      "source_files": 1111,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "PC2005-cloud/dsh-pet",
+      "url": "https://github.com/PC2005-cloud/dsh-pet.git",
+      "path": "references/sources/PC2005-cloud/dsh-pet",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/PC2005-cloud--dsh-pet.log",
+      "commit": "0e6465f29bb89b386390ba0f14fb86fa1bc656d0",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Command '['git', '-c', 'core.hooksPath=/dev/null', 'clone', '--depth', '1', '--single-branch', '--no-tags', 'https://github.com/PC2005-cloud/dsh-pet.git', '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/PC2005-cloud/dsh-pet']' timed out after 600 seconds"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/PC2005-cloud/dsh-pet/tar.gz/0e6465f29bb89b386390ba0f14fb86fa1bc656d0",
+      "archive_path": ".cache/reference-archives/PC2005-cloud--dsh-pet-0e6465f29bb89b386390ba0f14fb86fa1bc656d0.tar.gz",
+      "archive_sha256": "f6ed1c8e89776778e72ed7a11d8b4092b1cc6b2826db50c64e6e398169efa372",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:45.346078+00:00",
+      "source_files": 950,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "QCYTSN/dsh-dafeiyu",
+      "url": "https://github.com/QCYTSN/dsh-dafeiyu.git",
+      "path": "references/sources/QCYTSN/dsh-dafeiyu",
+      "requested_ref": "084323845ab82b68d5388d5c638bec09d8544a8a",
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/QCYTSN--dsh-dafeiyu.log",
+      "commit": "084323845ab82b68d5388d5c638bec09d8544a8a",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Command '['git', '-c', 'core.hooksPath=/dev/null', 'clone', '--depth', '1', '--single-branch', '--no-tags', 'https://github.com/QCYTSN/dsh-dafeiyu.git', '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/QCYTSN/dsh-dafeiyu']' timed out after 600 seconds"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/QCYTSN/dsh-dafeiyu/tar.gz/084323845ab82b68d5388d5c638bec09d8544a8a",
+      "archive_path": ".cache/reference-archives/QCYTSN--dsh-dafeiyu-084323845ab82b68d5388d5c638bec09d8544a8a.tar.gz",
+      "archive_sha256": "620df3388fe9196c26762acc3a4916b3e0e9b1886f439c95778761099402abc5",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:27:44.117986+00:00",
+      "source_files": 3616,
+      "license_files": [
+        "ASSET_LICENSE.md",
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "TomoyoNatsume/dsh-qq-bridge",
+      "url": "https://github.com/TomoyoNatsume/dsh-qq-bridge.git",
+      "path": "references/sources/TomoyoNatsume/dsh-qq-bridge",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/TomoyoNatsume--dsh-qq-bridge.log",
+      "commit": "6e13f95415bf58c9534b4616ed074087dc5e5631",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/TomoyoNatsume/dsh-qq-bridge'...\nfatal: unable to access 'https://github.com/TomoyoNatsume/dsh-qq-bridge.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/TomoyoNatsume/dsh-qq-bridge/tar.gz/6e13f95415bf58c9534b4616ed074087dc5e5631",
+      "archive_path": ".cache/reference-archives/TomoyoNatsume--dsh-qq-bridge-6e13f95415bf58c9534b4616ed074087dc5e5631.tar.gz",
+      "archive_sha256": "5f98549462e2338d466b44851b394ca31373722e587f0496a0728b361339f678",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:27:46.666801+00:00",
+      "source_files": 182,
+      "license_files": [
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "repository": "YOYOLnFu/dsh-bili-pond",
+      "url": "https://github.com/YOYOLnFu/dsh-bili-pond.git",
+      "path": "references/sources/YOYOLnFu/dsh-bili-pond",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/YOYOLnFu--dsh-bili-pond.log",
+      "commit": "57765435e33a8697c7f3b3b9f317c6146cd05faa",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/YOYOLnFu/dsh-bili-pond'...\nfatal: unable to access 'https://github.com/YOYOLnFu/dsh-bili-pond.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/YOYOLnFu/dsh-bili-pond/tar.gz/57765435e33a8697c7f3b3b9f317c6146cd05faa",
+      "archive_path": ".cache/reference-archives/YOYOLnFu--dsh-bili-pond-57765435e33a8697c7f3b3b9f317c6146cd05faa.tar.gz",
+      "archive_sha256": "0d84c66b19fe6663123ea82f2289054ebfed77e5afb7eb5cd737b742a825d716",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:27:50.791869+00:00",
+      "source_files": 51,
+      "license_files": [
+        "LICENSE",
+        "NOTICE.md"
+      ]
+    },
+    {
+      "repository": "Yuuyuko-uu/dsh-bili-subagent",
+      "url": "https://github.com/Yuuyuko-uu/dsh-bili-subagent.git",
+      "path": "references/sources/Yuuyuko-uu/dsh-bili-subagent",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/Yuuyuko-uu--dsh-bili-subagent.log",
+      "commit": "efae852a276b7b120ca9d8ef6cd5080da3023005",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/Yuuyuko-uu/dsh-bili-subagent'...\nfatal: unable to access 'https://github.com/Yuuyuko-uu/dsh-bili-subagent.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/Yuuyuko-uu/dsh-bili-subagent/tar.gz/efae852a276b7b120ca9d8ef6cd5080da3023005",
+      "archive_path": ".cache/reference-archives/Yuuyuko-uu--dsh-bili-subagent-efae852a276b7b120ca9d8ef6cd5080da3023005.tar.gz",
+      "archive_sha256": "4721867b51aaaa35e11f673ba512c64f0eb3dac6fecfd2c8a0c253e9032e7ff4",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:27:51.798503+00:00",
+      "source_files": 38,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "Yuuyuko-uu/dsh-fish-buddy",
+      "url": "https://github.com/Yuuyuko-uu/dsh-fish-buddy.git",
+      "path": "references/sources/Yuuyuko-uu/dsh-fish-buddy",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/Yuuyuko-uu--dsh-fish-buddy.log",
+      "commit": "a102f7262da4689639dfa57ce2759b5c2ec63fe9",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/Yuuyuko-uu/dsh-fish-buddy'...\nfatal: unable to access 'https://github.com/Yuuyuko-uu/dsh-fish-buddy.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/Yuuyuko-uu/dsh-fish-buddy/tar.gz/a102f7262da4689639dfa57ce2759b5c2ec63fe9",
+      "archive_path": ".cache/reference-archives/Yuuyuko-uu--dsh-fish-buddy-a102f7262da4689639dfa57ce2759b5c2ec63fe9.tar.gz",
+      "archive_sha256": "e65a9825275ed6bae84746f6ea6a89fbbe822cd8f8efe67df0d0c44d8e66977d",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:05.803864+00:00",
+      "source_files": 51,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "Yuuyuko-uu/dsh-fish-memory",
+      "url": "https://github.com/Yuuyuko-uu/dsh-fish-memory.git",
+      "path": "references/sources/Yuuyuko-uu/dsh-fish-memory",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/Yuuyuko-uu--dsh-fish-memory.log",
+      "commit": "a070ebf096f3472c107982b5741994cabdcc18f7",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/Yuuyuko-uu/dsh-fish-memory'...\nfatal: unable to access 'https://github.com/Yuuyuko-uu/dsh-fish-memory.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/Yuuyuko-uu/dsh-fish-memory/tar.gz/a070ebf096f3472c107982b5741994cabdcc18f7",
+      "archive_path": ".cache/reference-archives/Yuuyuko-uu--dsh-fish-memory-a070ebf096f3472c107982b5741994cabdcc18f7.tar.gz",
+      "archive_sha256": "dd10fdb621c5e60d27118bf4e313e6a49610cb90e93885d99f8da7672521dbf4",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:07.013472+00:00",
+      "source_files": 27,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "Yuuyuko-uu/dsh-qq-link",
+      "url": "https://github.com/Yuuyuko-uu/dsh-qq-link.git",
+      "path": "references/sources/Yuuyuko-uu/dsh-qq-link",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/Yuuyuko-uu--dsh-qq-link.log",
+      "commit": "fba7e3ee8ffb3a8f819a7823eb05186cfb782ecb",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/Yuuyuko-uu/dsh-qq-link'...\nfatal: unable to access 'https://github.com/Yuuyuko-uu/dsh-qq-link.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/Yuuyuko-uu/dsh-qq-link/tar.gz/fba7e3ee8ffb3a8f819a7823eb05186cfb782ecb",
+      "archive_path": ".cache/reference-archives/Yuuyuko-uu--dsh-qq-link-fba7e3ee8ffb3a8f819a7823eb05186cfb782ecb.tar.gz",
+      "archive_sha256": "d091b21eb96fccb606e26c7498d3a590500c8c0b11684518bc580e5348e0032c",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:07.234588+00:00",
+      "source_files": 24,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "Yuuyuko-uu/dsh-speak-up",
+      "url": "https://github.com/Yuuyuko-uu/dsh-speak-up.git",
+      "path": "references/sources/Yuuyuko-uu/dsh-speak-up",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/Yuuyuko-uu--dsh-speak-up.log",
+      "commit": "438bb636b4c631218e1d0b18b2bf957e3cb17b6d",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/Yuuyuko-uu/dsh-speak-up'...\nfatal: unable to access 'https://github.com/Yuuyuko-uu/dsh-speak-up.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/Yuuyuko-uu/dsh-speak-up/tar.gz/438bb636b4c631218e1d0b18b2bf957e3cb17b6d",
+      "archive_path": ".cache/reference-archives/Yuuyuko-uu--dsh-speak-up-438bb636b4c631218e1d0b18b2bf957e3cb17b6d.tar.gz",
+      "archive_sha256": "d51c5e45b0dbae84bd61d8aedc496857f8a4d93aabafe7876f97338064dba6a5",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:09.460261+00:00",
+      "source_files": 11,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "bearyluo/dsh-dafeiyu-room",
+      "url": "https://github.com/bearyluo/dsh-dafeiyu-room.git",
+      "path": "references/sources/bearyluo/dsh-dafeiyu-room",
+      "requested_ref": "e7c6ad6fb70e0e67c7fd1e87b12e17175a7480ed",
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/bearyluo--dsh-dafeiyu-room.log",
+      "commit": "e7c6ad6fb70e0e67c7fd1e87b12e17175a7480ed",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/bearyluo/dsh-dafeiyu-room'...\nfatal: unable to access 'https://github.com/bearyluo/dsh-dafeiyu-room.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/bearyluo/dsh-dafeiyu-room/tar.gz/e7c6ad6fb70e0e67c7fd1e87b12e17175a7480ed",
+      "archive_path": ".cache/reference-archives/bearyluo--dsh-dafeiyu-room-e7c6ad6fb70e0e67c7fd1e87b12e17175a7480ed.tar.gz",
+      "archive_sha256": "c8e020eb2300f9142da9d9aea0f78f379aeddc65b08278262255aa52cf286496",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:15.626698+00:00",
+      "source_files": 86,
+      "license_files": [
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "repository": "c1overzz/dsh-bili-scroll",
+      "url": "https://github.com/c1overzz/dsh-bili-scroll.git",
+      "path": "references/sources/c1overzz/dsh-bili-scroll",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/c1overzz--dsh-bili-scroll.log",
+      "commit": "f883d79fa536a2d1610dbb89796e6f48266103d7",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/c1overzz/dsh-bili-scroll'...\nfatal: unable to access 'https://github.com/c1overzz/dsh-bili-scroll.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/c1overzz/dsh-bili-scroll/tar.gz/f883d79fa536a2d1610dbb89796e6f48266103d7",
+      "archive_path": ".cache/reference-archives/c1overzz--dsh-bili-scroll-f883d79fa536a2d1610dbb89796e6f48266103d7.tar.gz",
+      "archive_sha256": "9ccd2a54279981e0ca25091d744e539979b5b0203ef53e86430b952033e1ea71",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:11.384606+00:00",
+      "source_files": 43,
+      "license_files": [
+        "LICENSE",
+        "NOTICE.md"
+      ]
+    },
+    {
+      "repository": "canyueY/dsh-mnemosyne",
+      "url": "https://github.com/canyueY/dsh-mnemosyne.git",
+      "path": "references/sources/canyueY/dsh-mnemosyne",
+      "requested_ref": "796dc292367667d2f453885c12d09bec49f8327b",
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/canyueY--dsh-mnemosyne.log",
+      "commit": "796dc292367667d2f453885c12d09bec49f8327b",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/canyueY/dsh-mnemosyne'...\nfatal: unable to access 'https://github.com/canyueY/dsh-mnemosyne.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/canyueY/dsh-mnemosyne/tar.gz/796dc292367667d2f453885c12d09bec49f8327b",
+      "archive_path": ".cache/reference-archives/canyueY--dsh-mnemosyne-796dc292367667d2f453885c12d09bec49f8327b.tar.gz",
+      "archive_sha256": "7d8ed2435db431cafd62b199608fe9d13e827e78421caa74c8fd55f254439dbf",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:15.993426+00:00",
+      "source_files": 952,
+      "license_files": [
+        "LICENSE",
+        "NOTICE",
+        "THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "repository": "chenkezhen480/dsh-world",
+      "url": "https://github.com/chenkezhen480/dsh-world.git",
+      "path": "references/sources/chenkezhen480/dsh-world",
+      "requested_ref": "d0b0ba7116ce1f186eb7f7a31ac849d55214bf7f",
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/chenkezhen480--dsh-world.log",
+      "commit": "d0b0ba7116ce1f186eb7f7a31ac849d55214bf7f",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/chenkezhen480/dsh-world'...\nfatal: unable to access 'https://github.com/chenkezhen480/dsh-world.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/chenkezhen480/dsh-world/tar.gz/d0b0ba7116ce1f186eb7f7a31ac849d55214bf7f",
+      "archive_path": ".cache/reference-archives/chenkezhen480--dsh-world-d0b0ba7116ce1f186eb7f7a31ac849d55214bf7f.tar.gz",
+      "archive_sha256": "5ae06645d901078e5de52d3ca4ff34eb5de01bde16e2cd7c18083bc3ddc59f98",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:12.201579+00:00",
+      "source_files": 208,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "chenluQwQ/astrbot_plugin_bilibili_ai_bot",
+      "url": "https://github.com/chenluQwQ/astrbot_plugin_bilibili_ai_bot.git",
+      "path": "references/sources/chenluQwQ/astrbot_plugin_bilibili_ai_bot",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/chenluQwQ--astrbot_plugin_bilibili_ai_bot.log",
+      "commit": "9f8f37bbc27b71d5f3cf0ea33edb61387da86028",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/chenluQwQ/astrbot_plugin_bilibili_ai_bot'...\nfatal: unable to access 'https://github.com/chenluQwQ/astrbot_plugin_bilibili_ai_bot.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/chenluQwQ/astrbot_plugin_bilibili_ai_bot/tar.gz/9f8f37bbc27b71d5f3cf0ea33edb61387da86028",
+      "archive_path": ".cache/reference-archives/chenluQwQ--astrbot_plugin_bilibili_ai_bot-9f8f37bbc27b71d5f3cf0ea33edb61387da86028.tar.gz",
+      "archive_sha256": "bcc31ade8e223b7d8550f7418bd7dbd9da084b3a7887f80e85ef1b6dfff2d01f",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:17.603166+00:00",
+      "source_files": 135,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "deepseek-ai/deepseek-harness",
+      "url": "https://github.com/deepseek-ai/deepseek-harness.git",
+      "path": "references/sources/deepseek-ai/deepseek-harness",
+      "requested_ref": "8bd073392eef6f54e921a093b95076248eb08cbb",
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/deepseek-ai--deepseek-harness.log",
+      "commit": "8bd073392eef6f54e921a093b95076248eb08cbb",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/deepseek-ai/deepseek-harness'...\nfatal: unable to access 'https://github.com/deepseek-ai/deepseek-harness.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/deepseek-ai/deepseek-harness/tar.gz/8bd073392eef6f54e921a093b95076248eb08cbb",
+      "archive_path": ".cache/reference-archives/deepseek-ai--deepseek-harness-8bd073392eef6f54e921a093b95076248eb08cbb.tar.gz",
+      "archive_sha256": "b9b9ce4d725ef4942767438f18b68d03def44c947f27d1d7ea38267edf8c2ecc",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:29.990528+00:00",
+      "source_files": 20531,
+      "license_files": [
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "repository": "moeru-ai/airi",
+      "url": "https://github.com/moeru-ai/airi.git",
+      "path": "references/sources/moeru-ai/airi",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/moeru-ai--airi.log",
+      "commit": "5951e0a7a94589097521a56e328359b5d1675a9e",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/moeru-ai/airi'...\nfatal: unable to access 'https://github.com/moeru-ai/airi.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/moeru-ai/airi/tar.gz/5951e0a7a94589097521a56e328359b5d1675a9e",
+      "archive_path": ".cache/reference-archives/moeru-ai--airi-5951e0a7a94589097521a56e328359b5d1675a9e.tar.gz",
+      "archive_sha256": "da25048a8663e1523f8c6eac3364c5dec39bbe75febcaf919ea8c61a28327afd",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:56.791694+00:00",
+      "source_files": 6326,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "omesser/fidget",
+      "url": "https://github.com/omesser/fidget.git",
+      "path": "references/sources/omesser/fidget",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/omesser--fidget.log",
+      "commit": "7326ed68caaf273923f2b321a4a005215b269017",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/omesser/fidget'...\nfatal: unable to access 'https://github.com/omesser/fidget.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/omesser/fidget/tar.gz/7326ed68caaf273923f2b321a4a005215b269017",
+      "archive_path": ".cache/reference-archives/omesser--fidget-7326ed68caaf273923f2b321a4a005215b269017.tar.gz",
+      "archive_sha256": "3dd81fc6eb3cb449855a9dc3cef0544dbfa5c94ca21baf3c3255c34ec00bbe0d",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:26.679375+00:00",
+      "source_files": 1915,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "whyever77/dafeiyu-astrbot",
+      "url": "https://github.com/whyever77/dafeiyu-astrbot.git",
+      "path": "references/sources/whyever77/dafeiyu-astrbot",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/whyever77--dafeiyu-astrbot.log",
+      "commit": "fef1e99d20381423145455b278488d951ec1de1e",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/whyever77/dafeiyu-astrbot'...\nfatal: unable to access 'https://github.com/whyever77/dafeiyu-astrbot.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/whyever77/dafeiyu-astrbot/tar.gz/fef1e99d20381423145455b278488d951ec1de1e",
+      "archive_path": ".cache/reference-archives/whyever77--dafeiyu-astrbot-fef1e99d20381423145455b278488d951ec1de1e.tar.gz",
+      "archive_sha256": "8a8e4c14b24cf7ec57c0e3805c3f1dcbaa6752b0e607224d3cd608d93def6075",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:39.663545+00:00",
+      "source_files": 256,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "wz20/dsh-dafeiyu-dot",
+      "url": "https://github.com/wz20/dsh-dafeiyu-dot.git",
+      "path": "references/sources/wz20/dsh-dafeiyu-dot",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/wz20--dsh-dafeiyu-dot.log",
+      "commit": "ff288f57a25becfe195201b02e4fc4726ae71a5b",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/wz20/dsh-dafeiyu-dot'...\nfatal: unable to access 'https://github.com/wz20/dsh-dafeiyu-dot.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/wz20/dsh-dafeiyu-dot/tar.gz/ff288f57a25becfe195201b02e4fc4726ae71a5b",
+      "archive_path": ".cache/reference-archives/wz20--dsh-dafeiyu-dot-ff288f57a25becfe195201b02e4fc4726ae71a5b.tar.gz",
+      "archive_sha256": "b1449cc1d96f70c6017e6f82491cf09b6998e3a32cd0c2cac13db9e121541352",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:48.677847+00:00",
+      "source_files": 200,
+      "license_files": [
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md"
+      ]
+    },
+    {
+      "repository": "xcisxc29/dsh-qq-plugin",
+      "url": "https://github.com/xcisxc29/dsh-qq-plugin.git",
+      "path": "references/sources/xcisxc29/dsh-qq-plugin",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/xcisxc29--dsh-qq-plugin.log",
+      "commit": "29cc25d1df556d7ae223c3f09a325140db6bd638",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/xcisxc29/dsh-qq-plugin'...\nfatal: unable to access 'https://github.com/xcisxc29/dsh-qq-plugin.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/xcisxc29/dsh-qq-plugin/tar.gz/29cc25d1df556d7ae223c3f09a325140db6bd638",
+      "archive_path": ".cache/reference-archives/xcisxc29--dsh-qq-plugin-29cc25d1df556d7ae223c3f09a325140db6bd638.tar.gz",
+      "archive_sha256": "d221356bdec187faf3881ae1947f1a9bdbdeb33d40c7d25960f79b0641120e43",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:43.048972+00:00",
+      "source_files": 72,
+      "license_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "repository": "yuanstarstar/dafeiyu-hub",
+      "url": "https://github.com/yuanstarstar/dafeiyu-hub.git",
+      "path": "references/sources/yuanstarstar/dafeiyu-hub",
+      "requested_ref": null,
+      "status": "ready",
+      "download_log": ".cache/reference-downloads/yuanstarstar--dafeiyu-hub.log",
+      "commit": "5f90bf0781882d142abc72b1562dcda1e8aa71cc",
+      "previous_attempts": [
+        {
+          "method": "git",
+          "error": "Cloning into '/Users/hy-yin/Developer/Codex Repo/Codex-Pet/references/sources/yuanstarstar/dafeiyu-hub'...\nfatal: unable to access 'https://github.com/yuanstarstar/dafeiyu-hub.git/': Could not resolve host: github.com\n"
+        }
+      ],
+      "checkout_type": "archive",
+      "archive_url": "https://codeload.github.com/yuanstarstar/dafeiyu-hub/tar.gz/5f90bf0781882d142abc72b1562dcda1e8aa71cc",
+      "archive_path": ".cache/reference-archives/yuanstarstar--dafeiyu-hub-5f90bf0781882d142abc72b1562dcda1e8aa71cc.tar.gz",
+      "archive_sha256": "2e09716c41883bcba9cfdc02fdaa46fa44702bfcffd6d0b51e296176693a4ab2",
+      "lfs_smudge_skipped": true,
+      "submodules_initialized": false,
+      "downloaded_at": "2026-11-04T14:28:44.486391+00:00",
+      "source_files": 103,
+      "license_files": []
+    }
+  ]
+}
