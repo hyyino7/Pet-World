@@ -1,117 +1,90 @@
 # Current Handover
 
-- Updated: 2026-11-05, Asia/Ho_Chi_Minh.
-- Status: Paused at the user's request after completing the current cleanup.
-  The user cleared the active goal. Do not continue automatically or reinstall
-  the desktop plugin; resume only when requested.
-- Latest boundary: Core governs real execution; Memory owns long-term memory;
-  Repo stores persona, user profile and configuration. The existing ledger or
-  workbench does not establish a required feature.
-- Current cleanup is source-only: STATE generation removed; new manifests use
-  five files and format 2; legacy format 1 migrates without touching or recreating
-  STATE.md. Settings no longer query the optional workbench; its unreleased tab
-  and polling are removed. Ordinary native context no longer recalls that ledger.
-  Unit/native validation is recorded in [completion](../core-completion.md).
-  The installed desktop package below remains the earlier snapshot.
-- Project direction retained from the preceding handover: complete reconstruction.
-  Existing architecture, code and passing checks are material to reassess, not
-  an accepted design or an obligation to preserve that implementation.
+- Updated: 2026-11-05, Asia/Saigon.
+- Status: Development paused at the user's request. The user cleared the active
+  goal. This turn authorizes commit and handoff only, not resumed implementation,
+  personal-profile installation or publication.
+- Code checkpoint: `f8990dd727dc3524ee23e3219f983f5adf7ce520` on `main`
+  (`Implement workspace-scoped Chatpet Core and settings`). This handover is a
+  separate documentation commit following that checkpoint.
 
-## Direction And Constraints
+## Accepted Direction
 
-Keep the complete [product goals](../planning/plan.md#confirmed-outcome-and-boundaries)
-and modular, DSH-native direction. Reuse existing reference implementations;
-deliver usable conversation/matter/progress/result flows with proportionate checks.
-Production semantics must not rely on keyword classifiers or fixed sample answers.
-Plugin/package name is `dsh-Chatpet`; first component is `00-Core`, described
-as `插件核心模块`. Companion identity remains 大肥鱼. Keep README unchanged.
-Use the [naming convention](../planning/modular-design.md#naming-convention) for
-repository, native module and internal identifier roles.
-One Bundle with separate native entries is a previous recommendation to reassess.
+Core governs real execution; Memory owns long-term memory; the Repo stores
+persona, user profile and configuration. Existing code cannot establish a
+requirement by its own existence. A matter ledger, custom workbench and STATE.md
+are not mandatory Core completion gates. Do not resume the old ten-responsibility
+checklist as if every proposed feature had independent user acceptance.
 
-The rejected **Core 测试** panel was removed. Do not restore it. The user has
-also explicitly rejected a separate 大肥鱼 mode: workspace binding must activate
-Core automatically in ordinary DSH sessions in that workspace. Do not add a
-companion preset or a mode-selection step. Other workspaces remain unaffected.
+The plugin/package is `dsh-Chatpet`; first component is `00-Core`, described as
+`插件核心模块`. Workspace binding activates Core in ordinary native DSH sessions
+in that workspace. No separate 大肥鱼 preset/mode or Core 测试 chat panel.
+Other workspaces retain ordinary behavior. Keep the root README unchanged.
 
-## Current Installation
+Read the latest scope in the [Core plan](../planning/core-console-implementation.md)
+and [completion inventory](../core-completion.md). The broader
+[product plan](../planning/plan.md) remains distinct from delivered/accepted Core.
 
-- `dsh-Chatpet@0.0.0` replaces `codex-pet` in desktop dependencies and selected
-  bundles. Source: `.cache/install/dsh-Chatpet-local-b923611b0f85.tgz`.
-- First component: patch ID/exported plugin name `00-Core`; module specifier
-  `dsh-Chatpet/00-Core`; locale description `插件核心模块`.
-- Settings client is registered through a state-free root carrier
-  (`chatpet-settings`, package root `dsh-Chatpet`), separate from `00-Core`.
-  Open **DSH Settings → dsh-Chatpet**. Five tabs are present. Identity, quiet mode, Core execution limits and
-  workspace binding/initialization and USER profile can now be read/saved.
-  Core automatically contributes role, USER context and matter tools to ordinary
-  root sessions in the bound workspace. No companion preset is declared.
-  This installed snapshot predates the scope cleanup; optional workbench work
-  is not a Core completion gate.
-- Installed settings client/adapter and changed Core files match the verified
-  workspace/native delivery. Source cleanup now removes the unreleased workbench
-  tab, polling and initial-settings dependency; optional query code is retained.
-  No cleanup package was installed before pausing. Source also preserves stop/receipt inspection
-  when Repo files are invalid, and refuses workspace rebind during running,
-  cancelling or unknown execution. Core-owned preferences are additive; identity, model route
-  and data directory are preserved. README, existing user patch, unrelated
-  dependencies and bundle selection are unchanged.
-- Latest backup: `~/.dsh/profiles/desktop/backups/codex-pet/2026-11-05T11-08-50-963Z/`.
-- Backup: `~/.dsh/profiles/desktop/backups/codex-pet/2026-11-04T20-10-41-095Z/`.
-- Reinstallation backup: `~/.dsh/profiles/desktop/backups/codex-pet/2026-11-04T20-11-54-746Z/`.
-- Native settings reads, saves, validation and restart recovery were visually
-  checked in an isolated DSH 0.2.2-rc.1 web profile. Direct desktop validation
-  now confirms ordinary Standard-mode conversation in Deepseek-Test: one
-  real-model turn, five steps and four successful Core matter calls. SQLite
-  contains created/progress/result records and a completed matter; STATE.md
-  projects it. [Evidence](../validation/core-workspace-desktop-2026-11-05.json).
-  Full Core and user acceptance remain open.
+## Source Checkpoint
 
-## Previous Installation Snapshot
+- Repo initialization uses five files: `.chatpet/README.md`, `manifest.json`,
+  `SOUL.md`, `USER.md`, `core.json`. Format-2 manifests replace validated format-1
+  declarations. STATE.md is no longer generated, read or updated; existing files
+  and owner edits are preserved, and missing legacy copies are not recreated.
+- Persona, USER and configuration are file-authoritative. Settings and manual
+  edits share revisions and validation. Invalid files block managed loading.
+- Ordinary native sessions use the existing DSH Agent, model/tool permissions,
+  stop control and logs. No second model turn is submitted by the adapter.
+  Native history lineage, cancellation and read-only reconciliation are retained.
+- Settings no longer query the optional workbench on initial read. Its unreleased
+  tab and polling are removed; ordinary context no longer automatically recalls
+  the matter ledger. Existing optional APIs/query code and data remain intact.
+- Execution stop/receipt inspection survives invalid Repo files. Workspace rebind
+  is refused while execution is running, cancelling or unresolved.
 
-The preceding handover recorded these facts on 2026-11-05; documentation cleanup
-did not recheck the running application. The subsequent description-only update
-changed installed README/description/locales as recorded below:
+Detailed owners: [Repo/native contract](../workspace.md),
+[settings](../settings.md), [runtime](../core-runtime.md),
+[flow evidence](../core-conversation.md). Historical runtime descriptions may
+cover earlier optional features; latest user scope takes precedence.
 
-- DSH 0.2.2-rc.1; `codex-pet@0.0.0` installed/enabled in the desktop profile.
-  Dev SDK remains 0.2.1-rc.5; package declares both native versions.
-- Installed package: `~/.dsh/profiles/desktop/node_modules/codex-pet`, from
-  `.cache/install/codex-pet-local.tgz`; it is a packaged snapshot, not live source.
-- Source/installed test client, test-host adapter and test Bundle entry were removed.
-  No completed normal DSH conversation entry/preset was delivered. Ordinary chats
-  were not modified. Final UI appearance was not visually confirmed.
-- Data: `~/.dsh/codex-pet/core/` (SQLite, WAL/SHM, writer lock); writer liveness
-  is unknown because the prior process probe was denied. Historical test bindings
-  may remain. Preserve identity/data and handle the writer before replacement.
-- Description-only update: installed README is now the two-line Chinese product
-  introduction; package description and three locale files match source. Runtime
-  files and Bundle patch hashes were unchanged. Backup:
-  `~/.dsh/profiles/desktop/backups/codex-pet/description-20261104T200343834906Z/`.
-  Existing tarballs still contain the preceding README until repacked.
-- Backups: `~/.dsh/profiles/desktop/backups/codex-pet/`. Official installation
-  changed package/lock/Bundle metadata, while the existing user patch was unchanged.
-  Credentials were not edited; QQ/Bilibili accounts were not connected.
+## Installed State And Outside-Git Assets
 
-## Code, Evidence And Local Assets
+The personal desktop installation is a packaged snapshot, not the checkout.
+Read-only verification during this handoff found:
 
-[Core runtime](../core-runtime.md) owns code entries, supported behavior and limits.
-[Flow/evidence](../core-conversation.md) owns reuse, hardcoding review and dated
-behavior/native/real-model observations. These are previous author checks, not
-user acceptance or a reason to repeat paid scenarios. Full provider joins,
-normal-use integration, guarded restore and whole-product acceptance remain open.
+- Profile: `~/.dsh/profiles/desktop/`.
+- Current dependency: `.cache/install/dsh-Chatpet-local-dd8ada0b6fe8.tgz`.
+- Installed Core workspace/native files and client differ from the current build;
+  STATE retirement is absent there. The source cleanup is **not installed**.
+- Core data: `~/.dsh/codex-pet/core/`; preserve identity, data and owner bindings.
+  The prior bound Repo is `/Users/hy-yin/Developer/Deepseek Repo/Deepseek-Test`.
+  Neither live process state nor that binding was rechecked in this commit turn.
+- Retain `.cache/install/` (including `installation.json`, archives and prepared
+  package), profile backups, `.tools/`, `.venv/`, `node_modules/` and reference
+  checkouts. These ignored/local assets and personal data are not in the commits.
+  Reference origins/licenses are in [manifest](../../references/manifest.json).
 
-Git baseline: `main`, `4ac51de265b8b4a8f8f1cafdee8ba165d99295c0`; Core work remains
-uncommitted among pre-existing modified/untracked files. Refresh Git state on resume.
-Keep `.tools/`, `.venv/`, `node_modules/`, reference sources and license records.
-Installation continuity also uses `.cache/install/installation.json`, both package
-tarballs and the prepared package; retained live evidence is linked from the flow
-record. These assets and installed data are outside the commit.
+No application upgrade, account connection, installation or user-data deletion
+was performed for this commit/handoff.
+
+## Verification And Limits
+
+Before the code commit, `pnpm run check:types` and `pnpm test` passed (32 tests).
+The earlier current-cleanup native fixture passed with eight local model calls,
+no paid-model request: ordinary chat without matter creation/automatic recall,
+no generated STATE, native stop/reconcile/resume and workspace isolation.
+The [desktop observation](../validation/core-workspace-desktop-2026-11-05.json)
+records an earlier installed Standard-mode real-model flow; it does not verify
+this uninstalled cleanup or accept all Core requirements.
+
+The remaining execution/configuration/recovery scope is not fully audited.
+Memory and other providers are not delivered by this checkpoint. Full guarded
+restore/autonomous coordination are not accepted. A paused optional workbench
+must not become the next task merely because its code exists.
 
 ## Restart
 
-Documentation cleanup and naming edits do not begin reconstruction. For the next product task,
-start from the reconstruction objective, relevant existing references and the
-actual dedicated DSH interaction entry. Establish the replacement design and first
-usable flow before replacing code or live data; do not resume the old sequence
-merely because its tests passed. Use the [planning index](../planning/README.md)
-for the affected design only.
+Wait for a new user request. On resumption, confirm the intended next outcome
+against the accepted Core/Memory/Repo boundary and inspect current Git/install
+state before choosing work. Do not automatically reinstall, replay execution,
+resume the cleared goal, or treat this checkpoint as full Core acceptance.
