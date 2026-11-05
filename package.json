@@ -1,14 +1,51 @@
 {
-  "name": "codex-pet",
+  "name": "dsh-Chatpet",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Modular DSH-backed Dafeiyu companion; project bootstrap.",
-  "engines": { "node": ">=24.9 <25" },
+  "description": "大肥鱼：基于 DSH 的模块化陪伴助手。",
+  "exports": {
+    ".": "./dist/src/console/plugin.js",
+    "./core": "./dist/src/core/index.js",
+    "./contracts": "./dist/src/contracts/index.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./00-Core": "./dist/src/core/plugin.js",
+    "./00-Core/locale/*.json": "./locale/core/*.json",
+    "./client": "./src/console/client.js"
+  },
+  "types": "./dist/src/console/plugin.d.ts",
+  "files": [
+    "dist/src",
+    "docs/core-runtime.md",
+    "docs/core-conversation.md",
+    "THIRD_PARTY_NOTICES.md",
+    "cordis.patch.yml",
+    "locale/",
+    "src/console/client.js",
+    "docs/settings.md"
+  ],
+  "engines": {
+    "node": ">=24.9 <25",
+    "dsh": "0.2.2-rc.1"
+  },
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "check:env": "node scripts/doctor.mjs",
-    "check:types": "tsc --noEmit"
+    "check:types": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "pnpm run build && node --test dist/tests/*.test.js",
+    "test:native": "pnpm run build && node scripts/check-native.mjs",
+    "test:native-workspace": "pnpm run build && node scripts/check-native-workspace.mjs",
+    "test:live": "pnpm run build && node scripts/check-core-live.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh-agent": "0.2.1-rc.5 || 0.2.2-rc.1",
+    "@deepseek-ai/dsh-session": "0.2.1-rc.5 || 0.2.2-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "0.2.1-rc.5 || 0.2.2-rc.1",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.5 || 0.2.2-rc.1"
   },
   "devDependencies": {
     "typescript": "5.9.3",
@@ -18,5 +55,19 @@
     "@deepseek-ai/dsh-session": "0.2.1-rc.5",
     "@deepseek-ai/dsh-system-prompt": "0.2.1-rc.5",
     "@deepseek-ai/dsh-tools": "0.2.1-rc.5"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-connection"
+      ]
+    }
   }
 }

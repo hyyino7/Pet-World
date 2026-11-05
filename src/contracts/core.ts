@@ -33,6 +33,16 @@ export interface Commitment {
   nextAction: string | null; waitingReason: string | null;
   dueAt?: Timestamp; resultSourceIds: readonly string[];
 }
+export interface CommitmentProgress {
+  progressId: string; commitmentId: string; revision: Revision; executionId: string;
+  kind: 'created' | 'updated' | 'progress' | 'result' | 'interrupted';
+  summary: string; sourceIds: readonly string[]; recordedAt: Timestamp;
+}
+export interface ConversationTurn {
+  activity: ActivitySnapshot; reply: ConversationMessage | null;
+  contact: ContactSnapshot | null; commitments: readonly Commitment[];
+  progress: readonly CommitmentProgress[];
+}
 export interface ActivityProposal {
   proposalId: string; owner: 'owner' | 'companion'; commitmentId?: string;
   capability: CapabilityId; action: string; purpose: string;
@@ -99,6 +109,7 @@ export interface CoreService {
     messageId: string; sourceId: string; duplicate: boolean; operation: OperationReceipt;
   }>;
   listConversation: ServiceCall<PageRequest & { channel?: ChannelRef }, Page<ConversationMessage>>;
+  getConversationTurn: ServiceCall<{ activityId: string }, ConversationTurn>;
   recordSource: ServiceCall<EvidenceSource, { sourceId: string; duplicate: boolean }>;
   getSource: ServiceCall<{
     sourceId: string; purpose: 'memory_processing' | 'owner_audit';
@@ -113,6 +124,7 @@ export interface CoreService {
     resultSourceIds: readonly string[];
   }, Commitment>;
   listCommitments: ServiceCall<PageRequest & { state?: Commitment['state'] }, Page<Commitment>>;
+  listCommitmentProgress: ServiceCall<PageRequest & { commitmentId: string }, Page<CommitmentProgress>>;
   admitActivity: ServiceCall<ActivityProposal, AdmissionRef>;
   getActivity: ServiceCall<{ activityId: string }, ActivitySnapshot>;
   cancelActivity: ServiceCall<{

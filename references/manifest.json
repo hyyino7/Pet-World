@@ -39,7 +39,16 @@
       "downloaded_at": "2026-11-04T11:06:54.719149+00:00",
       "checkout_type": "git",
       "submodules_initialized": false,
-      "submodule_paths": []
+      "submodule_paths": [],
+      "reused_in_core": [
+        {
+          "source": "lib/session-delivery.js",
+          "targets": [
+            "src/core/upstream/serial-delivery.ts"
+          ],
+          "treatment": "Adapted the Promise-tail serialization and failure isolation; product request/receipt persistence remains Core-owned."
+        }
+      ]
     },
     {
       "repository": "AstrBotDevs/AstrBot",
@@ -575,6 +584,15 @@
       "source_files": 208,
       "license_files": [
         "LICENSE"
+      ],
+      "reused_in_core": [
+        {
+          "source": "src/life/tools.ts",
+          "targets": [
+            "src/core/matters.ts"
+          ],
+          "treatment": "Adapted native scoped tool registration and text-rendered structured receipts; no life scheduling or persona defaults imported."
+        }
       ]
     },
     {
@@ -733,6 +751,38 @@
       "license_files": [
         "LICENSE",
         "THIRD_PARTY_NOTICES.md"
+      ],
+      "reused_in_core": [
+        {
+          "source": "lib/session.js",
+          "targets": [
+            "src/core/upstream/messages.ts"
+          ],
+          "treatment": "Adapted final non-tool reply projection; removed persona, singing and whole-session presentation coupling."
+        },
+        {
+          "source": "lib/memory-tools.js",
+          "targets": [
+            "src/core/matters.ts"
+          ],
+          "treatment": "Adapted the native tool/output registration pattern; no upstream memory extractor or persona rules copied."
+        },
+        {
+          "source": "client.js",
+          "targets": [
+            "client.js"
+          ],
+          "treatment": "Adapted native main/sidebar slot registration for a minimal Core test client; no upstream persona, speech or settings implementation imported."
+        }
+      ],
+      "reused_in_settings": [
+        {
+          "source": "client.js",
+          "targets": [
+            "src/console/client.js"
+          ],
+          "treatment": "Adapted native browser factory and feature-owned settings composition; uses DSH native settings slots, without upstream chat, HTTP API, account or memory features."
+        }
       ]
     },
     {

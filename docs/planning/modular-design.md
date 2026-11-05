@@ -1,7 +1,7 @@
 # Dafeiyu Modular Design
 
-- Revision: v0.3, accompanying [plan v0.9](plan.md).
-- Date: 2026-11-04; client timezone Asia/Saigon.
+- Revision: v0.7, accompanying [plan v0.13](plan.md).
+- Updated: 2026-11-05; client timezone Asia/Saigon.
 - Status: Architecture proposal. Complete planning, modularity and reserved
   interfaces for deferred implementations are user requirements. Specific
   boundaries below remain proposed; native DSH integration is preferred.
@@ -12,6 +12,12 @@
   [reference-study.md](reference-study.md) owns source applicability.
 
 ## Packaging And Host Direction
+
+The [naming convention](#naming-convention) separates product presentation,
+installation identity and module identifiers.
+Use one installable Bundle containing independently owned native plugin entries
+for Core, Memory, Life, Desktop, QQ, Bilibili, Voice and Console. Implementations
+may be enabled separately; they do not require separate user installations by default.
 
 Recommend one target-product source repository, one initial DSH distribution
 bundle, and multiple addressable Cordis plugin entries within it. Keep the Mac
@@ -25,11 +31,54 @@ is a runtime isolation/lifetime boundary. These do not need a one-to-one mapping
 The desktop module can have Host, DSH Client and native-helper artifacts while
 remaining one capability to maintain.
 
-Initial modules release together under one compatible bundle version, with a
+Modules selected for the initial release ship under one compatible bundle version, with a
 single lockfile and explicit build/packed-artifact checks in the future target
 repository. Extract separate packages only when independent reuse, dependency
 weight or release cadence justifies the added compatibility work. Do not require
 the user to assemble a compatible set of separately published packages.
+
+The user agreed to a unified Console workbench delivered alongside Core. Its
+Host/Client registrations remain a separate module in the same distribution;
+Core does not require Console or webServer to run. Console delegates settings
+and commands to their state owners, and Core resource/maintenance transactions
+survive UI loss. Use native DSH slots and trusted Host/Client calls; exact
+bindings remain subject to inspection.
+
+The [Core/Console implementation plan](core-console-implementation.md) owns
+C0–C3, workbench coverage and CC acceptance. It preserves the boundaries here
+and retains the full scope. The later user request authorized Core first;
+[Core runtime](../core-runtime.md) records the implementation and evidence.
+Console and the other module implementations remain pending.
+
+Contract 0.3 now distinguishes Core-owned raw dialogue continuity from extracted
+Memory knowledge. Core projects bounded eligible records into logged native
+context and exposes execution-scoped matter tools. Once a history eligibility
+provider is registered, its loss remains blocked across restart. Caller-supplied
+Memory-derived views still require the full view/use protocol; no replacement
+Bank is created. See [implemented flow and limits](../core-conversation.md).
+
+## Naming Convention
+
+| Surface | Name / convention | Use |
+| --- | --- | --- |
+| Plugin title and npm package / DSH Bundle | `dsh-Chatpet` | Exact user-specified casing, including the English fallback |
+| Plugin description | 大肥鱼：基于 DSH 的模块化陪伴助手。 | Existing bundle description; unchanged by this naming request |
+| First component title and patch ID | `00-Core` | Component description: 插件核心模块 |
+| First component module specifier | `dsh-Chatpet/00-Core` | Own exported locale metadata; separate from bundle metadata |
+| Repository | `Codex-Pet` | Existing repository/directory label |
+| Companion identity | 大肥鱼 / Dafeiyu | Existing character identity; independent of plugin title |
+| Internal APIs, data and persisted formats | Existing `petCore`, `pet/…`, `pet_matter_…`, `codex-pet.…` and `~/.dsh/codex-pet/core/` | Retained for compatibility and identity continuity |
+
+The user specified the plugin/package and first component names on 2026-11-05.
+Keep the README unchanged for a later user-directed update. Bundle and component
+metadata use separate exported locale directories, including the English fallback.
+No naming rule for additional components has been selected. Historical snapshots,
+upstream names and the originating `dsh-dafeiyu` planning ID retain their spelling.
+
+The installation rename replaces the previous `codex-pet` bundle; it must not
+activate a second Core writer. Preserve the configured identity, data directory,
+provider/model route and existing user patch. Other installation/data/format ID
+changes require an explicit compatibility decision.
 
 ## Module Responsibilities
 
@@ -37,27 +86,39 @@ The labels are proposed logical names, not registered package/service IDs.
 
 | Module | Owns | Required collaborators and boundaries |
 | --- | --- | --- |
-| Core and DSH adapter | Stable identity/bindings; immutable raw inputs/outcomes; conversation/commitments; native execution; admission and delivery; resource storage; durable maintenance transactions | CoreService, ExecutionPort, ResourceService and MaintenanceService are facets of one owner. No QQ, Bilibili or desktop implementation import is needed to start. |
+| Core and DSH adapter | Real native execution, workspace/identity bindings, admission, actual outcomes and necessary reconciliation; existing optional commitment APIs remain subject to product need | Reuse DSH execution/session evidence. CoreService, ExecutionPort, ResourceService and MaintenanceService retain explicit ownership, but their existing implementations do not make every proposed feature mandatory. No QQ, Bilibili or desktop implementation import is needed to start. |
 | Memory | Evidence mirror and source eligibility revisions; temporal claims; view/dependency validation and use leases; correction/withdrawal; derivations and Bank migrations | Core owns immutable originals; Memory alone owns mutable memory/source eligibility and withdrawal guards. Mnemosyne can be an implementation behind this contract. |
 | Life | Self-chosen pursuits, next check-in, review, curiosity and reflection proposals | Core is the only dispatch/contact gate. Memory is accessed through its service. No independent model client or timer may bypass common controls. |
 | Desktop | Pet/body actions, chat transport, native-helper lifetime and presentation state | Core supplies conversation and real activity state. UI never writes memory or owns a second conversation model. Native helper protocol is versioned. |
 | Room view, optional Desktop sub-capability | Scene/entity presentation and interaction through the same body boundary | Desktop remains the sole body/world writer. No second persona, scheduler or memory. Rendering/world content may be deferred while its interface is planned now. |
 | QQ | Gateway connection, explicit owner-account mapping, incoming normalization and transport receipts | Core supplies reply/contact intent. Gateway is external transport; no own persona/memory/scheduler. SDK is optional and loaded only when enabled. |
 | Bilibili | Discovery/read capability, evidence/coverage and bounded reader integration | Core dispatches authorized work; Life or an owner request supplies its purpose. No hidden auto-browse loop, social writes or second memory authority. |
-| DSH console | One localized settings/health entry with memory, life, connection and maintenance views | Client of Core-owned maintenance and each owner's application operations. No private backup/restore ledger; missing optional modules remain visible without SDK activation. |
+| Voice | Shared ASR/TTS adapters, profile revisions, readiness and bounded audio-job/cancel state | Core owns admission/conversation/resources; Desktop owns devices/playback; QQ owns media transport. Detailed contract/types pending outcome discussion. |
+| DSH console | Unified localized workbench: overview, Core settings, matters/activity, all module entries, resources and maintenance | Client of Core-owned maintenance and each owner's application operations. No private backup/restore ledger; missing optional modules remain visible without SDK activation. |
 | Shared contracts library | Public domain types, interface/error/version definitions and pure validation | Compile-time/runtime support, not a separately running plugin. No service, filesystem, timer or secret side effects at import. |
 
-Assistance commitments initially live in Core because every entrance and activity
-must respect them. Split a dedicated assistance module only when concrete duties
-justify independent ownership; do not pre-create a generic workflow framework.
+If assistance commitments are retained as a product feature, their existing
+Core ownership does not authorize separate writers. They are not required for
+ordinary conversation or real execution. The user explicitly rejected deriving
+mandatory features from the existing matter ledger or workbench. Memory owns
+long-term knowledge; the bound Repo owns persona, user profile and configuration.
 Association/attention experiments belong behind Memory's recall boundary;
 curiosity candidates belong behind Life's proposal boundary. The whitepaper's
 full graph/neuro-modulation stack is not a mandatory module set.
 
 ## Complete Contracts And Deferred Implementation
 
-Every planned capability has a public contract now, including capabilities whose
-implementation is deferred. [Module contracts](module-contracts.md) records the
+The seven baseline modules have public contract skeletons, including deferred
+implementations. Voice is the eighth confirmed module shared by Desktop and QQ;
+its detailed public types, capability/event additions and compile examples
+remain a Stage 0 gap after [outcome/reference discussion](voice.md), before any
+Voice implementation. Voice owns speech configuration/job metadata and state
+maintenance; Core owns audio resources and maintenance coordination.
+Desktop/QQ text functions remain available without Voice. Capture, synthesis,
+playback, Agent execution and QQ delivery have separate cancellation/outcome
+states. Derived audio follows Memory eligibility/use controls.
+
+[Module contracts](module-contracts.md) records the
 operation catalogue, producers/consumers, error and recovery semantics, and
 extension slots; `src/contracts/` contains only the corresponding TypeScript
 interfaces. Core's execution adapter and assistance commitments are included.
@@ -90,11 +151,16 @@ flowchart BT
   Desktop[Desktop adapter and helper] --> Core
   QQ[QQ channel] --> Core
   Bili[Bilibili capability] --> Core
+  Voice[Shared Voice capability] --> Core
+  Desktop -. optional voice .-> Voice
+  QQ -. optional voice .-> Voice
   Console[DSH console] --> Core
   Core --> DSH[DSH host services]
 ```
 
-Arrows mean declared service dependence, not direct imports or call direction.
+Solid arrows mean declared service dependence, not direct imports or call
+direction. Dotted Voice edges are optional capability consumption; losing Voice
+must not deactivate Desktop/QQ text functions.
 Providers register capabilities with Core; Core does not depend on them to start.
 Life waits for its required memory service. The console observes optional services
 reactively. Shared contracts are an acyclic library dependency of each module.
@@ -187,6 +253,7 @@ registrations and releases owned resources. It does not erase durable state.
 | Desktop | QQ/DSH entrances remain available when otherwise healthy; restarting the helper restores a snapshot without replaying stale decorations. |
 | QQ | Desktop/DSH remain usable; uncertain sends remain uncertain and are not blindly resent. |
 | Bilibili | Browsing-dependent activities wait, fail or choose rest; other conversation/assistance continues. |
+| Voice | Audio work stops or reconciles; Desktop/QQ text functions remain available. No late playback or independent speech runtime fallback. |
 | DSH console | Core-owned resources and maintenance transactions remain available through their application ports; UI loss does not change writers or cancel/erase the restore ledger. |
 
 These are product requirements to verify, not guarantees provided automatically

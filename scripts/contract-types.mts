@@ -1,3 +1,4 @@
+import { CONTRACT_VERSION } from '../src/contracts/version.js';
 // Compile-only examples of the draft boundary; never starts a provider or host.
 import type {
   ArtifactRef, CapabilityStatus, ConsoleService, ContractError, ConversationMessage, DeliveryAttempt,
@@ -7,7 +8,7 @@ import type {
 } from '../src/contracts/index.js';
 
 const deferred: CapabilityStatus = {
-  id: 'desktop.room', owner: 'desktop', contractVersion: '0.2',
+  id: 'desktop.room', owner: 'desktop', contractVersion: CONTRACT_VERSION,
   state: 'not_implemented', reason: 'Renderer deferred', supportedOperations: [],
 };
 const unsupported: Result<OperationReceipt> = {
@@ -22,13 +23,13 @@ const blindRetry: ContractError = { code: 'OUTCOME_UNKNOWN', effect: 'unknown', 
 // @ts-expect-error A timeout with unknown effects also needs reconciliation.
 const uncertainTimeout: ContractError = { code: 'TIMED_OUT', effect: 'unknown', retry: 'same_request', message: 'Retry' };
 // @ts-expect-error A deferred capability cannot advertise working operations.
-const fakeCapability: CapabilityStatus = { id: 'desktop.room', owner: 'desktop', contractVersion: '0.2', state: 'not_implemented', reason: 'Deferred', supportedOperations: ['interact'] };
+const fakeCapability: CapabilityStatus = { id: 'desktop.room', owner: 'desktop', contractVersion: CONTRACT_VERSION, state: 'not_implemented', reason: 'Deferred', supportedOperations: ['interact'] };
 // @ts-expect-error Acceptance needs an operation identity, revision and evidence list.
 const incompleteReceipt: OperationReceipt = { state: 'accepted' };
 // @ts-expect-error Native execution cannot omit admission, context and finite allowance.
 const unadmittedRun: Parameters<ExecutionPort['start']>[1] = { bindingId: 'binding', input: 'Read' };
 // @ts-expect-error An event kind cannot carry another event family's payload.
-const mismatchedEvent: ProductEvent = { contractVersion: '0.2', eventId: 'e', bootId: 'b', cursor: '1', companionId: 'fish', scopeId: 'owner', occurredAt: '2026-11-04T00:00:00Z', kind: 'memory.withdrawn', payload: { contactId: 'c', revision: 1, outcome: { state: 'pending' } } };
+const mismatchedEvent: ProductEvent = { contractVersion: CONTRACT_VERSION, eventId: 'e', bootId: 'b', cursor: '1', companionId: 'fish', scopeId: 'owner', occurredAt: '2026-11-04T00:00:00Z', kind: 'memory.withdrawn', payload: { contactId: 'c', revision: 1, outcome: { state: 'pending' } } };
 
 const view: MemoryViewStamp = {
   viewId: 'view', materialDigest: 'sha256:material',

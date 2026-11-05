@@ -1,4 +1,5 @@
 /** Stable draft import surface. No module implementations or host imports. */
+export { CONTRACT_VERSION } from './version.js';
 export type * from './common.js';
 export type * from './core.js';
 export type * from './execution.js';

@@ -1,83 +1,65 @@
-# Repository And Environment Setup
+# Local Environment And Restoration
 
-Date: 2026-11-04, Asia/Saigon. This record describes actual preparation, not
-product implementation or acceptance of the proposed architecture.
+This file owns toolchain/restoration details. Setup observations below date to
+2026-11-04; [the handover](handover/README.md) owns current work and the later
+installation snapshot. Setup checks establish preparation, not product acceptance.
 
-## Location And Codex Project
+## Tools
 
-- Repository: `/Users/hy-yin/Developer/Codex Repo/Codex-Pet`.
-- Git initialized on `main`; local-only, with no remote or publication configured.
-- Codex project `Codex-Pet` is registered and was verified through `list_projects`.
-- Project ID: `487765b7-a121-416a-9535-8a7a5bfff3a3`; host: local.
-- Original planning material remains preserved under `docs/planning/`.
+| Tool | Version / location |
+| --- | --- |
+| Node.js | 24.21.0, `.tools/node`; official distribution, SHA-256 checked |
+| pnpm | 11.25.0, `.tools/pnpm` |
+| TypeScript / Node types | 5.9.3 / 24.10.0, pinned development dependencies |
+| DSH development packages / Cordis | 0.2.1-rc.5 / 4.0.5, pinned development dependencies |
+| Python | 3.12.14, `.tools/python` and `.venv` |
+| uv | 0.12.5, existing installation reused |
+| Swift / Apple developer tools | 6.4 / `/Library/Developer/CommandLineTools`, existing installation reused |
 
-The connector had no project-creation operation and computer use could not
-operate Codex itself. A later project-list read nevertheless confirmed the
-requested project with the correct repository path and Git-repository status.
-This record does not attribute the registration to an unobserved action.
+Use `source ./scripts/env.sh` in the current shell. Bootstrap did not replace
+global tools or run upstream lifecycle hooks. Framework, gateway and memory
+provider dependencies require their own selection; source downloads do not install them.
+The development SDK version is distinct from the installed DSH app version.
 
-## Installed Or Reused Tools
+## Restore When Needed
 
-| Tool | Version / location | Treatment |
-| --- | --- | --- |
-| Node.js | 24.21.0, `.tools/node` | Project-local official distribution; SHA-256 checked |
-| pnpm | 11.25.0, `.tools/pnpm` | Project-local installation |
-| TypeScript | 5.9.3 | Pinned development dependency |
-| Node types | 24.10.0 | Pinned development dependency |
-| DSH development packages | 0.2.1-rc.5 | Agent, session, tools, system-prompt; pinned |
-| Cordis | 4.0.5 | Pinned development dependency |
-| Python | 3.12.14, `.tools/python` and `.venv` | Project-local managed runtime and environment |
-| uv | 0.12.5 | Existing installation reused |
-| Swift | 6.4 | Existing Apple toolchain reused |
-| Apple developer tools | `/Library/Developer/CommandLineTools` | Existing installation reused |
+From the repository root on the selected Apple Silicon Mac:
 
-Global Node/Python/pnpm selections, the installed DSH app, its profiles and
-plugins were not replaced or enabled. No QQ/Bilibili login, external message or
-upstream build/install hook was performed. Install used `--ignore-scripts`.
-The pnpm lockfile records the resolved development dependency graph.
+```sh
+python3 scripts/setup-runtime.py
+source ./scripts/env.sh
+pnpm install --frozen-lockfile --ignore-scripts
+python scripts/fetch-references.py
+pnpm run check:env
+```
 
-## Reference Library
+These are restoration operations, not a routine startup checklist. For deliberate
+dependency changes, update the lockfile with `pnpm install --ignore-scripts`.
+Native lifecycle hooks require a specific decision.
 
-All **32/32** repository sources are present under `references/sources/`.
-See [the local index](../references/INDEX.md) and
-[manifest](../references/manifest.json). The initial nine shallow Git checkouts
-were retained; the remaining 23 use official GitHub commit-pinned archives after
-clone timeouts/DNS failures. Old failures and partial data are retained under the
-ignored `.cache` directory. Owned timed-out Git processes were stopped.
+## Reference Library And Caches
 
-The deeply inspected projects retain their studied commits; other sources freeze
-the commit resolved during preparation. Original licenses/notices stay in source
-folders. Git LFS payloads and submodule dependencies were not fetched. No source
-for the Bilibili whitepaper was established; its article reference stays in the
-planning study. Source availability does not establish execution compatibility.
+The [index](../references/INDEX.md) and [manifest](../references/manifest.json)
+record 32 pinned sources: nine shallow Git checkouts and 23 official GitHub
+commit archives. Preserve commit identities and licenses. LFS payloads and
+submodule dependencies were not fetched; no source for the Bilibili whitepaper
+was established. Read/adapt reference code without running its setup/build hooks.
 
-## Verification Actually Performed
+`references/sources/`, `.tools/`, `.venv/`, `node_modules/`, `dist/` and `.cache/`
+are ignored local assets. Cached reference archives support checksum verification;
+installation archives/metadata may be referenced by the installed profile. Failed
+reference downloads/partials and compiler/package caches have separate purposes.
+Inspect use before removing a cache; do not delete the whole tree as routine cleanup.
 
-- Official Node distribution SHA-256 verification.
-- `pnpm run check:env`: project runtime selection; Python; compiler presence;
-  actual SDK imports; all 32 Git/archive version identities and archive checksums.
-- `pnpm run check:types`: TypeScript compilation of installed SDK entry-point types.
-- Swift compiled and ran `import AppKit` successfully (`APPKIT_OK`).
-- Project Python imported SQLite and TLS successfully; SQLite 3.53.1.
-- Repository-owned JavaScript/Python syntax, documentation links, Git scope and
-  whitespace inspection.
+## Preparation Evidence
 
-These checks do not exercise a DSH plugin, pet window, memory lifecycle, QQ
-transport or Bilibili activity. Archive verification validates its cached package
-and marker, not an adversarial integrity audit of every extracted working file.
+The setup record observed official Node checksum verification, SDK imports,
+reference identities/checksums, TypeScript checks, `APPKIT_OK`, Python SQLite/TLS
+imports (SQLite 3.53.1), script syntax, documentation links and Git scope checks.
+Archive checks verify cached bytes/markers, not every extracted file. None of
+these checks establishes desktop UX, memory quality or QQ/Bilibili operation.
+Later Core implementation/evidence belongs to [the runtime record](core-runtime.md).
 
-## Current Boundary
-
-The product's business modules are not implemented yet. Following the setup,
-complete planning and type-only interfaces were added under
-[`src/contracts/`](../src/contracts/index.ts), with
-[public semantics](planning/module-contracts.md) and
-[development sequencing](planning/development-plan.md). This does not activate
-plugins or choose a provider. Mac UI framework, memory provider, native DSH
-bindings and account integration remain unverified choices. The repository and
-basic toolchain are prepared for the next bounded work package.
-
-Contract 0.2 additionally reserves source/view eligibility, immutable delivery
-targets and Core-owned resource/maintenance ports. Their type checks run locally;
-no schema migration, storage service, provider activation or account change was
-performed to reserve them.
+Repository path: `/Users/hy-yin/Developer/Codex Repo/Codex-Pet`. The original
+setup recorded local `main` with no remote/publication and Codex project ID
+`487765b7-a121-416a-9535-8a7a5bfff3a3`; refresh Git/project state when relevant.

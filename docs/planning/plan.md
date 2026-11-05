@@ -1,10 +1,10 @@
 # Project Plan: DeepSeek Harness Dafeiyu
 
 - Project ID: `dsh-dafeiyu`
-- Revision: v0.9 — reviewed source, view, delivery, resource and maintenance boundaries
-- Prepared: 2026-11-04, Asia/Ho_Chi_Minh
-- Status: Overall-design proposal; implementation and acceptance remain open
-- Current work: Plan the complete product and maintain module interface skeletons; business implementations may be deferred.
+- Revision: v0.13 — Core continuous conversation/matter flow implemented
+- Prepared: 2026-11-04; updated 2026-11-05, Asia/Ho_Chi_Minh
+- Status: Retained product scope and design proposals; previous Core evidence is not architecture/product acceptance.
+- Execution status and reconstruction direction: [current handover](../handover/README.md). This plan owns product decisions, not the active task.
 - Continuity: This plan, [module design](modular-design.md), [module contracts](module-contracts.md), [development plan](development-plan.md), and [reference study](reference-study.md).
 - Retained source baseline: [v0.7 snapshot](snapshots/plan-v0.7.md), with earlier revisions retained under `snapshots/`.
 
@@ -47,7 +47,7 @@ connect companionship, useful help and autonomous life.
 | heartbeat's silent signal checks; speak-up's native follow-up | Cheap local checks offer opportunities to one coordinator; meaningful context opens an Agent turn | A random wake-up is not a motive; a heartbeat task snapshot is not a durable commitment store. |
 | bili-subagent's internal reading reports; whale/pond's personal experience; retrieval tools' source coverage | Tools gather evidence, optional workers read bounded material, the companion interprets and chooses whether to share | No parallel persona, independent timer or automatically published report. |
 | QQ link/bridge/dot routing and delivery patterns | Explicit owner binding, incoming-message dedupe and durable outgoing delivery state | Gateway acceptance is not proof that the user read a message; unknown outcomes require reconciliation. |
-| AIRI's body/audio/domain separation; MaiBot's social-presence direction | Keep embodied expression extensible and allow natural silence | Voice, Live2D/3D, group social life and a second Agent platform are not selected scope. |
+| AIRI's body/audio/domain separation; MaiBot's social-presence direction | Keep embodied expression extensible and allow natural silence | Voice now has a shared module discussion. Live2D/3D, group social life and a second Agent platform remain unselected. |
 | Mnemosyne 2.0's evidence, temporal claims, derivation and feedback boundaries | Preserve changing state and invalidate dependent conclusions when their sources change | Saving, ranking, repeating or liking a memory does not verify it. Its full cognitive rule engine is not our companion's semantic planner. |
 | dsh-world's home, self-scheduled next step and daily review | Let the companion propose its own next activity/check-in; the common coordinator validates and schedules it | A scheduled wake is neither work completed nor user speech. Keep program-enforced limits rather than copy its advisory daily-budget reminder. |
 
@@ -89,6 +89,34 @@ Private-assistant duties still need concrete user scenarios. Proposed examples
 are remembering agreements, helping organize information, and following up an
 explicitly assigned matter. We should define those alongside companionship,
 rather than claim that browsing and casual chat alone establish assistant value.
+
+## Core And Unified Console
+
+The user agreed to develop a unified Pet workbench alongside Core and requested
+its implementation proposal in the repository, without business code. Console
+remains the presentation/operation module; Core owns common identity/policy,
+coordination, resources and maintenance, while each module owns its settings
+and state. One workbench can expose all eight modules without loading absent
+providers or creating another administration runtime.
+
+The [Core/Console implementation plan](core-console-implementation.md) records
+ten Core responsibilities, workbench areas, module/service connections, source
+treatments, C0–C3 packages and planned CC acceptance cases. Mechanism/library
+choices, native bindings and detailed interface changes remain reviewable.
+No provider activation, live test, code or type change follows from saving it.
+The later request, “可以，那我们先做Core”, starts Core implementation first.
+[Core runtime](../core-runtime.md) records delivered behavior and bounded native
+checks; Console and the complete workbench remain pending.
+
+## Shared Voice Module
+
+The user confirmed Voice as the eighth independent business module, shared by
+Desktop and QQ. The [Voice discussion](voice.md) proposes expected effects,
+interaction modes and cases; the reference study owns source evidence.
+Engine, voice identity, languages, turn-taking, automatic playback and release
+timing remain open. Discuss these before drafting detailed Voice types or
+implementing providers. Contract 0.2 skeletons cover seven baseline modules;
+complete interface coverage for Voice remains an explicit Stage 0 gap.
 
 ## Intended Experience
 
@@ -152,6 +180,9 @@ flowchart TB
   Core --> Life[One activity and contact coordinator]
   Life --> DSH
   Runs <--> Bili[Established Bilibili connector]
+  Core <--> Voice[Shared Voice capability]
+  Voice <--> Desktop
+  Voice <--> Channels
   Core --> Body[Local body and animation engine]
   Body --> Desktop
   Body --> Room
@@ -165,15 +196,16 @@ flowchart TB
 | Life and attention | Select and coordinate activities, rest, user priority, contact and shared budgets | Borrow existing purpose/activity patterns; avoid independent timers that bypass common controls. |
 | Channel adapters | QQ identity mapping, message provenance, receipts and reply routing | OneBot/NapCat supplies ordinary-account transport. No new QQ protocol. |
 | Desktop and life view | Visible state, chat input, focus/quiet controls, playback and reconnect behavior | Native Mac windowing or a mature desktop framework; no second model client in the UI. |
+| Shared voice | Recognition/synthesis, voice profile and bounded audio-job state | Desktop owns capture/playback; QQ owns media transport; Core owns conversation, admission and artifacts. Reuse engines behind adapters. |
 | Virtual body | Validate/execute bounded actions, movement, animation and completed-action receipts | Local engine handles continuous motion; model calls only when a consequential choice needs one. |
 | Maintenance | One coherent installation, settings entry, health view, backup/export and recovery | Dependencies have explicit versions and data ownership; no promise that source control alone backs up live data. |
 
 These responsibilities do not imply separate services or one directory per row.
 The recommended carrier is one DSH bundle with multiple addressable Cordis plugin
 entries, supervising one Mac helper. The [module design](modular-design.md)
-defines the proposed Core, Memory, Life, Desktop, QQ, Bilibili and console
+defines Core, Memory, Life, Desktop, QQ, Bilibili, Voice and console
 responsibilities, acyclic service dependencies, data owners and stop/upgrade
-contracts. A shared contracts library is not another running plugin. Initial
+contracts. A shared contracts library is not another running plugin. Selected initial
 modules release together; later independent packaging needs a concrete reason.
 Separating another always-on assistant
 backend is not justified by the selected DSH-dependent lifetime at present.
@@ -473,7 +505,9 @@ and failure. A local timeout may follow a successful send; reconcile using the
 gateway's available receipts/history instead of blind retries. A proactive share
 has one identity across channels so changing focus or reconnecting cannot create
 a second copy. Starting with ordinary text keeps account continuity testable;
-voice and richer media remain extensions of the same message contract.
+voice will use the shared Voice module with the same conversation/delivery
+identity. QQ audio acquisition/format support remains unverified; QQ live calls
+are not implied.
 
 Each persisted delivery target fixes the Core binding ID/revision, channel/scene,
 transport account and recipient. A queued attempt cannot follow a later rebind.
@@ -550,8 +584,8 @@ Reuse host execution and mature protocol/storage/rendering components where fit
 is established. Custom development is the user's selected product direction;
 it is not justified by claiming no usable plugins exist.
 
-The target repository is now Codex-Pet; the [repository README](../../README.md)
-and [setup record](../setup.md) own current preparation status. The original
+The target repository is now Codex-Pet; the [handover](../handover/README.md)
+owns current execution status and [setup](../setup.md) owns restoration. The original
 PM Advisor planning record is retained as historical material. Current product,
 module and development records are maintained here; no other repository or
 reusable Skill is changed to encode this project's decisions.
@@ -560,8 +594,9 @@ Complete planning covers later implementation slices as well as the first flow.
 Room integration is specified as an optional Desktop sub-capability now, with
 implementation and release timing still open. All candidate assistance cases
 share a defined commitment boundary. Selecting one first does not remove the
-other contracts. Unselected voice/media and additional channels retain explicit
-extension seams without becoming selected product requirements.
+other contracts. Voice is a confirmed shared module; its experience and public
+protocol need discussion before implementation. Other unselected media and
+additional channels retain extension seams.
 
 ## Delivery And Evidence Proposal
 
@@ -574,7 +609,7 @@ attention controls. A desktop-only chat demo cannot establish that release.
 
 | Stage | Reviewable result | Acceptance evidence and stop conditions |
 | --- | --- | --- |
-| Design contracts | Complete module catalogue; public identity, memory, activity/receipt, channel, helper and maintenance contracts; type-only interface skeletons | Every planned capability has an integration/absence contract, including deferred modules. User reviews the whole experience. Unresolved host/provider bindings keep dependent implementation provisional. |
+| Design contracts | Complete module catalogue; public identity, memory, activity/receipt, channel, helper and maintenance contracts; type-only interface skeletons | Before implementation, every planned capability must have an integration/absence contract, including Voice and deferred modules. User reviews the whole experience. Unresolved host/provider bindings keep dependent implementation provisional. |
 | First coherent companion | Our core, DSH execution, desktop chat and durable identity/memory work together | Desktop chat survives compaction/restart; replacement execution session preserves the fish's identity and knowledge. A second independent pet chatbot fails this stage. |
 | Ordinary QQ continuity | Available small account and main-account friend chat bind to the same companion | Real two-way delivery, source/owner scoping, corrections across entrances, disconnect and uncertain-send recovery. User completes login/QR confirmation. |
 | Autonomous life | Our coordinator uses an established Bilibili connector and a local body/view where selected | An actual bounded activity produces provenance, a useful memory and an optional single-channel share. Room activity receipts and external activity receipts remain distinguishable. |
@@ -603,22 +638,14 @@ QQ delivery uncertainty, helper restart, multi-screen/input behavior and focus/p
 Self-checks and maintainer test counts do not provide independent evaluation or
 user acceptance. Synthetic room benchmarks do not forecast total daily model cost.
 
-## Current Evidence And Remaining Decisions
+## Evidence Ownership And Remaining Decisions
 
-The installed DSH package version was rechecked read-only on 2026-11-04:
-`/Applications/DeepSeek Harness.app` contains DSH `0.2.1-rc.5`. Its bundled
-plugin-development references were read alongside official architecture/Cordis
-documentation. The `arm64` and desktop-profile observations from earlier revisions
-remain historical. Old installed `dsh-pet`/`dsh-chatbot` and their data were not
-modified. None of these observations proves the new implementation works.
-
-The [reference study](reference-study.md) identifies pinned commits for six
-focused source studies, including the user-confirmed Mnemosyne 2.0 repository,
-other inspected documents, transfer lessons and evidence limits. That research
-belongs to the retained baseline. v0.8 adds the user's complete-planning rule,
-module contracts and type-only skeletons. v0.9 repairs the five reviewed boundary
-gaps in contract 0.2 and adds explicit acceptance cases. These revisions do not run upstream applications,
-DSH execution, account login, messages, installations or model requests.
+The [reference study](reference-study.md) owns inspected source evidence and
+transfer limits; the [manifest](../../references/manifest.json) pins local commits.
+The [runtime record](../core-runtime.md) owns the previous implementation and
+links its dated checks. Installation observations and the active reconstruction
+checkpoint belong to [the handover](../handover/README.md). Do not infer current
+deployment, model behavior or acceptance from this retained plan.
 
 The user's own-product direction, local carrier and ordinary QQ account are
 settled. Complete planning and reserved interfaces for deferred modules are
@@ -627,13 +654,7 @@ product decisions are the assistant's concrete everyday duties,
 character/relationship, whether an expanded room is wanted, contact/resource
 limits and Bilibili account setup. These do not reopen the corrected build goal.
 
-Technical decisions remain: installed DSH extension contracts, Mac shell and
-renderer, storage binding, privacy/scenario scopes and a bounded implementation
-work package. Current evidence supports this overall design proposal, not a
-deployment-ready selection of libraries or account setup. The next human decision
-is whether the proposed bundle/module boundaries, public contracts, data ownership,
-failure behavior and maintenance contracts provide the desired modular product while preserving
-the unified companion, native DSH execution, temporal memory and autonomous life.
-That content decision would not install dependencies or connect accounts.
-Business behavior remains unimplemented. The interfaces are a compile-checked
-draft, not accepted host/provider bindings or runtime proof.
+Mac rendering, eligible memory context, the full workbench/restore and provider
+joins remain unresolved product obligations. The ten Core duties and complete
+eight-module goal remain in scope; the old Core-first sequence does not authorize
+resuming that implementation during reconstruction.

@@ -1,7 +1,7 @@
 # Product Module Contracts
 
-- Revision: v0.2, 2026-11-04, Asia/Ho_Chi_Minh.
-- Status: Reviewable product contract draft with compile-checked type skeletons.
+- Revision: v0.3, updated 2026-11-05, Asia/Ho_Chi_Minh.
+- Status: Contract 0.3 adds Core turn/progress reads and direct-dialogue semantics; Voice IDs are reserved, detailed Voice port pending.
 - Confirmed requirement: Plan the whole product and all module boundaries now;
   module implementation may be deferred, but its integration contract must exist.
 - Type entry point: [src/contracts/index.ts](../../src/contracts/index.ts).
@@ -11,6 +11,15 @@ This file owns public operation semantics and deferred-module integration.
 [development plan](development-plan.md) owns implementation order. Types contain
 no provider implementations, SDK bindings, storage, renderer or model client.
 Their existence and compilation do not establish runtime enforcement.
+
+The [Core/Console implementation proposal](core-console-implementation.md) maps
+these ports to ten Core duties, the unified owner-delegated workbench and
+planned C0–C3/CC acceptance. [Core runtime](../core-runtime.md) records the current
+implementation subset and denial paths. Contract 0.3 retains the 0.2 boundary
+repairs, adds turn/progress reads and clarifies Core raw dialogue versus extracted
+Memory knowledge. `CONTRACT_VERSION` is shared; Voice detailed types remain pending.
+Voice and any configuration/observation gaps remain explicit C0 preparation
+work before implementation; Console stays a client of Core maintenance.
 
 ## Review Repair Coverage
 
@@ -30,8 +39,10 @@ These repairs do not mark the behavioral cases passed or independent review done
 The planning set includes every confirmed product capability, the room extension
 boundary, assistance commitments and maintenance. Choosing an initial flow only
 orders implementation. It does not defer defining the remaining interfaces.
-Voice and additional channels/renderers can use the extension boundaries below;
-their inclusion in a release remains a product choice.
+Voice is the eighth confirmed module, shared by Desktop and QQ. Its effects
+and references are being discussed before detailed protocol/type drafting;
+contract 0.3 does not yet supply its detailed port. Voice modes/release timing and additional
+channels/renderers remain open choices.
 
 | Owner / capability | Consumers and host dependencies | Interface already reserved | Implementation order / absence behavior |
 | --- | --- | --- | --- |
@@ -45,6 +56,7 @@ their inclusion in a release remains a product choice.
 | Room, Desktop sub-capability | Same Core/body identity and Desktop world writer | `RoomViewService` | Renderer/world content may be deferred; capability reports `not_implemented` |
 | QQ ordinary-account transport | Core; selected gateway and explicit owner binding | `QQService`, `ChannelTransport` | May be deferred; no QQ dependency imported by Core and no replacement channel send |
 | Bilibili content access | Core admission; selected read connector | `BilibiliService` | May be deferred; exploration waits or another admitted activity/rest is chosen |
+| Voice (new planning scope) | Core; Desktop/QQ consume the same optional speech capability | Detailed port/types pending; see [Voice discussion](voice.md) | Absent/disabled Voice leaves healthy text functions available; no provider selected |
 | DSH console | Core application ports; trusted host configuration | `ConsoleService` | Presentation/configuration facade; does not own resource or restore transactions |
 | Shared support | Each module; no implementation dependencies | `ModulePort`, `ProductEvent`, common DTOs | Type-only library, not a running module or loader |
 
@@ -126,6 +138,7 @@ Sources: [core.ts](../../src/contracts/core.ts),
 | `getIdentity`, `reviseIdentity` | Scope / expected revision and editable character → stable identity | Owner-controlled character changes; no new companion on session replacement |
 | `bindChannel`, `listChannelBindings`, `revokeChannelBinding` | Trusted pairing proof, transport/account association and revision → canonical owner/channel binding | Core alone owns relationship mapping; channel-local connection records reference this binding |
 | `receiveMessage`, `listConversation` | Attributed channel message / bounded cursor → accepted input / presented history | Validate owner, dedupe original message, serialize state-changing owner turns; internal reports remain separate |
+| `getConversationTurn`, `listCommitmentProgress` | Activity / matter ID and cursor → final reply, related state and durable progress | Eligibility applies; pending reply is not gateway confirmation |
 | `recordSource`, `getSource` | Immutable attributed evidence / processing or owner-audit query → raw evidence | Core owns original product input/action records; same ID with different evidence is a conflict; normal recall cannot bypass Memory through raw-source access |
 | `createCommitment`, `reviseCommitment`, `listCommitments` | Requested outcome, sources, progress and revision → durable matters | Covers agreements, comparisons and follow-ups; completion needs result evidence, independently of run completion |
 | `admitActivity`, `getActivity`, `cancelActivity`, `reportActivity` | Proposal / stable activity and admission revision / receipt → actual state | Sole permission/resource/priority gate; reports only from admitted originating capability |
@@ -135,16 +148,22 @@ Sources: [core.ts](../../src/contracts/core.ts),
 
 An admission reference must be checked against stored scope, provider, policy,
 revision and current stop state. Supplying the reference is not authorization.
-Core's conversation record owns what reached the owner; DSH owns its native logs.
+Core owns generated/presented records and delivery associations; DSH owns native
+logs. Generating a reply is not external delivery or proof that the owner read it.
 Default replies use the originating channel. Queueing work and committing its
 source/outbox intent precede dispatch; cross-store processing is reconciled.
 Exact installed service keys and host cancellation guarantees remain V1 work.
 
-Conversation presentation uses the same eligibility gate as Life views. History
-and `conversation.presented` entries carry their memory stamp; an ineligible or
-unverifiable derived entry is a `withheld` record with empty parts, not a stale
-text preview. Core retains original history for separately authorized audit;
-retention does not authorize automatic redisplay or model-context reinjection.
+Direct authenticated dialogue/current matters are Core-owned and can support
+bounded continuity before extracted Memory exists. Source lineage is retained.
+Once a trusted eligibility provider is registered, its loss stays blocked across
+restart; tool reads expand the checked dependencies. This is not a replacement
+Bank or acceptance of the full cross-process Memory lease protocol.
+
+Memory-derived conversation uses the same view/use gate as Life and carries its
+stamp. Ineligible or unverifiable history is withheld with empty parts. Privileged
+audit retention does not authorize ordinary redisplay. See the implemented
+[conversation flow and limits](../core-conversation.md).
 
 `ExecutionBinding.memoryContext` retains the lineage of memory already projected
 into native history. A new turn's memory stamp covers both that lineage and new
@@ -204,7 +223,7 @@ dependency closure, so unrelated updates do not hide unaffected valid memory.
 Record/inspection/commit results carry their observed fence; a consumer cannot
 attach an old record to a separately fetched new epoch and call it current.
 
-Every derived context, message, life entry and artifact carries a `MemoryViewStamp`
+Every Memory-derived context, message, life entry and artifact carries a `MemoryViewStamp`
 binding exact material to versioned source/memory dependencies. The trusted view
 builder includes transitive source roots, native-context lineage and referenced
 artifact dependencies. Memory expands/checks the closure; a caller cannot omit
@@ -421,12 +440,27 @@ cursor and correlation through record IDs. Receiving an event does not commit
 the underlying operation; reconnect reads the owning snapshot/history. Memory
 event consumers use the Memory view/use protocol even if events were lost.
 
+## Shared Voice: Protocol Planning Gap
+
+Voice is a confirmed module. Define recognition, synthesis, readiness/profile,
+inspect/cancel and maintenance operations after outcome/reference discussion.
+Bind source or reply identity, scope, selected provider/profile revision and
+resources, with limits, duplicate handling and actual stop outcomes. Recognition
+does not itself submit owner input; synthesis does not itself play or send.
+Core owns conversation/admission/delivery; Desktop owns capture/playback; QQ
+owns bound media transport. Derived audio retains Memory dependency/use checks
+through ordinary replay and disclosure.
+
+Voice service types, ModuleId/CapabilityId additions, events and compile
+examples remain required Stage 0 work. They are not added to src/contracts in
+this discussion. Existing 0.2 checks cannot close the gap. See [Voice discussion](voice.md).
+
 ## Extension Slots And Integration Gate
 
 | Deferred or future capability | Reserved boundary | What stays owned by existing modules |
 | --- | --- | --- |
 | Full room renderer/world content | `desktop.room`, `RoomViewService`, body command and receipt | Core admission, Desktop world state, Memory provenance and Life planning |
-| Voice or rich media, if selected | `MessagePart`/Core resources, channel and presentation ports | One conversation/delivery identity, bound target and scoped artifact access |
+| Other rich media, if selected | `MessagePart`/Core resources, channel and presentation ports | One conversation/delivery identity, bound target and scoped artifact access |
 | Another channel or content source, if selected | Transport/evidence shapes plus a reviewed new capability ID | Core owner scope, routing/dispatch, common memory and shared resources |
 | Another memory provider | `MemoryService`, source versions, epochs, view leases and withdrawal guards | Memory semantics and migration obligations; never concurrent writers on one Bank |
 | Another shell/renderer | Desktop snapshot/body/room interfaces | Stable companion and history, configured lifecycle and host execution |

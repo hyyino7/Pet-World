@@ -1,0 +1,64 @@
+{
+  "check": "desktop-workspace-native-conversation",
+  "checkedAt": "2026-11-05T11:10:15.273Z",
+  "dshVersion": "0.2.2-rc.1",
+  "preset": "standard",
+  "companionModeDeclared": false,
+  "workspace": "Deepseek-Test",
+  "sessionId": "session-e89fae40-a274-46e4-be16-05752d0b1698",
+  "coreTools": [
+    "pet_matter_create",
+    "pet_matter_finish",
+    "pet_matter_list",
+    "pet_matter_progress",
+    "pet_matter_read",
+    "pet_matter_update"
+  ],
+  "toolResults": [
+    {
+      "isError": false
+    },
+    {
+      "isError": false
+    },
+    {
+      "isError": false
+    },
+    {
+      "isError": false
+    }
+  ],
+  "mainTurns": 1,
+  "modelSteps": 5,
+  "nativeTitleRequests": 1,
+  "turnEnd": [
+    "completed"
+  ],
+  "coreMatterState": "completed",
+  "coreProgressKinds": [
+    "created",
+    "progress",
+    "result"
+  ],
+  "repoStateProjectionChecked": true,
+  "realModel": true,
+  "wholeCoreAccepted": false,
+  "toolCalls": [
+    {
+      "id": "call_00_J96bvfMlIjHSv2Y78LCK2406",
+      "name": "pet_matter_list"
+    },
+    {
+      "id": "call_00_k3m6uXGPwIlq1pQIyMxn9145",
+      "name": "pet_matter_create"
+    },
+    {
+      "id": "call_00_EZ1HbrIoPkCLoxH2Rm6l5047",
+      "name": "pet_matter_progress"
+    },
+    {
+      "id": "call_00_ET_nVxRPd5YSxATigl4ZNZB1361",
+      "name": "pet_matter_finish"
+    }
+  ]
+}

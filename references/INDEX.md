@@ -2,6 +2,9 @@
 
 All 32 requested upstream repositories are available locally. These are source references, not activated plugins.
 
+See the [module/integration map](../docs/planning/reference-module-map.md) for
+per-project transfer judgments and selected source-level connection evidence.
+
 | Repository | Local entry point | Commit | Format |
 | --- | --- | --- | --- |
 | [2332239652/dsh-bilibili-retrieval](https://github.com/2332239652/dsh-bilibili-retrieval) | [source](sources/2332239652/dsh-bilibili-retrieval/README.md) | `5ffb27e040dc0e5d5461d6df913226a22b06aa9a` | git |

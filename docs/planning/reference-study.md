@@ -1,9 +1,16 @@
 # Dafeiyu Reference Study
 
-Date: 2026-11-04, Asia/Ho_Chi_Minh.
-Revision: v0.7. Previous synthesis: [v0.6 snapshot](snapshots/reference-study-v0.6.md).
+Updated: 2026-11-05, Asia/Ho_Chi_Minh; earlier evidence dates remain as recorded.
+Revision: v0.9, adding the 32-project module/integration map. Previous synthesis: [v0.6 snapshot](snapshots/reference-study-v0.6.md).
 Scope: Inform a new DSH-backed companion product. These projects are references,
 not a proposed installation bundle or automatically accepted requirements.
+
+The [pinned module/integration map](reference-module-map.md) traverses all 32
+local references against Core, Memory, Life, Desktop/Room, QQ, Bilibili, Voice
+and Console. It distinguishes selected source evidence from documented claims,
+actual runtime connections from code lineage, and transfer proposals from
+adoption. It extends source coverage beyond the retained README pass below;
+neither pass is a full-code audit or runtime acceptance.
 
 The user named SurfCore, surfpet, dsh-dafeiyu and dsh-dafeiyu-room. The room
 project links QCYTSN/dsh-dafeiyu as its target, supporting that resolution of the
@@ -263,7 +270,7 @@ are readable views within that loop, not parallel authorities.
 | Sources | Useful strength | Our adaptation and transfer limit |
 | --- | --- | --- |
 | [dafeiyu-hub](https://github.com/yuanstarstar/dafeiyu-hub/blob/main/README.md) | Character, current plans, progress, interests, memory and unified workbench form a continuing resident | Adopt continuity of unfinished matters. Do not inherit satisfaction rewards for external actions, fixed relationship arithmetic, live-streaming features or session fallback. |
-| [dsh-dafeiyu-dot](https://github.com/wz20/dsh-dafeiyu-dot/blob/main/README.md) | Role, memory, native DSH owner conversation, QQ, settings and recovery are connected | Adopt one operating experience and explicit message outcomes. A DSH-window widget does not establish an independent Mac desktop client; voice is optional for us. |
+| [dsh-dafeiyu-dot](https://github.com/wz20/dsh-dafeiyu-dot/blob/main/README.md) | Role, memory, native DSH owner conversation, QQ, settings and recovery are connected | Adopt one operating experience and explicit message outcomes. A DSH-window widget does not establish an independent Mac desktop client; Voice is now a confirmed shared module; its modes remain open. |
 | [dafeiyu-astrbot](https://github.com/whyever77/dafeiyu-astrbot/blob/main/README.md), [AstrBot](https://github.com/AstrBotDevs/AstrBot/blob/master/README.md) | An IM companion can combine longer-term projects, source-backed experience, life decisions and contact coordination | Learn from those seams without introducing another model/platform runtime alongside DSH. The life-decision source distinguishes a completed Agent run from a completed goal. Many reported extensions still lack real long-term/model/QQ acceptance. |
 | [dsh-pet](https://github.com/PC2005-cloud/dsh-pet/blob/main/README.md), [fish-buddy](https://github.com/Yuuyuko-uu/dsh-fish-buddy/blob/main/README.md) | Existing animated fish and asset pipeline; desktop input can be bound to a native DSH session | Borrow interaction/asset packaging and the native input path. The pet's separate model/history path is not our initial chat design; fish-buddy's screenshots/game/voice scope and platform packaging are not requirements. |
 | [dsh-pet-indesktop](https://github.com/MerZlin/dsh-pet-indesktop/blob/main/README.md) | Standalone PySide6 pet, tray, transparent windows and packaging; README discusses display/DPI faults and distinguishes unresolved issues | Use its operational lessons and display cases. Cross-platform claims and provided packages are not our Mac test results; a separate AI chat configuration would duplicate our core. |
@@ -345,6 +352,11 @@ test continuity; group and public social behavior need a separate product choice
 
 ## Evidence Coverage For The Wider Set
 
+The following table retains the earlier README/blob study. The 2026-11-05
+[module/integration map](reference-module-map.md) adds selected source reads at
+the local manifest commits without reclassifying every historical README claim
+as verified behavior.
+
 The original four focused studies and the two v0.6 additions retain
 commit-pinned selected-source evidence above.
 For the wider set, this revision refreshed the default-branch README documents
@@ -392,6 +404,33 @@ No reference was installed or run for this synthesis. Licensing/asset observatio
 in the focused study do not extend automatically to the wider set. Reusing a
 specific component requires checking its exact version, license, dependencies,
 data behavior and host contract at adoption time.
+
+## Voice: Shared Desktop And QQ Capability
+
+The user confirmed an independent Voice module shared by Desktop and QQ on
+2026-11-04. [Voice discussion](voice.md) owns proposed experience, mode choices
+and success/failure examples. Earlier descriptions of Voice as unselected are
+superseded for module inclusion; detailed behavior and release scope remain open.
+
+The following study reads the local versions in the manifest. For this addition,
+Git HEAD was checked for surfpet; archive source markers were checked against
+the manifest for dot, DSH, AIRI and fish-buddy. Markers establish recorded archive
+identity, not a fresh audit of every extracted byte. No upstream application,
+setup hook, tests, microphone, engine or account was activated.
+
+| Reference / fixed commit | Inspected evidence | Transfer and disposition |
+| --- | --- | --- |
+| wz20/dsh-dafeiyu-dot `ff288f57a25becfe195201b02e4fc4726ae71a5b` | `lib/speech.js`, `lib/speech-delivery.js`, selected `client.js` capture/playback/cancel paths and `lib/qq.js` delivery paths | Primary combined-capability reference. Borrow shared ASR/TTS service separation, readiness, bounded requests, cancellation and source-bound voice delivery; inspect small helpers for adaptation later. Its complete WAV synthesis and half-duplex UI do not establish full-duplex streaming. Chinese-only cleaning can drop Latin terms; preset/session gates need our Core bindings. Its separate tool-free emotion LLM pass adds cost/latency and fixed tone defaults; neither is selected. QQ outgoing voice is concrete; inbound QQ audio acquisition/decoding/transcription is not established by these reads. |
+| deepseek-ai/deepseek-harness `8bd073392eef6f54e921a093b95076248eb08cbb` | `docs/subsystems/voice-input.md`, selected `packages/experimental/speech-to-text/src/index.ts` registry, resolution, withdrawal and cancellation paths | Primary native recognition/lifecycle reference. Use supported services where the installed version fits; pin provider selection and expose preparation/readiness. Recognition and Agent submission have distinct owners. Experimental public-source contracts are not verified installed bindings, a TTS service or a complete voice conversation engine. No recognizer/model selected. |
+| Mieksido/surfpet `d825d236a2afb760c15b9332eee3a8ccad1958a4` | `src/main/chat-host.ts` dialog/bubble ownership and `chat:audio-start` / `bubble:audio-start` paths | Borrow one intended local playback owner, text/voice presentation and reply correlation. Adapt only if the chosen Mac shell fits. Electron IPC, media URL handling and its separate pet-chat history are not adopted. |
+| moeru-ai/airi `5951e0a7a94589097521a56e328359b5d1675a9e` | `packages/pipelines-audio/src/audio-input.ts` source/connection contract and selected helpers; `playback.ts` driver, group, clip and receipt contracts | Secondary audio-pipeline reference. Borrow connection-scoped buffers, group/clip cancellation, platform-owned output and explicit rendered-audio receipts. Inspect selective reuse only after shell and dependency fit; no whole AIRI runtime. Rendered samples do not prove hearing or exact spoken-word completion. These selected contracts do not establish echo cancellation or natural interruption on our Mac. |
+| Yuuyuko-uu/dsh-fish-buddy `a102f7262da4689639dfa57ce2759b5c2ec63fe9` | `app/hands/voice.py` local recognizer, VAD, device capture, text substitution and log bridge | Secondary local-input comparison. Borrow VAD/device cases; avoid importing another recognition worker when native DSH already meets the need. Its fixed language, hotword substitutions and append-to-log bridge are not our semantic correction or accepted-input protocol. sherpa-onnx/Silero, Python audio dependencies and model assets are not selected. |
+
+The manifest records license notices for all five entries; dot and official DSH
+also include third-party notices. Review exact code, dependency and model/voice
+asset terms before any reuse. Reading code does not select its provider or assets.
+No Voice code was copied. SurfCore remains relevant to common coordination;
+its entire voice/bridge stack was not audited for this focused addition.
 
 ## Native DSH Module And Packaging Evidence
 

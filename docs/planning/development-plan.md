@@ -1,12 +1,12 @@
 # Codex-Pet Development Plan
 
-- Revision: v0.3.
-- Prepared: 2026-11-04, Asia/Ho_Chi_Minh.
-- Status: Complete planning and type-only interfaces; business implementation and runtime validation pending.
-- Authorization: The user requested a development outline, then asked us to draft
-  the proposed Stage 0 package, then required full planning and reserved module
-  interfaces even where module development is deferred.
-- Current stage: Stage 0, pending review and resolution of the choices below.
+- Revision: v0.7.
+- Prepared: 2026-11-04; updated 2026-11-05, Asia/Ho_Chi_Minh.
+- Status: Retained development proposal; reconstructing the product may replace
+  this sequence. [The handover](../handover/README.md) owns the active task.
+- Requirement: Complete planning and reserved interfaces include deferred modules.
+- Previous checkpoint: Core work crossed selected C0/C1/C2/C3 seams without closing
+  those packages. [Runtime/evidence](../core-runtime.md) owns its coverage.
 
 ## Purpose And Source Ownership
 
@@ -18,11 +18,12 @@ technical choices have been accepted.
 | Source | Responsibility |
 | --- | --- |
 | [Repository README](../../README.md) and [setup record](../setup.md) | Current preparation and environment status |
-| [Product plan v0.9](plan.md) | Confirmed product outcome, reviewed boundary repairs and open product choices |
-| [Module design v0.3](modular-design.md) | Module dependencies, sole writers, Core resource/maintenance facets and lifecycle contracts |
+| [Product plan v0.13](plan.md) | Confirmed product outcome, reviewed boundary repairs and open product choices |
+| [Module design v0.7](modular-design.md) | Module dependencies, sole writers, Core resource/maintenance facets and lifecycle contracts |
 | [Module contracts](module-contracts.md) and [type skeletons](../../src/contracts/index.ts) | Complete public interfaces, absence/compatibility semantics and deferred-module integration |
 | [Reference study](reference-study.md) and [source manifest](../../references/manifest.json) | Research applicability and exact local source identities |
 | [Current handover](../handover/README.md) | Work checkpoint, uncommitted scene and restart action |
+| [Core/Console implementation plan](core-console-implementation.md) | Detailed scope, workbench, references, connections, C0–C3 and CC acceptance |
 
 The target repository now exists at the path in the repository README. Statements
 about an unchosen destination in the retained baseline describe its earlier
@@ -44,16 +45,19 @@ Deliver a locally running DSH-backed companion with one continuing identity:
 The intermediate milestones accumulate toward this release. A milestone's
 limited interface does not remove the remaining product goals.
 
-Planning covers every module now. Each has operations, data ownership,
-dependencies, absence behavior and an integration gate in the module contracts.
+Planning covers all eight modules. Seven baseline modules have operations,
+owned state, absence behavior and type skeletons. Shared Voice is in
+outcome/reference discussion; detailed contracts/types remain a Stage 0 gap
+before implementation.
 Implementation scheduling may defer a provider; its interface and planned
 responsibility remain in scope. No deferred module is considered ready.
 
 Propose compact recent-life presentation for the first release. The expanded
 room interface is planned now as a Desktop sub-capability; its renderer/content
 implementation and release timing remain open. Autonomous life remains in scope
-with either choice. Voice, public/group social behavior, mobile access
-and server hosting stay outside the currently selected first-release scope.
+with either choice. Voice is now in complete planning, shared by Desktop and
+QQ; its modes and release timing remain open in [Voice discussion](voice.md).
+Public/group social behavior, mobile access and server hosting remain unselected.
 
 ## Everyday Experience To Review
 
@@ -136,7 +140,8 @@ UI and console changes invoke the same application operations as tools.
 
 The families below are specified by [module-contracts.md](module-contracts.md)
 and `src/contracts/`. Installed SDK inspection verifies their host mappings; it
-does not postpone the public contract of a deferred module.
+does not postpone the public contract of a deferred module. The newly added
+Voice family still needs detailed types after outcome/reference discussion.
 
 | Interface family | Contract questions to settle |
 | --- | --- |
@@ -146,6 +151,7 @@ does not postpone the public contract of a deferred module.
 | Activity proposal, admission and receipt | Ownership, available capability, stopping condition, checkpoint and restart reconciliation |
 | Contact intent and transport outcome | Eligible channel, stable intent ID, attempted send, confirmed/unknown/failed result and recovery |
 | Helper command, receipt and snapshot | Protocol version, boot identity, reconnect state, started/completed distinction and process lifetime |
+| Shared voice (types pending) | Source-bound recognition, reply-bound synthesis, provider/profile revision, audio format, cancellation, playback versus send outcomes, eligible cached audio and text-only degradation |
 | Configuration and health | Available capability, effective settings, incompatibility and concise failure/waiting reasons |
 
 All families need explicit input/result/error, scope, compatibility and
@@ -206,19 +212,26 @@ an identified gap and record exact tested versions.
 
 ## Development Sequence
 
-All stages below are proposed. Complete planning and interface skeletons are the
-current authorized work. No business module, account connection or live probe
-has been implemented or executed for it.
+The table retains the earlier proposed sequence. The previous Core-first batch
+and its [checks](../core-runtime.md) did not close a whole stage. Deployment and
+active work belong to [the handover](../handover/README.md), not this stage table.
 
 | Stage | Work package and reviewable result | Exit condition |
 | --- | --- | --- |
-| 0: Overall design and interfaces | Complete flows and module catalogue, public type contracts, deferred-provider behavior, choices, validation and release cases | Every planned module has a concrete contract now; record reviewed direction and choices needing Stage 1 evidence |
+| 0: Overall design and interfaces | Complete flows and module catalogue, public type contracts, deferred-provider behavior, choices, validation and release cases | Complete every planned module contract, including Voice after outcome discussion; record direction and choices needing Stage 1 evidence |
 | 1: Critical validation | Bounded DSH, Mac, memory/state, QQ and Bilibili probes; versioned results and component decisions | Required flows have local evidence or an explicit revised route; unresolved failures block only dependent implementation |
-| 2: Product foundation | Bundle/module lifecycle, stable identity, DSH adapter, owned persistence and durable work/receipt boundaries | Start/stop/restart preserves identity and pending work; optional dependency loss is explicit; no orphaned work |
+| 2: Product foundation | Core/Console C1–C3 as dependencies allow: native lifecycle, identity/execution, durable coordination/resources/maintenance and growing workbench | Start/stop/restart preserves identity and pending work; optional dependency loss is explicit; no orphaned work |
 | 3: Desktop and memory | Fish/chat, native turns, recall, correction/forgetting and one selected assistance flow | Continued conversation survives rebind/restart; useful assignment result and memory changes remain inspectable |
 | 4: QQ continuity | Owner binding, two-way text, cross-channel continuity and transport recovery | Actual owner exchange, dedupe and correction work across entrances; uncertain send is handled without duplicate intent |
 | 5: Autonomous life | Pursuit/check-in, real bounded Bilibili activity, evidence ingestion, optional share and control policies | Interruption, quiet/pause, resource exhaustion and restart preserve truthful activity and memory state |
-| 6: Daily use and maintenance | Unified settings/health, installation artifacts, export/backup/restore and normal-use observation | Release cases pass and the user assesses continuity, usefulness, life rhythm and attention burden |
+| 6: Daily use and maintenance | Integrate the workbench and Core maintenance across all implemented modules, installation artifacts and normal-use observation | Release cases pass and the user assesses continuity, usefulness, life rhythm and attention burden |
+
+The [Core/Console plan](core-console-implementation.md) maps C0 to Stage 0/1
+preparation and grows Console from C1 onward. C1–C3 are foundation packages, not
+a replacement for all eight-module release work. CC01–CC20 supplement A01–A19;
+fixture results cannot close real Memory/channel integration. V1–V6 remain
+evidence dependencies. The previous Core implementation is recorded separately
+from the earlier documentation-only proposal.
 
 Treat stop/restart, error handling, diagnostics and data recovery as part of every
 feature's completion. Stage 6 integrates their operational experience.
@@ -295,17 +308,17 @@ not establish that outcome.
 
 Review this draft in the following order:
 
-1. Review complete planning coverage and concrete interfaces for every module,
-   including room and all assistance cases; choose implementation/release order.
-2. Review the proposed carrier, module/data ownership and lifecycle boundaries
-   against the existing module design. Record amendments in their owning sources.
-3. Resolve which choices need user preference and which Stage 1 can settle with
-   evidence; set the relevant resource/contact and account-test scope.
-4. Turn V1 into the first bounded validation work package, beginning with
-   read-only installed DSH contract inspection and defining the subsequent live
-   test before execution. Keep V2–V6 visible as dependencies of the full release.
+1. Read the Core runtime record and its actual C0/C1/C2/C3 coverage before
+   continuing the authorized Core work. Preserve owner boundaries and CC gates.
+2. Resolve shared Voice outcomes, then prepare its detailed public types/events
+   and the configuration/observation gaps before dependent implementation.
+3. Retain the verified native binding/SQLite foundation. Resolve remaining
+   provider/UI bindings before dependent implementation; UI remains separate.
+4. Select the next authorized implementation/validation scope using C0–C3 and
+   V1–V6. No automatic V1 activation follows from an old restart suggestion.
 
-This task delivers complete planning and compile-checked interface skeletons.
+The earlier planning task delivered planning and compile-checked interface skeletons.
 The user's requirement to reserve interfaces is recorded as confirmed. Specific
 contract acceptance, Stage 1 execution and provider choices remain distinct from
-that requirement; no business implementation is reported complete.
+that requirement. The Core foundation is implemented, but complete Core and
+whole-product acceptance remain open.

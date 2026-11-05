@@ -1,0 +1,5 @@
+- insert:
+    - id: 00-Core
+      name: dsh-Chatpet/00-Core
+    - id: chatpet-settings
+      name: dsh-Chatpet

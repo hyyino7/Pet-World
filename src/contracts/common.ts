@@ -1,14 +1,14 @@
-/** Product contract draft 0.2. Types only; runtime validation is still required. */
-export type ContractVersion = '0.2';
+/** Product contract 0.3. Types only; services enforce runtime validation. */
+export type ContractVersion = typeof import('./version.js').CONTRACT_VERSION;
 export type Timestamp = string;
 export type Revision = number;
-export type ModuleId = 'core' | 'memory' | 'life' | 'desktop' | 'qq' | 'bilibili' | 'console';
+export type ModuleId = 'core' | 'memory' | 'life' | 'desktop' | 'qq' | 'bilibili' | 'voice' | 'console';
 export type CapabilityId =
   | 'core.conversation' | 'core.commitments' | 'core.activities' | 'core.delivery'
   | 'core.resources' | 'core.maintenance'
   | 'execution.native' | 'memory.lifecycle' | 'life.pursuits'
   | 'desktop.presentation' | 'desktop.body' | 'desktop.room'
-  | 'channel.qq' | 'content.bilibili' | 'console.operations';
+  | 'channel.qq' | 'content.bilibili' | 'voice.speech' | 'console.operations';
 
 export interface RequestContext {
   contractVersion: ContractVersion;

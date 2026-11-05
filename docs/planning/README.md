@@ -1,42 +1,31 @@
-# Planning And Development
+# Planning Index
 
-## Current Records
+This index routes design work; it is not a required reading list for every change.
+[The handover](../handover/README.md) owns current task/status. The complete product
+scope remains; existing architecture and implementation are subject to reconstruction.
 
-The user requires complete product planning and modularity. Business modules
-may be implemented later, but their public interfaces must be reserved now.
-
-| Record | Owns |
+| Subject | Owning record |
 | --- | --- |
-| [Product plan v0.9](plan.md) | Product outcome, reviewed boundary repairs and open product choices |
-| [Modular design v0.3](modular-design.md) | Module dependencies, sole writers, Core facets and lifecycle boundaries |
-| [Module contracts v0.2](module-contracts.md) | Source/view/use, immutable delivery, resource and maintenance protocols |
-| [Contract type skeletons](../../src/contracts/index.ts) | Type-only product interfaces, without provider implementations |
-| [Development plan v0.3](development-plan.md) | Implementation sequence, validation and 19 draft release cases |
-| [Reference study v0.7](reference-study.md) | Research evidence, source applicability and limitations |
+| Product outcomes, boundaries and open product choices | [Product plan](plan.md) |
+| Module dependencies, ownership and lifecycle | [Modular design](modular-design.md) |
+| Public operations and integration semantics | [Module contracts](module-contracts.md); [type skeletons](../../src/contracts/index.ts) |
+| Proposed sequence and release cases | [Development plan](development-plan.md) |
+| Ten Core duties, Console, C0–C3 and CC cases | [Core/Console proposal](core-console-implementation.md) |
+| Shared Desktop/QQ speech outcomes and open choices | [Voice discussion](voice.md) |
+| Source applicability and limitations | [Reference study](reference-study.md) |
+| 32-project module/reuse map | [Reference map](reference-module-map.md); exact commits/licenses in [manifest](../../references/manifest.json) |
 
-The complete-planning/interface requirement is confirmed. The particular
-architecture, signatures, provider selections and SDK mappings remain reviewable
-drafts; compilation does not establish runtime conformance. Accepted changes
-belong in the owning record, rather than competing copies of the same plan.
-Current preparation belongs to [the setup record](../setup.md); short-term work
-continuity belongs to [the handover](../handover/README.md).
+Complete planning and reserved interfaces are requirements; particular boundaries,
+providers and signatures remain reviewable. Contract 0.3 covers seven baseline
+ports; Voice IDs are reserved but its detailed port remains a gap. Runtime behavior
+and dated checks belong to [Core runtime](../core-runtime.md) and
+[flow/evidence](../core-conversation.md), not these proposals.
 
-The five reviewed contract gaps are addressed by product contract 0.2, including
-Core-owned resource/maintenance facets and Memory eligibility/use gates. Those
-facets do not add business plugins or mandatory dependencies. Runtime/provider
-conformance remains a later validation gate; compile-only examples do not prove it.
+## History
 
-## Retained Origins And Snapshots
-
-Original plans and research were copied from the authorized PM Advisor engagement
-on 2026-11-04, at:
-
-`/Users/hy-yin/Developer/Codex Repo/Codex-PM Advisor/projects/dsh-dafeiyu/`
-
-The current records are maintained in Codex-Pet. The original
-[plan v0.7](snapshots/plan-v0.7.md),
-[modular design v0.1](snapshots/modular-design-v0.1.md), and earlier named snapshots
-preserve their original bytes. Their relative links are interpreted from their
-original document locations; use current entry points above for navigation.
-Retained proposals and upstream feature lists do not become accepted product
-requirements merely by being copied here.
+Original planning material came from the authorized PM Advisor engagement at
+`/Users/hy-yin/Developer/Codex Repo/Codex-PM Advisor/projects/dsh-dafeiyu/` on
+2026-11-04. Named files under `snapshots/`, including [plan v0.7](snapshots/plan-v0.7.md)
+and [module design v0.1](snapshots/modular-design-v0.1.md), preserve original bytes.
+Their relative links reflect original locations; use this index for active navigation.
+Read snapshots only for a specific historical question.

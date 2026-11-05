@@ -1,128 +1,117 @@
 # Current Handover
 
-- Updated: 2026-11-04, Asia/Ho_Chi_Minh.
-- Status: Five reviewed gaps repaired in contract 0.2; final static/semantic recheck completed; business implementation pending.
-- Repository: `/Users/hy-yin/Developer/Codex Repo/Codex-Pet`.
+- Updated: 2026-11-05, Asia/Ho_Chi_Minh.
+- Status: Paused at the user's request after completing the current cleanup.
+  The user cleared the active goal. Do not continue automatically or reinstall
+  the desktop plugin; resume only when requested.
+- Latest boundary: Core governs real execution; Memory owns long-term memory;
+  Repo stores persona, user profile and configuration. The existing ledger or
+  workbench does not establish a required feature.
+- Current cleanup is source-only: STATE generation removed; new manifests use
+  five files and format 2; legacy format 1 migrates without touching or recreating
+  STATE.md. Settings no longer query the optional workbench; its unreleased tab
+  and polling are removed. Ordinary native context no longer recalls that ledger.
+  Unit/native validation is recorded in [completion](../core-completion.md).
+  The installed desktop package below remains the earlier snapshot.
+- Project direction retained from the preceding handover: complete reconstruction.
+  Existing architecture, code and passing checks are material to reassess, not
+  an accepted design or an obligation to preserve that implementation.
 
-This is the single current handover entry point. Update it when handing work to
-another chat or changing objectives, using [the template](TEMPLATE.md). Replace
-stale checkpoint details rather than creating competing current handovers.
-Historical planning snapshots remain under `../planning/snapshots/`.
+## Direction And Constraints
 
-## Read First And Record Ownership
+Keep the complete [product goals](../planning/plan.md#confirmed-outcome-and-boundaries)
+and modular, DSH-native direction. Reuse existing reference implementations;
+deliver usable conversation/matter/progress/result flows with proportionate checks.
+Production semantics must not rely on keyword classifiers or fixed sample answers.
+Plugin/package name is `dsh-Chatpet`; first component is `00-Core`, described
+as `插件核心模块`. Companion identity remains 大肥鱼. Keep README unchanged.
+Use the [naming convention](../planning/modular-design.md#naming-convention) for
+repository, native module and internal identifier roles.
+One Bundle with separate native entries is a previous recommendation to reassess.
 
-| Source | Owns |
-| --- | --- |
-| [Repository guidance](../../AGENTS.md) | Collaboration, toolchain and reference-source boundaries |
-| [Repository README](../../README.md) | Navigation and current preparation scope |
-| [Setup record](../setup.md) | Environment preparation and its verification limits |
-| [Planning entry point](../planning/README.md) and [plan](../planning/plan.md) | Product goals, proposed design and open choices |
-| [Development plan](../planning/development-plan.md) | Stage 0 review package, proposed sequence, validation and release cases |
-| [Module design](../planning/modular-design.md) | Proposed module, data and lifecycle boundaries |
-| [Module contracts](../planning/module-contracts.md) and [types](../../src/contracts/index.ts) | Public operation semantics, deferred modules and compile-time interfaces |
-| [Core resources](../../src/contracts/resources.ts) and [maintenance](../../src/contracts/maintenance.ts) | Scoped artifacts and Core-owned durable maintenance transactions |
-| [Reference study](../planning/reference-study.md) | Research evidence and applicability limits |
-| [Source index](../../references/INDEX.md) and [manifest](../../references/manifest.json) | Local upstream locations, versions and notices |
+The rejected **Core 测试** panel was removed. Do not restore it. The user has
+also explicitly rejected a separate 大肥鱼 mode: workspace binding must activate
+Core automatically in ordinary DSH sessions in that workspace. Do not add a
+companion preset or a mode-selection step. Other workspaces remain unaffected.
 
-The handover records short-term continuity; it does not replace those sources or
-accept their proposals. Update the owning document when its subject changes,
-then link it here. Treat older statements that the target repository does not
-exist as historical; use the repository README and setup record for preparation.
+## Current Installation
 
-## Goal, Current Task And Authorization
+- `dsh-Chatpet@0.0.0` replaces `codex-pet` in desktop dependencies and selected
+  bundles. Source: `.cache/install/dsh-Chatpet-local-b923611b0f85.tgz`.
+- First component: patch ID/exported plugin name `00-Core`; module specifier
+  `dsh-Chatpet/00-Core`; locale description `插件核心模块`.
+- Settings client is registered through a state-free root carrier
+  (`chatpet-settings`, package root `dsh-Chatpet`), separate from `00-Core`.
+  Open **DSH Settings → dsh-Chatpet**. Five tabs are present. Identity, quiet mode, Core execution limits and
+  workspace binding/initialization and USER profile can now be read/saved.
+  Core automatically contributes role, USER context and matter tools to ordinary
+  root sessions in the bound workspace. No companion preset is declared.
+  This installed snapshot predates the scope cleanup; optional workbench work
+  is not a Core completion gate.
+- Installed settings client/adapter and changed Core files match the verified
+  workspace/native delivery. Source cleanup now removes the unreleased workbench
+  tab, polling and initial-settings dependency; optional query code is retained.
+  No cleanup package was installed before pausing. Source also preserves stop/receipt inspection
+  when Repo files are invalid, and refuses workspace rebind during running,
+  cancelling or unknown execution. Core-owned preferences are additive; identity, model route
+  and data directory are preserved. README, existing user patch, unrelated
+  dependencies and bundle selection are unchanged.
+- Latest backup: `~/.dsh/profiles/desktop/backups/codex-pet/2026-11-05T11-08-50-963Z/`.
+- Backup: `~/.dsh/profiles/desktop/backups/codex-pet/2026-11-04T20-10-41-095Z/`.
+- Reinstallation backup: `~/.dsh/profiles/desktop/backups/codex-pet/2026-11-04T20-11-54-746Z/`.
+- Native settings reads, saves, validation and restart recovery were visually
+  checked in an isolated DSH 0.2.2-rc.1 web profile. Direct desktop validation
+  now confirms ordinary Standard-mode conversation in Deepseek-Test: one
+  real-model turn, five steps and four successful Core matter calls. SQLite
+  contains created/progress/result records and a completed matter; STATE.md
+  projects it. [Evidence](../validation/core-workspace-desktop-2026-11-05.json).
+  Full Core and user acceptance remain open.
 
-The product goal is the modular DSH-backed Mac companion described in the plan:
-one continuing identity across desktop and ordinary QQ chat, durable memory,
-useful assistance and autonomous life including Bilibili activity.
+## Previous Installation Snapshot
 
-The user requested complete planning and reserved interfaces, then authorized
-repairing all five findings from the overall review and rechecking the complete
-result. This task changes the planning records and type-only contracts, with
-compile-only examples. It does not activate business providers, run live Stage 1
-tests, select credentials/accounts or accept a particular SDK/provider binding.
+The preceding handover recorded these facts on 2026-11-05; documentation cleanup
+did not recheck the running application. The subsequent description-only update
+changed installed README/description/locales as recorded below:
 
-## Completed Work And Changed Files
+- DSH 0.2.2-rc.1; `codex-pet@0.0.0` installed/enabled in the desktop profile.
+  Dev SDK remains 0.2.1-rc.5; package declares both native versions.
+- Installed package: `~/.dsh/profiles/desktop/node_modules/codex-pet`, from
+  `.cache/install/codex-pet-local.tgz`; it is a packaged snapshot, not live source.
+- Source/installed test client, test-host adapter and test Bundle entry were removed.
+  No completed normal DSH conversation entry/preset was delivered. Ordinary chats
+  were not modified. Final UI appearance was not visually confirmed.
+- Data: `~/.dsh/codex-pet/core/` (SQLite, WAL/SHM, writer lock); writer liveness
+  is unknown because the prior process probe was denied. Historical test bindings
+  may remain. Preserve identity/data and handle the writer before replacement.
+- Description-only update: installed README is now the two-line Chinese product
+  introduction; package description and three locale files match source. Runtime
+  files and Bundle patch hashes were unchanged. Backup:
+  `~/.dsh/profiles/desktop/backups/codex-pet/description-20261104T200343834906Z/`.
+  Existing tarballs still contain the preceding README until repacked.
+- Backups: `~/.dsh/profiles/desktop/backups/codex-pet/`. Official installation
+  changed package/lock/Bundle metadata, while the existing user patch was unchanged.
+  Credentials were not edited; QQ/Bilibili accounts were not connected.
 
-- Earlier in this chat: read the repository and created this handover entry plus
-  [the reusable template](TEMPLATE.md), with a root README navigation link.
-- Updated product plan to v0.9, module design to v0.3, development plan to v0.3
-  and public contracts to v0.2. The seven business modules remain; resources and
-  maintenance are Core-owned facets, not new plugins.
-- R1: version/epoch-bound views and bounded use leases cover native context,
-  conversation history, Life views and derived artifacts. Withheld history has
-  no old text. Unknown uses are not falsely marked stopped.
-- R2: immutable attempts freeze binding revision, connection, actual account and
-  recipient; later receipts/reconciliation stay with that target.
-- R3: queryable source versions, absent-source tombstones and blocked ingestion
-  cover withdrawal before extraction without another mutable evidence authority.
-- R4: Core resource ports own bytes/catalogue/access/retention and holder references.
-- R5: Core maintenance owns durable jobs/step permits and protected control data.
-  Restore freezes writers before taking the final withdrawal guard, preserves
-  outcome ledgers and binding revision high-water marks, and rechecks readiness.
-- Extended compile-only positive/negative boundary examples and added five
-  behavioral cases A15–A19; there are now 19 draft release cases and six validation packages.
-- Preserved the prior product/module documents as byte-identical snapshots;
-  updated navigation, setup scope and repository guidance to reflect interfaces.
+## Code, Evidence And Local Assets
 
-Current work touches `AGENTS.md`, `README.md`, `docs/setup.md`, the current
-planning records, this handover, the two new snapshots, `src/contracts/` and
-`scripts/contract-types.mts`. Current repair work does not change the earlier
-handover template or historical snapshots, nor package/lockfile dependencies.
-No provider, business runtime, account connection or new dependency was added.
+[Core runtime](../core-runtime.md) owns code entries, supported behavior and limits.
+[Flow/evidence](../core-conversation.md) owns reuse, hardcoding review and dated
+behavior/native/real-model observations. These are previous author checks, not
+user acceptance or a reason to repeat paid scenarios. Full provider joins,
+normal-use integration, guarded restore and whole-product acceptance remain open.
 
-## Repository Scene And Local Assets
+Git baseline: `main`, `4ac51de265b8b4a8f8f1cafdee8ba165d99295c0`; Core work remains
+uncommitted among pre-existing modified/untracked files. Refresh Git state on resume.
+Keep `.tools/`, `.venv/`, `node_modules/`, reference sources and license records.
+Installation continuity also uses `.cache/install/installation.json`, both package
+tarballs and the prepared package; retained live evidence is linked from the flow
+record. These assets and installed data are outside the commit.
 
-Checkpoint observed on 2026-11-04 before the five-gap repairs:
+## Restart
 
-- Branch: `main`.
-- HEAD: `dd5e0773149bbe198dc86cc5dd161ceff90dd1e0` (bootstrap).
-- Index: empty. All previously drafted planning, contracts, repository guidance,
-  snapshots and handover files were already modified/untracked from this chat.
-  The repair preserves that work and adds resource/maintenance contract files.
-- No configured Git remote, as checked during the earlier scaffold task.
-- The current documentation work remains uncommitted; no staging, commit or
-  publication was performed. Re-read status for the complete pending file set.
-
-Reacquire Git state on resume; these values are dated evidence. Preserve unrelated
-changes if the working tree has since changed.
-
-The ignored `.tools/`, `.venv/`, `node_modules/`, `.cache/` and
-`references/sources/` are local assets outside the parent repository's commits.
-All 32 reference entries matched their recorded Git/archive identities during
-the earlier checks in this chat. Use the [setup record](../setup.md) and
-[reference restoration guide](../../references/README.md) if assets are missing;
-do not delete or reinstall them just to resume reading.
-
-## Verification And Limits
-
-Evidence from this chat on 2026-11-04; runtime checks used `source ./scripts/env.sh`:
-
-| Check | Result | Limit |
-| --- | --- | --- |
-| `pnpm run check:env` | Rerun for repair work; local runtimes, SDK imports and 32 source identities checked | Environment/source identity only; no product behavior |
-| `pnpm run check:types` | Passed with 0.2 contracts and repair-specific positive/negative examples | Static shape only; runtime validation, authority and provider behavior remain pending |
-| Contract structure/ownership inspection | 14 type-only files, 106 documented service operations, local acyclic imports; Core resource/maintenance ownership and Console separation rechecked | Actual Cordis activation/dependency behavior is not exercised |
-| `git diff --check`, new-file whitespace, local links and plan structure | Passed after repairs | Active documents only; excludes historical snapshot links and external URLs |
-| Historical snapshot bytes and final change scope | Checked; earlier snapshots preserved and no staging/commit | Git scene is dated; reacquire it on resume |
-
-The earlier Swift,
-SQLite and TLS checks are historical evidence in the setup record, not rerun here.
-No plugin activation, pet UI, memory lifecycle, QQ exchange or Bilibili activity
-was exercised. Reference checks do not audit every extracted archive file.
-
-## Open Questions And Blockers
-
-No blocker prevented the authorized repairs. The five findings are addressed at
-the planning/interface level. Native DSH bindings, shell, memory-provider atomic
-eligibility/use enforcement, actual transport/account behavior, persistence and
-operating limits still need evidence. A15–A19 are not passed runtime tests, and
-the recheck is an author self-review rather than independent acceptance.
-
-## Immediate Restart Action
-
-Refresh branch/HEAD/status and relevant diffs, then review the development plan's
-complete module contracts and development order with the user's current
-instruction. The proposed next technical work is V1 installed DSH contract
-inspection to map the revised execution/context gate, followed by a bounded live-test
-specification. Its execution has not started; deferred modules retain their
-interfaces throughout later work.
+Documentation cleanup and naming edits do not begin reconstruction. For the next product task,
+start from the reconstruction objective, relevant existing references and the
+actual dedicated DSH interaction entry. Establish the replacement design and first
+usable flow before replacing code or live data; do not resume the old sequence
+merely because its tests passed. Use the [planning index](../planning/README.md)
+for the affected design only.
