@@ -1,12 +1,16 @@
 # Dafeiyu Modular Design
 
-- Revision: v0.7, accompanying [plan v0.13](plan.md).
+- Revision: v0.7, retained architecture proposal accompanying
+  [prior plan v0.13](snapshots/plan-v0.13.md).
+- Current applicability: [Product plan v0.14](plan.md) owns current responsibility,
+  component and package decisions. Retain the naming/compatibility facts below;
+  earlier workbench-first, full-API and Stage 0 sequences are not active gates.
 - Updated: 2026-11-05; client timezone Asia/Saigon.
 - Status: Architecture proposal. Complete planning, modularity and reserved
   interfaces for deferred implementations are user requirements. Specific
   boundaries below remain proposed; native DSH integration is preferred.
-- Ownership: This file owns the proposed module/dependency, lifecycle and
-  maintenance contracts. [Module contracts](module-contracts.md) owns public
+- Ownership: This file retains the earlier module/dependency, lifecycle and
+  maintenance proposal. [Module contracts](module-contracts.md) owns public
   operation semantics and maps them to [type skeletons](../../src/contracts/index.ts).
   The plan owns product scope and open decisions;
   [reference-study.md](reference-study.md) owns source applicability.
@@ -37,7 +41,8 @@ repository. Extract separate packages only when independent reuse, dependency
 weight or release cadence justifies the added compatibility work. Do not require
 the user to assemble a compatible set of separately published packages.
 
-The user agreed to a unified Console workbench delivered alongside Core. Its
+The earlier proposal called for a unified Console workbench alongside Core.
+The current plan removes it as a compulsory Core/first-batch prerequisite. Its
 Host/Client registrations remain a separate module in the same distribution;
 Core does not require Console or webServer to run. Console delegates settings
 and commands to their state owners, and Core resource/maintenance transactions

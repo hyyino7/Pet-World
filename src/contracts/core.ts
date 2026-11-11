@@ -19,7 +19,7 @@ export interface IncomingMessage {
   replyToExternalMessageId?: string;
 }
 export type ConversationMessage = {
-  messageId: string; channel: ChannelRef; binding: ChannelBindingRef; sender: 'owner' | 'companion';
+  messageId: string; channel: ChannelRef; binding: ChannelBindingRef; sender: 'owner' | 'companion' | 'room_tv';
   sourceId: string; hostTurnId?: string; createdAt: Timestamp;
 } & (
   | { visibility: 'available'; parts: readonly MessagePart[]; memoryView: MemoryViewStamp | null }

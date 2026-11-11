@@ -1,8 +1,9 @@
 import { constants, closeSync, existsSync, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, isAbsolute, sep } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { CoreRuntime } from './core.js';
 import { preferences, type CorePreferences, type WorkspaceTarget } from './preferences.js';
+import { DEFAULT_COMPANION_SETTINGS, parseCompanionSettings, type CompanionSettings } from './companion-settings.js';
 import { conversationOptions } from './options.js';
 import type { CompanionIdentity, AttentionPolicy } from '../contracts/core.js';
 import type { ServiceCall } from '../contracts/common.js';
@@ -10,9 +11,27 @@ import { bytesDigest, canonical, check, reject, revision, text, now } from './st
 
 const REQUIRED = ['README.md', 'manifest.json', 'SOUL.md', 'USER.md', 'core.json'] as const;
 const LEGACY_FILES = [...REQUIRED, 'STATE.md'];
+const WORKSPACE_INSTRUCTIONS = `# 大肥鱼陪伴工作区
+
+这个 Repo 是大肥鱼与用户共同使用的工作区。默认用简体中文自然交流；用户明确要求其他语言时遵从当前要求。可以聊天、解释和协助工作，无须先创建事项、制定计划或把对话当作编程任务。遵循用户当前的请求，不编造记忆、个人信息、已完成的操作或进度。
+
+## 文件与原生上下文
+
+- .chatpet/SOUL.md 定义大肥鱼的名字和性格。
+- .chatpet/USER.md 保存用户明确提供的个人资料。
+- .chatpet/core.json 保存经过验证的执行配置。
+- Chatpet 插件将这些文件和当前工作区内允许使用的记忆提供给现有 DSH 原生会话，不另建助手运行时。
+- .chatpet/data/core/ 和 .chatpet/data/memory/ 保存各模块拥有的数据库与运行数据。它们是存储文件，不是需要直接读取的提示词。
+
+## 对话与记忆
+
+结合当前对话和有来源的记忆自然续聊。需要时使用 pet_memory_recall 查找相关信息，召回块不足以回答细节时使用 pet_memory_read 精读当前允许使用的完整记录；使用记忆工具保存有意义的事实与偏好、纠正变化的信息，以及遗忘用户要求撤回的内容。只有收到成功回执后才能声称保存、纠正或遗忘成功。没有召回或只召回部分内容意味着不确定，不能据此断言事情从未发生。以前的助手分析不等于已经独立证实的用户事实。
+
+不要通过读取数据库、旧日志、备份或已停用的 STATE.md 绕过记忆使用限制，也不要另写 MEMORY.md 建立平行记忆库。精读工具不需要用户再次确认；工具之外的数据库、备份和旧日志读取需要用户另行明确提出。普通回答不展示内部记录 ID 和版本号，除非用户询问。使用原生工具阅读用户提供的文档，并说明结论来自哪些材料。保留这些指引和已有项目文件，只有在用户要求时才修改。
+`;
 const MAX_BYTES = 64 * 1024;
 interface Manifest { schemaVersion: 1 | 2; companionId: string; files: readonly string[] }
-interface FileConfig { schemaVersion: 1; quiet: boolean; conversation: CorePreferences['conversation'] }
+interface FileConfig { schemaVersion: 1; quiet: boolean; conversation: CorePreferences['conversation']; companion?: CompanionSettings }
 interface Binding { revision: number; target: WorkspaceTarget; phase: 'ready' | 'inactive'; hashes: Record<string, string>; initializedAt: string }
 interface Documents { identity: Pick<CompanionIdentity, 'displayName' | 'character'>; user: string; config: FileConfig; hashes: Record<string, string> }
 export interface WorkspaceStatus {
@@ -20,14 +39,17 @@ export interface WorkspaceStatus {
   target: WorkspaceTarget | null; files: readonly string[]; error: string | null;
   sourceRevision: string | null;
 }
+type NativeSessionScope = { id: string; header: { cwd?: string; parentSession?: unknown; origin?: string; agentPreset?: string } };
+type NativeWorkspaceRegistry = { get(id: string): { path: string; sessionIds: readonly string[] } | undefined };
 export interface WorkspaceService {
   inspect: ServiceCall<Record<string, never>, WorkspaceStatus>;
   initialize: ServiceCall<{ expectedPreferencesRevision: number }, WorkspaceStatus>;
   readProfile: ServiceCall<Record<string, never>, { revision: number; text: string }>;
+  saveCompanion: ServiceCall<{ workspaceId: string; expectedSettings: CompanionSettings; settings: CompanionSettings }, CompanionSettings>;
   saveProfile: ServiceCall<{ expectedRevision: number; text: string }, { revision: number; text: string }>;
 }
 
-/** Core-owned repository authority. Runtime ledgers and credentials never move here. */
+/** Core-owned repository authority; module runtime data has its own writers. */
 export class CoreWorkspace {
   readonly port: WorkspaceService;
   constructor(readonly runtime: CoreRuntime) {
@@ -37,6 +59,16 @@ export class CoreWorkspace {
         const prefs = preferences(runtime); revision(prefs.revision, input.expectedPreferencesRevision);
         check(prefs.workspace !== null, 'Choose a workspace first');
         this.initialize(prefs.workspace); return this.status();
+      }, true),
+      saveCompanion: runtime.call('workspace.saveCompanion', true, input => {
+        const binding = this.binding();
+        if (!binding || binding.target.id !== input.workspaceId) reject('STALE_BINDING', 'Workspace binding changed');
+        const settings = parseCompanionSettings(input.settings);
+        const docs = this.documents(binding.target);
+        if (canonical(input.expectedSettings) !== canonical(docs.config.companion ?? DEFAULT_COMPANION_SETTINGS))
+          reject('STALE_REVISION', 'Companion settings changed');
+        this.replace(binding, 'core.json', JSON.stringify({ ...docs.config, companion: settings }, null, 2) + '\n');
+        return settings;
       }, true),
       readProfile: runtime.call('workspace.readProfile', false, () => runtime.store.get<{ revision: number; text: string }>('profile', 'current') ?? { revision: 1, text: '' }, true),
       saveProfile: runtime.call('workspace.saveProfile', true, input => {
@@ -97,13 +129,20 @@ export class CoreWorkspace {
     const identity = { displayName: match![1], character: match![2] }; this.soul(identity);
     const user = this.read(directory, 'USER.md');
     const configText = this.read(directory, 'core.json'); const raw = JSON.parse(configText) as FileConfig;
-    check(raw.schemaVersion === 1 && typeof raw.quiet === 'boolean' && canonical(Object.keys(raw).sort()) === canonical(['conversation', 'quiet', 'schemaVersion']), 'Invalid core.json');
+    check(raw.schemaVersion === 1 && typeof raw.quiet === 'boolean' && Object.keys(raw).every(key => ['conversation', 'quiet', 'schemaVersion', 'companion'].includes(key)), 'Invalid core.json');
     const conversation = conversationOptions(raw.conversation);
     check(raw.conversation && canonical(Object.keys(raw.conversation).sort()) === canonical(Object.keys(conversation).sort()), 'Invalid conversation configuration');
-    return { identity, user, config: { schemaVersion: 1, quiet: raw.quiet, conversation }, hashes: {
+    return { identity, user, config: { schemaVersion: 1, quiet: raw.quiet, conversation, ...(Object.hasOwn(raw, 'companion') ? { companion: parseCompanionSettings(raw.companion) } : {}) }, hashes: {
       'manifest.json': bytesDigest(Buffer.from(manifestText)), 'SOUL.md': bytesDigest(Buffer.from(soul)),
       'USER.md': bytesDigest(Buffer.from(user)), 'core.json': bytesDigest(Buffer.from(configText)),
     } };
+  }
+  storageId(): string {
+    const target=preferences(this.runtime).workspace;
+    check(target,'A bound workspace is required');
+    const local=relative(target.path,this.runtime.store.directory);
+    const owns=!isAbsolute(local) && local!=='..' && !local.startsWith('..'+sep);
+    return owns ? this.runtime.store.meta<string>('workspace.storage-id') ?? target.id : target.id;
   }
   private initialize(target: WorkspaceTarget): void {
     const directory = this.directory(target), store = this.runtime.store;
@@ -114,9 +153,9 @@ export class CoreWorkspace {
       try {
         const manifest: Manifest = { schemaVersion: 2, companionId: identity.companionId, files: REQUIRED };
         for (const [name, value] of Object.entries({
-          'README.md': '# Chatpet Workspace\n\nSOUL.md and USER.md are editable profile sources. core.json is validated configuration.\nCore governs real execution; Memory owns long-term memory. No task summary is generated here.\nExecution receipts, native logs and credentials retain their runtime owners.\n',
+          'README.md': "# 大肥鱼工作区\n\nSOUL.md 和 USER.md 分别保存可编辑的角色设定和用户资料；core.json 保存经过验证的配置。\nCore 负责执行，Memory 负责长期记忆。这里不生成 STATE.md 或任务摘要；已有旧文件会保留。\n运行数据保存在本目录的 data/core/ 和 data/memory/，由安装器绑定路径、各模块负责写入。\nDSH 账号凭据仍由宿主管理；完整原生日志副本保存在 data/core/native-sessions/。迁移 Repo 前请完全退出 DSH。\n",
           'manifest.json': JSON.stringify(manifest, null, 2) + '\n', 'SOUL.md': this.soul(identity),
-          'USER.md': store.get<{ text: string }>('profile', 'current')?.text || '# User\n\n',
+          'USER.md': store.get<{ text: string }>('profile', 'current')?.text || '# 用户资料\n\n',
           'core.json': JSON.stringify(config, null, 2) + '\n',
         })) this.atomic(stage, name, value);
         check(!existsSync(directory), 'Managed directory appeared during initialization');
@@ -131,8 +170,24 @@ export class CoreWorkspace {
       this.runtime.fileEffect = true; docs = this.documents(target);
     }
     check(REQUIRED.every(name => existsSync(join(directory, name))), 'Managed workspace is incomplete');
+    // DSH discovers root instructions, not arbitrary hidden profile files.
+    // Create an entry only for an explicitly initialized companion workspace;
+    // exclusive creation preserves existing instructions, including symlinks.
+    let instructions: number | undefined;
+    try { instructions = openSync(join(target.path, 'AGENTS.md'), 'wx', 0o600); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
+    if (instructions !== undefined) {
+      try { writeFileSync(instructions, WORKSPACE_INSTRUCTIONS); fsyncSync(instructions); }
+      finally { closeSync(instructions); }
+      this.runtime.fileEffect = true;
+    }
     const previous = store.get<Binding>('workspace-binding', 'current');
     if (previous?.phase === 'ready' && previous.target.id === target.id && previous.target.path === target.path && canonical(previous.hashes) === canonical(docs.hashes)) return;
+    const local=relative(target.path,this.runtime.store.directory);
+    if(!isAbsolute(local) && local!=='..' && !local.startsWith('..'+sep) && !store.meta('workspace.storage-id')) {
+      const owner=store.meta<{id:string}>('memory-configured-directory-owner');
+      store.setMeta('workspace.storage-id',owner?.id ?? previous?.target.id ?? target.id);
+    }
     const binding: Binding = { revision: (previous?.revision ?? 0) + 1, target, phase: 'ready', hashes: docs.hashes, initializedAt: previous?.initializedAt ?? now() };
     store.put('workspace-binding', 'current', binding); this.adopt(docs);
   }
@@ -150,6 +205,11 @@ export class CoreWorkspace {
   }
   synchronize(operation: string): void {
     if (['workspace.initialize', 'workspace.inspect', 'cancelActivity', 'execution.interrupt', 'execution.inspect', 'reportDelivery'].includes(operation) || operation.startsWith('maintenance.')) return;
+    // Recovery/settings reads must remain usable when a moved Repo's former
+    // device path is absent. Native admission and data writes still require
+    // valid current files; rebinding never writes into the unavailable target.
+    if (['preferences.read','preferences.save','getIdentity','getPolicy','listCapabilities','workspace.readProfile'].includes(operation)
+      && !existsSync(preferences(this.runtime).workspace?.path ?? '') && this.status().state==='unavailable') return;
     const binding = this.binding(); if (!binding) return;
     const docs = this.documents(binding.target);
     if (canonical(docs.hashes) !== canonical(binding.hashes)) this.runtime.store.transaction(() => {
@@ -170,6 +230,20 @@ export class CoreWorkspace {
     const docs = this.documents(binding.target);
     const config = { ...docs.config, ...(kind === 'policy' ? { quiet: (value as AttentionPolicy).quiet } : { conversation: (value as CorePreferences).conversation }) };
     this.replace(binding, 'core.json', JSON.stringify(config, null, 2) + '\n');
+  }
+  /** One workspace membership check shared by native Core, Memory, Emotion and Desktop. */
+  sessionStatus(session: NativeSessionScope, registry: NativeWorkspaceRegistry | undefined): WorkspaceStatus | null {
+    if (session.header.parentSession || session.header.origin === 'subagent' || session.header.agentPreset === 'chatpet-channel-guest') return null;
+    const target = preferences(this.runtime).workspace;
+    if (!target || (session.header.cwd && session.header.cwd !== target.path)) return null;
+    const native = registry?.get(target.id);
+    if (native?.path !== target.path || !native.sessionIds.includes(session.id)) return null;
+    return this.status();
+  }
+  companionSettings(): CompanionSettings {
+    const binding = this.binding();
+    check(binding, 'Initialize the workspace first');
+    return this.documents(binding.target).config.companion ?? { ...DEFAULT_COMPANION_SETTINGS };
   }
   status(): WorkspaceStatus {
     const target = preferences(this.runtime).workspace, binding = this.binding();

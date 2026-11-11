@@ -1,5 +1,13 @@
 # Chatpet Repository And Native Session
 
+DSH Standard discovers root `AGENTS.md`/`CLAUDE.md` instruction files; it does
+not automatically scan `.chatpet/`. On successful initialization, Chatpet creates
+root `AGENTS.md` only if absent, explaining the companion workspace, the profile
+files and protected Memory tools. Existing root instructions are never replaced
+or appended to, and the root README remains untouched. The root instruction file
+is an entry for DSH's native instruction loader, separate from the five managed
+profile/config files. Deleting/editing it does not change profile authority.
+
 Core owns `.chatpet/` in the explicitly bound native workspace. Initialization
 creates five profile/configuration files and preserves the project's root
 README and instructions.
@@ -23,11 +31,26 @@ foreign identities, incompatible schemas, missing files and symlinks are not
 silently overwritten. Optimistic revisions reject stale settings. File edits
 are validated at the next request boundary. Failure blocks managed loading.
 
-Operational ledgers, credentials and native logs stay outside the Repo. Core's
-SQLite records retain actual admissions, evidence, receipts and results. DSH
-owns native sessions and their logs. Memory owns its future files and provider
-state; Core does not create a replacement memory Bank. Copying this directory
-alone is not a complete runtime backup.
+The Repo is the storage home for companion information. The five profile/config
+files remain file authorities; `.chatpet/data/core/` contains Core's database,
+receipts and records, and `.chatpet/data/memory/` contains the single Memory Bank,
+service state and logs. These extra data directories do not change the five-file
+manifest or introduce a second writer. DSH owns its account credentials and native
+session logs outside the Repo.
+
+`scripts/install-dsh.mjs --storage-repo <bound-repo>` relocates existing module
+data only with DSH and its writers stopped, verifies every copied file, and binds
+the installed package to the new absolute paths. Existing data and timestamped
+backups remain for rollback. A foreign identity, symlink, live owner or existing
+destination is refused; no automatic merge, backfill or reset occurs. Workspace
+selection alone does not move the companion's storage home. Moving that home
+requires the explicit offline relocation again.
+
+The installer adds `.chatpet/.gitignore` for `/data/`: information is physically
+in the Repo without automatically publishing private databases/tokens in Git.
+Stop DSH before copying the entire `.chatpet/` directory. This carries companion
+data, but not host credentials, native session logs or the machine's Python setup;
+it is not a promise of full cross-machine restore.
 
 Binding itself activates Core in ordinary native DSH sessions in that workspace.
 The user explicitly rejected a separate 大肥鱼 mode. The Bundle declares no
@@ -69,4 +92,6 @@ completion. The native title service also made its normal title request.
 See [desktop evidence](validation/core-workspace-desktop-2026-11-05.json).
 These observations are historical evidence of the earlier installed snapshot,
 not requirements to retain the ledger or STATE. The source cleanup described
-above is not installed. Work is paused at the user's request.
+above is present in the updated package; actual personal workspace use is still
+separate from its synthetic installed-package tests. P1–P3 source/fixture work resumed on 2026-11-06; see the
+[current execution record](core-runtime.md#p1p3-execution-2026-11-06).

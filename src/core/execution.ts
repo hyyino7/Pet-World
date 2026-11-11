@@ -217,6 +217,11 @@ export class CoreExecution {
         const source: EvidenceSource = { sourceId: `result:${executionId}`, origin: 'model_interpretation', actorId: runtime.config.companionId,
           recordedAt: now(), rootSourceIds: roots, text: result.text };
         runtime.store.put('source', source.sourceId, source); sourceIds.push(source.sourceId);
+        const memoryDisabled = executionId.startsWith('native:') && runtime.store.get<boolean>('native-memory-enabled',record.binding.hostSessionId) === false;
+        if (memoryDisabled) runtime.store.put('native-independent-source',source.sourceId,true);
+        if (runtime.config.memory && !memoryDisabled && executionId.startsWith('native:')) runtime.store.put('memory-source-work', source.sourceId, {
+          sourceId: source.sourceId, workspaceId: runtime.files?.storageId(), state: 'queued', observationId: null,
+        });
         if (activity.inputMessageId) {
           const incoming = runtime.store.require<ConversationMessage>('conversation', activity.inputMessageId);
           freshReply = { messageId: `reply:${executionId}`, sourceId: source.sourceId,

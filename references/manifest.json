@@ -265,7 +265,12 @@
       "source_files": 950,
       "license_files": [
         "LICENSE"
-      ]
+      ],
+      "runtime_adoption": {
+        "commit": "c7ea8b28e2a8b04a495a3b472a871dff6969ccca",
+        "retained_native_commit": "0e6465f29bb89b386390ba0f14fb86fa1bc656d0",
+        "origin": "vendor/dsh-pet/origin.json"
+      }
     },
     {
       "repository": "QCYTSN/dsh-dafeiyu",
@@ -585,6 +590,18 @@
       "license_files": [
         "LICENSE"
       ],
+      "runtime_subset": {
+        "version": "0.7.4",
+        "commit": "49bc2c9bb8183e3dbed9257404099946e0c97a1d",
+        "path": "vendor/dsh-world",
+        "origin_and_checksums": "vendor/dsh-world/origin.json",
+        "license": "vendor/dsh-world/LICENSE",
+        "entry": "src/world/index.ts",
+        "adaptations": [
+          "src/core/world-prompt.ts",
+          "src/emotion/plugin.ts"
+        ]
+      },
       "reused_in_core": [
         {
           "source": "src/life/tools.ts",
@@ -834,6 +851,44 @@
       "downloaded_at": "2026-11-04T14:28:44.486391+00:00",
       "source_files": 103,
       "license_files": []
+    },
+    {
+      "repository": "sh2234113/feiyu-room-template",
+      "url": "https://github.com/sh2234113/feiyu-room-template",
+      "requested_ref": "9df0a6b76b563abc738b6d4b7ae137381c425424",
+      "commit": "9df0a6b76b563abc738b6d4b7ae137381c425424",
+      "path": "references/sources/sh2234113/feiyu-room-template",
+      "checkout_type": "archive",
+      "license_files": [
+        "LICENSE"
+      ],
+      "reused": [
+        {
+          "source": "src/home-state.js",
+          "target": "vendor/feiyu-room-template/home-state.js",
+          "treatment": "Original state machine shared by Life, Room and Desktop."
+        },
+        {
+          "source": "public/room",
+          "target": "vendor/feiyu-room-template/public/room",
+          "treatment": "Original visuals, model quality selector, garden and TV. Native Connection and native chat history adapters."
+        },
+        {
+          "source": "src/garden-autonomy.js, src/garden-store.js, src/room-state.js",
+          "target": "vendor/feiyu-room-template/src",
+          "treatment": "Original garden economy, caretaker, visits and affection."
+        },
+        {
+          "source": "src/affinity.js, src/slang-learner.js, src/role-card.js, src/sticker-lib.js, src/forward.js, src/md-to-plain.js, src/qzone.js, src/sensitive.js; src/bridge.js member impressions, V2 wake predicates, read receipts and feedback",
+          "target": "vendor/feiyu-room-template/src",
+          "treatment": "QQ group affinity, member impressions, slang, role sections, stickers and forwarded messages. The affinity store accepts a device-owned per-group file. V2 wake selection and read acknowledgement use extracted bridge functions. Feedback is scoped to the originating group. Qzone timing, content and quota rules apply to owner-approved public drafts."
+        }
+      ],
+      "archive_sha256": "ce2c90908d3b0eaf12aa52d52f450c26d3a58d273772d4a1174a11f82901e4fb",
+      "origin": "vendor/feiyu-room-template/origin.json",
+      "status": "ready",
+      "archive_path": ".cache/life-study/room-9df0a6b.tgz",
+      "archive_url": "https://codeload.github.com/sh2234113/feiyu-room-template/tar.gz/9df0a6b76b563abc738b6d4b7ae137381c425424"
     }
   ]
 }

@@ -4,6 +4,7 @@ dist/
 .tools/
 .venv/
 .cache/
+.pnpm-store/
 .DS_Store
 *.tsbuildinfo
 references/sources/

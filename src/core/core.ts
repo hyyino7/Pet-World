@@ -16,6 +16,7 @@ export interface CoreConfig {
   dataDir: string; companionId: string; scopeId: string; ownerActorId: string;
   displayName: string; character: string;
   conversation?: Partial<ConversationOptions>;
+  memory?: import('../memory/client.js').MemoryConfig;
 }
 export type StoredActivity = ActivitySnapshot & { createdAt: string; inputMessageId?: string };
 type StoredAttempt = { attempt: DeliveryAttempt; receipt: DeliveryAttemptReceipt | null };
@@ -46,7 +47,7 @@ export class CoreRuntime {
     return this.store.get<import('./preferences.js').CorePreferences>('preferences', 'current')?.conversation ?? this.defaultConversation;
   }
   files?: import('./workspace.js').CoreWorkspace;
-  nativeIngress?: { sessionId: string; turn: number };
+  nativeIngress?: { sessionId: string; turn: number; memory?: boolean; life?: boolean; television?: boolean };
   fileEffect = false;
   private historyGuard: HistoryGuard | null = null;
   private stopped = false;
@@ -248,18 +249,23 @@ export class CoreRuntime {
           return { messageId: previous.messageId, sourceId: previous.sourceId, operation: this.store.require<StoredActivity>('activity', previous.operation.operationId).receipt, duplicate: true };
         }
         // The authenticated adapter supplies attribution. Text is never parsed for authority.
-        const messageId = id('message'), sourceId = id('source'), activityId = this.nativeIngress ? `native-work:${digest(this.nativeIngress)}` : id('activity');
-        const source: EvidenceSource = { sourceId, origin: 'owner_statement', actorId: this.config.ownerActorId,
+        const messageId = id('message'), sourceId = id('source'), activityId = this.nativeIngress ? `native-work:${digest({sessionId:this.nativeIngress.sessionId,turn:this.nativeIngress.turn})}` : id('activity');
+        const source: EvidenceSource = { sourceId, origin: this.nativeIngress?.television ? 'external_content' : this.nativeIngress?.life ? 'virtual_action' : 'owner_statement',
+          actorId: this.nativeIngress?.television ? 'chatpet-room-tv' : this.nativeIngress?.life ? this.config.companionId : this.config.ownerActorId,
           recordedAt: now(), eventTime: { from: input.receivedAt, precision: 'exact' }, rootSourceIds: [],
           text: input.parts.map(p => p.kind === 'text' ? p.text : p.altText).join('\n') };
         this.store.put('source', sourceId, source);
+        if (this.nativeIngress?.memory === false) this.store.put('native-independent-source',sourceId,true);
+        if (this.nativeIngress && (this.nativeIngress.memory ?? Boolean(this.config.memory))) this.store.put('memory-source-work', sourceId, {
+          sourceId, workspaceId: this.files?.storageId(), state: 'queued', observationId: null,
+        });
         this.store.put('conversation', messageId, { messageId, sourceId, channel: input.channel, binding: input.binding,
-          sender: 'owner', createdAt: now(), parts: input.parts, memoryView: null, visibility: 'available' } satisfies ConversationMessage);
+          sender: this.nativeIngress?.television ? 'room_tv' : 'owner', createdAt: now(), parts: input.parts, memoryView: null, visibility: 'available' } satisfies ConversationMessage);
         const nativePrevious = this.nativeIngress ? this.store.get<StoredActivity>('activity', activityId) : undefined;
         if (nativePrevious && this.isTerminal(nativePrevious.receipt.state)) reject('CONFLICT', 'Native turn already ended');
         const activity: StoredActivity = { activityId, createdAt: nativePrevious?.createdAt ?? now(), inputMessageId: messageId,
           proposal: { proposalId: activityId, owner: 'owner', capability: 'core.conversation', action: 'reply',
-            purpose: 'Respond to the paired owner', desiredOutcome: source.text, stoppingCondition: 'One native turn settles', sourceIds: [...new Set([...(nativePrevious?.proposal.sourceIds ?? []), sourceId])] },
+            purpose: this.nativeIngress?.television ? 'Comment on a shared television frame' : this.nativeIngress?.life ? 'Continue the companion Life session' : 'Respond to the paired owner', desiredOutcome: source.text, stoppingCondition: 'One native turn settles', sourceIds: [...new Set([...(nativePrevious?.proposal.sourceIds ?? []), sourceId])] },
           receipt: input.parts.some(p => p.kind !== 'text')
             ? { ...operation(activityId, 'waiting'), waitingReason: 'Asset interpretation is not implemented; text input remains available' }
             : this.nativeIngress ? { ...operation(activityId, 'running'), revision: (nativePrevious?.receipt.revision ?? 0) + 1 } : operation(activityId) };

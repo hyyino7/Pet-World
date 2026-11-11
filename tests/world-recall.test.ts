@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import type { Session } from '@deepseek-ai/dsh-session';
+import { WorldRecall } from '../src/core/world-recall.js';
+
+test('World reloads after compaction or the configured silence measured from the last actual request', () => {
+  let clock = 0;
+  const recall = new WorldRecall(() => clock);
+  const old = {type:'user/message', data:{id:'old',source:{kind:'chatpet-recall'}}};
+  const replacements: unknown[] = [];
+  const session = {surface:{nodes:[3]}, eventAt:()=>old, append:(...args: unknown[])=>replacements.push(args)} as unknown as Session;
+  assert.equal(recall.refresh(session,'bound',true,24),true);
+  const message = recall.prepare(session, 'First eligible conversation');
+  assert.ok(message);
+  recall.request(session,1,1,true);
+  assert.equal(replacements.length,1);
+  clock = 23*3_600_000;
+  assert.equal(recall.refresh(session,'bound',true,24),false);
+  recall.request(session,2,1,true);
+  clock += 24*3_600_000;
+  assert.equal(recall.refresh(session,'bound',false,24),false);
+  assert.equal(recall.refresh(session,'bound',true,24),true);
+  assert.equal(recall.refresh(session,'bound',true,25),false);
+  recall.prepare(session,'');
+  recall.request(session,3,1,true);
+  assert.equal(replacements.length,2);
+  recall.compacted(session);
+  assert.equal(recall.refresh(session,'bound',true,24),true);
+  recall.request(session,4,1,false);
+  assert.equal(recall.refresh(session,'other',true,24),true);
+});

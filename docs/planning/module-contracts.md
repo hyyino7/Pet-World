@@ -4,11 +4,15 @@
 - Status: Contract 0.3 adds Core turn/progress reads and direct-dialogue semantics; Voice IDs are reserved, detailed Voice port pending.
 - Confirmed requirement: Plan the whole product and all module boundaries now;
   module implementation may be deferred, but its integration contract must exist.
+- Current applicability: This is the retained contract 0.3 baseline. The
+  [current plan](plan.md) owns P1–P10, reuse decisions and P8a's shared Voice design
+  reservation. Reconcile only affected interfaces before their consumers change;
+  no signatures or runtime controls are implemented by this synchronization.
 - Type entry point: [src/contracts/index.ts](../../src/contracts/index.ts).
 
-This file owns public operation semantics and deferred-module integration.
-[Modular design](modular-design.md) owns module/data/lifecycle boundaries;
-[development plan](development-plan.md) owns implementation order. Types contain
+This file records existing public operation semantics and deferred-module seams.
+[Modular design](modular-design.md) retains the earlier lifecycle proposal;
+[the product plan](plan.md) owns current boundaries and implementation gates. Types contain
 no provider implementations, SDK bindings, storage, renderer or model client.
 Their existence and compilation do not establish runtime enforcement.
 
@@ -18,8 +22,10 @@ planned C0–C3/CC acceptance. [Core runtime](../core-runtime.md) records the cu
 implementation subset and denial paths. Contract 0.3 retains the 0.2 boundary
 repairs, adds turn/progress reads and clarifies Core raw dialogue versus extracted
 Memory knowledge. `CONTRACT_VERSION` is shared; Voice detailed types remain pending.
-Voice and any configuration/observation gaps remain explicit C0 preparation
-work before implementation; Console stays a client of Core maintenance.
+Earlier C0/CC and A15–A19 references identify the retained proposals, including
+[historical development cases](snapshots/development-plan-v0.7.md). They do not
+create a new all-contract preparation batch. P8a is a design reservation, not
+implemented Voice types; text-only P1–P3 does not wait for Voice implementation.
 
 ## Review Repair Coverage
 

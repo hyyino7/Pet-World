@@ -2,12 +2,12 @@
 export type ContractVersion = typeof import('./version.js').CONTRACT_VERSION;
 export type Timestamp = string;
 export type Revision = number;
-export type ModuleId = 'core' | 'memory' | 'life' | 'desktop' | 'qq' | 'bilibili' | 'voice' | 'console';
+export type ModuleId = 'core' | 'emotion' | 'memory' | 'life' | 'desktop' | 'qq' | 'bilibili' | 'voice' | 'console';
 export type CapabilityId =
   | 'core.conversation' | 'core.commitments' | 'core.activities' | 'core.delivery'
   | 'core.resources' | 'core.maintenance'
   | 'execution.native' | 'memory.lifecycle' | 'life.pursuits'
-  | 'desktop.presentation' | 'desktop.body' | 'desktop.room'
+  | 'emotion.expression' | 'desktop.presentation' | 'desktop.body' | 'desktop.room'
   | 'channel.qq' | 'content.bilibili' | 'voice.speech' | 'console.operations';
 
 export interface RequestContext {

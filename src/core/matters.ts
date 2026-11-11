@@ -50,7 +50,7 @@ export function matterTools(runtime: CoreRuntime, binding: { executionId: string
     runtime.store.put('commitment', matter.commitmentId, matter); return record;
   };
   return [
-    defineTool({ name: MATTER_TOOLS[0], description: 'List this owner’s matters before creating or choosing one. Do not infer a task from isolated keywords or create matters for ordinary conversation.',
+    defineTool({ name: MATTER_TOOLS[0], description: '创建或选择事项前，先查看用户已有的事项。不要仅凭孤立关键词推断任务，也不要为普通聊天创建事项。',
       parameters: { limit: { type: 'integer' } }, output, execute: async ({ limit = 50 }, exec) => {
         admit(exec); integer(limit, 'limit', 1, 200);
         const all = runtime.store.all<Commitment>('commitment').filter(m => runtime.eligible([...m.sourceIds, ...m.resultSourceIds]));
@@ -58,7 +58,7 @@ export function matterTools(runtime: CoreRuntime, binding: { executionId: string
         include(selected.flatMap(m => [...m.sourceIds, ...m.resultSourceIds]));
         return canonical({ commitments: selected, truncated: all.length > limit });
       } }),
-    defineTool({ name: MATTER_TOOLS[1], description: 'Read a matter’s current state, recorded progress and actual stored analysis result. Missing results do not prove that work was completed.',
+    defineTool({ name: MATTER_TOOLS[1], description: '读取事项当前状态、已记录进度和实际保存的分析结果。缺少结果不能证明工作已经完成。',
       parameters: { commitmentId: requiredText }, output, execute: async ({ commitmentId }, exec) => {
         admit(exec); const commitment = load(commitmentId);
         include([...commitment.sourceIds, ...commitment.resultSourceIds]);
@@ -69,7 +69,7 @@ export function matterTools(runtime: CoreRuntime, binding: { executionId: string
             return { sourceId, origin: source.origin, text: source.text.slice(0, runtime.conversation.maxContextChars), truncated: source.text.length > runtime.conversation.maxContextChars };
           }) });
       } }),
-    defineTool({ name: MATTER_TOOLS[2], description: 'Create a durable matter when the owner actually requests an outcome or ongoing work. Interpret the complete conversation; ask about ambiguity. Describe the requested outcome and a concrete next action in the owner’s language.',
+    defineTool({ name: MATTER_TOOLS[2], description: '只有用户确实要求取得某个结果或持续工作时才创建持久事项。结合完整对话理解，有歧义时询问。用用户的语言描述目标和具体下一步。',
       parameters: { requestedOutcome: requiredText, nextAction: requiredText, dueAt: { type: 'string' } }, output,
       execute: async (args, exec) => mutate(MATTER_TOOLS[2], args, exec, () => {
         text(args.requestedOutcome, 'requestedOutcome'); text(args.nextAction, 'nextAction'); if (args.dueAt) timestamp(args.dueAt);
@@ -77,7 +77,7 @@ export function matterTools(runtime: CoreRuntime, binding: { executionId: string
           sourceIds: [...permittedSources], state: 'open', nextAction: args.nextAction, waitingReason: null, resultSourceIds: [], ...(args.dueAt ? { dueAt: args.dueAt } : {}) };
         return { commitment, progress: progress(commitment, 'created', args.requestedOutcome) };
       }) }),
-    defineTool({ name: MATTER_TOOLS[3], description: 'Update an existing matter from the owner’s request or actual work state. Use waiting with a specific missing dependency. Do not report completion here; use finish with a substantive result and evidence.',
+    defineTool({ name: MATTER_TOOLS[3], description: '根据用户要求或实际工作状态更新已有事项。设为 waiting 时说明具体缺少的依赖。不要在这里报告完成；完成应使用 finish 并提供实质结果和证据。',
       parameters: { commitmentId: requiredText, expectedRevision, state: { type: 'string', enum: ['open', 'in_progress', 'waiting', 'cancelled'], required: true },
         nextAction: { type: 'string' }, waitingReason: { type: 'string' }, requestedOutcome: { type: 'string' }, summary: requiredText }, output,
       execute: async (args, exec) => mutate(MATTER_TOOLS[3], args, exec, () => {
@@ -89,7 +89,7 @@ export function matterTools(runtime: CoreRuntime, binding: { executionId: string
         commitment.sourceIds = [...new Set([...commitment.sourceIds, ...permittedSources])]; commitment.revision++;
         return { commitment, progress: progress(commitment, 'updated', args.summary) };
       }) }),
-    defineTool({ name: MATTER_TOOLS[4], description: 'Record a concrete step actually performed or an intermediate analytical finding. Use the owner’s language. Do not invent activity, percentages, tool results or external actions.',
+    defineTool({ name: MATTER_TOOLS[4], description: '用用户的语言记录实际执行的具体步骤或中间分析发现。不编造活动、百分比、工具结果或外部操作。',
       parameters: { commitmentId: requiredText, expectedRevision, summary: requiredText, nextAction: requiredText }, output,
       execute: async (args, exec) => mutate(MATTER_TOOLS[4], args, exec, () => {
         const commitment = load(args.commitmentId); revision(commitment.revision, args.expectedRevision);
@@ -97,7 +97,7 @@ export function matterTools(runtime: CoreRuntime, binding: { executionId: string
         text(args.nextAction, 'nextAction'); commitment.state = 'in_progress'; commitment.nextAction = args.nextAction; commitment.waitingReason = null; commitment.revision++;
         return { commitment, progress: progress(commitment, 'progress', args.summary) };
       }) }),
-    defineTool({ name: MATTER_TOOLS[5], description: 'Store a completed analysis of supplied material with its substantive result and supporting source IDs. This tool does not perform or certify external actions. Verify the requested conditions; explain limitations. Wait for the receipt before claiming the matter is recorded as completed, then reply with the actual result.',
+    defineTool({ name: MATTER_TOOLS[5], description: '保存对所提供材料的已完成分析，包括实质结果和支持结论的来源 ID。此工具不执行或证明外部操作。核对用户条件并说明局限。收到成功回执后才能声称事项已记录为完成，并向用户给出实际结果。',
       parameters: { commitmentId: requiredText, expectedRevision, result: requiredText,
         evidenceSourceIds: { type: 'array', items: { type: 'string' }, required: true } }, output,
       execute: async (args, exec) => mutate(MATTER_TOOLS[5], args, exec, () => {

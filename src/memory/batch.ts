@@ -1,0 +1,105 @@
+import type { Context } from '@deepseek-ai/cordis';
+import type { Agent } from '@deepseek-ai/dsh-agent';
+import { digest } from '../core/storage.js';
+import type { PetCoreHost } from '../core/index.js';
+
+interface Summary { seq: number; content: string; sources: string[]; turns: number }
+interface Pending { summary?: Summary; retryAt?: number; failures?: number; sessionId: string; workspaceId: string; path: string; turns: number; lastActivity: number; lastAttempt: number; error?: string }
+/** dsh-chatbot's turn/idle/minimum-interval policy over DSH's existing
+ * compaction maintenance transaction. Original events remain in the native log. */
+export function installMemoryBatch(ctx: Context, host: PetCoreHost): () => Promise<void> {
+  const store = host.workspace.runtime.store;
+  const running = new Map<string, { abort: AbortController; done: Promise<void> }>();
+  const reviews = new Set<string>();
+  ctx.on('pet/life.review', id => { if (host.native.memoryFor(id)) reviews.add(id); }, {global: true});
+  const matches = (row: Pending) => {
+    const status = host.workspace.status();
+    return status.state === 'ready' && status.target?.id === row.workspaceId && status.target.path === row.path;
+  };
+  ctx.on('session/event', (session, event) => {
+    if (!host.native.memoryFor(session.id) || event.type !== 'turn/end' || event.data.reason.kind !== 'completed') return;
+    const native = ctx as unknown as { get(key: string): Parameters<PetCoreHost['workspace']['sessionStatus']>[1] };
+    const bound = host.workspace.sessionStatus(session, native.get('workspaceRegistry'));
+    if (bound?.state !== 'ready' || !bound.target) return;
+    const old = store.get<Pending>('memory-batch', session.id);
+    store.put('memory-batch', session.id, { sessionId: session.id, workspaceId: bound.target.id, path: bound.target.path,
+      turns: (old?.turns ?? 0) + 1, lastActivity: event.time, lastAttempt: old?.lastAttempt ?? 0, retryAt:old?.retryAt ?? 0, failures:old?.failures ?? 0, ...(old?.summary ? {summary:old.summary} : {}) });
+  }, { global: true });
+  async function run(row: Pending, agent: Agent, signal: AbortSignal) {
+    const memory = host.native.memoryFor(row.sessionId);
+    // dsh-world console/homeApply.ts compactionFor: Web presets isolate
+    // compaction from agent.ctx; resolve through the native preset registry.
+    type Engine = { compactNow(agent: Agent, signal: AbortSignal): Promise<{ summarySeq: number; summary: {type:string;text?:string}[] } | null> };
+    const services = ctx as unknown as { get(key: string): unknown };
+    const presets = services.get('agentPresets') as { serviceFor?(agent: Agent, name: string): unknown } | undefined;
+    const compaction = (presets?.serviceFor?.(agent, 'compaction') ?? services.get('compaction')) as Engine | undefined;
+    if (!memory || !compaction) throw Error('Native compaction service is unavailable');
+    await memory.prepare(row.sessionId);
+    if (!matches(row) || signal.aborted) return;
+    let pending = row.summary;
+    const recovered = [...agent.session.snapshotEvents()].reverse().find(event => String(event.type) === 'compaction/summary' && event.time >= row.lastActivity);
+    if (!pending && recovered) {
+      const data = recovered.data as unknown as {summary:{type:string;text?:string}[]};
+      pending = {seq:recovered.seq, content:data.summary.flatMap(part=>part.type==='text'?[part.text ?? '']:[]).join('\n'),
+        sources:store.get<string[]>('native-session-sources',row.sessionId) ?? [], turns:row.turns};
+    }
+    if (!pending) {
+      const result = await compaction.compactNow(agent, signal);
+      if (!matches(row) || signal.aborted) return;
+      if (result) {
+        pending = { seq: result.summarySeq,
+          content: result.summary.flatMap(part => part.type === 'text' ? [part.text ?? ''] : []).join('\n'),
+          sources: store.get<string[]>('native-session-sources', row.sessionId) ?? [], turns: row.turns };
+        const latest = store.get<Pending>('memory-batch', row.sessionId)!;
+        store.put('memory-batch', row.sessionId, {...latest, summary:pending});
+      }
+    }
+    if (pending) {
+      await memory.capture(pending.sources);
+      const saved = await memory.connection.call<{id:string}>('summary', { session_id: row.sessionId, summary_seq: pending.seq, content: pending.content,
+        sources: pending.sources.map(id => ({ id, revision: '1' })) });
+      if (saved.id) store.put('native-summary-memory',digest([row.sessionId,pending.seq]),saved.id);
+    }
+    const latest = store.get<Pending>('memory-batch', row.sessionId)!;
+    // Maintenance serializes waking input; preserve any newly completed turns.
+    const {summary: _summary, error: _error, ...clean} = latest;
+    store.put('memory-batch', row.sessionId, { ...clean, turns: Math.max(0, latest.turns - (pending?.turns ?? row.turns)), failures:0, retryAt:0 });
+  }
+  const interval = setInterval(() => {
+    for (const row of store.all<Pending>('memory-batch')) {
+      if (!row.turns || !matches(row) || running.has(row.sessionId)) continue;
+      const settings = host.workspace.companionSettings(), now = Date.now();
+      const review = reviews.has(row.sessionId) && ctx.get('petLife')?.isHome(row.sessionId);
+      if (!review && row.turns < settings.memorySummaryTurns && now - row.lastActivity < settings.memorySummaryIdleMinutes * 60_000) continue;
+      if (row.retryAt && now < row.retryAt) continue;
+      if (row.lastAttempt && now - row.lastAttempt < Math.max(1000, settings.memorySummaryMinimumMinutes * 60_000)) continue;
+      const agent = ctx.agents.get(row.sessionId as never);
+      if (!agent || agent.status !== 'idle') continue;
+      const abort = new AbortController();
+      store.put('memory-batch', row.sessionId, { ...row, lastAttempt: now });
+      const done = run(row, agent, abort.signal).then(() => {
+        if (!abort.signal.aborted && review) reviews.delete(row.sessionId);
+      }).catch(error => {
+        const latest = store.get<Pending>('memory-batch', row.sessionId);
+        if (latest) {
+          const messages: string[] = [];
+          for (let e: unknown = error; e instanceof Error; e = e.cause) messages.push(e.message);
+          const failures = (latest.failures ?? 0)+1;
+          // dsh-chatbot native-chat.ts: failed work backs off, retaining originals.
+          const delay = [60_000,300_000,900_000,3_600_000][Math.min(failures-1,3)];
+          store.put('memory-batch', row.sessionId, { ...latest, failures, retryAt:Date.now()+delay, error: messages.join(': ') || 'Summary failed' });
+        }
+        ctx.logger('chatpet-memory').warn('Batch summary pending; original conversation retained', error);
+      }).finally(() => running.delete(row.sessionId));
+      running.set(row.sessionId, { abort, done });
+    }
+  }, 1000);
+  interval.unref();
+  const stop = async () => {
+    clearInterval(interval);
+    for (const job of running.values()) job.abort.abort();
+    await Promise.all([...running.values()].map(job => job.done));
+  };
+  ctx.effect(() => stop);
+  return stop;
+}

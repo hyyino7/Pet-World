@@ -1,0 +1,349 @@
+{
+  "repository": "https://github.com/sh2234113/feiyu-room-template",
+  "commit": "9df0a6b76b563abc738b6d4b7ae137381c425424",
+  "source": "src/home-state.js",
+  "license": "MIT",
+  "sha256": "cd304d35a61e0fdb5f3cebb684b40f092bb1f57698727f848311c96c7fbf7488",
+  "treatment": "Original Room presentation, garden and visitor state. Body simulation is shared with Life. The room request transport and chat history use the native DSH connection.",
+  "gitBlob": "7fda4d0d16430a861a20d30c88f26a3026030219",
+  "archive_sha256": "ce2c90908d3b0eaf12aa52d52f450c26d3a58d273772d4a1174a11f82901e4fb",
+  "assets_notices": [
+    "THIRD_PARTY_NOTICES.md",
+    "public/room/assets/pet/CREDITS.md",
+    "public/room/assets/models/README.md",
+    "public/room/vendor/LICENSE-three.txt"
+  ],
+  "files": {
+    "LICENSE": {
+      "sha256": "6fe22b738ef498e27daf6f6500d618635eb62a677a5e053b7fd5ccb80d80278c",
+      "upstream_sha256": "c8ba59c3ce65542fbe3311384bd8b5fa12f481d0b37cdd7e87356657e12411fa"
+    },
+    "PRIVACY_AND_ASSETS.md": {
+      "sha256": "d70bc2ae93911f7b4abc06d049da36fd17f49b5eba38628899aada7d8c0a4161"
+    },
+    "THIRD_PARTY_NOTICES.md": {
+      "sha256": "9ce03b8a90ce8b074e1a11514133605cebeb2f6912e6a352c5e8e4bf40521a54"
+    },
+    "home-state.js": {
+      "sha256": "cd304d35a61e0fdb5f3cebb684b40f092bb1f57698727f848311c96c7fbf7488"
+    },
+    "public/room/actor.js": {
+      "sha256": "f9cee7a82af7d7f50a737700ce51ced60a1e700ea02fed400aa45976ed1cceb0"
+    },
+    "public/room/actor3d.js": {
+      "sha256": "7dd52b02cfbc0338553b2b3a48f36109c0c3a9db9fbc4fd8d2fd0569fe670881"
+    },
+    "public/room/app.js": {
+      "sha256": "d7db7a6c82a9957ea37727b414d659da24a1b515f15affa725af785e788cad9e",
+      "upstream_sha256": "13125c572839773c45809319bb5c4bb01d4209e17bad2071cf4f67b0a1fe1f18"
+    },
+    "public/room/assets/models/README.md": {
+      "sha256": "0079c4d16bbb25292b5dd92c30e1628a0caff4d2d713903ad6cec1e101a14e2b"
+    },
+    "public/room/assets/models/da-feiyu.glb": {
+      "sha256": "367d5aaf33af250a6f5495d4bd4e96d14302de6e88023cb01a511ad15d2aa325"
+    },
+    "public/room/assets/models/da-feiyu.opt.glb": {
+      "sha256": "0ae8e7ff887778aa259f98d7104adf3cc60fd6fa86c63bf185e13f341002a682"
+    },
+    "public/room/assets/pet/CREDITS.md": {
+      "sha256": "40030c8a5d809974795a90581c459cba7ff7860559073ff611ffb8f37b24333a"
+    },
+    "public/room/assets/pet/brush.png": {
+      "sha256": "8c78267517b978ed4996bc239a40227ec980ccd044c18be8c66d9dd705e09ccb"
+    },
+    "public/room/assets/pet/brush.webm": {
+      "sha256": "017e384e7e13732fb12428d024ef686e79df5b79bfab0d83faa7fa50653d1bc4"
+    },
+    "public/room/assets/pet/curtsy.png": {
+      "sha256": "2838530ab7f3aa63869df6fe4b30e44e99d749ddd0e0be1f018ce550abe0dbc8"
+    },
+    "public/room/assets/pet/curtsy.webm": {
+      "sha256": "6536fb519ba73bbc338d30cf7286b14ffde1278b6d469c64573536dc0f896918"
+    },
+    "public/room/assets/pet/dance.png": {
+      "sha256": "2fadf7594770b5b14a8a7d53921d028516147be088a225bbca2925d947070737"
+    },
+    "public/room/assets/pet/dance.webm": {
+      "sha256": "c621d00e1b959b991df8fc420e409b569e768fad7f75d1fb489375d101fee630"
+    },
+    "public/room/assets/pet/desk_code.png": {
+      "sha256": "b59b6be97257a05e62b97f8c691ef0bc5f0ded37fb5da6fd2b8db72b33631020"
+    },
+    "public/room/assets/pet/desk_code.webm": {
+      "sha256": "0441287737cdbb993ce90dfa74c67ea4ea3549d8c8ea98946604668464589ed7"
+    },
+    "public/room/assets/pet/desk_mutter.png": {
+      "sha256": "5be4549135f289f2347a70e03b3b0e24c4dead021f59174f88829acff93b6d12"
+    },
+    "public/room/assets/pet/desk_mutter.webm": {
+      "sha256": "fda85ca286e173b7cf868c91829c3445e55c395e0c788b6be310a855b9b37973"
+    },
+    "public/room/assets/pet/desk_tap.png": {
+      "sha256": "96f62a9c930baeb2fc2a5ef945470a827490151e05b66f5f00f11537a6037d5b"
+    },
+    "public/room/assets/pet/desk_tap.webm": {
+      "sha256": "a40f481e89abcc726c89f30b01d085ca8c17a090e71facdd5e7f747e771093eb"
+    },
+    "public/room/assets/pet/eat_rice.png": {
+      "sha256": "b32c096d22161f89db4d484326cedaae1874ba56771aeadeb3a2d8d62b83a469"
+    },
+    "public/room/assets/pet/eat_rice.webm": {
+      "sha256": "b620413d6fa303a0ed9168dc71453c3bddc10141a0b7edeff87dc2e6e054d502"
+    },
+    "public/room/assets/pet/eat_snack.png": {
+      "sha256": "73ca07735c41bda31754050cf4e64e38429a9258eeb77ac47412424f60ddfcd9"
+    },
+    "public/room/assets/pet/eat_snack.webm": {
+      "sha256": "fdacb534a828b0c669f22a54e8da9bb9b5d731e0132dd5ea946f7badc9229a39"
+    },
+    "public/room/assets/pet/examples/example-back-idle.png": {
+      "sha256": "15a7c7573f3a664461b92487d4c0c4cbb955785a8ffeb0ae9be6b3f6e93cdea1"
+    },
+    "public/room/assets/pet/examples/example-back-run.png": {
+      "sha256": "8a7bfe52744381182d10d402168cecf161782d592d6c8f1ef19e97f3af2c522e"
+    },
+    "public/room/assets/pet/examples/example-front-idle.png": {
+      "sha256": "b61313627751046c115e882fbba8b092c0b48471b709b0d00cdd16a0edb92b65"
+    },
+    "public/room/assets/pet/fan.png": {
+      "sha256": "a02b5c7b74958f3fc238f9269ead039acfa6c7028d9db45f45a35751ca2aaa1b"
+    },
+    "public/room/assets/pet/fan.webm": {
+      "sha256": "87d4b9454692484e4809b45071751b2144fc82fd8696fafabb32e19af98350f2"
+    },
+    "public/room/assets/pet/game.png": {
+      "sha256": "f3b9e28d6d2afe5a33c4630774ae6ac4f54f061607038885888ca3d6ebb0e7ab"
+    },
+    "public/room/assets/pet/game.webm": {
+      "sha256": "8e406bc52cf2a20c9d288867367c4df7c45a5dc78443bc5c2fdc83835ac0b4c3"
+    },
+    "public/room/assets/pet/idle.png": {
+      "sha256": "ea26c0d43b547342288a653280b6650c770809a17afbffdaf8486af138a3f6e6"
+    },
+    "public/room/assets/pet/idle.webm": {
+      "sha256": "deb965d05a85dacf5ff4a20faa757846f0d11679598c3ec578a5571487660395"
+    },
+    "public/room/assets/pet/idle_hum.png": {
+      "sha256": "1c3510ecb918fe79be5c65da5503849b9792f13d86726069a1b9e0a07c5e0f55"
+    },
+    "public/room/assets/pet/idle_hum.webm": {
+      "sha256": "358905afc2c81a9ed478bcf121a8f2f19276766b1d382d0067456bd57d1d7dbb"
+    },
+    "public/room/assets/pet/idle_look.png": {
+      "sha256": "9502d62d6a0435593c042aefa7aaf8b4a2f526867a76d5835d64ac12150d4765"
+    },
+    "public/room/assets/pet/idle_look.webm": {
+      "sha256": "a20ed02ccc5e72075a3ca83fabb57d9aac5ded699f52d00ec6de72069799fcd5"
+    },
+    "public/room/assets/pet/kite.png": {
+      "sha256": "604b6be26b47a6641b4ddfa196417e1fa23ace4c187857653b6f0ff166fc6709"
+    },
+    "public/room/assets/pet/kite.webm": {
+      "sha256": "9d9ac75871b1c70a77fc4aaa63dd24778d79cbf492c2c5df42167199c7dd2132"
+    },
+    "public/room/assets/pet/mirror.png": {
+      "sha256": "7fa7ad687d37b20e03eed630cbe0ed0b852546034c4b4184540c2102b8aeb4bc"
+    },
+    "public/room/assets/pet/mirror.webm": {
+      "sha256": "13dc61c003e500d906b6526765072b7a78c0709491a397d4e70a88ec7ea63310"
+    },
+    "public/room/assets/pet/mooncake.png": {
+      "sha256": "98e090f747e6e2e03bbf6328c8a84dd722e0a0ba86ab0841956be5d1aada189e"
+    },
+    "public/room/assets/pet/mooncake.webm": {
+      "sha256": "3f64003262d3f129470721495695ecd231795d859693a748914c02c6e3883a3a"
+    },
+    "public/room/assets/pet/mutter.png": {
+      "sha256": "b3e08cc19d274834b1364a811d6c632047a4392e64d7abe458e2591815c941c8"
+    },
+    "public/room/assets/pet/mutter.webm": {
+      "sha256": "02da8cc2194250ae9708b137a3deff43fed2ebd40a7aa4a033b6262c3485eb5b"
+    },
+    "public/room/assets/pet/nap.png": {
+      "sha256": "a8dc9ee0871f852d9fd4beccd7475d1aa6f6817714385f112d47126fe9577897"
+    },
+    "public/room/assets/pet/nap.webm": {
+      "sha256": "31d4a6b36a29b2a4fe097384173d3bbeb3fa2f40f526b13191791456bf7507a1"
+    },
+    "public/room/assets/pet/react_happy.png": {
+      "sha256": "230e22240762a241d1e5ab504fa19a6347be7225d59bad0f92cc9b0a8304a8b9"
+    },
+    "public/room/assets/pet/react_happy.webm": {
+      "sha256": "86dcb0c3dd7b651de9c107e927d57a5c4224599101706dbdcc782fa48bcd0ad7"
+    },
+    "public/room/assets/pet/react_scare.png": {
+      "sha256": "70012cf4af08e54b327533207816d43e4f62224ea53c1eda3d4ae523928fc01c"
+    },
+    "public/room/assets/pet/react_scare.webm": {
+      "sha256": "537dde496e0f776e775dec1bb7bfe3fbc5eebf89112469a1a910ad0433ccde66"
+    },
+    "public/room/assets/pet/react_shy.png": {
+      "sha256": "5df9462043ce15fe9c8eae5d099c43d48cb4ac97d4b025b97043e15e8f3d2a17"
+    },
+    "public/room/assets/pet/react_shy.webm": {
+      "sha256": "a04968bbc46d1ebea07f81e5dabd93b0b67a9d07f1371e9887b33075134ad00d"
+    },
+    "public/room/assets/pet/run_happy.png": {
+      "sha256": "fb36535510a0c91b29afdc093cb87346a0bf0d42b550241e483408a7aac753b8"
+    },
+    "public/room/assets/pet/run_happy.webm": {
+      "sha256": "fa6a6d589490845a24aade4b8d9d16bd67143b36348261526f0acb9e6c2eb145"
+    },
+    "public/room/assets/pet/run_hurry.png": {
+      "sha256": "24124cb84583a8068a25510d9423abf3d4a07a15d790850ab3e032d3a794f796"
+    },
+    "public/room/assets/pet/run_hurry.webm": {
+      "sha256": "75dac326108fc701214042e0cabff5e950bc21b7ba03ca2ee54cdb0afc0618d6"
+    },
+    "public/room/assets/pet/sick.png": {
+      "sha256": "625793b789520ef3b1317e9427b223376952a3370ce032d8680677ec338b2180"
+    },
+    "public/room/assets/pet/sick.webm": {
+      "sha256": "ab00c844e62221905574b4c070e0d7b6fa14fb2afa1064c27a160f10e25f7196"
+    },
+    "public/room/assets/pet/sleep_in.png": {
+      "sha256": "ba707bad981999ec6c78fc038b1d93e2ce56f61f79dba794aea95001f3902db0"
+    },
+    "public/room/assets/pet/sleep_in.webm": {
+      "sha256": "5352a208925e01e191c1529d07c61ae61bcda90d92f2b89549c25c949f207e11"
+    },
+    "public/room/assets/pet/sleep_loop.png": {
+      "sha256": "8f2170c078e2c14f52591aa4bb54e8cb783d4ab8ce3971d9a9967b43f97fdb11"
+    },
+    "public/room/assets/pet/sleep_loop.webm": {
+      "sha256": "b49deb9b8dae4b83f84b6dc49efd41fdb654b05ad08ac6c5083977e17ef1122c"
+    },
+    "public/room/assets/pet/sleep_out.png": {
+      "sha256": "e6a142714a5ea8a9f891d81da5f30afa40bdca738a226efc400057f5a1ffb36e"
+    },
+    "public/room/assets/pet/sleep_out.webm": {
+      "sha256": "a2a4832e546e7639782b74f998d8a6ebc2ec3b3b933c0bcc709487fb4d19ab46"
+    },
+    "public/room/assets/pet/stretch.png": {
+      "sha256": "97b3d019825c6a5680624b227a3dbbed3349ff82df9895fb3c8605be97644185"
+    },
+    "public/room/assets/pet/stretch.webm": {
+      "sha256": "0ac66d918cc5efd49be1273c3830de73eae5f9bdcd5fcb968d1b2f9b487705ad"
+    },
+    "public/room/assets/pet/wait_food.png": {
+      "sha256": "8acd5fec17c679ac6e609f63d69b71c002af1407860616c06664cfa46bf59493"
+    },
+    "public/room/assets/pet/wait_food.webm": {
+      "sha256": "4999759c8c32af0b5400518084ade31c9445c4e5e3ea40218efa28f2e79d9c3e"
+    },
+    "public/room/assets/pet/walk.png": {
+      "sha256": "1329c448a31fadd93d803a62b0cdc12e0fe468b9fc5c6778e04d962ebf37318d"
+    },
+    "public/room/assets/pet/walk.webm": {
+      "sha256": "5696b0878be38cc450d6eaace837aef1c1b5834f1382bc6c11c2de582f284673"
+    },
+    "public/room/assets/pet/walk_fast.png": {
+      "sha256": "24124cb84583a8068a25510d9423abf3d4a07a15d790850ab3e032d3a794f796"
+    },
+    "public/room/assets/pet/walk_fast.webm": {
+      "sha256": "75dac326108fc701214042e0cabff5e950bc21b7ba03ca2ee54cdb0afc0618d6"
+    },
+    "public/room/assets/pet/yawn.png": {
+      "sha256": "396c12e008fe6c3c8b137ee3a95f1a8b117dc9e0c5144ae5488f4d4c0effcff0"
+    },
+    "public/room/assets/pet/yawn.webm": {
+      "sha256": "2b23372e1ff2bc2f9078c09740708c960d4ea021f9fc3cca294d9df11e393ec8"
+    },
+    "public/room/assets/sound/click-duck.wav": {
+      "sha256": "f1dafe05dfaa696b190e127800c48513e192d3efb521c246d1eaf86a4589b617"
+    },
+    "public/room/garden-camera.js": {
+      "sha256": "4106998a0289af0d5ee13071fd11617f3a9260251a669971253bab74d783c63f"
+    },
+    "public/room/garden-client.js": {
+      "sha256": "7fa2aef34131019c306c1101229b8398cf10cd0741cd51a7d15c4ade6acf307e",
+      "upstream_sha256": "5004f469caa1515888a7ddf771b830461a925b7b2ed96b30937791c0bd15b828"
+    },
+    "public/room/garden-showcase.html": {
+      "sha256": "49a1da7643f167db735d993e32ec842a0522d110f9bb0acd6cf18c2f8cb2ad71"
+    },
+    "public/room/garden-state.js": {
+      "sha256": "77ba933ca4f54a74d3ffcb49f6176337aa7ce9d7537d0818f7a9e56eb33e7a78"
+    },
+    "public/room/garden-ui.js": {
+      "sha256": "8d2959e1d117bf4fbdde38ff73a47313a8f9e74e41b02fbec701f6f7615d009c"
+    },
+    "public/room/garden-world.js": {
+      "sha256": "055d2ad54703932faaacba22f3fdc7edc6ff89cd88ba619cf43867ad692fc8cb"
+    },
+    "public/room/garden.css": {
+      "sha256": "8c4b86d59bcc5d682e24d2036d484f6036eb093fb57275cf31a7baa3f0f0b754"
+    },
+    "public/room/index.html": {
+      "sha256": "b83b324f652169202ab5518cd26549ae07edab69d54fb074ba9797cd4af0d0d7",
+      "upstream_sha256": "954320073ffd7cd4da83088f336a3317ef7572e6cf009ba80e6aa475391179ed"
+    },
+    "public/room/model-actor.js": {
+      "sha256": "4ded7a6928ace5f2738c6fe661814cfb11dfd2b30d19366570aa1c991abae045"
+    },
+    "public/room/native-room.js": {
+      "sha256": "bca54bca53df7a4150b13ca7112099e38cc59a55846c0b07b5f8664dc9f3c804",
+      "local": true
+    },
+    "public/room/vendor/BufferGeometryUtils.js": {
+      "sha256": "3a6701d824adfe05dc28c09b6c1d64aeab9a183bc3b944d85f15f596e5c6c2b3"
+    },
+    "public/room/vendor/GLTFLoader.js": {
+      "sha256": "1f9b02acfbf219a6ebb77f09e355500449a3ba9e6a77d87e0de72c0b9315ea4e"
+    },
+    "public/room/vendor/LICENSE-three.txt": {
+      "sha256": "852e0e8699169bf9f6fdc6bda3e682d078dcbc738b5d33e74df594721bff271d"
+    },
+    "public/room/vendor/three.module.js": {
+      "sha256": "76dea8151bc9352aef3528b4262e249b2604f62543828328db978d060d61a495"
+    },
+    "public/room/world.js": {
+      "sha256": "8a8fb5036cc90f206f91ef2e659035c824138700c58ce969fdd28565e164c6fc"
+    },
+    "src/garden-autonomy.js": {
+      "sha256": "51fde1095ff49415d25dede2178746ca4d583e854a988ae32169427f00e56dd0"
+    },
+    "src/garden-store.js": {
+      "sha256": "3303f75140a85eaed855aae68ce04d7542c47c3c9d8f875c7ebc5708d90931fe"
+    },
+    "src/home-state.js": {
+      "sha256": "d85c1545cff883ae64ba89d184d56f399d510368765936e11f9ea5a2f4c7b819",
+      "upstream_sha256": "cd304d35a61e0fdb5f3cebb684b40f092bb1f57698727f848311c96c7fbf7488"
+    },
+    "src/room-state.js": {
+      "sha256": "b9147660da8c6814217eacbf6c73dbed21bea8f229eb491dbcbcee292487f715"
+    },
+    "src/affinity.js": {
+      "sha256": "e8ce988acb789dff983f1ef8ddbd3d578f69a9f3059d9fa4ab54985b1a141853",
+      "upstream_sha256": "0f6be82a1c40ed627b70984ed97a48f9db4d0b666c0397e6f1eafb7002f6de92"
+    },
+    "src/slang-learner.js": {
+      "sha256": "8d51fa76144f068c8299112a10642d5e840615a56992e786c8696e9e1b296b60"
+    },
+    "src/sticker-lib.js": {
+      "sha256": "731c8eb78ddbcd6be8474626d34ba95cf7e6cee1d08fb633009748cea7a18023"
+    },
+    "src/role-card.js": {
+      "sha256": "cc24ccd4a6fcc8326ff5138f0f0e1df76e20fffc8dbec545f122da49afd38627"
+    },
+    "src/forward.js": {
+      "sha256": "6b4fe6533125bc3057108f452e291bf63e083a0b0b13664612cf60384c97a833"
+    },
+    "src/md-to-plain.js": {
+      "sha256": "45b929e680473b99a66ba4957582e43601b3a2b2eb33f5b67fafd6d9c01089ee"
+    },
+    "src/qzone.js": {
+      "sha256": "2f3abd3f761f55a08b728aa9cc57b7f04e328411498a15016656262f43d4ca49"
+    },
+    "src/sensitive.js": {
+      "sha256": "5b995729e191a33e89aa41028ab6aa3c7598dffe0aaa1081c326af4dff1ebe1e"
+    },
+    "src/group-wake.js": {
+      "sha256": "db6913d73194cf7a0012f9bb122e43b1fdec2df54b3cee219582cc77ae7ad1ec",
+      "upstream_sha256": "be0ec622d7b5024d882ad0d310e53dd0e122e6d2f796883e4d37d2fad7b50300",
+      "upstream_file": "src/bridge.js",
+      "treatment": "V1 silence, V2 wake predicates and validated read receipts from the original Room bridge. The host supplies the group nickname."
+    }
+  }
+}

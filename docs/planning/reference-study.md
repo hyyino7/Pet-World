@@ -1,5 +1,10 @@
 # Dafeiyu Reference Study
 
+Current applicability: Retained research and transfer limits. The
+[reuse review r4](reuse-review.md) owns current concrete component dispositions;
+[the product plan](plan.md) owns route, packages and trial gates. Earlier candidate
+statements below do not supersede those decisions or prove installed behavior.
+
 Updated: 2026-11-05, Asia/Ho_Chi_Minh; earlier evidence dates remain as recorded.
 Revision: v0.9, adding the 32-project module/integration map. Previous synthesis: [v0.6 snapshot](snapshots/reference-study-v0.6.md).
 Scope: Inform a new DSH-backed companion product. These projects are references,

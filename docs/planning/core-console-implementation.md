@@ -1,13 +1,16 @@
 # Core And Console Implementation Plan
 
 - Revision: v0.3, 2026-11-05, Asia/Ho_Chi_Minh.
-- Status: Core continuous chat/matter flow passed native and real-model checks; full scope and Console remain pending.
-- Current authorization: The subsequent user request starts Core implementation
-  first. See [runtime/evidence](../core-runtime.md) for the delivered subset.
+- Status: Retained C0–C3/CC proposal and historical implementation inventory.
+  [The current product plan](plan.md) replaces its execution sequence and mandatory
+  workbench implications; [the handover](../handover/README.md) keeps work paused.
+- Historical authorization: The earlier Core-first request applied to a previous
+  batch. See [runtime/evidence](../core-runtime.md) for that delivered subset;
+  it neither starts the current P1–P3 proposal nor accepts complete Core/Console.
 - This plan does not authorize installing into the personal profile, connecting
   accounts, migrating personal data, staging, commit or publication.
-- Current baseline: `main`, HEAD `4ac51de265b8b4a8f8f1cafdee8ba165d99295c0`.
-  Existing uncommitted planning, Voice, research and handover changes are retained.
+- Historical design baseline: `4ac51de265b8b4a8f8f1cafdee8ba165d99295c0`.
+  Do not interpret this old baseline or duty catalogue as current task state.
 
 ## 1. Authority, Decisions And Completion
 

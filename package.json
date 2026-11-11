@@ -8,14 +8,31 @@
     ".": "./dist/src/console/plugin.js",
     "./core": "./dist/src/core/index.js",
     "./contracts": "./dist/src/contracts/index.js",
+    "./world": "./dist/src/world/index.js",
     "./package.json": "./package.json",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./locale/*.json": "./locale/*.json",
     "./00-Core": "./dist/src/core/plugin.js",
     "./00-Core/locale/*.json": "./locale/core/*.json",
-    "./client": "./src/console/client.js"
+    "./client": "./src/desktop/platform/client.js",
+    "./20-Emotion": "./dist/src/emotion/plugin.js",
+    "./30-Desktop": "./dist/src/desktop/plugin.js",
+    "./35-PetPlatform": "./dist/src/desktop/platform/plugin.js",
+    "./70-Voice": "./dist/src/voice/plugin.js",
+    "./10-Memory": "./dist/src/memory/plugin.js",
+    "./40-Life": "./dist/src/life/plugin.js",
+    "./50-Room": "./dist/src/room/plugin.js",
+    "./60-Channels": "./dist/src/channels/plugin.js",
+    "./channel-guest": "./dist/src/channels/guest.js"
   },
   "types": "./dist/src/console/plugin.d.ts",
+  "bin": {"dafeiyu-standalone":"src/desktop/standalone.mjs"},
+  "imports": {
+    "#dsh-world/*": "./vendor/dsh-world/lib/*.js",
+    "#feiyu-home": "./vendor/feiyu-room-template/home-state.js",
+    "#feiyu-room/*": "./vendor/feiyu-room-template/src/*.js",
+    "#feiyu-garden": "./vendor/feiyu-room-template/public/room/garden-state.js"
+  },
   "files": [
     "dist/src",
     "docs/core-runtime.md",
@@ -24,7 +41,19 @@
     "cordis.patch.yml",
     "locale/",
     "src/console/client.js",
-    "docs/settings.md"
+    "src/desktop/platform/client.js",
+    "src/desktop/standalone.mjs",
+    "vendor/dsh-pet/platform/",
+    "src/desktop/assets/",
+    "src/desktop/helper/",
+    "src/room/shot-browser.cjs",
+    "src/memory/*.py",
+    "vendor/mnemosyne/",
+    "vendor/dsh-world/",
+    "docs/settings.md",
+    "vendor/dsh-pet/LICENSE",
+    "vendor/dsh-pet/origin.json",
+    "vendor/feiyu-room-template/"
   ],
   "engines": {
     "node": ">=24.9 <25",
@@ -34,27 +63,47 @@
   "scripts": {
     "check:env": "node scripts/doctor.mjs",
     "check:types": "tsc --noEmit",
-    "build": "tsc -p tsconfig.build.json",
-    "test": "pnpm run build && node --test dist/tests/*.test.js",
+    "build": "node scripts/build-desktop-animation.mjs && node scripts/build-pet-platform.mjs && tsc -p tsconfig.build.json",
+    "test": "pnpm run build && node --test dist/tests/*.test.js tests/world-*.test.mjs",
     "test:native": "pnpm run build && node scripts/check-native.mjs",
     "test:native-workspace": "pnpm run build && node scripts/check-native-workspace.mjs",
-    "test:live": "pnpm run build && node scripts/check-core-live.mjs"
+    "test:live": "pnpm run build && node scripts/check-core-live.mjs",
+    "test:memory": "pnpm run build && python tests/memory_provider_test.py && node --test tests/memory-process.test.mjs",
+    "test:native-memory": "pnpm run build && node scripts/check-native-memory.mjs",
+    "test:native-desktop": "pnpm run build && node scripts/check-native-desktop.mjs",
+    "test:desktop-window": "node scripts/check-desktop-window.mjs",
+    "test:native-portability": "pnpm run build && node scripts/check-native-portability.mjs",
+    "test:native-batch": "pnpm run build && CHATPET_CHECK_BATCH=1 node scripts/check-native-desktop.mjs",
+    "test:desktop-lifecycle": "node scripts/check-desktop-lifecycle.mjs",
+    "test:desktop-images": "pnpm run build && node scripts/check-desktop-images.mjs",
+    "test:native-life": "pnpm run build && node scripts/check-native-life.mjs",
+    "test:native-room": "pnpm run build && node scripts/check-native-room.mjs --photo",
+    "test:native-channel-homes": "pnpm run build && node scripts/check-native-channel-homes.mjs",
+    "test:pet-platform": "pnpm run build && node --test tests/pet-platform.test.mjs",
+    "test:pet-platform-window": "pnpm run build && node scripts/check-pet-platform-window.mjs"
+  },
+  "optionalDependencies": {
+    "@andresaya/edge-tts": "1.9.1",
+    "@snowluma/sdk": "1.14.20",
+    "ws": "8.22.2"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.5",
     "@deepseek-ai/dsh-agent": "0.2.1-rc.5 || 0.2.2-rc.1",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.5 || 0.2.2-rc.1",
     "@deepseek-ai/dsh-session": "0.2.1-rc.5 || 0.2.2-rc.1",
     "@deepseek-ai/dsh-system-prompt": "0.2.1-rc.5 || 0.2.2-rc.1",
     "@deepseek-ai/dsh-tools": "0.2.1-rc.5 || 0.2.2-rc.1"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
-    "@types/node": "24.10.0",
     "@deepseek-ai/cordis": "4.0.5",
     "@deepseek-ai/dsh-agent": "0.2.1-rc.5",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.5",
     "@deepseek-ai/dsh-session": "0.2.1-rc.5",
     "@deepseek-ai/dsh-system-prompt": "0.2.1-rc.5",
-    "@deepseek-ai/dsh-tools": "0.2.1-rc.5"
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.5",
+    "@types/node": "24.10.0",
+    "typescript": "5.9.3"
   },
   "dsh": {
     "bundle": {

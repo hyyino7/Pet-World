@@ -4,8 +4,10 @@
 - Status: Module inclusion confirmed; experience and transfer proposals under discussion.
 - Confirmed: Voice is the eighth independent business module, shared by Desktop
   and QQ. Implementation may be staged without removing either consumer.
-- Current work: Discuss outcomes and reference scope. No provider, engine,
-  dependency, account, implementation or live validation is selected here.
+- Current applicability: Retained experience discussion. The current
+  [P8a design reservation](plan.md#p8a--minimum-shared-voice-contract-reserved-now)
+  owns the minimum shared seam; P8b resolves experience/provider choices and P9a/P9b
+  record earlier implementation stages. The owner subsequently selected the complete Pet, World and Room integration, including Voice. The independent native Voice component shares the original Pet recognition and synthesis adapters across presentations. See [current evidence](../mvp-runtime.md#three-reference-integration).
 - Ownership: This record owns the Voice experience discussion. The product plan
   owns scope; module design owns responsibilities; module contracts owns the
   future public protocol; reference study owns inspected upstream evidence.
@@ -117,7 +119,8 @@ synthesis and first playback latency separately. Account for optional expression
 inference and format conversion as well as ASR/TTS work; choose no numerical
 limits from an upstream example.
 
-Detailed Voice public types, capability IDs/events and compile-only examples
-remain an explicit Stage 0 gap. Complete planning requires those contracts after
-this outcome/reference discussion, before any Voice implementation. Existing
-contract 0.2 type checks cover seven baseline modules, not Voice.
+P8a now reserves the minimum source/job/profile/cancel/playback/send design.
+Detailed Voice types, capability events and compile-only examples remain
+unimplemented. Reconcile affected types before the first affected Desktop/QQ
+consumer changes, following the current plan; this is not a Voice gate on the
+text-only P1–P3 batch. Existing contract type checks do not prove Voice behavior.

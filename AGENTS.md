@@ -20,6 +20,20 @@ competing current states. Prefer direct upstream reuse and verify the changed
 critical path. Documentation-only edits need link, diff and scope checks; run
 runtime or paid-model checks only when the change requires them.
 
+## Reuse Before Custom Changes
+
+Prefer existing reference-project code and workflows that satisfy the actual
+product requirements. Inspect and exercise the relevant existing path before
+designing a replacement; documentation claims or speculative limitations are
+not evidence that reuse is impossible.
+
+Only when source or runtime evidence establishes a concrete functional gap,
+explain the requirement, the reference limitation and the proposed improvement
+to the user. Discuss and agree on that improvement before implementing custom
+business/control logic or modifying the reference workflow. Do not weaken the
+requested functionality to make reuse appear sufficient. Existing custom code
+is not an accepted baseline merely because it is implemented or passes tests.
+
 ## Boundaries
 
 Preserve unrelated changes; do not commit or publish without request.

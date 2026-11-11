@@ -1,4 +1,8 @@
 import type { Context } from '@deepseek-ai/cordis';
+import type {} from '../desktop/plugin.js';
+import type {} from '../room/plugin.js';
+import type {} from '../channels/plugin.js';
+import type { PetPlatform } from '../desktop/platform/plugin.js';
 import { settingsHandler, type SettingsHandler, type SettingsWorkspaceRegistry } from './settings.js';
 
 export const name = 'dsh-Chatpet';
@@ -12,8 +16,14 @@ export function apply(ctx: Context): void {
     };
     get(name: 'workspaceRegistry'): SettingsWorkspaceRegistry | undefined;
   };
-  const handler = settingsHandler(() => ctx.get('petCore'), () => native.get('workspaceRegistry'));
-  for (const endpoint of ['snapshot', 'identity', 'quiet', 'preferences', 'initialize', 'profile', 'workbench', 'matter', 'cancelActivity', 'reconcileExecution']) {
+  const handler = settingsHandler(
+    () => ctx.get('petCore'), () => native.get('workspaceRegistry'), () => ctx.get('petDesktop'),
+    () => Object.keys(ctx.get('petWorld')?.modules ?? {}), () => ctx.get('petEmotion'), () => ctx.get('petLife'),
+    () => ctx.get('petRoom'),
+    () => ctx.get('petChannels'),
+    () => (ctx as unknown as {get(key:'petPlatform'):PetPlatform|undefined}).get('petPlatform'),
+  );
+  for (const endpoint of ['petPlatformAccess','petControlAccess','petStandaloneAccess','qzoneState','qzoneSettings','qzoneDraft','qzoneRemove','groupState','groupSettings','groupSlang','groupResearch','channelStatus','bridgeSettings','messagingSettings','roomState', 'roomAction', 'roomGarden', 'roomPlant', 'roomCare', 'roomChat', 'roomTelevision', 'roomHistory', 'lifeView', 'lifeControl', 'lifeAction', 'lifePreferences', 'lifeDates', 'lifeJournal', 'lifeAlbum', 'lifeSearch', 'lifePhoto', 'lifeForgetPhoto', 'snapshot', 'worldView', 'archiveFind', 'archiveRead', 'desktopOpen', 'desktopClose', 'desktopAppearance', 'companion', 'identity', 'quiet', 'preferences', 'initialize', 'profile', 'workbench', 'matter', 'cancelActivity', 'reconcileExecution']) {
     native.connection.fetch.register({ path: `/api/chatpetSettings/${endpoint}`, methods: ['POST'], requestBody: 'buffered',
       async fetch(request) {
         // Connection authenticates the physical request and admits only owner Peers

@@ -12,6 +12,25 @@ const fixture = () => {
   return { root, repo, config };
 };
 
+test('only an initialized companion Repo gets native-discoverable instructions, and owner edits survive restart', async () => {
+  const f = fixture(); let host = createCore(f.config);
+  try {
+    const prefs = unwrap(await host.services.preferences.read(host.operator.request('instructions.read'), {}));
+    assert.ok(!readdirSync(f.repo).includes('AGENTS.md'));
+    const saved = unwrap(await host.services.preferences.save(host.operator.request('instructions.bind'), {
+      expectedRevision: prefs.revision, conversation: prefs.conversation, workspace: { id: 'repo', path: f.repo, title: 'Repo' },
+    }));
+    unwrap(await host.services.workspace.initialize(host.operator.request('instructions.initialize'), { expectedPreferencesRevision: saved.revision }));
+    const instructions = readFileSync(join(f.repo, 'AGENTS.md'), 'utf8');
+    assert.ok(instructions.includes('.chatpet/SOUL.md') && instructions.includes('pet_memory_recall'));
+    assert.ok(instructions.includes('不要通过读取数据库、旧日志、备份'));
+    writeFileSync(join(f.repo, 'AGENTS.md'), '# Owner instructions\n');
+    await host.close(); host = createCore(f.config);
+    unwrap(await host.services.workspace.initialize(host.operator.request('instructions.restart'), { expectedPreferencesRevision: saved.revision }));
+    assert.equal(readFileSync(join(f.repo, 'AGENTS.md'), 'utf8'), '# Owner instructions\n');
+  } finally { await host.close(); rmSync(f.root, { recursive: true, force: true }); }
+});
+
 test('workspace initialization preserves project files, uses five profile/config files, reloads file authority and survives restart', async () => {
   const f = fixture(); let host = createCore(f.config); let request = 0;
   const context = () => host.operator.request(`workspace-${++request}`);

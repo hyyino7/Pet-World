@@ -1,18 +1,29 @@
 import type { PetCoreHost } from '../core/index.js';
 import type { ConversationOptions } from '../core/options.js';
 import type { WorkspaceTarget } from '../core/preferences.js';
+import { Rejection } from '../core/storage.js';
+import type { CompanionEmotion } from '../emotion/plugin.js';
+import type { CompanionLife } from '../life/plugin.js';
+import { estimateTokens } from '#dsh-world/console/snapshot';
+import { desktopAppearanceDefaults } from '../desktop/appearance.js';
+interface RoomControls { request(workspaceId: string, endpoint: string, data: Record<string, unknown>, requestId: string, signal: AbortSignal): Promise<unknown> }
 
 /** Structural subset of the native Connection RPC contract; no new transport. */
 export type SettingsReply = { ok: true; value: unknown } | { ok: false; error: { code: string; message: string; details: Record<string, never> } };
 export type SettingsHandler = (endpoint: string, payload: unknown, signal: AbortSignal, peer: { principal: { kind: string }; signal: AbortSignal }) => Promise<SettingsReply>;
-export interface SettingsWorkspace extends WorkspaceTarget { status(): Promise<'ok' | 'missing-dir'> }
+export interface SettingsWorkspace extends WorkspaceTarget { readonly sessionIds?: readonly string[]; status(): Promise<'ok' | 'missing-dir'> }
 export interface SettingsWorkspaceRegistry { list(): SettingsWorkspace[]; get(id: string): SettingsWorkspace | undefined }
+import type { CompanionSettings } from '../core/companion-settings.js';
 const messages: Record<string, string> = {
+  STALE_BINDING: '工作区绑定已改变，请刷新。',
   STALE_REVISION: '设置已被其他操作修改，请刷新后重新编辑。',
   CONFLICT: '设置已被其他操作修改，请刷新后重新编辑。',
   INVALID_ARGUMENT: '设置值无效，请检查填写内容。', UNAUTHORIZED: '当前连接没有修改设置的权限。',
   DISABLED: 'Core 当前已停止或暂停写入，请检查核心模块状态。',
   UNAVAILABLE: '00-Core 尚未就绪，请检查核心模块是否启用。',
+  WORLD_UNAVAILABLE: '大肥鱼的 World 组件尚未加载。',
+  PROFILE_UNAVAILABLE: '人设预览无法加载。请检查角色、用户资料和上下文字符上限。',
+  MEMORY_UNAVAILABLE: '长期记忆服务尚未配置或不可用。',
   NOT_FOUND: '所选工作区不存在，请刷新工作区列表。',
   WORKSPACE_INVALID: '绑定 Repo 的 .chatpet 资料无法加载。请检查 manifest.json、SOUL.md、USER.md 和 core.json 后刷新。原文件未被覆盖。',
   LIMIT_REACHED: '仍有执行进行中或结果未确认，请先停止或核对执行状态后再修改。',
@@ -30,8 +41,24 @@ function unwrap<T>(value: { ok: true; value: T } | { ok: false; error: { code: s
   if (!value.ok) fail(value.error.code);
   return value.value;
 }
+function requiredText(value: unknown, max: number): string {
+  if (typeof value !== 'string' || !value.trim() || value.length > max) fail('INVALID_ARGUMENT');
+  return value.trim();
+}
+const sectionModules = new Map([['profile', 'persona'], ['sessions', 'archive'], ['emotion', 'mood']]);
 /** Owner-only, finite endpoint map. No caller-supplied operation, actor or authority is forwarded. */
-export function settingsHandler(getHost: () => PetCoreHost | undefined, getWorkspaces: () => SettingsWorkspaceRegistry | undefined): SettingsHandler {
+interface DesktopControls {
+  status(): { running: boolean };
+  start(): Promise<unknown>;
+  closeWindow(): unknown;
+}
+export function settingsHandler(getHost: () => PetCoreHost | undefined, getWorkspaces: () => SettingsWorkspaceRegistry | undefined,
+  getDesktop?: (host: PetCoreHost) => DesktopControls | undefined, getWorldModules?: () => readonly string[],
+  getEmotion?: () => Pick<CompanionEmotion, 'current' | 'catalog'> | undefined,
+  getLife?: () => (Pick<CompanionLife, 'snapshot' | 'control' | 'act'> & Partial<Pick<CompanionLife, 'settings' | 'library'>>) | undefined,
+  getRoom?: () => RoomControls | undefined,
+  getChannels?: () => Pick<import('../channels/plugin.js').CompanionChannels,'request'> | undefined,
+  getPlatform?: () => Pick<import('../desktop/platform/plugin.js').PetPlatform, 'ownerAccess' | 'controlAccess' | 'standaloneAccess'> | undefined): SettingsHandler {
   return async (endpoint, payload, signal, peer) => {
     try {
       if (peer.principal.kind !== 'owner' || peer.signal.aborted) fail('UNAUTHORIZED');
@@ -41,10 +68,82 @@ export function settingsHandler(getHost: () => PetCoreHost | undefined, getWorks
       if (typeof body.requestId !== 'string' || body.requestId.length < 1 || body.requestId.length > 160) fail('INVALID_ARGUMENT');
       const context = () => host.operator.request(`settings:${endpoint}:${body.requestId}`);
       const options = { signal };
+      if (endpoint === 'desktopAppearance') { object(body.input, []); return {ok:true, value:desktopAppearanceDefaults()}; }
+      if (['petPlatformAccess','petControlAccess','petStandaloneAccess'].includes(endpoint)) {
+        const input = object(body.input,['workspaceId']);
+        const target = host.workspace.status();
+        if (target.state !== 'ready' || target.target?.id !== input.workspaceId) fail('STALE_BINDING');
+        const platform = getPlatform?.();
+        if (!platform) fail('UNAVAILABLE');
+        const id = target.target!.id;
+        const value = endpoint === 'petPlatformAccess' ? platform.ownerAccess(id) :
+          endpoint === 'petControlAccess' ? platform.controlAccess(id) : await platform.standaloneAccess(id);
+        if (host.workspace.status().target?.id !== input.workspaceId || getPlatform?.() !== platform) fail('STALE_BINDING');
+        return {ok:true,value};
+      }
+      const channelFields = {channelStatus:['workspaceId'], bridgeSettings:['workspaceId','expected','next'],
+        messagingSettings:['workspaceId','expected','next'], groupState:['workspaceId','groupId'],
+        groupSettings:['workspaceId','groupId','expected','next'], groupSlang:['workspaceId','groupId','content','meaning','usage','status'],
+        groupResearch:['workspaceId','groupId','content'], qzoneState:['workspaceId'], qzoneSettings:['workspaceId','expected','next'],
+        qzoneDraft:['workspaceId','text'], qzoneRemove:['workspaceId','id']} as Record<string,string[]>;
+      if (Object.hasOwn(channelFields,endpoint)) {
+        const input = object(body.input, channelFields[endpoint]);
+        const id = requiredText(input.workspaceId, 200), channels = getChannels?.();
+        if (!channels) fail('UNAVAILABLE');
+        if (host.workspace.status().target?.id !== id) fail('STALE_BINDING');
+        const value = await channels.request(id, endpoint, input);
+        if (getChannels?.() !== channels || host.workspace.status().target?.id !== id) fail('STALE_BINDING');
+        if (signal.aborted || peer.signal.aborted) fail('CANCELLED');
+        return {ok:true, value};
+      }
+      if (['roomState','roomAction','roomGarden','roomPlant','roomCare','roomChat','roomTelevision','roomHistory'].includes(endpoint)) {
+        const input = object(body.input, ['workspaceId', 'data']);
+        const id = requiredText(input.workspaceId, 200), room = getRoom?.();
+        if (!room) fail('UNAVAILABLE');
+        if (host.workspace.status().target?.id !== id) fail('STALE_BINDING');
+        if (!input.data || typeof input.data !== 'object' || Array.isArray(input.data)) fail('INVALID_ARGUMENT');
+        const value = await room.request(id, endpoint, input.data as Record<string, unknown>, body.requestId, AbortSignal.any([signal, peer.signal]));
+        if (getRoom?.() !== room || host.workspace.status().target?.id !== id) fail('STALE_BINDING');
+        if (signal.aborted || peer.signal.aborted) fail('CANCELLED');
+        return {ok:true, value};
+      }
+      if (['lifePreferences', 'lifeDates', 'lifeJournal', 'lifeAlbum', 'lifePhoto', 'lifeForgetPhoto','lifeSearch'].includes(endpoint)) {
+        const fields = endpoint === 'lifePreferences' ? ['expected', 'next'] : endpoint === 'lifeSearch' ? ['query','offset'] : endpoint === 'lifeDates' ? [] :
+          [endpoint === 'lifeJournal' ? 'day' : endpoint === 'lifeAlbum' ? 'offset' : 'id'];
+        const input = object(body.input, ['workspaceId', ...fields]);
+        const id = requiredText(input.workspaceId, 200);
+        const life = getLife?.();
+        if (host.workspace.status().target?.id !== id) fail('STALE_BINDING');
+        if (!life?.settings || !life.library) fail('UNAVAILABLE');
+        let value: unknown;
+        if (endpoint === 'lifePreferences') value = await life.settings(id, input.expected, input.next);
+        else if (endpoint === 'lifeSearch') value = await life.library(id, 'search', {query:input.query, offset:input.offset});
+        else if (endpoint === 'lifeDates') value = await life.library(id, 'dates');
+        else if (endpoint === 'lifeJournal') value = await life.library(id, 'journal', input.day);
+        else if (endpoint === 'lifeAlbum') value = await life.library(id, 'album', input.offset);
+        else value = await life.library(id, endpoint === 'lifePhoto' ? 'photo' : 'forgetPhoto', input.id);
+        if (signal.aborted || peer.signal.aborted) fail('CANCELLED');
+        if (getLife?.() !== life || host.workspace.status().target?.id !== id) fail('STALE_BINDING');
+        return {ok: true, value};
+      }
+      if (endpoint === 'lifeView' || endpoint === 'lifeControl' || endpoint === 'lifeAction') {
+        const key = endpoint === 'lifeControl' ? 'enabled' : endpoint === 'lifeAction' ? 'action' : null;
+        const input = object(body.input, ['workspaceId', ...(key ? [key] : [])]);
+        const state = host.workspace.status();
+        if (state.state !== 'ready' || state.target?.id !== input.workspaceId) fail('STALE_BINDING');
+        const life = getLife?.(); if (!life) fail('UNAVAILABLE');
+        if (endpoint === 'lifeControl' && typeof input.enabled !== 'boolean') fail('INVALID_ARGUMENT');
+        if (endpoint === 'lifeAction' && (typeof input.action !== 'string' || !['feed', 'water', 'play', 'pet', 'sleep', 'wake'].includes(input.action))) fail('INVALID_ARGUMENT');
+        const workspaceId = input.workspaceId as string;
+        const value = endpoint === 'lifeView' ? await life.snapshot(workspaceId)
+          : endpoint === 'lifeControl' ? await life.control(workspaceId, input.enabled as boolean)
+          : await life.act(workspaceId, input.action as string);
+        if (signal.aborted || peer.signal.aborted) fail('CANCELLED');
+        if (getLife?.() !== life || host.workspace.status().target?.id !== workspaceId) fail('STALE_BINDING');
+        return {ok: true, value: endpoint === 'lifeView' ? {...value, roomAvailable: Boolean(getRoom?.()), channelsAvailable:Boolean(getChannels?.())} : value};
+      }
       if (endpoint === 'snapshot') {
         object(body.input, []);
-        const initialWorkspace = unwrap(await host.services.workspace.inspect(context(), {}, options));
-        if (initialWorkspace.state === 'unavailable') fail('WORKSPACE_INVALID');
         const identity = unwrap(await host.services.core.getIdentity(context(), {}, options));
         const policy = unwrap(await host.services.core.getPolicy(context(), {}, options));
         const prefs = unwrap(await host.services.preferences.read(context(), {}, options));
@@ -57,7 +156,95 @@ export function settingsHandler(getHost: () => PetCoreHost | undefined, getWorks
         })));
         return { ok: true, value: { identity: { revision: identity.revision, displayName: identity.displayName, character: identity.character },
           policy, preferences: prefs, capabilities, workspaces, workspaceAvailable: Boolean(registry), workspace, profile,
+          desktop: getDesktop?.(host)?.status() ?? null,
+          platformAvailable:Boolean(getPlatform?.()),
+          memory: { newSessions: Boolean(host.native.memory && host.native.memoryEnabledForNewSessions),
+            provider: host.native.memory?.connection.lifecycle ?? null },
+          worldModules: getWorldModules?.() ?? [],
+          companion: workspace.state === 'ready' ? host.workspace.companionSettings() : null,
           nativeConversationReady: workspace.state === 'ready' && Boolean(registry) } };
+      }
+      if (endpoint === 'worldView' || endpoint === 'archiveFind' || endpoint === 'archiveRead') {
+        const archiveKey = endpoint === 'archiveFind' ? 'query' : endpoint === 'archiveRead' ? 'memoryId' : null;
+        const input = object(body.input, ['workspaceId', archiveKey ?? 'section']);
+        const { workspaceId } = input;
+        if (typeof workspaceId !== 'string' || !workspaceId.trim()) fail('INVALID_ARGUMENT');
+        const argument = archiveKey ? requiredText(input[archiveKey], archiveKey === 'query' ? 240 : 256) : '';
+        const module = archiveKey ? 'memory' : typeof input.section === 'string' && sectionModules.get(input.section);
+        if (!module) fail('INVALID_ARGUMENT');
+        const modulesReady = () => getWorldModules?.().includes(module);
+        if (!modulesReady()) fail('WORLD_UNAVAILABLE');
+        const binding = unwrap(await host.services.workspace.inspect(context(), {}, options));
+        const registered = getWorkspaces()?.get(workspaceId);
+        if (binding.state !== 'ready' || binding.target?.id !== workspaceId || registered?.id !== workspaceId
+          || registered.path !== binding.target.path) fail('STALE_BINDING');
+        if (await registered.status() !== 'ok') fail('NOT_FOUND');
+
+        // Directory availability is asynchronous. Resolve the services and binding
+        // again before reading any workspace content from the current owners.
+        const verifyCurrentScope = () => {
+          if (peer.signal.aborted) fail('UNAUTHORIZED');
+          if (signal.aborted) fail('CANCELLED');
+          if (getHost() !== host || !modulesReady()) fail('WORLD_UNAVAILABLE');
+          const now = host.workspace.status();
+          if (getWorkspaces()?.get(workspaceId) !== registered || now.state !== 'ready'
+            || now.target?.id !== workspaceId || now.target.path !== registered.path
+            || now.revision !== binding.revision || now.sourceRevision !== binding.sourceRevision) fail('STALE_BINDING');
+        };
+        verifyCurrentScope();
+        if (archiveKey) {
+          const memory = host.native.memory;
+          if (!memory) fail('MEMORY_UNAVAILABLE');
+          let value;
+          try {
+            value = archiveKey === 'query' ? await memory.findForOwner(workspaceId, argument)
+              : await memory.readForOwner(workspaceId, argument);
+          } catch (error) {
+            verifyCurrentScope();
+            const code = error instanceof Rejection ? error.detail.code
+              : error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+            if (code === 'STALE_BINDING' || code === 'INELIGIBLE') fail(code);
+            const status = error && typeof error === 'object' && 'status' in error ? error.status : null;
+            if (status === 403 || status === 404 || status === 409) fail('INELIGIBLE');
+            fail('MEMORY_UNAVAILABLE');
+          }
+          verifyCurrentScope();
+          return { ok: true, value };
+        }
+        if (input.section === 'sessions') return { ok: true, value: { workspaceId, sessions: registered.sessionIds?.length ?? null } };
+        if (input.section === 'profile') {
+          let profile;
+          try { profile = host.native.context(); } catch { fail('PROFILE_UNAVAILABLE'); }
+          const estimatedTokens = estimateTokens([profile.identity, profile.user].filter(Boolean).join('\n\n'));
+          return { ok: true, value: { workspaceId, profile: { ...profile, estimatedTokens } } };
+        }
+        const emotion = getEmotion?.();
+        const current = emotion?.current(workspaceId);
+        const label = (asset: { name: string; label?: string }) => asset.label || asset.name;
+        return { ok: true, value: { workspaceId,
+          emotion: emotion ? {
+            current: current ? { mood: current.mood, at: current.at } : null,
+            actions: emotion.catalog.actions.map(label), stickers: emotion.catalog.stickers.map(label),
+          } : null,
+        } };
+      }
+      if (endpoint === 'desktopOpen' || endpoint === 'desktopClose') {
+        const input = object(body.input, ['workspaceId']);
+        const desktop = getDesktop?.(host);
+        if (!desktop) fail('UNAVAILABLE');
+        const workspace = host.workspace.status();
+        if (workspace.target?.id !== input.workspaceId || (endpoint === 'desktopOpen' && workspace.state !== 'ready'))
+          fail('STALE_BINDING');
+        if (endpoint === 'desktopOpen') await desktop.start();
+        else await desktop.closeWindow();
+        return { ok: true, value: desktop.status() };
+      }
+      if (endpoint === 'companion') {
+        const input = object(body.input, ['workspaceId', 'expectedSettings', 'settings']);
+        return { ok: true, value: unwrap(await host.services.workspace.saveCompanion(context(), {
+          workspaceId: input.workspaceId as string, expectedSettings: input.expectedSettings as CompanionSettings,
+          settings: input.settings as CompanionSettings,
+        }, options)) };
       }
       if (endpoint === 'workbench') {
         object(body.input, []);

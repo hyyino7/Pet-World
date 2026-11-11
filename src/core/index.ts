@@ -1,4 +1,5 @@
 import { CoreNative } from './native.js';
+import { NativeMemory } from './native-memory.js';
 import { createWorkbench } from './workbench.js';
 import { CoreWorkspace } from './workspace.js';
 import { createPreferences } from './preferences.js';
@@ -17,10 +18,19 @@ export function createCore(config: CoreConfig, driver: NativeDriver | null = nul
   const workspace = new CoreWorkspace(runtime); runtime.files = workspace;
   const execution = new CoreExecution(runtime, driver);
   const native = new CoreNative(runtime, execution);
+  if (config.memory) native.memory = new NativeMemory(runtime, config.memory);
   const resources = new CoreResources(runtime);
   const maintenance = new CoreMaintenance(runtime, resources);
   runtime.capabilities = () => {
     const base = runtime.baseCapabilities();
+    if (native.memory) {
+      const memory = base.find(capability => capability.id === 'memory.lifecycle')!;
+      const active = native.memory.connection.lifecycle === 'ready';
+      memory.state = active ? 'degraded' : 'unavailable';
+      memory.reason = active ? 'Selected provider native port active; full Memory catalogue/guarded restore are not implemented'
+        : `Memory configured; owned provider ${native.memory.connection.lifecycle}. Native use must verify availability.`;
+      memory.supportedOperations = active ? ['observe', 'recall', 'correct', 'withdraw', 'validate', 'recover'] : [];
+    }
     const conversation = base.find(x => x.id === 'core.conversation')!;
     if (driver?.kind === 'dsh') {
       conversation.state = runtime.historyReady() ? 'ready' : 'unavailable';
@@ -61,7 +71,10 @@ export function createCore(config: CoreConfig, driver: NativeDriver | null = nul
     chat,
     workspace, native,
     drain: () => execution.drain(), idle: () => execution.idle(),
-    close: async () => { try { await native.close(); await execution.close(); } finally { runtime.close(); } },
+    close: async () => {
+      try { await native.close(); await execution.close(); }
+      finally { try { await native.memory?.close(); } finally { runtime.close(); } }
+    },
   };
 }
 export type PetCoreHost = ReturnType<typeof createCore>;

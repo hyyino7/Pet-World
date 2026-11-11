@@ -1,5 +1,9 @@
 # Pinned Reference Module And Integration Map
 
+Current applicability: This map retains the broad research inventory, not current
+adoption decisions. Use [reuse review r4](reuse-review.md) for concrete reuse gaps
+and [the product plan](plan.md) for scope, dependencies and delivery gates.
+
 - Revision: v0.1, 2026-11-05, Asia/Ho_Chi_Minh.
 - Scope: All 32 entries in the local reference manifest, mapped to the eight
   confirmed product modules. Core includes resource and maintenance facets;
