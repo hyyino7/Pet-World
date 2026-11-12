@@ -324,10 +324,10 @@ export class CoreRuntime {
         if (input.dueAt === null) delete result.dueAt; else if (input.dueAt) result.dueAt = input.dueAt;
         this.store.put('commitment', result.commitmentId, result); return result;
       }, true),
-      listCommitments: this.call('listCommitments', false, input => this.store.page(this.store.all<Commitment>('commitment').filter(x => (!input.state || x.state === input.state) && this.eligible([...x.sourceIds, ...x.resultSourceIds])), input)),
+      listCommitments: this.call('listCommitments', false, input => this.store.page(this.store.all<Commitment>('commitment').filter(x => !input.state || x.state === input.state), input)),
       listCommitmentProgress: this.call('listCommitmentProgress', false, input => {
         this.store.require('commitment', input.commitmentId);
-        return this.store.page(this.store.all<CommitmentProgress>('commitment-progress').filter(x => x.commitmentId === input.commitmentId && this.eligible(x.sourceIds)), input);
+        return this.store.page(this.store.all<CommitmentProgress>('commitment-progress').filter(x => x.commitmentId === input.commitmentId), input);
       }),
       admitActivity: this.call('admitActivity', true, (input, context) => this.admit(input, context)),
       getActivity: this.call('getActivity', false, input => {

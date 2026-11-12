@@ -4,7 +4,7 @@ import { digest } from '../core/storage.js';
 import type { PetCoreHost } from '../core/index.js';
 
 interface Summary { seq: number; content: string; sources: string[]; turns: number }
-interface Pending { summary?: Summary; retryAt?: number; failures?: number; sessionId: string; workspaceId: string; path: string; turns: number; lastActivity: number; lastAttempt: number; error?: string }
+interface Pending { summary?: Summary; retryAt?: number; failures?: number; sessionId: string; workspaceId: string; path: string; turns: number; lastActivity: number; lastAttempt: number; error?: string; lastSummary?: {seq:number;state:'joined'|'withheld';reason:string|null;at:number} }
 /** dsh-chatbot's turn/idle/minimum-interval policy over DSH's existing
  * compaction maintenance transaction. Original events remain in the native log. */
 export function installMemoryBatch(ctx: Context, host: PetCoreHost): () => Promise<void> {
@@ -20,10 +20,11 @@ export function installMemoryBatch(ctx: Context, host: PetCoreHost): () => Promi
     if (!host.native.memoryFor(session.id) || event.type !== 'turn/end' || event.data.reason.kind !== 'completed') return;
     const native = ctx as unknown as { get(key: string): Parameters<PetCoreHost['workspace']['sessionStatus']>[1] };
     const bound = host.workspace.sessionStatus(session, native.get('workspaceRegistry'));
-    if (bound?.state !== 'ready' || !bound.target) return;
+    const scope=host.native.scopeFor(session.id);
+    if(!scope || (!scope.guest && (bound?.state!=='ready' || !bound.target)))return;
     const old = store.get<Pending>('memory-batch', session.id);
-    store.put('memory-batch', session.id, { sessionId: session.id, workspaceId: bound.target.id, path: bound.target.path,
-      turns: (old?.turns ?? 0) + 1, lastActivity: event.time, lastAttempt: old?.lastAttempt ?? 0, retryAt:old?.retryAt ?? 0, failures:old?.failures ?? 0, ...(old?.summary ? {summary:old.summary} : {}) });
+    store.put('memory-batch', session.id, { sessionId: session.id, workspaceId: scope.workspaceId, path: scope.path,
+      turns: (old?.turns ?? 0) + 1, lastActivity: event.time, lastAttempt: old?.lastAttempt ?? 0, retryAt:old?.retryAt ?? 0, failures:old?.failures ?? 0, ...(old?.summary ? {summary:old.summary} : {}),...(old?.lastSummary?{lastSummary:old.lastSummary}:{}) });
   }, { global: true });
   async function run(row: Pending, agent: Agent, signal: AbortSignal) {
     const memory = host.native.memoryFor(row.sessionId);
@@ -55,10 +56,25 @@ export function installMemoryBatch(ctx: Context, host: PetCoreHost): () => Promi
       }
     }
     if (pending) {
-      await memory.capture(pending.sources);
-      const saved = await memory.connection.call<{id:string}>('summary', { session_id: row.sessionId, summary_seq: pending.seq, content: pending.content,
-        sources: pending.sources.map(id => ({ id, revision: '1' })) });
-      if (saved.id) store.put('native-summary-memory',digest([row.sessionId,pending.seq]),saved.id);
+      const checkpoint=pending.seq;
+      let withheld:string|null=null;
+      const sources=[...pending.sources];
+      const bank=host.workspace.storageId();
+      const tracked=sources.every(id=>store.get<{workspaceId:string}>('memory-source-work',id)?.workspaceId===bank);
+      // A native checkpoint can still contain original text from a Memory-off
+      // period. Keep it in DSH, but do not silently backfill it into the Bank.
+      if(!tracked){pending=undefined;withheld='memory_off_sources_not_observed';}
+      if(pending)await memory.capture(sources);
+      // Withhold a checkpoint containing withdrawn material without rejecting
+      // the native chat or retrying the same unusable summary indefinitely.
+      const decision=pending ? await memory.connection.validate({sources:sources.map(id=>({id,revision:'1'})),memories:[]}) : 'ineligible';
+      if(decision==='unknown')throw Error('Memory summary source status unavailable');
+      if(decision==='ineligible' && pending){pending=undefined;withheld='source_withdrawn_or_corrected';}
+      const saved=pending && sources.length ? await memory.connection.call<{id:string}>('summary', { session_id: row.sessionId, summary_seq: pending.seq, content: pending.content,
+        sources:sources.map(id=>({id,revision:'1'})) }) : undefined;
+      if(saved?.id && pending)store.put('native-summary-memory',digest([row.sessionId,pending.seq]),saved.id);
+      const latest=store.get<Pending>('memory-batch',row.sessionId)!;
+      store.put('memory-batch',row.sessionId,{...latest,lastSummary:{seq:checkpoint,state:saved?.id?'joined':'withheld',reason:saved?.id?null:withheld ?? 'no_observed_sources',at:Date.now()}});
     }
     const latest = store.get<Pending>('memory-batch', row.sessionId)!;
     // Maintenance serializes waking input; preserve any newly completed turns.

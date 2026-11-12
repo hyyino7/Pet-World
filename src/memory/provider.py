@@ -200,7 +200,7 @@ class MemoryPort:
 
     def observe(self, scope: dict, *, source_id: str, content: str, revision: str,
                 actor_id: str, source_kind: str = "user_statement", roots: list[dict] | None = None, excerpt_parent: dict | None = None,
-                conversation_context: bool = False) -> dict:
+                conversation_context: bool = False, attribution: dict | None = None) -> dict:
         self.authorize(scope)
         if not all((source_id, revision, actor_id)):
             raise ValueError("attributed source/revision required")
@@ -221,7 +221,7 @@ class MemoryPort:
             agent_id=scope["companionId"], idempotency_key=f"pet:observation:{source_id}",
             metadata={"workspace_id": scope["workspaceId"], "pet_scope": scope, "actor_id": actor_id,
                       "agent_id": scope["companionId"], "pet_roots": roots or [],
-                      "pet_excerpt_parent": excerpt_parent,
+                      "pet_excerpt_parent": excerpt_parent, "attribution": attribution or {},
                       **({"pet_context": True, "pet_sources": [{"id": source_id, "revision": revision}]} if conversation_context else {}),
                       "source_ref": {"source_id": source_id, "root_source_id": source_id, "revision": revision}}))
         decision = self.source_decision(source_id)
@@ -428,7 +428,8 @@ class MemoryPort:
                     # eligible dialogue separately, never relabel it as
                     # an extracted fact or a semantic summary.
                     record["conversation"] = [{"sourceId": dep["id"], "role": "user" if source["kind"] == "user_statement" else "assistant",
-                        "recorded_at": source["recorded_at"], "text": source["content"]}
+                        "recorded_at": source["recorded_at"], "text": source["content"],
+                        "actor_id": source["metadata"].get("actor_id"), "attribution": source["metadata"].get("attribution", {})}
                         for dep in sources if (source := self.source(dep["id"]))
                         and source["kind"] in ("user_statement", "agent_inference")]
                 records.append(record)
@@ -463,7 +464,8 @@ class MemoryPort:
         if self.validate(scope, **dependencies)["decision"] != "eligible":
             raise ConflictError("memory detail unavailable")
         return {"memory": memory, "dependencies": dependencies,
-                "conversation": [{"sourceId": dep["id"], "text": source["content"], "role": source["kind"]}
+                "conversation": [{"sourceId": dep["id"], "text": source["content"], "role": source["kind"],
+                                 "actor_id": source["metadata"].get("actor_id"), "attribution": source["metadata"].get("attribution", {})}
                                  for dep in sources if (source := self.source(dep["id"]))]}
 
     def context(self, scope: dict, *, query: str, max_chars: int, limit: int = 8, include_recent: bool = False, exclude_sources: list[str] | None = None, exclude_memories: list[str] | None = None, block_chars: int = 600) -> dict:
@@ -481,6 +483,8 @@ class MemoryPort:
                     "epistemic": memory.get("metadata", {}).get("epistemic", "unverified_record"),
                     "source_roles": sorted({source["kind"]
                         for dep in record["dependencies"]["sources"] if (source := self.source(dep["id"]))})}
+            view["speakers"] = [{"actor_id": source["metadata"].get("actor_id"), "attribution": source["metadata"].get("attribution", {})}
+                for dep in record["dependencies"]["sources"] if (source := self.source(dep["id"]))]
             view["memory"]["content"] = memory["content"][:block_chars]
             view["detail_available"] = len(memory["content"]) > block_chars or bool(record.get("conversation"))
             if record.get("conversation"):
@@ -499,7 +503,7 @@ class MemoryPort:
         # character heuristic estimates tokens; the consumer separately enforces
         # its exact character allowance. No second clipping/packing loop exists.
         built = self.service.build_context(ContextBuildIn(query=query, token_budget=max_chars // 2, limit=limit,
-            envelope={"sections": {"stable_prefix": "以下是有来源的记忆数据，召回范围可能不完整。ID 和状态标签仅供内部使用，普通回答不要复述。source_roles=user_statement 表示用户亲口提供的信息，应按用户所述自然回忆，不要求独立核实，也不凭空认定信息过时。unverified_record 不代表用户从未确认。conversation 条目是过去的原始对话；通过 source_roles 区分用户陈述和助手回复，不能把助手回复当成用户事实。未收入的片段不代表不存在，不能编造缺失细节。updated_at 是记录更新时间，不等于事件发生时间；保持原话的时间含义，不臆造事件日期或时间间隔。"}}),
+            envelope={"sections": {"stable_prefix": "以下是有来源的记忆数据，召回范围可能不完整。ID 和状态标签仅供内部使用，普通回答不要复述。source_roles=user_statement 表示相应发言人亲口提供的信息；actor_id 与 attribution 区分主人、群友、群和私聊，不得把访客的话当主人事实，应按实际发言人自然回忆，不要求独立核实，也不凭空认定信息过时。unverified_record 不代表用户从未确认。conversation 条目是过去的原始对话；通过 source_roles 区分用户陈述和助手回复，不能把助手回复当成用户事实。未收入的片段不代表不存在，不能编造缺失细节。updated_at 是记录更新时间，不等于事件发生时间；保持原话的时间含义，不臆造事件日期或时间间隔。"}}),
             admitted_memories=[Memory.model_validate(record["memory"]) for record in recalled["records"]],
             render_content=lambda memory: views[memory.id])
         if built.fits is False:

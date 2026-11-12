@@ -10,7 +10,8 @@ declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap { 'runtime-context': { kind: 'runtime-context' } & ContextFormed }
 }
 
-const previousSections = new Set(['chatpet.identity', 'chatpet.user', 'chatpet.memory-policy', 'chatpet.expression', 'chatpet.memory']);
+const previousSections = new Set(['chatpet.identity', 'chatpet.user', 'chatpet.memory-policy', 'chatpet.expression',
+  'chatpet.expression-state', 'chatpet.expression-guide', 'chatpet.memory']);
 // Any remaining section must pick up a removed sibling's pending change when
 // an optional component is unloaded between two turns of the same Agent.
 const restart = new WeakMap<Agent, symbol>();
@@ -44,11 +45,17 @@ export function retireLegacyPrompt(session: Session, turn: number, step: number,
  * 0.7.4 (promptSection.ts, worldScope.ts and runtime.ts, MIT). The caller's
  * reader supplies the bound Repo's content and returns '' outside its scope.
  */
+export interface WorldPromptRegistration {
+  (): void;
+  /** Share the same per-Agent section map across native preset waterfalls. */
+  attach(scope: Context): void;
+}
+
 export function registerWorldPrompt(
   ctx: Context, name: string, order: number, read: (agent: Agent) => string,
   prepare?: (agent: Agent) => Promise<void>,
   admit?: (agent: Agent) => Promise<void>,
-): () => void {
+): WorldPromptRegistration {
   const entries = new Map<Agent, { text: string; dispose: () => void }>();
   function sync(agent: Agent): boolean {
     const text = read(agent);
@@ -68,39 +75,55 @@ export function registerWorldPrompt(
     restart.set(agent, Symbol());
     return true;
   }
-  const offAssembly = reassembleOnChange(ctx, sync);
-  // The native loop assembles the system prompt before agent/pre-step. A
-  // scoped asynchronous reader must finish before the original sync listener
-  // selects sections, then join its sources after Core admits that step.
-  const offPrepare = prepare && ctx.on('system-prompt/assemble', async (_assembly, context, next) => {
-    if (context.agent) await prepare(context.agent);
-    return next();
-  }, {prepend: true});
-  const offPreStep = ctx.on('agent/pre-step', async ({ agent }, next) => {
-    const decision = await next();
-    if (admit && decision.kind === 'enter') await admit(agent);
-    const pending = restart.get(agent);
-    if (decision.kind !== 'enter' || !pending) return decision;
-    admitted.set(agent, pending);
-    return { ...decision, startsRequestSeries: true };
-  });
-  // A cancelled admission may finish before DSH records a request. Keep the
-  // restart pending so a retry can still replace the prior in-history prompt.
-  const offAdmission = ctx.on('session/event', (session, event) => {
-    if (event.type !== 'assistant/message') return;
-    const agent = ctx.agents.get(session.id);
-    if (agent && restart.get(agent) === admitted.get(agent)) restart.delete(agent);
-  });
-  const offAgent = ctx.on('agent/disposed', ({ agent }) => {
-    entries.get(agent)?.dispose();
-    entries.delete(agent);
-  });
-  return ctx.effect(() => () => {
-    offPrepare?.(); offAssembly(); offPreStep(); offAdmission(); offAgent();
+  const scopes = new Map<Context, () => void>();
+  let stopped = false;
+  const attach = (scope: Context) => {
+    if (stopped || scopes.has(scope)) return;
+    const offAssembly = reassembleOnChange(scope, sync);
+    // The native loop assembles the system prompt before agent/pre-step. A
+    // scoped asynchronous reader must finish before the original sync listener
+    // selects sections, then join its scoped material after the native step starts.
+    const offPrepare = prepare && scope.on('system-prompt/assemble', async (_assembly, context, next) => {
+      if (context.agent) await prepare(context.agent);
+      return next();
+    }, {prepend: true, global: true});
+    const offPreStep = scope.on('agent/pre-step', async ({ agent }, next) => {
+      const decision = await next();
+      if (admit && decision.kind === 'enter') await admit(agent);
+      const pending = restart.get(agent);
+      if (decision.kind !== 'enter' || !pending) return decision;
+      admitted.set(agent, pending);
+      return { ...decision, startsRequestSeries: true };
+    }, {global: true});
+    // A cancelled admission may finish before DSH records a request. Keep the
+    // restart pending so a retry can still replace the prior in-history prompt.
+    const offAdmission = scope.on('session/event', (session, event) => {
+      if (event.type !== 'assistant/message') return;
+      const agent = ctx.agents.get(session.id);
+      if (agent && restart.get(agent) === admitted.get(agent)) restart.delete(agent);
+    }, {global: true});
+    const offAgent = scope.on('agent/disposed', ({ agent }) => {
+      entries.get(agent)?.dispose();
+      entries.delete(agent);
+    }, {global: true});
+    const detach = () => {
+      if (!scopes.delete(scope)) return;
+      offPrepare?.(); offAssembly(); offPreStep(); offAdmission(); offAgent();
+    };
+    scopes.set(scope, detach);
+    scope.effect(() => detach);
+  };
+  const dispose = Object.assign(() => {
+    if (stopped) return;
+    stopped = true;
+    for (const detach of [...scopes.values()]) detach();
     for (const [agent, entry] of entries) {
       entry.dispose();
       restart.set(agent, Symbol());
     }
     entries.clear();
-  });
+  }, {attach});
+  attach(ctx);
+  ctx.effect(() => dispose);
+  return dispose;
 }

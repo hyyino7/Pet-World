@@ -201,6 +201,7 @@ export async function checkMessaging({ctx,host,workspace,deviceDirectory,home,mo
     await msg.close();msg=undefined;
     await mockLife.dispose();
     setProgram(async function*(){yield* say('Home ready');});
+    const behaviorComponent=ctx.get('petBehavior')?undefined:await ctx.plugin(await import('../../dist/src/behavior/plugin.js'));
     const lifeComponent=await ctx.plugin(await import('../../dist/src/life/plugin.js'));
     const channelsComponent=await ctx.plugin(await import('../../dist/src/channels/plugin.js'),{deviceDirectory:join(deviceDirectory,'host')});
     const life=ctx.petLife, channels=ctx.petChannels, request=(op,input={})=>channels.request(workspace.id,op,input);
@@ -243,7 +244,7 @@ export async function checkMessaging({ctx,host,workspace,deviceDirectory,home,mo
     assert.ok((await host.services.preferences.setQuiet(host.operator.request('reach-quiet'),{expectedRevision:policy.revision,quiet:true})).ok);
     assert.deepEqual(await channels.reach(workspace.id,{...replayPush,deliveryId:'quiet-new-call'}),[]);
     assert.equal(actions.length,lastQQ);assert.equal((await checked(inbox)).job,undefined);
-    await channelsComponent.dispose();await lifeComponent.dispose();
+    await channelsComponent.dispose();await lifeComponent.dispose();await behaviorComponent?.dispose();
     assert.equal((await fetch(origin+bridge.sayPath)).status,404);
 
     console.log(JSON.stringify({ok:true,qqSdk:'loopback',voiceTranscriptAndReceipt:true,channelUsage:true,ownerReachDedup:true,nativeBridgePush:true,qzoneReceipt:true,groupForwardAndSticker:true,wechatProtocol:4,media:true,groupTools:true,visitorTools:wxNames,blockedTools:denials,plainAndExplicitQueuedOnce:true,restartDedup:true,paidCalls:0}));

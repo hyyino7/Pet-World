@@ -81,7 +81,7 @@ export async function createMessaging(ctx:Context, host:PetCoreHost, options:Opt
         });
         return agent;
       },inWorld:session=>active() &&
-        (ctx.get('petLife')?.isHome(session.id) || homes.identityFor(session.id)?.channel==='qq')});
+        homes.owns(session.id)});
       const home=qqHome;
       const qqAccount=config.qq.accountId;
       qq=openQQ({settings:config.qq,qzone:createQzoneLedger(options.deviceDirectory,qqAccount),
@@ -114,15 +114,15 @@ export async function createMessaging(ctx:Context, host:PetCoreHost, options:Opt
       const module=createWechatModule({ctx,file:discovery,worldId:'chatpet-'+accountKey,incomingDir:incoming,allowedHosts:[],
         origin:()=>server.getOrigin(),settings:()=>({contextMessages:settings.contextMessages,bufferSeconds:settings.bufferSeconds}),
         home:async id=>{check(allowed(id),'WeChat identity unavailable');return homes.open(id);},
-        inWorld:session=>active() && (ctx.get('petLife')?.isHome(session.id) || homes.identityFor(session.id)?.channel==='wechat'),
+        inWorld:session=>active() && homes.owns(session.id),
         toolAllowed(agent,name,args) {
           if(!active())return false;
           const visitor=homes.identityFor(agent.id);
           // At registration the shared home needs the full owner catalog. At
           // execution, its current turn controls which account/target may act.
-          if(!visitor && args===undefined)return Boolean(ctx.get('petLife')?.isHome(agent.id));
+          if(!visitor && args===undefined)return homes.owns(agent.id);
           const external=visitor??identityInTurn(agent);
-          if(!external)return Boolean(ctx.get('petLife')?.isHome(agent.id));
+          if(!external)return homes.owns(agent.id);
           if(external.channel!=='wechat'||!allowed(external)||!homes.allowsReply(agent.id,external))return false;
           if(!visitor&&owner(external)) {
             if(args && name==='wechat_send') return (args as {chatId?:string}).chatId===external.conversationId;

@@ -26,15 +26,16 @@ export function createCore(config: CoreConfig, driver: NativeDriver | null = nul
     if (native.memory) {
       const memory = base.find(capability => capability.id === 'memory.lifecycle')!;
       const active = native.memory.connection.lifecycle === 'ready';
-      memory.state = active ? 'degraded' : 'unavailable';
-      memory.reason = active ? 'Selected provider native port active; full Memory catalogue/guarded restore are not implemented'
-        : `Memory configured; owned provider ${native.memory.connection.lifecycle}. Native use must verify availability.`;
+      memory.state = !native.memoryEnabledForNewSessions ? 'disabled' : active ? 'ready' : 'degraded';
+      memory.reason = !native.memoryEnabledForNewSessions ? 'Memory is disabled for subsequent turns; native chat remains available'
+        : active ? 'Shared Bank available for per-turn observation and recall'
+        : `Memory configured; provider ${native.memory.connection.lifecycle}, starts on demand. Chat continues without recall on failure.`;
       memory.supportedOperations = active ? ['observe', 'recall', 'correct', 'withdraw', 'validate', 'recover'] : [];
     }
     const conversation = base.find(x => x.id === 'core.conversation')!;
     if (driver?.kind === 'dsh') {
-      conversation.state = runtime.historyReady() ? 'ready' : 'unavailable';
-      conversation.reason = runtime.historyReady() ? 'Native host bound with scoped dialogue context and matter tools' : 'A previously registered history eligibility provider is absent';
+      conversation.state = workspace.status().state === 'ready' ? 'ready' : 'unavailable';
+      conversation.reason = 'Native DSH owns ordinary conversation execution; Memory availability does not gate chat';
     }
     const extra: CapabilityStatus[] = [
       { id: 'execution.native', owner: 'core', contractVersion: CONTRACT_VERSION,
@@ -43,7 +44,7 @@ export function createCore(config: CoreConfig, driver: NativeDriver | null = nul
       { id: 'core.resources', owner: 'core', contractVersion: CONTRACT_VERSION, state: 'degraded',
         reason: 'Ordinary immutable resources ready; derived material needs Memory', supportedOperations: Object.keys(resources.port) },
       { id: 'core.maintenance', owner: 'core', contractVersion: CONTRACT_VERSION, state: 'degraded',
-        reason: 'Partial local snapshots and owner export only; guarded restore disabled',
+        reason: 'Legacy online snapshots and owner export; full scoped file recovery is available through the offline dafeiyu-backup command',
         supportedOperations: Object.keys(maintenance.port).filter(x => x !== 'applyRestore') },
     ];
     return [...base, ...extra];

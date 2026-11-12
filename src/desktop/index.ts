@@ -15,6 +15,8 @@ import { Conversation, type NativeDesktopHost, type NativeEvent, type NativeSess
 
 type Work = { session: string; turn: number; start: number; stage: string; workspaceId: string; entered?: boolean; terminal?: boolean };
 type HostServices = NativeDesktopHost & {
+  getPresentation?(): {show(): Promise<unknown>; hide(): Promise<unknown>; bodyStatus(): {running:boolean};
+    savePreference?(key:string,value:boolean):Promise<unknown>} | undefined;
   getEmotion(): import('../emotion/plugin.js').CompanionEmotion | undefined;
   isLifeHome?(id: string): boolean;
   on(name: string, handler: (data: { agent: { session: NativeSession }; frame: StreamFrame }) => void,
@@ -55,7 +57,7 @@ export class Desktop {
   }
   presentationAvailable() { return this.status().running || [...this.surfaces.values()].some(active=>active()); }
   private push(type: string, value: unknown, nativeWindow = true) {
-    if (['say','balance','sleep','sleep-text','notice','work','expression','preferences'].includes(type)) {
+    if (['say','balance','sleep','sleep-text','notice','work','expression','preferences','chat'].includes(type)) {
       for (const receive of this.surfaces.keys()) {
         try { receive(type,value); } catch (error) { console.warn('Desktop presentation update failed', error); }
       }
@@ -136,6 +138,11 @@ export class Desktop {
   async savePreference(data:Record<string,unknown>) {
     const key=data.key;
     if (!['desktopClickSound','desktopReplyBubble','desktopWhisperEnabled','desktopBalanceEnabled','desktopFixed','desktopConfineToScreen'].includes(String(key)) || typeof data.value!=='boolean') throw Error('无效桌宠设置');
+    if(key!=='desktopReplyBubble') {
+      const presentation=this.native.getPresentation?.();
+      if(!presentation?.savePreference)throw Error('请启用桌宠展示模块后修改外观设置');
+      return presentation.savePreference(String(key),data.value);
+    }
     const current=this.host.workspace.companionSettings();
     const saved=await this.host.services.workspace.saveCompanion(this.host.operator.request('desktop-setting:'+randomUUID()), {
       workspaceId:this.target().id,expectedSettings:current,settings:{...current,[String(key)]:data.value}});
@@ -146,15 +153,22 @@ export class Desktop {
   recordPlayback(data:PlaybackReceipt) {
     this.native.getEmotion()?.recordPlayback({...data,workspaceId:this.target().id});
   }
-  status() { return { running: this.isReady && !!this.child && this.child.exitCode === null }; }
+  status() { return this.native.getPresentation?.()?.bodyStatus() ?? {running:false}; }
   async start() {
+    const presentation=this.native.getPresentation?.();
+    if (!presentation) throw Error('桌宠展示模块尚未就绪');
+    await presentation.show();
+    this.features?.restore();
+    this.workUpdate();
+  }
+  async openChat() {
     const target = this.target();
-    if (this.child && this.bodyBinding !== target.id) this.closeWindow();
-    if (this.child) { await this.ready; this.push('show', true); return; }
+    if (this.child && this.bodyBinding !== target.id) this.closeChat();
+    if (this.child) { await this.ready; this.push('show-chat', true); return; }
     const bin = process.env.DSH_CHATBOT_ELECTRON_PATH || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'electron/Electron.app/Contents/MacOS/Electron');
     if (!existsSync(bin)) throw Error('找不到桌宠 Electron，请检查已安装的桌面运行环境');
     const root = dirname(createRequire(import.meta.url).resolve('dsh-Chatpet/package.json'));
-    const env = { ...process.env }; delete env.ELECTRON_RUN_AS_NODE;
+    const env: NodeJS.ProcessEnv = { ...process.env, CHATPET_CHAT_ONLY:'1' }; delete env.ELECTRON_RUN_AS_NODE;
     const child = spawn(bin, [join(root, 'src/desktop/helper/main.cjs')], { env, stdio: ['pipe','pipe','pipe'] });
     this.child = child; this.bodyBinding = target.id;
     child.stderr.resume();
@@ -167,7 +181,7 @@ export class Desktop {
       let msg; try { msg = JSON.parse(line); } catch { return; }
       if (this.child !== child) return;
       if (msg.type === 'ready') {
-        clearTimeout(timeout); this.isReady = true; done(); this.settingsChanged(); this.features?.restore(); return;
+        clearTimeout(timeout); this.isReady = true; done(); this.push('show-chat',true); this.settingsChanged(); return;
       }
       if (msg.type === 'request') void this.handle(msg);
     });
@@ -206,7 +220,11 @@ export class Desktop {
       if (child === this.child) this.push('response', { id: msg.id, ok: false, error: e instanceof Error ? e.message : '操作失败' });
     }
   }
-  closeWindow() {
+  async closeWindow() {
+    await this.native.getPresentation?.()?.hide();
+    this.closeChat();
+  }
+  closeChat() {
     this.features?.pause();
     clearTimeout(this.tick); clearTimeout(this.clock); this.tick = undefined;
     const child = this.child; this.child = undefined; this.bodyBinding = undefined;
@@ -243,6 +261,7 @@ export function registerDesktop(ctx: Context, host: PetCoreHost): void {
       return desk.features.images.admit(image);
     },
     getEmotion: () => (ctx as Context).get('petEmotion'),
+    getPresentation: () => (ctx as any).get('petPlatform'),
     isLifeHome: id => ctx.get('petLife')?.isHome(id) ?? false,
     on: context.on.bind(ctx),
   };
@@ -257,5 +276,5 @@ export function registerDesktop(ctx: Context, host: PetCoreHost): void {
     if (operation.startsWith('preferences.') || operation.startsWith('workspace.')) desk.settingsChanged();
   });
   const expression = ctx.on('pet/emotion.expression', value => desk.expression(value));
-  ctx.effect(() => async () => { stream(); event(); settings(); expression(); desk.closeWindow(); await desk.features?.close(); desks.delete(host); });
+  ctx.effect(() => async () => { stream(); event(); settings(); expression(); desk.closeChat(); await desk.features?.close(); desks.delete(host); });
 }

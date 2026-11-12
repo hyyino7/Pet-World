@@ -66,10 +66,6 @@
       "source": "runtime/electron-helper/dpi-linearization.js",
       "sha256": "6ea137ae8d4fadfebadc2d89ffe298256a0d94b6b9591069628631aa8f9b2462"
     },
-    "runtime/electron-helper/events.js": {
-      "source": "runtime/electron-helper/events.js",
-      "sha256": "3fa99a880c8fee2f182c03f947461f9bd5469b778cee63b1b2eb54d1b187882c"
-    },
     "runtime/electron-helper/host-liveness.js": {
       "source": "runtime/electron-helper/host-liveness.js",
       "sha256": "ccbde1a267f08d184a7f2dabd7292a58f179a06f57c908dc15b02b8014ceaf07"
@@ -197,6 +193,13 @@
     "upstream/helper-main.js": {
       "source": "runtime/electron-helper/main.js",
       "sha256": "313485a4aead0eb178ac896c391dc1813413d75a93edbc820907eee6f0269411"
+    },
+    "upstream/helper-events.js": {
+      "source": "runtime/electron-helper/events.js",
+      "sha256": "3fa99a880c8fee2f182c03f947461f9bd5469b778cee63b1b2eb54d1b187882c"
     }
+  },
+  "adaptations": {
+    "runtime/electron-helper/events.js": "Generated from upstream/helper-events.js: refresh renderer-only shared activity configuration in place on the existing config invalidation; preserve windows, motion and playback receipts."
   }
 }

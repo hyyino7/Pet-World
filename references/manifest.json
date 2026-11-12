@@ -866,17 +866,17 @@
         {
           "source": "src/home-state.js",
           "target": "vendor/feiyu-room-template/home-state.js",
-          "treatment": "Original state machine shared by Life, Room and Desktop."
+          "treatment": "Original state machine, with explicit paused-autonomy/passive policy, is the shared Behavior authority used by Life, Room and Desktop; structured Emotion remains a separate expression projection."
         },
         {
           "source": "public/room",
           "target": "vendor/feiyu-room-template/public/room",
-          "treatment": "Original visuals, model quality selector, garden and TV. Native Connection and native chat history adapters."
+          "treatment": "Original visuals, model quality selector, garden and TV. Native Connection/chat adapters and an authenticated independent Room-window bridge. Existing idle clips, Chibi pose and static-model root motion express shared structured feelings without replacing behavior."
         },
         {
           "source": "src/garden-autonomy.js, src/garden-store.js, src/room-state.js",
           "target": "vendor/feiyu-room-template/src",
-          "treatment": "Original garden economy, caretaker, visits and affection."
+          "treatment": "Original garden economy, caretaker, visits and affection. The caretaker honors host autonomy pause while retaining explicit requested routes, work and care receipts."
         },
         {
           "source": "src/affinity.js, src/slang-learner.js, src/role-card.js, src/sticker-lib.js, src/forward.js, src/md-to-plain.js, src/qzone.js, src/sensitive.js; src/bridge.js member impressions, V2 wake predicates, read receipts and feedback",
@@ -888,7 +888,38 @@
       "origin": "vendor/feiyu-room-template/origin.json",
       "status": "ready",
       "archive_path": ".cache/life-study/room-9df0a6b.tgz",
-      "archive_url": "https://codeload.github.com/sh2234113/feiyu-room-template/tar.gz/9df0a6b76b563abc738b6d4b7ae137381c425424"
+      "archive_url": "https://codeload.github.com/sh2234113/feiyu-room-template/tar.gz/9df0a6b76b563abc738b6d4b7ae137381c425424",
+      "adaptations": {
+        "vendor/feiyu-room-template/home-state.js": {
+          "sha256": "003dec6b1697a145ce297e09547f50001fdbc117e3a7c14cd68c1dbc030094b0",
+          "treatment": "Expose explicit host autonomy/passive policy while preserving the original default workflow; advance requested routes and care while autonomy is paused, and project structured Emotion feelings without changing actual behavior or inventing numeric mood.",
+          "source": "src/home-state.js",
+          "upstream_sha256": "cd304d35a61e0fdb5f3cebb684b40f092bb1f57698727f848311c96c7fbf7488"
+        },
+        "vendor/feiyu-room-template/src/garden-autonomy.js": {
+          "sha256": "e61367d2ad408e1437d284cefd13e6a07a6ba3b250de857dc31e2ca2cdaa0ef5",
+          "treatment": "Honor the shared host autonomy/passive policy; cancel automatic work when paused, preserve requested work and idempotent one-shot care through the original planner, route, dwell and receipt flow.",
+          "source": "src/garden-autonomy.js",
+          "upstream_sha256": "51fde1095ff49415d25dede2178746ca4d583e854a988ae32169427f00e56dd0"
+        },
+        "vendor/feiyu-room-template/public/room/actor3d.js": {
+          "sha256": "b3754a993b5225410ecfed79c7e0e2d5cf86b25b4a46f628eea0a287fb93de86",
+          "treatment": "Render structured anger, boredom and happiness using the original Chibi skeleton and motion parameters; actual sleep, eating and movement take precedence. No new image assets.",
+          "source": "public/room/actor3d.js",
+          "upstream_sha256": "7dd52b02cfbc0338553b2b3a48f36109c0c3a9db9fbc4fd8d2fd0569fe670881"
+        },
+        "vendor/feiyu-room-template/public/room/app.js": {
+          "sha256": "ad3970169c5cf2b04be5bed2cbc207542d760ef7bd5827176338617b9e84ee22",
+          "treatment": "Retain the native Connection/chat adapters and source-backed Room state; render shared structured feelings with original idle clips and static-model root motion, preserving actual behavior and the settings-independent Room carrier.",
+          "source": "public/room/app.js",
+          "upstream_sha256": "13125c572839773c45809319bb5c4bb01d4209e17bad2071cf4f67b0a1fe1f18"
+        },
+        "vendor/feiyu-room-template/public/room/native-room.js": {
+          "sha256": "17171311a4673252b20558bedf5898586edeb98ca24b3326f311531a6c36e4bc",
+          "treatment": "Local DSH transport adapter: accept the narrow authenticated independent-window preload bridge, preserve the owner-frame MessageChannel route, and retain bounded timeout/cancellation without a separate assistant or state writer.",
+          "local": true
+        }
+      }
     }
   ]
 }

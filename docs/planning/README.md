@@ -1,13 +1,17 @@
 # Planning Index
 
-The [MVP 1.0 delivery plan](mvp-1.0.md) owns the current four-module release,
-its sequence, settings and acceptance scenarios. The [handover](../handover/README.md)
+The [MVP 1.0 delivery plan](mvp-1.0.md) owns the selected product scope and the
+four confirmed owner-feedback requirements. The [four-feedback modification
+plan](feedback-redesign-plan.md) proposes their detailed implementation route,
+work packages, migration and acceptance. The owner authorized its implementation
+with basic verification and a later detailed owner trial. The [handover](../handover/README.md)
 owns current status and preservation notes. Earlier plans remain available for
 provenance and long-term scope.
 
 | Subject | Owning record |
 | --- | --- |
 | Current MVP scope and detailed delivery | [MVP 1.0](mvp-1.0.md) and [handover](../handover/README.md) |
+| Four-feedback redesign, proposed implementation and acceptance | [Modification plan draft 1.1](feedback-redesign-plan.md); confirmed requirements remain in [MVP 1.0](mvp-1.0.md#owner-trial-redesign-feedback) |
 | Historical product route, packages and original trial register | [Product plan v0.14](plan.md), synchronized from PM Advisor v1.3; not the active MVP task list |
 | Concrete component evidence, direct use/adaptation/custom gaps and F01–F26 | [Reuse review r4](reuse-review.md) |
 | Delivery navigation | [Development index](development-plan.md); current delivery entry and historical sequence |

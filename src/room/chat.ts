@@ -94,7 +94,6 @@ export class RoomChat {
       if (this.ctx.get('sessionTitle' as never)) await this.native.sessionController.rename({sessionId: id, title: '大肥鱼 · 房间私聊'});
     }
     if (!id) return;
-    if (!this.ctx.petCore.native.historyEligible(id)) throw Error('房间聊天历史已失效，请在原生会话中完成恢复');
     const {agent, error} = await this.native.sessionController.resolveAgent(id);
     if (error || !agent || this.existing(workspaceId) !== id || this.ctx.petWorld.sessionStatus(agent.session)?.state !== 'ready')
       throw Error(error?.message ?? '房间会话不属于当前工作区');

@@ -10,7 +10,6 @@ import type { PetCoreHost } from '../core/index.js';
 const upstream = (file: string): Promise<any> => import('./upstream/host/' + file + '.js');
 export class DesktopFeatures {
   private todosByRoot = new Map<string, any>();
-  private standaloneSleep = new Set<string>();
   private shownRest?: {path: string; sleeping: boolean; pending: boolean};
   readonly images: DesktopImages;
   private whispering?: Promise<any>;
@@ -29,6 +28,10 @@ export class DesktopFeatures {
     this.timer = setInterval(() => {if(!this.maintenance)this.maintenance=this.tick().finally(()=>{this.maintenance=undefined;});}, 1000); this.timer.unref();
   }
   private get(name: string): any { return this.ctx.get(name as never); }
+  private preferences() {
+    const presentation=(this.ctx as any).get('petPlatform',false);
+    return {...this.host.workspace.companionSettings(),...presentation?.featurePreferences()};
+  }
   private target() {
     const state = this.host.workspace.status();
     if (state.state !== 'ready' || !state.target) throw Error('请先绑定并初始化工作区');
@@ -63,8 +66,7 @@ export class DesktopFeatures {
   }
   restoreImages() {return this.images.restore();}
   private rest(target: {id: string; path: string}) {
-    return this.ctx.get('petLife')?.restState?.(target.id) ??
-      {sleeping: this.standaloneSleep.has(target.path), pending: false};
+    return (this.ctx as any).get('petBehavior')?.restState(target.id) ?? {sleeping:false,pending:false};
   }
   restore(force = true) {
     const target = this.host.workspace.status().target;
@@ -99,12 +101,10 @@ export class DesktopFeatures {
     if (rest === 'whisper') return this.whisper(url.searchParams.get('image') ?? undefined);
     if (rest === 'balance') return this.balance();
     if (rest === 'sleep' || rest === 'wake') {
-      const result = await this.ctx.get('petLife')?.desktopRest?.(target.id, rest);
+      const behavior=(this.ctx as any).get('petBehavior');
+      if(!behavior)throw Error('身体与行为模块未启用');
+      const result = await behavior.act(target.id, rest);
       if (this.closed || this.host.workspace.status().target?.path !== target.path) throw Error('桌宠工作区已切换');
-      if (!result) {
-        if (rest === 'sleep') this.standaloneSleep.add(target.path);
-        else this.standaloneSleep.delete(target.path);
-      }
       this.restore(false);
       if (!result || result.changed) {
         if (this.rest(target).pending) this.publish('notice', {text: result?.home.her.activity});
@@ -139,7 +139,7 @@ export class DesktopFeatures {
       const pool = catalog.stickers.map((item: {id: string; description: string}) => ({name: item.id, desc: item.description}));
       const forced = image && matchMeme(pool, image);
       if (image && !forced) throw Error('没有这张贴图');
-      const meme = forced || (!dream && this.host.workspace.companionSettings().desktopWhisperImageEnabled && pickMeme(pool));
+      const meme = forced || (!dream && this.preferences().desktopWhisperImageEnabled && pickMeme(pool));
       if (abort.signal.aborted || !this.same(root)) throw Error('碎碎念已取消');
       const llm = this.get('llm');
       const nativeLlm = llm && {resolveModelInfo:llm.resolveModelInfo?.bind(llm),stream:(options: any) => llm.stream({...options,signal:AbortSignal.any([options.signal,abort.signal])})};
@@ -163,7 +163,7 @@ export class DesktopFeatures {
     if (this.checking || this.closed || !this.available() || this.busy() || this.host.workspace.runtime.policy().quiet) return;
     this.checking = true;
     try {
-      const target = this.target(), root = target.path, now = Date.now(), settings = this.host.workspace.companionSettings();
+      const target = this.target(), root = target.path, now = Date.now(), settings = this.preferences();
       const {sleeping} = this.rest(target);
       const todos = await this.todos(), policy = await upstream('todo/policy');
       for (const todo of sleeping ? [] : await todos.list()) {

@@ -6820,6 +6820,7 @@ function createDesktopSpawn(deps) {
 		disposed = true;
 	};
 	return {
+		status: () => ({running:Boolean(helper?.child && helper.child.exitCode === null),starting:Boolean(electronEnsure || startRetryTimer)}),
 		startHelper,
 		stopHelper,
 		stopHelperAndWait,
@@ -6868,6 +6869,7 @@ function createDesktopHelper(deps) {
 		...spawn$1
 	});
 	return {
+		status: spawn$1.status,
 		startHelper: spawn$1.startHelper,
 		stopHelper: spawn$1.stopHelper,
 		requestRestart: sync.requestRestart,
@@ -9498,4 +9500,4 @@ function apply(ctx) {
 }
 
 //#endregion
-export { createHostSetup, createPetLookup, createHttpRoute, createDesktopHelper, flattenPetList, createSessionNotify, registerSessionWatch, createWorkStatusBridge, pickSleepNames, readAllConfig, readBody, sendFile, sendJson, sendText };
+export { createHostSetup, createPetLookup, createHttpRoute, createDesktopHelper, flattenPetList, createSessionNotify, registerSessionWatch, createWorkStatusBridge, pickSleepNames, readAllConfig, readJsonc, topFieldValid, decideAnim, readBody, sendFile, sendJson, sendText };

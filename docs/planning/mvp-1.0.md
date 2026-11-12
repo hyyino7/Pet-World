@@ -1,5 +1,14 @@
 # Dafeiyu MVP 1.0
 
+> Current execution update (2026-11-12): the owner approved the
+> [native-service refactor](native-service-refactor.md) after review of Claude's
+> proposal. It supersedes ordinary Core execution gating, new-session-only
+> Memory enrollment and whole-history invalidation, and selects registered
+> guest shared-Bank access with trusted speaker attribution. Other requirements
+> below remain in force unless that owning record explicitly replaces them.
+> Implementation and owner acceptance are tracked separately.
+
+
 Project delivery plan, 2026-11-11. The release is a blue-fish desktop companion on Mac backed by an ordinary DSH conversation in its bound workspace. The owner can drag the fish, open its compact chat, type Chinese, read and stop a streamed reply, fold the window and pick up the same conversation. The fish can express a mood, remember a recent interaction and recall a lasting preference in a fresh conversation.
 
 Implementation status and installed verification are recorded in the [MVP runtime report](../mvp-runtime.md).
@@ -19,6 +28,156 @@ Life's dedicated home is the only companion conversation that accepts autonomous
 The owner selected identity and conversation isolation for external messages. Only verified owner private messages may enter the Life home. Each other private conversation and group gets its own native session and public-facing material. A reply returns to its originating account and chat. Multiple bodies may choose independent appearance and position and otherwise follow the bound companion. Device credentials and external-account configuration remain device-local.
 
 [Current integration and evidence](../mvp-runtime.md#three-reference-integration) · [User controls](../settings.md#pet-world-and-room)
+
+## Owner trial redesign feedback
+
+The four requirements below are the accepted product direction. The
+[detailed modification plan, draft 1.1](feedback-redesign-plan.md) proposes
+responsibility changes, delivery packages, migration and acceptance for them.
+The owner subsequently authorized execution: “按照计划执行吧，测试可以基础一些，后面我会详细测试”.
+The plan is the implementation baseline; basic verification and delivery status
+belong in the runtime record, and detailed owner acceptance remains pending.
+
+### Feedback 1: Core foundation independent of Life
+
+Confirmed by the owner on 2026-11-12 during the trial of installed build
+`6e5c1796d459`. This is an approved design direction, not an implementation or
+runtime acceptance claim. Implementation is now authorized by the instruction
+recorded above; this does not establish owner acceptance.
+
+Core must provide a companion foundation instruction document, using World's
+editable prompt-document approach. Core reads and assembles the applicable
+context for eligible native conversations. The foundation remains available
+when Life is paused, disabled or absent and covers:
+
+| Foundation content | Responsibility |
+| --- | --- |
+| Identity and relationships | Name, identity, personality, speaking style, aspirations, partner address and basic world background. |
+| Conversation behavior | Natural responses, no fabricated experiences or completed operations, and honest uncertainty. |
+| Input and audience boundaries | Recognize the input surface and speaker; distinguish the owner, visitors and group participants and preserve each conversation's information boundaries. |
+| Self-description maintenance | Explain where the companion's self-description is, what may be updated, when a lasting change warrants an update, and how to replace obsolete content and merge duplicates. Keep it distinct from the owner's authored persona. |
+| Memory use | Explain recent context, lookup, supported saving and correction, conditioned on the owning Memory capability being available. |
+| Emotion use and expression | Explain how to use the current emotional state and express feelings, conditioned on Emotion's available state and capabilities. |
+| Diary and album use | Explain how available diary and photo capabilities may be used during ordinary interaction without requiring autonomous Life. |
+| Permissions and action boundaries | Explain the permitted operating scope, actions requiring prior agreement and confirmation of actual tool outcomes; retain native DSH permission enforcement. |
+
+Putting usage rules in the Core foundation does not transfer the corresponding
+data, tools or business logic to Core. Memory remains responsible for memory
+operations, Emotion for emotional state, and other capabilities retain their
+owning modules. Unavailable capabilities must not be described as available.
+
+Life adds autonomous activity/rest planning, schedules and alarms, wakeups
+without user input, proactive-contact timing, scheduled daily review and the
+corresponding event messages. Self-description can be updated when an ordinary
+conversation reveals a lasting change; Life's daily review supplies an
+additional opportunity to inspect it, not a prerequisite for updating it.
+
+The four input categories discussed are direct DSH chat, compact desktop chat,
+Room chat and bridged external channels such as QQ. This feedback does not
+decide whether surfaces share one session/history or finalize window selection.
+The foundation document's exact filename, schema and detailed module interfaces
+remain to be designed. No change to the installed package is recorded here.
+
+### Feedback 2: Shared emotion and behavior across Room and Desktop
+
+Confirmed by the owner on 2026-11-12 after discussing the desired mirroring
+between Emotion, Room and Desktop. This approves the design direction below;
+implementation was subsequently authorized, while owner acceptance remains pending.
+
+Emotion and actual behavior belong to the same companion, independent of any
+particular presentation surface. Keep three distinct concepts: continuing
+emotion, intended behavior and actual behavior. A companion may be angry while
+eating, or happy while asleep; an emotional change must not independently
+replace an ongoing activity in only one surface.
+
+- Emotion maintains an editable emotion-state file, including current feelings
+  and intensity, reasons and change information. The same native Agent can
+  maintain this state during conversations or autonomous activity. Emotion
+  influences both behavior choice and how an activity is expressed; it must
+  not be reduced to a random animation selected after each reply.
+- Actual behavior has one authoritative state and execution path. Room and
+  Desktop present its corresponding phases: for example, going to eat,
+  eating and finishing, or entering sleep and remaining asleep. Each surface
+  may render differently, but cannot independently contradict the activity.
+  A request or intention alone is not evidence that the behavior happened.
+- Keep Emotion, Room and Desktop as separate components with explicit
+  interfaces. Presentation surfaces offer available capabilities and report
+  interactions and actual execution/playback results. Emotion remains usable
+  in text-only chat. Desktop and Room retain basic operation without Emotion,
+  with their exact fallback behavior still to be specified.
+- A reopened surface reads the current shared state rather than deciding the
+  companion's activity again. Missing action assets are a delivery gap; an
+  unsupported animation does not establish complete activity synchronization.
+- Life supplies autonomous wakeups and opportunities to choose the next
+  activity when no user is speaking. Pausing Life pauses autonomous progression,
+  while owner interaction and directed care remain available. Owner-directed,
+  conversation-initiated and autonomous actions use the same behavior path.
+
+The emotion dimensions, numeric scale, update/decay rules, file schema and
+exact surface mappings remain open. Ownership of the shared behavior authority
+must be assigned explicitly; this decision does not require a new module or
+transfer all behavior logic into Core. Core assembles context and preserves
+native execution/permission boundaries. No separate assistant runtime is
+introduced. These decisions supersede earlier proposals that required enabled
+Life for all manual care, or limited Emotion to reply-time
+presentation. The current installed behavior is unchanged.
+
+### Feedback 3: Unified settings and a World-based layout
+
+Requested by the owner on 2026-11-12 during the trial of build `6e5c1796d459`.
+The owner reports that the two settings surfaces can result in two pets being
+visible, and finds the current settings confusing and visually poor. These are
+owner-reported observations; this feedback-recording pass did not reproduce
+the UI flow or run tests.
+
+Consolidate the overlapping companion settings into one coherent entry and
+redesign its arrangement and appearance using the original World 0.7.4
+settings interface as the reference. The selected direction is:
+
+- One companion-settings home with clear navigation and consistent control
+  labels, rather than competing `大肥鱼` and `桌宠配置` homes for the same pet.
+- Opening or configuring the normal desktop companion must address the same
+  managed body. Using another settings route must not accidentally start a
+  second independently controlled pet. Preserve deliberate multi-body support
+  as an explicitly selected feature, not a side effect of settings navigation.
+- Reuse World's identifiable companion/status header, clear topic tabs and
+  focused cards as the starting point. Establish consistent spacing, typography,
+  field alignment and primary-action placement. The final visual arrangement
+  and tab names remain to be designed against the reference.
+- Give role/instructions, emotion and behavior, memory/archive, Room/Life configuration,
+  desktop appearance/interactions and external channels identifiable places.
+  Avoid mixing unrelated controls or duplicating the same setting in separate
+  forms. Advanced diagnostics and maintenance must not dominate everyday use.
+- A unified settings interface remains a client of module-owned services;
+  consolidating it does not merge the modules or transfer their data ownership.
+
+This records the requested redesign, not a completed UI repair. The exact
+duplicate-body trigger, the common presentation-host route and configuration
+reconciliation still require source/runtime verification during implementation.
+Reuse the existing upstream settings and presentation workflows before proposing
+custom replacements; preserve the owner's saved configuration and personal data.
+The feedback-recording round did not implement or reinstall anything. Subsequent
+implementation follows the explicit execution request above; installation and
+owner acceptance are reported separately.
+
+### Feedback 4: Direct access to Room in its own window
+
+Requested by the owner on 2026-11-12. The current placement of the interactive
+Room inside settings is unsuitable for everyday use. Room must open in an
+independent window through an everyday access point, without requiring the
+owner to navigate settings first.
+
+The owner proposed a keyboard shortcut, a visible button or an item in the
+desktop pet's context menu. These are candidate access mechanisms, not a
+requirement to implement all three. The exact entry combination, shortcut keys
+and shortcut scope remain open. Settings retain Room configuration rather than
+serving as the normal container for the interactive room.
+
+The window presents the same bound companion and shared behavior state selected
+in feedback 2. Opening it must not create another independent companion or
+assistant runtime. Conversation sharing and history selection remain separate
+open decisions. This is a recorded product requirement; no window, input
+binding, installation or runtime test was changed in this feedback round.
 
 ## Original four-module milestone architecture
 
@@ -67,7 +226,7 @@ Rows group the upstream source by user-visible capability. “MVP” identifies 
 
 | World capability and source | Decision | How Dafeiyu would use it |
 | --- | --- | --- |
-| Owner-authored persona and world prompt — `persona`, `worldPrompt`, `promptSection` | MVP, reuse placement | Core loads the existing SOUL/USER through the original scoped prompt path. Edits update the next eligible request. Home-only Life instructions belong to the native Life home; its body-state snapshot is shared with bound conversations while enabled. |
+| Owner-authored persona and world prompt — `persona`, `worldPrompt`, `promptSection` | Core foundation implemented; basic checks passed, owner trial pending | Core loads SOUL/USER and assembles the Life-independent foundation described in [feedback 1](#feedback-1-core-foundation-independent-of-life). Optional modules retain their data and capability ownership; autonomous Life instructions remain specific to Life. |
 | World registration, start/stop, workspace, permissions and multiple worlds — `worldScope`, `worldSwitch`, `worldRoutes`, `workspacePermissions` | MVP, reuse scope checks | Bind scope to the selected Repo. Preserve DSH permission choices and component switches. Memory enrollment changes only for new conversations. Multiple simultaneous pets and a global world power switch are outside the selected scope. |
 | Recent history, open/compact/long-idle refresh — `history`, `runtime` | MVP, reuse original lifecycle | Seed eligible recent conversation once, deduplicate native messages and reuse the block during ordinary continuation. Evaluate the cold interval separately from recall count. |
 | Source capture, archive scope, backfill, SQLite archive and daily text exports — `archiveSelection`, `sourceArchive`, `archive`, `store` | MVP, adapt selection only | Use scope and message IDs when selecting history. DSH and the existing Repo copies retain complete native logs for recovery. Avoid a parallel World text archive. |
@@ -75,7 +234,7 @@ Rows group the upstream source by user-visible capability. “MVP” identifies 
 | Dialogue compression, local-time rendering and preset replacement — `compaction*`, `timeContext` | Keep the Pet consolidation path | Preserve native batching, time and roles in summaries, retained originals and the Bank join. Borrow selective dialogue extraction if comparison exposes a gap. Omit the profile-wide preset swap. |
 | Mood file and change-only snapshots — `mood`, `runtime` | MVP, adapt snapshot delivery | Emotion supplies the continuing textual state. Publish a changed state once per session. Actual dsh-pet playback and feedback remain separately attributable. |
 | Settings console, archive browser, health and faults — `console/*`, `faults` | MVP, selective reuse | Use component status and error reporting in existing DSH settings where they answer an operational question. Any archive view must read through Memory's eligibility checks. |
-| Author-written self-description, diary, snapshots and daily review — `self`, `life/diary`, `life/runtime` | Selected Life extension | Keep owner-authored identity distinct from the companion's self-description. Reuse the originals for reflection if selected. Route durable user claims through Memory and coordinate review with existing summarization. |
+| Author-written self-description, diary, snapshots and daily review — `self`, `life/diary`, `life/runtime` | Core usage rules approved; scheduled review belongs to Life | [Feedback 1](#feedback-1-core-foundation-independent-of-life) separates ordinary self-description updates and available diary use from Life's scheduled review. Keep owner-authored identity distinct from the companion's self-description, retain module-owned data and route durable user claims through Memory. |
 | Home, room directory, alarms, wake/rest, early-stop handling and proactive contact — `life/home`, `alarm*`, `earlyStop`, `tools`, `lifeStore` | Selected Life extension; factories reused | Give autonomous activity its own native home session. Reuse persisted schedules and coordinate proactive messages with Desktop whisper. A visual room is a separate product choice. |
 | General local bridge, outgoing notifications and outlets — `ecosystem/bridge`, `shared/outlets`, `life/notify` | Life desktop outlet integrated | Route an opted-in home notification to a desktop bubble once. Keep native session streaming, cancellation and attachment handling for interactive chat. |
 | Shared channel identity, turn routing and delivery — `ecosystem/shared` | Later, with first external channel | Carry platform, account, conversation, speaker and message IDs. Use the originating conversation for replies and keep group participants distinct from the owner. |
@@ -115,8 +274,10 @@ emotion; reset Desktop from the original dsh-pet implementation.
 The owner approved editable trial Memory defaults (10 turns / 10 idle minutes /
 5 minimum minutes) and continuing textual emotion updated by the same native
 reply. The owner subsequently approved native-log Repo recovery and specified that
-Memory switching must affect only new conversations, leaving old chats
-unaffected. Those behaviors are implemented in the local repair candidate. Implemented scope and runtime evidence
+the earlier repair should apply Memory switching only to new conversations.
+The 2026-11-12 native-service refactor supersedes that switch policy with
+current-turn selection, including retained chats. The other earlier repair
+behaviors remain historical implementation evidence. Implemented scope and runtime evidence
 remain separate from owner acceptance.
 
 The owner then requested the remaining dsh-pet features and approved connecting

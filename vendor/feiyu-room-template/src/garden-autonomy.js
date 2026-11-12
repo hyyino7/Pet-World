@@ -135,7 +135,7 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
     const env=getEnv(now)||{};
     let g=advanceGarden(storage.loadGarden(gardenFile,now),now);
     let h=storage.loadHomeState(homeFile,now);
-    let careDirty=false;
+    let careDirty=env.passive===false;
     const pending=g.care.pendingConflict;
     if(pending && now>=pending.deadline){
       resolvePending(g,h,pending.defaultDecision,now);
@@ -143,6 +143,12 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
     }
     const beforeCare=JSON.stringify(g.care);
     let homeTransition=false, gardenCommit=false;
+    if(env.autonomy===false && g.care.task?.source==='auto'){
+      const job=g.care.task;
+      h=endGardenWork(h,job,now,'自主照料已暂停');
+      finish(g,job,false,'自主照料已暂停',now,'cancelled');
+      homeTransition=true;careDirty=true;
+    }
     // Recover from a crash after garden commit but before home checkpoint.
     const owner=h.route?.target?.gardenJobId || h.dwell?.target?.gardenJobId;
     if(owner && owner!==g.care.task?.id){
@@ -155,7 +161,7 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
       h=endGardenWork(h,job,now,reason);
       finish(g,job,false,`${reason}；已暂停这次${labels[job.action.type]}`,now,'cancelled');homeTransition=true;
     }
-    const mayPlan=!reason && (g.care.task || g.care.queue.length || (g.care.autoEnabled && now>=g.care.nextPlanAt));
+    const mayPlan=!reason && (g.care.task || g.care.queue.length || (env.autonomy!==false && g.care.autoEnabled && now>=g.care.nextPlanAt));
     const beforeMotion=JSON.stringify([h.route,h.dwell,h.asleep,h.sleepPending]);
     if(reason && !h.route && !h.dwell)h.nextDecisionAt=0;
     const advanced=advanceHomeState(h,now,{...env,gardenReady:!!mayPlan}); h=advanced.state;
@@ -192,7 +198,7 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
       if(reason){g.care.status=reason;}
       else if(!h.route&&!h.dwell&&now>=g.care.nextPlanAt){
         let next=g.care.queue.shift()||null;
-        if(!next&&g.care.autoEnabled){
+        if(!next&&env.autonomy!==false&&g.care.autoEnabled){
           const action=planGardenAction(g,g.care.rotation,now);
           if(action)next=createJob(g,action,'auto',now);
         }
@@ -213,6 +219,7 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
     return {state:h,env,garden:publicView(g,h,now),changed:advanced.changed||homeTransition};
   }
   function control(input={},now=Date.now()){
+    const env=getEnv(now)||{};
     // Validation/idempotency precede tick: a malformed request never starts work.
     if(!input || typeof input!=='object' || Array.isArray(input))return {ok:false,message:'照料安排需要有效的操作内容'};
     const type=input.type==='go'?'visit':input.type;
@@ -223,13 +230,29 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
     for(const field of ['plotId','cropId','quantity'])if(input[field]!==undefined)action[field]=input[field];
     if(type==='auto')action.enabled=input.enabled;
     let g=advanceGarden(storage.loadGarden(gardenFile,now),now);
+    // "Care now" is still an explicit request when the host has paused new
+    // autonomous goals. Queue one original planner action, not a hidden
+    // automatic loop; all normal walking/work/receipt rules remain unchanged.
+    const requestCareOnce=()=>{
+      if(env.autonomy!==false || g.care.task || g.care.queue.length)return;
+      const action=planGardenAction(g,g.care.rotation,now)||{type:'visit'};
+      const job=createJob(g,action,'requested',now,input.requestId||'');
+      g.care.queue.push(job);
+      if(input.requestId)g.care.receipts.push({requestId:input.requestId,jobId:job.id,fingerprint:keyOf({type:'careNow'}),status:'queued',message:'已记下这次照料安排',at:now});
+    };
     if(type==='careNow'){
+      const previous=input.requestId&&g.care.receipts.find(row=>row.requestId===input.requestId);
+      if(previous){
+        const h=storage.loadHomeState(homeFile,now);
+        return {ok:!['failed','cancelled'].includes(previous.status),accepted:previous.status==='queued',status:previous.status,message:previous.message,garden:publicView(g,h,now),home:homeView(h,now,env)};
+      }
       let h=storage.loadHomeState(homeFile,now);
       const decision=input.decision;
       if(decision!==undefined && !['force','defer'].includes(decision))return {ok:false,message:'请选择先做手头的事或直接去菜园'};
       if(g.care.pendingConflict){
         if(!decision)return {ok:true,conflict:true,pending:g.care.pendingConflict,message:g.care.pendingConflict.question,garden:publicView(g,h,now),home:homeView(h,now,getEnv(now))};
         resolvePending(g,h,decision,now);
+        requestCareOnce();
         storage.saveGarden(gardenFile,g);storage.saveHomeState(homeFile,h,now);
         const result=tick(now);
         return {ok:true,accepted:decision==='force',conflict:false,status:result.garden.care.status,message:decision==='force'?'你选了直接去菜园，她已经出发了':'先做手头的事，稍后再照料',garden:result.garden,home:homeView(result.state,now,result.env)};
@@ -242,7 +265,8 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
         g.care=normalizeGardenCare(g.care);storage.saveGarden(gardenFile,g);
         return {ok:true,conflict:true,pending,message:pending.question,garden:publicView(g,h,now),home:homeView(h,now,getEnv(now))};
       }
-      g.care.autoEnabled=true;g.care.nextPlanAt=0;
+      if(env.autonomy!==false)g.care.autoEnabled=true;
+      requestCareOnce();g.care.nextPlanAt=0;
       g.care=normalizeGardenCare(g.care);storage.saveGarden(gardenFile,g);
       const result=tick(now);
       return {ok:true,accepted:true,conflict:false,status:result.garden.care.status,message:blocker?.kind==='already'?'她已经在照料菜园了':'她放下手里的事，先去菜园了',garden:result.garden,home:homeView(result.state,now,result.env)};

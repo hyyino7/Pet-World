@@ -16,6 +16,7 @@
     "./00-Core/locale/*.json": "./locale/core/*.json",
     "./client": "./src/desktop/platform/client.js",
     "./20-Emotion": "./dist/src/emotion/plugin.js",
+    "./25-Behavior": "./dist/src/behavior/plugin.js",
     "./30-Desktop": "./dist/src/desktop/plugin.js",
     "./35-PetPlatform": "./dist/src/desktop/platform/plugin.js",
     "./70-Voice": "./dist/src/voice/plugin.js",
@@ -26,7 +27,10 @@
     "./channel-guest": "./dist/src/channels/guest.js"
   },
   "types": "./dist/src/console/plugin.d.ts",
-  "bin": {"dafeiyu-standalone":"src/desktop/standalone.mjs"},
+  "bin": {
+    "dafeiyu-standalone": "src/desktop/standalone.mjs",
+    "dafeiyu-backup": "scripts/companion-backup.mjs"
+  },
   "imports": {
     "#dsh-world/*": "./vendor/dsh-world/lib/*.js",
     "#feiyu-home": "./vendor/feiyu-room-template/home-state.js",
@@ -47,10 +51,16 @@
     "src/desktop/assets/",
     "src/desktop/helper/",
     "src/room/shot-browser.cjs",
+    "src/room/voice-client.js",
+    "src/room/window*.cjs",
     "src/memory/*.py",
     "vendor/mnemosyne/",
     "vendor/dsh-world/",
     "docs/settings.md",
+    "docs/portability.md",
+    "scripts/companion-backup.mjs",
+    "scripts/lib/offline-backup.mjs",
+    "scripts/lib/repo-storage.mjs",
     "vendor/dsh-pet/LICENSE",
     "vendor/dsh-pet/origin.json",
     "vendor/feiyu-room-template/"
@@ -80,7 +90,11 @@
     "test:native-room": "pnpm run build && node scripts/check-native-room.mjs --photo",
     "test:native-channel-homes": "pnpm run build && node scripts/check-native-channel-homes.mjs",
     "test:pet-platform": "pnpm run build && node --test tests/pet-platform.test.mjs",
-    "test:pet-platform-window": "pnpm run build && node scripts/check-pet-platform-window.mjs"
+    "test:pet-platform-window": "pnpm run build && node scripts/check-pet-platform-window.mjs",
+    "test:native-services": "pnpm run build && node scripts/check-native-services.mjs",
+    "test:room-voice": "pnpm run build && node scripts/check-room-voice.mjs",
+    "test:backup": "node --test tests/offline-backup.test.mjs",
+    "test:room-refresh": "pnpm run build && node tests/room-refresh-window.mjs"
   },
   "optionalDependencies": {
     "@andresaya/edge-tts": "1.9.1",
@@ -88,20 +102,20 @@
     "ws": "8.22.2"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "4.0.5",
-    "@deepseek-ai/dsh-agent": "0.2.1-rc.5 || 0.2.2-rc.1",
-    "@deepseek-ai/dsh-llm": "0.2.1-rc.5 || 0.2.2-rc.1",
-    "@deepseek-ai/dsh-session": "0.2.1-rc.5 || 0.2.2-rc.1",
-    "@deepseek-ai/dsh-system-prompt": "0.2.1-rc.5 || 0.2.2-rc.1",
-    "@deepseek-ai/dsh-tools": "0.2.1-rc.5 || 0.2.2-rc.1"
+    "@deepseek-ai/cordis": "~4.1.0",
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.1"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "4.0.5",
-    "@deepseek-ai/dsh-agent": "0.2.1-rc.5",
-    "@deepseek-ai/dsh-llm": "0.2.1-rc.5",
-    "@deepseek-ai/dsh-session": "0.2.1-rc.5",
-    "@deepseek-ai/dsh-system-prompt": "0.2.1-rc.5",
-    "@deepseek-ai/dsh-tools": "0.2.1-rc.5",
+    "@deepseek-ai/cordis": "4.1.0",
+    "@deepseek-ai/dsh-agent": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-session": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.1",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.1",
     "@types/node": "24.10.0",
     "typescript": "5.9.3"
   },

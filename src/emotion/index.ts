@@ -8,6 +8,8 @@ export function workAnimationEligible(startedAt: number | null, now: number, del
 
 export interface ExpressionAsset { name: string; description: string; label?: string }
 export interface ExpressionCatalog { actions: ExpressionAsset[]; stickers: ExpressionAsset[] }
+/** Shared semantic vocabulary; optional Room scores remain a separate legacy representation. */
+export { COMPANION_FEELINGS } from '../contracts/emotion.js';
 const roomDimensions = ['happy', 'calm', 'sweet', 'heartache', 'worry', 'sad', 'jealous'] as const;
 export interface RoomMood { mood: number; dims: Partial<Record<typeof roomDimensions[number], number>> }
 export function readRoomMood(value: unknown): RoomMood | undefined {
@@ -31,12 +33,17 @@ export interface ReplyIntent {
   action?: string;
   sticker?: string;
   mood?: string;
+  /** Semantic feelings, such as anger or boredom; not a numeric happiness conversion. */
+  feelings?: string[];
   roomMood?: RoomMood;
   reason?: string;
   feedback?: { playbackId: string; quote: string };
 }
 export interface ExpressionEvent {
   workspaceId: string; sessionId: string; turn: number; action?: string; sticker?: string; mood?: string;
+  feelings?: string[];
+  /** Human-readable expression intent for displays without the corresponding asset. */
+  actionLabel?: string;
 }
 export interface PlaybackReceipt {
   workspaceId: string; id: string; name: string;
@@ -45,10 +52,11 @@ export interface PlaybackReceipt {
 }
 
 export function decideExpression(intent: ReplyIntent, catalog: ExpressionCatalog,
-  settings: Pick<CompanionSettings, 'stickerProbabilityPercent'>, random = Math.random): Pick<ExpressionEvent, 'action' | 'sticker' | 'mood'> {
-  const decision: Pick<ExpressionEvent, 'action' | 'sticker' | 'mood'> = {};
+  settings: Pick<CompanionSettings, 'stickerProbabilityPercent'>, random = Math.random): Pick<ExpressionEvent, 'action' | 'sticker' | 'mood' | 'feelings'> {
+  const decision: Pick<ExpressionEvent, 'action' | 'sticker' | 'mood' | 'feelings'> = {};
   if (catalog.actions.some(item => item.name === intent.action)) decision.action = intent.action;
   if (intent.mood) decision.mood = intent.mood;
+  if (intent.feelings) decision.feelings = [...intent.feelings];
   if (catalog.stickers.some(item => item.name === intent.sticker)) {
     const p = settings.stickerProbabilityPercent;
     if (p === 100 || (p > 0 && random() * 100 < p)) decision.sticker = intent.sticker;
@@ -75,6 +83,7 @@ function parseFooter(raw: string): ReplyIntent | undefined {
     }
     const roomMood = readRoomMood(parsed.roomMood);
     if (intent.mood && roomMood) intent.roomMood = roomMood;
+    if (Array.isArray(parsed.feelings) && parsed.feelings.length <= 16 && parsed.feelings.every((item: unknown) => typeof item === 'string' && item.trim() && item.length <= 48)) intent.feelings = [...new Set<string>(parsed.feelings)];
     const playbackId = small(parsed.feedback?.playbackId, 160), quote = small(parsed.feedback?.quote, 240);
     if (playbackId && quote) intent.feedback = { playbackId, quote };
     return intent;

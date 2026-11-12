@@ -205,6 +205,8 @@ export class ChibiActor {
     this._walking = false;
     this._pose = 'stand';
     this._kind = 'idle';
+    this._expression = null;
+    this._desiredFace = 'idle';
     this._asleep = false;
     this._facing = 0;
     this._blinkAt = 2;
@@ -583,7 +585,7 @@ export class ChibiActor {
     this._shadow.visible = v;
   }
 
-  setPose({ pos, elev = 0, pose = 'stand', kind = 'idle', walking = false, facing = 0, asleep = false, activity = '' }) {
+  setPose({ pos, elev = 0, pose = 'stand', kind = 'idle', walking = false, facing = 0, asleep = false, activity = '', expression = null }) {
     this._target.set(pos[0], pos[1]);
     this._targetElev = elev;
     this._pose = pose;
@@ -592,7 +594,10 @@ export class ChibiActor {
     this._asleep = asleep;
     this._facing = facing;
     this._activity = activity || '';
-    const face = asleep ? 'sleep' : kind === 'sick' || kind === 'help' ? 'sick' : kind === 'react_happy' || kind === 'play' ? 'happy' : kind === 'react_scare' || kind === 'react_shy' ? 'shy' : 'idle';
+    // The shared behavior owns eating, sleeping and movement. Emotion only colors an idle pose.
+    this._expression = !asleep && !walking && kind === 'idle' && pose !== 'lie' && ['anger', 'boredom', 'happy'].includes(expression) ? expression : null;
+    const face = asleep ? 'sleep' : kind === 'sick' || kind === 'help' ? 'sick' : kind === 'react_happy' || kind === 'play' || this._expression === 'happy' ? 'happy' : kind === 'react_scare' || kind === 'react_shy' ? 'shy' : 'idle';
+    this._desiredFace = face;
     this.setFace(face);
     if (kind === 'react_happy' || kind === 'react_scare' || kind === 'play') this._react = 0.5;
   }
@@ -647,18 +652,26 @@ export class ChibiActor {
     if (this._kind === 'desk' || this._kind === 'phone') { armL = -0.95; armR = -0.95; }
     if (this._kind === 'balcony') { armL = -1.4; armR = -1.2; }
     if (gardening) { armL = -.35; armR = -.8 + Math.sin(this.t * 3.8) * .1; }
+    if (this._expression === 'anger') { armL = -.35; armR = -.35; }
+    else if (this._expression === 'boredom') { armL = -.55; armR = -.1; }
     this.arms[0].group.rotation.x += (armL - this.arms[0].group.rotation.x) * Math.min(1, dt * 5);
     this.arms[1].group.rotation.x += (armR - this.arms[1].group.rotation.x) * Math.min(1, dt * 5);
+    for (const arm of this.arms) {
+      const spread = this._expression === 'anger' ? .36 : this._expression === 'boredom' ? .1 : .18;
+      arm.group.rotation.z += (arm.side * spread - arm.group.rotation.z) * Math.min(1, dt * 5);
+    }
 
     // 呼吸/说话/生病
     const breathe = 1 + Math.sin(this.t * 2.1) * (this._asleep ? 0.012 : 0.008);
     this.torso.scale.y = breathe;
-    const headTilt = this._kind === 'sick' || this._kind === 'help' ? 0.32 : this._asleep ? 0.18 : Math.sin(this.t * 0.8) * 0.03;
+    const headTilt = this._kind === 'sick' || this._kind === 'help' ? 0.32 : this._asleep ? 0.18 : this._expression === 'anger' ? -.09 : this._expression === 'boredom' ? .16 : Math.sin(this.t * 0.8) * 0.03;
     this.head.rotation.x += (headTilt - this.head.rotation.x) * Math.min(1, dt * 4);
-    this.head.rotation.z = Math.sin(this.t * 0.6) * 0.02;
+    this.head.rotation.z = this._expression === 'boredom' ? .1 + Math.sin(this.t * .35) * .015 : Math.sin(this.t * 0.6) * 0.02;
 
     // 尾巴与呆毛
-    this.tail.rotation.y = Math.sin(this.t * 2.4) * 0.35 + (this._kind === 'react_happy' ? 0.4 : 0);
+    const tailSpeed = this._expression === 'anger' ? 5.2 : this._expression === 'boredom' ? 1 : 2.4;
+    const tailRange = this._expression === 'anger' ? .18 : this._expression === 'boredom' ? .12 : .35;
+    this.tail.rotation.y = Math.sin(this.t * tailSpeed) * tailRange + (this._kind === 'react_happy' ? 0.4 : 0);
     this.tail.rotation.x = Math.sin(this.t * 1.7) * 0.12;
     this.ahoge.rotation.z = Math.sin(this.t * 2.8) * 0.12 + (walking ? 0.1 : 0);
 
@@ -673,7 +686,7 @@ export class ChibiActor {
     this._blinkAt -= dt;
     if (this._blinkAt <= 0) { this._blinkAt = 2.5 + Math.random() * 3.5; this._blinkUntil = this.t + 0.12; }
     if (this._blinkUntil > this.t && this.faceName !== 'sleep') this.setFace('blink');
-    else if (this._blinkUntil <= this.t && this.faceName === 'blink') this.setFace(this._asleep ? 'sleep' : this._kind === 'sick' ? 'sick' : 'idle');
+    else if (this._blinkUntil <= this.t && this.faceName === 'blink') this.setFace(this._desiredFace);
 
     // 阴影
     const shadowY = this._elev > 0.1 ? this._elev + 0.006 : 0.008;

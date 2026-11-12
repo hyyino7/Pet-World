@@ -6,19 +6,19 @@ declare module '@deepseek-ai/dsh-llm' {
 }
 interface Refresh { bank: string; loaded: boolean; lastRequestAt?: number; replacement?: {id?: string} }
 
-/** dsh-world 0.7.4 runtime.ts: select on open, cold turn or compaction, admit
+/** dsh-world 0.7.4 runtime.ts: select once per native turn or after compaction, admit
  * ahead of new input, and retire old recall nodes only inside an open step.
  * The authoritative material here is the existing scoped Mnemosyne projection. */
 export class WorldRecall {
   private readonly sessions = new WeakMap<Session, Refresh>();
   constructor(private readonly now: () => number = Date.now) {}
-  refresh(session: Session, bank: string, firstStep: boolean, hours: number): boolean {
+  refresh(session: Session, bank: string, firstStep: boolean, _hours: number): boolean {
     let state = this.sessions.get(session);
     if (!state || state.bank !== bank) {
       state = {bank, loaded: false};
       this.sessions.set(session, state);
     }
-    return !state.loaded || firstStep && state.lastRequestAt !== undefined && this.now() - state.lastRequestAt >= hours * 3_600_000;
+    return !state.loaded || firstStep;
   }
   compacted(session: Session) {
     const state = this.sessions.get(session);

@@ -25,7 +25,7 @@ export interface DesktopService {
   reconnect: ServiceCall<{ knownBootId?: string; afterCursor?: string }, DesktopSnapshot>;
 }
 
-/** Optional Desktop sub-capability. Desktop remains the sole body/world writer. */
+/** Room consumes the shared Behavior authority; presentation never owns body effects. */
 export interface RoomViewService {
   getScene: ServiceCall<Record<string, never>, {
     sceneId: string; revision: Revision;

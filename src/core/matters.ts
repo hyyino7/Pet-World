@@ -16,22 +16,24 @@ const requiredText = { type: 'string' as const, required: true as const };
 const expectedRevision = { type: 'integer' as const, required: true as const };
 
 /** A narrow execution-scoped delegation, never an owner RequestContext or arbitrary tool dispatcher. */
-export function matterTools(runtime: CoreRuntime, binding: { executionId: string; sessionId: string; activityId: string; sourceIds: readonly string[]; dependencies?: Set<string> }): ToolDefinition[] {
-  const permittedSources = binding.dependencies ?? new Set(sourceClosure(runtime, binding.sourceIds));
+export function matterTools(runtime: CoreRuntime, binding: { executionId: string; sessionId: string; activityId: string; sourceIds: readonly string[]; dependencies?: Set<string>; ordinary?: boolean; validate?(): void }): ToolDefinition[] {
+  const permittedSources = binding.dependencies ?? new Set(binding.ordinary ? binding.sourceIds : sourceClosure(runtime, binding.sourceIds));
   const include = (sourceIds: readonly string[]) => {
-    for (const sourceId of sourceClosure(runtime, sourceIds)) permittedSources.add(sourceId);
-    runtime.store.put('execution-dependencies', binding.executionId, [...permittedSources]);
+    for (const sourceId of binding.ordinary ? sourceIds : sourceClosure(runtime, sourceIds)) permittedSources.add(sourceId);
+    if(!binding.ordinary)runtime.store.put('execution-dependencies', binding.executionId, [...permittedSources]);
   };
   const admit = (exec: ToolRunContext) => {
     if (exec.agent?.id !== binding.sessionId) reject('UNAUTHORIZED', 'Tool belongs to another admitted execution');
     if (exec.signal.aborted) reject('DISABLED', 'Execution cancellation was requested');
+    binding.validate?.();
+    if(binding.ordinary)return;
     const activity = runtime.store.require<StoredActivity>('activity', binding.activityId);
     if (activity.receipt.state !== 'running' || runtime.store.meta('quiescence')) reject('DISABLED', 'Execution is no longer admitted');
     if (!runtime.eligible([...permittedSources])) reject('INELIGIBLE', 'Execution sources are no longer eligible');
   };
   const load = (commitmentId: string) => {
     const matter = runtime.store.require<Commitment>('commitment', commitmentId);
-    if (!runtime.eligible([...matter.sourceIds, ...matter.resultSourceIds])) reject('INELIGIBLE', 'Matter sources are not eligible');
+    if (!binding.ordinary && !runtime.eligible([...matter.sourceIds, ...matter.resultSourceIds])) reject('INELIGIBLE', 'Matter sources are not eligible');
     return matter;
   };
   const mutate = (name: string, args: unknown, exec: ToolRunContext, apply: () => { commitment: Commitment; progress: CommitmentProgress; resultSource?: EvidenceSource }) => {
@@ -53,7 +55,7 @@ export function matterTools(runtime: CoreRuntime, binding: { executionId: string
     defineTool({ name: MATTER_TOOLS[0], description: '创建或选择事项前，先查看用户已有的事项。不要仅凭孤立关键词推断任务，也不要为普通聊天创建事项。',
       parameters: { limit: { type: 'integer' } }, output, execute: async ({ limit = 50 }, exec) => {
         admit(exec); integer(limit, 'limit', 1, 200);
-        const all = runtime.store.all<Commitment>('commitment').filter(m => runtime.eligible([...m.sourceIds, ...m.resultSourceIds]));
+        const all = runtime.store.all<Commitment>('commitment').filter(m => binding.ordinary || runtime.eligible([...m.sourceIds, ...m.resultSourceIds]));
         const selected = all.slice(-limit);
         include(selected.flatMap(m => [...m.sourceIds, ...m.resultSourceIds]));
         return canonical({ commitments: selected, truncated: all.length > limit });
@@ -62,7 +64,7 @@ export function matterTools(runtime: CoreRuntime, binding: { executionId: string
       parameters: { commitmentId: requiredText }, output, execute: async ({ commitmentId }, exec) => {
         admit(exec); const commitment = load(commitmentId);
         include([...commitment.sourceIds, ...commitment.resultSourceIds]);
-        const records = runtime.store.all<CommitmentProgress>('commitment-progress').filter(p => p.commitmentId === commitmentId && runtime.eligible(p.sourceIds));
+        const records = runtime.store.all<CommitmentProgress>('commitment-progress').filter(p => p.commitmentId === commitmentId && (binding.ordinary || runtime.eligible(p.sourceIds)));
         return canonical({ commitment, progress: records.slice(-runtime.conversation.maxHistoryMessages || records.length),
           results: commitment.resultSourceIds.map(sourceId => {
             const source = runtime.store.require<EvidenceSource>('source', sourceId);
@@ -99,14 +101,15 @@ export function matterTools(runtime: CoreRuntime, binding: { executionId: string
       }) }),
     defineTool({ name: MATTER_TOOLS[5], description: '保存对所提供材料的已完成分析，包括实质结果和支持结论的来源 ID。此工具不执行或证明外部操作。核对用户条件并说明局限。收到成功回执后才能声称事项已记录为完成，并向用户给出实际结果。',
       parameters: { commitmentId: requiredText, expectedRevision, result: requiredText,
-        evidenceSourceIds: { type: 'array', items: { type: 'string' }, required: true } }, output,
+        evidenceSourceIds: { type: 'array', items: { type: 'string' } } }, output,
       execute: async (args, exec) => mutate(MATTER_TOOLS[5], args, exec, () => {
         const commitment = load(args.commitmentId); revision(commitment.revision, args.expectedRevision); text(args.result, 'analysis result');
         if (['completed', 'cancelled'].includes(commitment.state)) reject('CONFLICT', 'Matter is already terminal');
-        check(args.evidenceSourceIds.length > 0, 'A result needs supporting sources');
-        for (const sourceId of args.evidenceSourceIds) if (!permittedSources.has(sourceId)) reject('UNAUTHORIZED', 'Evidence was not admitted or read in this execution');
+        const evidenceSourceIds=args.evidenceSourceIds ?? (binding.ordinary?[...permittedSources]:[]);
+        check(binding.ordinary || evidenceSourceIds.length > 0, 'A result needs supporting sources');
+        for (const sourceId of evidenceSourceIds) if (!permittedSources.has(sourceId)) reject('UNAUTHORIZED', 'Evidence was not admitted or read in this execution');
         const resultSource: EvidenceSource = { sourceId: id('analysis'), origin: 'model_interpretation', actorId: runtime.config.companionId,
-          recordedAt: now(), text: args.result, rootSourceIds: [...new Set([...permittedSources, ...args.evidenceSourceIds])] };
+          recordedAt: now(), text: args.result, rootSourceIds: [...new Set([...permittedSources, ...evidenceSourceIds])] };
         runtime.store.put('source', resultSource.sourceId, resultSource);
         commitment.state = 'completed'; commitment.nextAction = null; commitment.waitingReason = null; commitment.revision++;
         commitment.resultSourceIds = [resultSource.sourceId];

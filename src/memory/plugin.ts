@@ -5,8 +5,8 @@ import type { NativeMemory } from '../core/native-memory.js';
 export const name = '10-Memory';
 export const inject = ['petCore'];
 declare module '@deepseek-ai/cordis' { interface Context { petMemory: NativeMemory } }
-/** Enrollment follows the plugin lifecycle. Existing conversations retain their
- * original Memory mode and provider through Core's native-session lifetime. */
+/** The component lifecycle controls Memory on the next native turn.
+ * Native conversations and their full original logs remain owned by DSH. */
 export function apply(ctx: Context): void {
   const native = ctx.petCore.native;
   if (!native.memory) return;

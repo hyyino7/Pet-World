@@ -9,41 +9,61 @@ window.__ModuleLoader__.load({
     const details = (title, ...children) => h('details', { className: 'cp-details' }, h('summary', null, title), ...children);
     const { useState, useRef, useId } = React;
     const sections = [
-      ['overview', '概览'], ['role', '角色与记忆'], ['archive', '对话与档案'], ['life', '日常生活'], ['desktop', '桌宠互动'], ['workspace', '工作区与维护'],
+      ['overview', '概览'], ['role', '角色'], ['emotion', '情绪'], ['archive', '记忆与档案'],
+      ['desktop', '桌宠'], ['life', '生活'], ['connections', '连接'], ['workspace', '工作区'],
     ];
     const worldGroups = [
       { id: 'persona', title: '人设与提示', modules: { persona: '人设提示', scope: '工作区范围' },
-        connection: '角色与记忆页预览绑定工作区的角色和用户资料。' },
+        connection: '角色页预览绑定工作区的角色和用户资料。' },
       { id: 'conversation', title: '对话与记忆', modules: { history: '近期历史', archive: '对话归档', memory: '记忆查询', compaction: '批量整理' },
-        connection: '对话与档案页显示 DSH 工作区关联的会话数，调用 Mnemosyne 搜索和精读。整理继续使用大肥鱼的批处理，续聊沿用 DSH 历史。' },
+        connection: '记忆与档案页显示 DSH 工作区关联的会话数，并提供搜索和精读。续聊沿用 DSH 历史。' },
       { id: 'expression', title: '心情与表达', modules: { mood: '心情状态' },
-        connection: '桌宠互动页从情绪模块读取当前心情和可用动作、贴图。' },
+        connection: '情绪页读取当前心情和可用动作、贴图。' },
       { id: 'life', title: '生活与接入', modules: { life: '自主生活', reflection: '日记与反思', photos: '长期相册',
         bridge: '主动消息', channels: '渠道路由', qq: 'QQ', wechat: '微信' },
-        connection: '日常生活页可调整作息、查看活动、翻日记和打开相册。' },
+        connection: '生活页提供作息、活动、日记和相册；连接页管理聊天渠道。' },
       { id: 'activity', title: '运行与用量', modules: { health: '健康与故障', usage: '活动与用量' },
-        connection: '当前服务状态见上方。生活活动日志在日常生活页；准确用量见对应 DSH 会话。' },
+        connection: '当前服务状态见上方。活动日志在生活页；准确用量见对应 DSH 会话。' },
     ];
     const workspaceLabels = { unbound: '未绑定', pending: '待初始化', ready: '已就绪', unavailable: '不可用' };
     const capabilityLabels = { ready: '可用', degraded: '部分可用', unavailable: '不可用', disabled: '已停用',
       initializing: '初始化中', not_implemented: '待接入', incompatible: '版本不兼容', stopping: '正在停用' };
     const memoryProviderLabels = { ready: '已连接', stopped: '未运行，按需启动', unresolved: '状态待确认' };
-    const memoryKeys = ['recentActionCount', 'recentActionMinutes', 'recentMoodCount', 'recentMoodHours',
-      'memorySummaryTurns', 'memorySummaryIdleMinutes', 'memorySummaryMinimumMinutes', 'memoryRecallCount', 'memoryRecallBlockChars', 'memoryColdHours'];
+    const memoryKeys = ['memorySummaryTurns', 'memorySummaryIdleMinutes', 'memorySummaryMinimumMinutes', 'memoryRecallCount', 'memoryRecallBlockChars'];
     const css = `
-      .chatpet-settings { container-type: inline-size; color: inherit; width: 100%; max-width: 900px; min-width: 0; margin-inline: auto; padding: 4px 0 20px; }
+      .chatpet-settings { --cp-gold:#c49a52; --cp-glow:color-mix(in srgb,var(--cp-gold) 22%,transparent); --cp-soft:var(--dsw-alias-label-tertiary,#8b8475); --cp-serif:'Noto Serif SC','Source Han Serif SC','Songti SC','STSong','SimSun',serif; font-size:13px; line-height:1.65; container-type: inline-size; color: inherit; width: 100%; max-width: 780px; min-width: 0; margin-inline: auto; padding: 4px 0 20px; }
       .chatpet-settings * { box-sizing: border-box; }
       .chatpet-settings h2 { font-size: 22px; margin: 0 0 8px; font-weight: 650; }
-      .chatpet-settings h3 { font-size: 15px; margin: 0; font-weight: 600; }
+      .chatpet-settings h3 { font:600 14px var(--cp-serif); letter-spacing:.12em; margin:0; }
+      .chatpet-settings .cp-card-head h3:before {content:'';display:inline-block;width:14px;height:1px;background:var(--cp-gold);vertical-align:middle;margin-right:8px;}
       .chatpet-settings p { margin: 6px 0 0; line-height: 1.65; font-size: 13px; }
       .chatpet-settings .cp-muted { opacity: .64; }
-      .chatpet-settings .cp-heading { display: flex; gap: 16px; align-items: start; justify-content: space-between; margin-bottom: 22px; }
+      .chatpet-settings .cp-heading { display:flex; gap:16px; align-items:center; justify-content:space-between; margin-bottom:18px; padding:18px 20px; border:1px solid color-mix(in srgb,currentColor 13%,transparent); border-radius:14px; background:radial-gradient(120% 140% at 100% 0%,var(--cp-glow),transparent 55%),color-mix(in srgb,currentColor 3.5%,transparent); }
+      .chatpet-settings .cp-heading h2 {font:600 24px/1.25 var(--cp-serif);letter-spacing:.04em;margin:2px 0 5px;}
+      .chatpet-settings .cp-heading small {font-size:10px;letter-spacing:.22em;color:var(--cp-soft);}
+      .chatpet-settings .cp-state {font-size:12px;color:var(--cp-soft);display:flex;align-items:center;gap:7px;}
+      .chatpet-settings .cp-dot {width:7px;height:7px;border-radius:50%;background:var(--cp-gold);display:inline-block;}
+      .chatpet-settings .cp-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+      .chatpet-settings .cp-grid .cp-card {margin:0;}
+      .chatpet-settings .cp-foundation {min-height:340px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.7;}
+      .chatpet-settings .cp-appearance {min-width:0;overflow-wrap:anywhere;--dsw-alias-state-business-primary:var(--cp-gold);--dsw-alias-button-info-fill:var(--cp-gold);--dsw-alias-button-info-hover:color-mix(in srgb,var(--cp-gold) 92%,black);--dsw-alias-border-l2:color-mix(in srgb,currentColor 14%,transparent);}
+      .chatpet-settings .cp-appearance .dsh-pet-cfg {max-width:none!important;}
+      .chatpet-settings .cp-appearance .dsh-pet-cfg__card {border-color:color-mix(in srgb,currentColor 14%,transparent);background:color-mix(in srgb,currentColor 3.5%,transparent);}
+      .chatpet-settings .cp-appearance .dsh-pet-cfg__title {font:600 16px var(--cp-serif);letter-spacing:.1em;}
+      .chatpet-settings .cp-desktop-panel {display:flex;flex-direction:column;}
+      .chatpet-settings .cp-desktop-panel > * {order:2;}
+      .chatpet-settings .cp-desktop-panel > .cp-card:first-child {order:0;}
+      .chatpet-settings .cp-desktop-panel > .cp-migration-panel {order:0;}
+      .chatpet-settings .cp-desktop-panel > .cp-appearance {order:1;margin-bottom:14px;}
+      .chatpet-settings .cp-migration + .cp-migration {border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);padding-top:8px;}
+      .chatpet-settings .cp-big {font:600 22px/1.3 var(--cp-serif);margin:4px 0 8px;}
+      .chatpet-settings .cp-emotion {border-left:2px solid var(--cp-gold);padding-left:12px;}
       .chatpet-settings .cp-badge { display: inline-flex; flex: 0 0 auto; border: 1px solid color-mix(in srgb,currentColor 20%,transparent); border-radius: 20px; padding: 3px 9px; font-size: 11px; line-height: 1.5; }
       .chatpet-settings .cp-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid color-mix(in srgb,currentColor 15%,transparent); margin-bottom: 20px; }
-      .chatpet-settings .cp-tab { font: inherit; font-size: 13px; color: inherit; padding: 10px 12px; background: transparent; border: 0; border-bottom: 2px solid transparent; cursor: pointer; opacity: .64; }
-      .chatpet-settings .cp-tab[aria-selected=true] { opacity: 1; border-bottom-color: currentColor; font-weight: 600; }
+      .chatpet-settings .cp-tab { font:500 13px var(--cp-serif); letter-spacing:.1em; font-size: 13px; color: inherit; padding: 10px 12px; background: transparent; border: 0; border-bottom: 2px solid transparent; cursor: pointer; opacity: .64; }
+      .chatpet-settings .cp-tab[aria-selected=true] { opacity: 1; border-bottom-color: var(--cp-gold); font-weight: 600; }
       .chatpet-settings :focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 3px; }
-      .chatpet-settings .cp-card { border: 1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+      .chatpet-settings .cp-card { border: 1px solid color-mix(in srgb,currentColor 14%,transparent); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; background:color-mix(in srgb,currentColor 3.5%,transparent); }
       .chatpet-settings .cp-card-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 15px; }
       .chatpet-settings .cp-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
       .chatpet-settings .cp-field { display: flex; flex-direction: column; gap: 7px; font-size: 13px; min-width: 0; }
@@ -77,13 +97,15 @@ window.__ModuleLoader__.load({
       .chatpet-settings .cp-status-list { display:grid; grid-template-columns:minmax(5em,auto) 1fr; gap:8px 16px; font-size:13px; margin:10px 0; }
       .chatpet-settings .cp-status-list dd { margin:0; }
       .chatpet-settings .cp-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid color-mix(in srgb,currentColor 14%,transparent); padding-top: 16px; margin-top: 22px; }
+      .chatpet-settings button:not(.cp-tab):not([class]) {border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:7px;padding:7px 12px;background:transparent;color:inherit;font:inherit;cursor:pointer;margin:5px 6px 5px 0;}
       .chatpet-settings .cp-save { flex: 0 0 auto; border: 1px solid color-mix(in srgb,currentColor 20%,transparent); color: inherit; background: transparent; padding: 8px 14px; border-radius: 7px; font: inherit; font-size: 13px; }
       .chatpet-settings .cp-card > p + .cp-save { margin-top:12px; }
       .chatpet-settings .cp-save:enabled { cursor:pointer; }
       .chatpet-settings .cp-save:enabled:hover { background:color-mix(in srgb,currentColor 7%,transparent); }
-      .chatpet-settings .cp-primary:enabled { background:var(--color-primary,#246381); border-color:var(--color-primary,#246381); color:var(--color-primary-foreground,white); }
-      .chatpet-settings .cp-primary:enabled:hover { background:var(--color-primary,#246381); filter:brightness(.93); }
-      @container(max-width:560px) { .chatpet-settings .cp-fields { grid-template-columns: 1fr; } .chatpet-settings .cp-card { padding: 14px; } .chatpet-settings .cp-tab { padding: 9px 8px; } .chatpet-settings .cp-footer { align-items: start; } .chatpet-settings .cp-overview-row { grid-template-columns:minmax(5em,auto) 1fr; } .chatpet-settings .cp-overview-row .cp-save { grid-column:2; justify-self:start; } }
+      .chatpet-settings .cp-primary:enabled { background:var(--cp-gold); border-color:var(--cp-gold); color:#fffaf0; }
+      .chatpet-settings .cp-primary:enabled:hover { background:var(--cp-gold); filter:brightness(.95); }
+      @media(prefers-reduced-motion:reduce) {.chatpet-settings * {animation:none!important;transition:none!important;}}
+      @container(max-width:560px) { .chatpet-settings .cp-grid {grid-template-columns:1fr;}  .chatpet-settings .cp-fields { grid-template-columns: 1fr; } .chatpet-settings .cp-card { padding: 14px; } .chatpet-settings .cp-tab { padding: 9px 8px; } .chatpet-settings .cp-footer { align-items: start; } .chatpet-settings .cp-overview-row { grid-template-columns:minmax(5em,auto) 1fr; } .chatpet-settings .cp-overview-row .cp-save { grid-column:2; justify-self:start; } }
     `;
     const badge = (text = '待接入') => h('span', { className: 'cp-badge' }, text);
     function Field({ label, note, wide, multiline, value, onChange, type = 'text', min, max, maxLength, disabled }) {
@@ -186,27 +208,18 @@ window.__ModuleLoader__.load({
               preview(({ user: '用户', assistant: '大肥鱼', source: '来源' })[turn.role] || '来源', turn.text))))));
     }
     function RoomView({workspaceId, request}) {
-      const frame = useRef(null), [open, setOpen] = useState(false);
-      React.useEffect(() => {
-        if (!open) return;
-        const lifetime = new AbortController();
-        async function receive(event) {
-          if (event.source !== frame.current?.contentWindow || event.origin !== location.origin ||
-              event.data?.kind !== 'chatpet.room' || !event.ports[0]) return;
-          const {endpoint, data} = event.data, port = event.ports[0];
-          if (!['roomState','roomAction','roomGarden','roomPlant','roomCare','roomChat','roomTelevision','roomHistory'].includes(endpoint)) return;
-          try { const value = await request(endpoint, {workspaceId, data}, lifetime.signal);
-            if (!lifetime.signal.aborted) port.postMessage({ok:true, value});
-          } catch (e) { if (!lifetime.signal.aborted) port.postMessage({ok:false, error:e.message}); }
-          finally { port.close(); }
-        }
-        window.addEventListener('message', receive);
-        return () => { lifetime.abort(); window.removeEventListener('message', receive); };
-      }, [workspaceId, request, open]);
-      return h(Card, {title:'房间与菜园'},
-        h('button', {type:'button', onClick:() => setOpen(!open)}, open ? '收起房间' : '进入 3D 房间'),
-        open && h('iframe', {ref:frame, src:'/chatpet-room/index.html', title:'大肥鱼的房间',
-          allow:'display-capture; fullscreen', allowFullScreen:true, style:{border:0,marginTop:'10px',width:'100%',height:'min(75vh, 760px)'}}));
+      const [busy,setBusy] = useState(false), [error,setError] = useState('');
+      const lifetime = useRef(null);
+      React.useEffect(() => {const c=new AbortController();lifetime.current=c;return()=>c.abort();}, [workspaceId]);
+      async function open() {
+        const signal=lifetime.current.signal;setBusy(true);setError('');
+        try {await request('roomOpen',{workspaceId},signal);}
+        catch(e) {if(!signal.aborted)setError(e.message);}
+        finally {if(!signal.aborted)setBusy(false);}
+      }
+      return h(Card,{title:'房间与菜园',note:'在独立窗口里陪它聊天、照顾生活或看看菜园。'},
+        h('button',{type:'button',className:'cp-save',disabled:busy||!workspaceId,onClick:open},busy?'正在打开…':'打开房间'),
+        error&&h('p',{role:'alert'},error));
     }
     function QQGroup({workspaceId, groupId, request}) {
       const [view,setView] = useState(null), [edit,setEdit] = useState(null), [word,setWord] = useState(''), [meaning,setMeaning] = useState('');
@@ -476,11 +489,10 @@ window.__ModuleLoader__.load({
             onChange:e => updatePref('compactAfterReview',e.target.checked)}), '晚间回顾后整理生活会话')),
           button('保存作息和预算', () => change('lifePreferences', edit), !edit)),
         view?.roomAvailable && h(RoomView, {workspaceId, request}),
-        view?.channelsAvailable && h(ChannelsPage, {key:workspaceId + '-channels', workspaceId, request}),
         view && h(LifeArchive, {key:workspaceId, workspaceId, request}),
-        home && h(Card, {title: '陪它一会儿', note: '操作直接更新原版生活状态，不额外调用模型。下一次对话或生活唤醒会读到这些经历。'},
+        home && h(Card, {title: '陪它一会儿', note: '暂停自主生活时也能照顾它；这些操作不会调用模型。'},
           h('div', {className: 'cp-inline-actions'}, ...[['feed', '喂小鱼干'], ['water', '倒杯水'], ['pet', '摸摸头'], ['play', '一起玩'], ['sleep', '去睡觉'], ['wake', '叫醒']].map(([action, label]) =>
-            h(React.Fragment, {key: action}, button(label, () => change('lifeAction', {action}), !view.running))))),
+            h(React.Fragment, {key: action}, button(label, () => change('lifeAction', {action})))))),
         home && h(Card, {title: '最近的生活', note: '原版保留最近 15 分钟的生活事件。会话工具活动另存于绑定 Repo。'},
           ...(home.events.length ? home.events.map((event, i) => h('p', {key: `${event.at}-${i}`}, `${new Date(event.at).toLocaleTimeString()} · ${event.text}`)) : [h('p', {key: 'empty', className: 'cp-muted'}, '这会儿还没有新活动。')]),
           ...(view.activity || []).slice(-8).map((event, i) => h('p', {key: `tool-${i}`, className: 'cp-muted'}, `${new Date(event.time).toLocaleTimeString()} · ${event.summary}`))));
@@ -507,33 +519,125 @@ window.__ModuleLoader__.load({
         h('button',{type:'button',onClick:create},'生成本机连接文件'),
         h('button',{type:'button',onClick:copyControl},'复制第三方动作控制凭据'),result && h('p',{role:'status'},result));
     }
-    function AppearanceEditor({value, request, onSave}) {
-      const [text, setText] = useState(() => JSON.stringify(value || {}, null, 2));
-      const [error, setError] = useState('');
-      const lifetime = useRef(null);
-      React.useEffect(() => { const c = new AbortController(); lifetime.current = c; return () => c.abort(); }, []);
-      const load = async () => {
-        try { const defaults = await request('desktopAppearance', {}, lifetime.current.signal);
-          if (!lifetime.current.signal.aborted) { setText(JSON.stringify({...defaults,...value}, null, 2)); setError(''); }
-        } catch (e) { if (!lifetime.current.signal.aborted) setError(e.message); }
-      };
-      return details('高级外观、动作和文案', h('div', null,
-        h('button', {type:'button', onClick:load}, '载入当前完整配置'),
-        h('label', {className:'cp-field'}, '物理参数、字体、归位、动作池和文字（JSON）',
-          h('textarea', {rows:10, value:text, onChange:e => setText(e.target.value)})),
-        h('button', {type:'button', onClick:() => {
-          try { const next = JSON.parse(text); setError(''); onSave(next); } catch { setError('请输入有效的 JSON 对象。'); }
-        }}, '保存高级设置'), error && h('p', {role:'alert'}, error)));
+    // The platform is loaded after settings. Resolve its original editor lazily,
+    // and keep it mounted between topic changes so its own drafts survive.
+    function PlatformAppearance({getEditor}) {
+      const [Editor,setEditor]=useState(()=>getEditor?.());
+      React.useEffect(()=>{
+        const sync=()=>setEditor(previous=>{const next=getEditor?.();return previous===next?previous:next;});
+        sync();const timer=setInterval(sync,500);return()=>clearInterval(timer);
+      },[getEditor]);
+      return Editor?h(Editor):h(Card,{title:'外观与动作'},h('p',{className:'cp-muted'},'原版桌宠外观编辑器尚未加载。启用桌宠模块后会在这里显示。'));
     }
-    function SettingsPage({ request }) {
+    function PresentationMigration({workspaceId,migration,request,onResolved}) {
+      const [busy,setBusy]=useState(''),[error,setError]=useState('');
+      const lifetime=useRef(null);
+      React.useEffect(()=>{const c=new AbortController();lifetime.current=c;return()=>c.abort();},[workspaceId]);
+      async function choose(field,choice) {
+        const signal=lifetime.current.signal;setBusy(field);setError('');
+        try {await request('presentationMigration',{workspaceId,field,choice,expectedConfigHash:migration.configHash},signal);if(!signal.aborted)await onResolved();}
+        catch(e){if(!signal.aborted)setError(e.message);}
+        finally{if(!signal.aborted)setBusy('');}
+      }
+      if(!migration?.conflicts?.length)return null;
+      const show=value=>typeof value==='string'?value:JSON.stringify(value);
+      return h(Card,{title:'外观设置需要选择',note:'两份已保存的设置存在差异。选择每项要保留的值，不会增加桌宠。'},
+        ...migration.conflicts.map(row=>h('div',{key:row.field,className:'cp-migration'},h('h4',null,row.field),
+          h('p',null,'原大肥鱼设置：'+show(row.legacy)),h('p',null,'原版桌宠设置：'+show(row.current)),
+          h('div',{className:'cp-inline-actions'},...['legacy','current'].map(choice=>h('button',{key:choice,type:'button',className:'cp-save',disabled:Boolean(busy),onClick:()=>choose(row.field,choice)},choice==='legacy'?'使用原大肥鱼设置':'保留原版桌宠设置'))))),
+        error&&h('p',{role:'alert'},error));
+    }
+    function PresentationTiming({workspaceId,initial,value,onChange,request}) {
+      const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+      const lifetime=useRef(null);
+      React.useEffect(()=>{const c=new AbortController();lifetime.current=c;return()=>c.abort();},[workspaceId]);
+      const draft=value||initial&&{base:initial,next:initial};
+      if(!draft)return null;
+      async function save() {
+        const signal=lifetime.current.signal;setBusy(true);setError('');setNotice('');
+        try {const result=await request('presentationTiming',{workspaceId,expected:draft.base,eventsRefreshSec:draft.next},signal);
+          const timing=result.timing||result;
+          if(!signal.aborted){onChange({base:timing,next:timing});setNotice('定时互动间隔已保存。');}
+        }catch(e){if(!signal.aborted)setError(e.message);}
+        finally{if(!signal.aborted)setBusy(false);}
+      }
+      return h(Card,{title:'互动间隔',note:'碎碎念和余额查询的开关使用上方原版桌宠设置。自主生活运行时，自动碎碎念暂停。'},
+        fields(...[['whisper','碎碎念间隔（秒）'],['sleepTalk','梦话间隔（秒）'],['balance','余额查询间隔（秒）']].map(([key,label])=>field(label,{type:'number',min:1,max:86400,value:draft.next[key],disabled:busy,onChange:text=>onChange({...draft,next:{...draft.next,[key]:text===''?'':Number(text)}})}))),
+        h('div',{className:'cp-inline-actions'},h('button',{type:'button',className:'cp-save',disabled:busy||equal(draft.base,draft.next),onClick:save},busy?'正在保存…':'保存互动间隔')),
+        error&&h('p',{role:'alert'},error),notice&&h('p',{role:'status'},notice));
+    }
+    // Drafts live in SettingsPage so changing tabs never discards new file edits.
+    function FoundationEditor({workspaceId, request, value, onChange}) {
+      const [error,setError]=useState(''),[busy,setBusy]=useState(false),[attempt,retry]=useState(0),[notice,setNotice]=useState('');
+      const lifetime=useRef(null);
+      React.useEffect(()=>{
+        const controller=new AbortController();lifetime.current=controller;
+        if(workspaceId&&!value) request('foundation',{workspaceId},controller.signal).then(base=>{
+          if(!controller.signal.aborted)onChange({base,text:base.text});
+        },e=>{if(!controller.signal.aborted)setError(e.message);});
+        return()=>controller.abort();
+      },[workspaceId,request,attempt]);
+      async function save() {
+        const signal=lifetime.current.signal;setBusy(true);setError('');setNotice('');
+        try {const base=await request('foundation',{workspaceId,expectedRevision:value.base.revision,text:value.text},signal);
+          if(!signal.aborted){onChange({base,text:base.text});setNotice('基础说明已保存，下一次对话使用新内容。');}
+        } catch(e){if(!signal.aborted)setError(e.message);}
+        finally {if(!signal.aborted)setBusy(false);}
+      }
+      return h(Card,{title:'基础说明',note:'对话规则、关系和能力说明。关闭自主生活后仍会使用；当前未加载的能力不会提供给大肥鱼。',status:value?.base.source==='owner'?'已自定义':'随包默认'},
+        !workspaceId?h('p',null,'请先绑定并初始化工作区。'):value?h(React.Fragment,null,
+          h('label',{className:'cp-field'},'基础说明内容',h('textarea',{className:'cp-foundation',value:value.text,maxLength:64000,
+            disabled:busy,onChange:e=>onChange({...value,text:e.target.value})})),
+          h('div',{className:'cp-inline-actions'},h('button',{type:'button',className:'cp-save cp-primary',disabled:busy||value.text===value.base.text,onClick:save},busy?'正在保存…':'保存基础说明')),
+          h('p',{className:'cp-muted'},'保存在 .chatpet/COMPANION.md。未编辑时直接使用随包说明，旧档案无需迁移。')):
+          h('p',{role:'status'},error?'未能读取基础说明。':'正在读取基础说明…'),
+        notice&&h('p',{role:'status'},notice),error&&h('p',{role:'alert'},error),error&&!value&&h('button',{type:'button',className:'cp-save',onClick:()=>{setError('');retry(n=>n+1);}},'重试读取'));
+    }
+    function EmotionEditor({workspaceId,request,value,onChange}) {
+      const [error,setError]=useState(''),[busy,setBusy]=useState(false),[attempt,retry]=useState(0),[notice,setNotice]=useState('');
+      const lifetime=useRef(null);
+      React.useEffect(()=>{
+        const controller=new AbortController();lifetime.current=controller;
+        if(workspaceId&&!value) request('emotionState',{workspaceId},controller.signal).then(base=>{
+          if(!controller.signal.aborted)onChange({base,mood:base.state?.mood||'',reason:base.state?.reason||'',feelings:(base.state?.feelings||[]).join('、')});
+        },e=>{if(!controller.signal.aborted)setError(e.message);});
+        return()=>controller.abort();
+      },[workspaceId,request,attempt]);
+      async function save() {
+        const signal=lifetime.current.signal;setBusy(true);setError('');setNotice('');
+        try {const base=await request('emotionUpdate',{workspaceId,expectedRevision:value.base.revision,expectedHash:value.base.contentHash,
+          mood:value.mood,reason:value.reason,feelings:value.feelings.split(/[、,，]/).map(s=>s.trim()).filter(Boolean)},signal);
+          if(!signal.aborted){onChange({base,mood:base.state?.mood||'',reason:base.state?.reason||'',feelings:(base.state?.feelings||[]).join('、')});setNotice('当前心情已保存。');}
+        }catch(e){if(!signal.aborted)setError(e.message);}
+        finally{if(!signal.aborted)setBusy(false);}
+      }
+      const dirty=value&&(value.mood!==(value.base.state?.mood||'')||value.reason!==(value.base.state?.reason||'')||value.feelings!==(value.base.state?.feelings||[]).join('、'));
+      const edit=key=>text=>onChange({...value,[key]:text});
+      return h(Card,{title:'此刻的心情',note:'心情表达它的感受和倾向；房间与桌宠共同呈现实际行为。',status:value?({ready:'已保存',empty:'尚未记录',unavailable:'暂不可用'}[value.base.status]):'读取中'},
+        !workspaceId?h('p',null,'请先绑定并初始化工作区。'):value?h(React.Fragment,null,
+          value.base.state&&h('div',{className:'cp-emotion'},h('div',{className:'cp-big'},value.base.state.mood),h('p',{className:'cp-muted'},new Date(value.base.state.at).toLocaleString('zh-CN'))),
+          value.base.status==='unavailable'&&h('p',{role:'status'},'旧心情的依据暂时无法确认，请重新写下当前的感受。'),
+          fields(field('心情',{value:value.mood,onChange:edit('mood'),maxLength:160}),field('感受标签',{value:value.feelings,onChange:edit('feelings'),note:'用顿号分隔，例如开心、想聊天。',maxLength:500}),
+            field('原因与想法',{value:value.reason,onChange:edit('reason'),multiline:true,wide:true,maxLength:4000})),
+          h('div',{className:'cp-inline-actions'},h('button',{type:'button',className:'cp-save cp-primary',disabled:busy||!dirty||!value.mood.trim(),onClick:save},busy?'正在保存…':'保存当前心情')),
+          value.base.reason&&h('p',{className:'cp-muted'},value.base.reason)):
+          h('p',{role:'status'},error?'未能读取当前心情。':'正在读取当前心情…'),
+        notice&&h('p',{role:'status'},notice),error&&h('p',{role:'alert'},error),error&&!value&&h('button',{type:'button',className:'cp-save',onClick:()=>{setError('');retry(n=>n+1);}},'重试读取'));
+    }
+    function SettingsPage({ request, getAppearanceEditor }) {
       const [active, setActive] = useState('overview');
+      const [documents,setDocuments]=useState({});
+      const [appearanceVisited,setAppearanceVisited]=useState(false);
+      const documentDirty=Object.values(documents).some(row=>row.foundation&&row.foundation.text!==row.foundation.base.text||row.emotion&&(row.emotion.mood!==(row.emotion.base.state?.mood||'')||row.emotion.reason!==(row.emotion.base.state?.reason||'')||row.emotion.feelings!==(row.emotion.base.state?.feelings||[]).join('、'))||row.timing&&!equal(row.timing.base,row.timing.next));
       const [snapshot, setSnapshot] = useState(null);
       const [draft, setDraft] = useState(null);
       const [loading, setLoading] = useState(true);
       const [busy, setBusy] = useState(null);
       const [notice, setNotice] = useState('');
       const [error, setError] = useState('');
+      const [desktopFailure,setDesktopFailure]=useState(null);
       const lifetime = useRef(null), sequence = useRef(0);
+      const desktopFlight=useRef(null);
       const tabs = useRef([]), prefix = useId();
       const focusAfterNavigation = useRef(null);
       React.useEffect(() => {
@@ -543,6 +647,7 @@ window.__ModuleLoader__.load({
         target?.focus();
       }, [active]);
       function selectTab(tab) {
+        if(tab==='desktop')setAppearanceVisited(true);
         setActive(tab);
         setNotice('');
       }
@@ -550,14 +655,57 @@ window.__ModuleLoader__.load({
         focusAfterNavigation.current = target ? `${prefix}-${target}` : `${prefix}-${tab}-panel`;
         selectTab(tab);
       }
-      const dirty = Boolean(snapshot && draft && (!equal(snapshot.identity, draft.identity)
+      const dirty = documentDirty || Boolean(snapshot && draft && (!equal(snapshot.identity, draft.identity)
         || !equal(snapshot.companion, draft.companion) || snapshot.policy.quiet !== draft.quiet || !equal(snapshot.preferences.conversation, draft.conversation)
         || (snapshot.preferences.workspace?.id ?? null) !== draft.workspaceId || snapshot.profile.text !== draft.profile));
       function accept(value) {
         setSnapshot(value); setDraft({ companion: value.companion, identity: { ...value.identity }, quiet: value.policy.quiet,
           workspaceId: value.preferences.workspace?.id ?? null, conversation: { ...value.preferences.conversation }, profile: value.profile.text });
+        setDesktopFailure(null);
+        if(value.desktop&&!value.desktop.running&&(value.desktop.starting||value.desktop.requested))waitForDesktop(value.workspace.target?.id);
+      }
+      function stopDesktopWait() {
+        desktopFlight.current?.abort();desktopFlight.current=null;
+      }
+      function waitForDesktop(workspaceId) {
+        stopDesktopWait();
+        if(!workspaceId)return;
+        const controller=new AbortController();desktopFlight.current=controller;
+        let timedOut=false;
+        const timeout=setTimeout(()=>{timedOut=true;controller.abort();},20000);
+        const abort=()=>controller.abort();lifetime.current.signal.addEventListener('abort',abort,{once:true});
+        const pause=()=>new Promise((resolve,reject)=>{
+          const cleanup=()=>{clearTimeout(timer);controller.signal.removeEventListener('abort',cancel);};
+          const cancel=()=>{cleanup();reject(Error('Desktop wait cancelled'));};
+          const timer=setTimeout(()=>{cleanup();resolve();},700);
+          controller.signal.addEventListener('abort',cancel,{once:true});
+          if(controller.signal.aborted)cancel();
+        });
+        void(async()=>{
+          try {
+            while(true) {
+              await pause();
+              const value=await request('snapshot',{},controller.signal);
+              if(controller.signal.aborted||desktopFlight.current!==controller)return;
+              if(value.workspace.target?.id!==workspaceId)throw Error('工作区已切换，请刷新设置。');
+              // Status observation must not acknowledge or replace another form's draft.
+              setSnapshot(old=>old?.workspace.target?.id===workspaceId?{...old,desktop:value.desktop}:old);
+              if(value.desktop?.running){setDesktopFailure(null);setNotice('桌宠已打开。');return;}
+              if(!value.desktop?.requested&&!value.desktop?.starting)throw Error('桌宠未能启动，可以重试。');
+            }
+          }catch(failure){
+            if(desktopFlight.current===controller&&!lifetime.current.signal.aborted&&(!controller.signal.aborted||timedOut)) {
+              setDesktopFailure(workspaceId);setNotice('');
+              setError(timedOut?'桌宠启动等待超时，可以取消或重试。':failure.message);
+            }
+          }finally{
+            clearTimeout(timeout);lifetime.current.signal.removeEventListener('abort',abort);
+            if(desktopFlight.current===controller)desktopFlight.current=null;
+          }
+        })();
       }
       async function load() {
+        stopDesktopWait();
         const version = ++sequence.current;
         setLoading(true); setError('');
         try { const value = await request('snapshot', {}, lifetime.current.signal); if (version === sequence.current) accept(value); }
@@ -567,10 +715,11 @@ window.__ModuleLoader__.load({
       React.useEffect(() => {
         const controller = new AbortController(); lifetime.current = controller;
         void load();
-        return () => { sequence.current++; controller.abort(); };
+        return () => { sequence.current++; stopDesktopWait(); controller.abort(); };
       }, []);
       async function saveWorkspace(kind, input, signal) {
         // Binding and initialization can each change the authoritative workspace.
+        stopDesktopWait();
         setSnapshot(null);
         setDraft(null);
         let failure;
@@ -603,19 +752,26 @@ window.__ModuleLoader__.load({
       async function save(kind, input, scope) {
         if (busy) return;
         setBusy(kind); setError(''); setNotice('');
+        const endpoint=kind==='desktopRetry'?'desktopOpen':kind;
+        if(endpoint==='desktopOpen'||endpoint==='desktopClose'){stopDesktopWait();setDesktopFailure(null);}
         try {
           if (kind === 'initialize' || scope === 'workspace') {
             await saveWorkspace(kind, input, lifetime.current.signal);
             return;
           }
-          const value = await request(kind, input, lifetime.current.signal);
+          if(kind==='desktopRetry')await request('desktopClose',input,lifetime.current.signal);
+          const value = await request(endpoint, input, lifetime.current.signal);
           if (lifetime.current.signal.aborted) return;
           // Acknowledge exactly the saved section; do not discard edits on other tabs.
           if (kind === 'identity') {
             const identity = { revision: value.revision, displayName: value.displayName, character: value.character };
             setSnapshot(old => ({ ...old, identity })); setDraft(old => ({ ...old, identity }));
-          } else if (kind === 'desktopOpen' || kind === 'desktopClose') {
+          } else if (endpoint === 'desktopOpen' || endpoint === 'desktopClose') {
             setSnapshot(old => ({ ...old, desktop: value }));
+            if(endpoint==='desktopClose'){setNotice('桌宠已关闭。');return;}
+            if(value.running){setNotice('桌宠已打开。');return;}
+            if(value.starting||value.requested){setNotice('桌宠正在启动…');waitForDesktop(input.workspaceId);return;}
+            setDesktopFailure(input.workspaceId);throw Error('桌宠未能启动，可以重试。');
           } else if (kind === 'companion') {
             setSnapshot(old => ({ ...old, companion: value }));
             setDraft(old => ({ ...old, companion: { ...old.companion, ...Object.fromEntries(scope.map(key => [key, value[key]])) } }));
@@ -626,15 +782,15 @@ window.__ModuleLoader__.load({
           } else {
             setSnapshot(old => ({ ...old, preferences: value }));
           }
-          setNotice(kind === 'desktopOpen' ? '桌宠已打开。'
-            : kind === 'desktopClose' ? '桌宠已关闭。' : '设置已保存并生效。');
+          setNotice('设置已保存并生效。');
         } catch (failure) {
+          if(endpoint==='desktopOpen')setDesktopFailure(input.workspaceId);
           if (!lifetime.current.signal.aborted) setError(failure.message);
         } finally { if (!lifetime.current.signal.aborted) setBusy(null); }
       }
       function refresh() {
         if (dirty && !window.confirm('刷新会放弃尚未保存的修改，继续吗？')) return;
-        setDraft(null); setSnapshot(null);
+        setDraft(null); setSnapshot(null); setDocuments({});
         setNotice(''); void load();
       }
       const editIdentity = key => value => setDraft(old => ({ ...old, identity: { ...old.identity, [key]: value } }));
@@ -644,7 +800,7 @@ window.__ModuleLoader__.load({
       const conversationDirty = snapshot && draft && !equal(snapshot.preferences.conversation, draft.conversation);
       const profileDirty = snapshot && draft && snapshot.profile.text !== draft.profile;
       const companionDirty = snapshot && draft && !equal(snapshot.companion, draft.companion);
-      const otherWorkspaceDrafts = companionDirty || identityDirty || quietDirty || conversationDirty || profileDirty;
+      const otherWorkspaceDrafts = companionDirty || identityDirty || quietDirty || conversationDirty || profileDirty || documentDirty;
       const saveButton = (kind, dirtySection, onClick, label) => h('div', { style: { marginTop: 16 } },
         h('button', { type: 'button', className: 'cp-save', disabled: Boolean(busy) || !dirtySection, onClick }, busy === kind ? '正在保存…' : label));
       const savePreferences = (part) => {
@@ -659,20 +815,24 @@ window.__ModuleLoader__.load({
         const ready = snapshot.workspace.state === 'ready';
         const boundId = snapshot.workspace.target?.id;
         const world = new Set(snapshot.worldModules);
+        const document=documents[boundId]||{};
+        const editDocument=key=>value=>setDocuments(old=>({...old,[boundId]:{...old[boundId],[key]:value}}));
         const workspaceId = ready ? boundId : null;
         const worldView = (section, revision, render) => h(WorkspaceView, { key: workspaceId ?? 'unbound',
           workspaceId, section, request, revision }, render);
         const sourceAbsent = () => h('p', { className: 'cp-muted' }, '对应的 World 组件尚未加载。');
-        const desktopState = !snapshot.desktop ? '未加载' : snapshot.desktop.running ? '已打开' : '已关闭';
+        const desktopPending=Boolean(snapshot.desktop&&!snapshot.desktop.running&&(snapshot.desktop.requested||snapshot.desktop.starting));
+        const desktopState = !snapshot.desktop ? '未加载' : snapshot.desktop.running ? '已打开' : desktopFailure===boundId ? '启动未完成' : desktopPending ? '启动中' : '已关闭';
         const button = (label, onClick, disabled = false, primary = false) => h('button',
           { type: 'button', className: primary ? 'cp-save cp-primary' : 'cp-save', onClick, disabled: Boolean(busy) || disabled }, label);
         const jump = (label, tab, target, primary = false) => button(label, () => navigateTo(tab, target), false, primary);
         const bindLink = () => jump('绑定工作区', 'workspace', 'binding');
         const needsWorkspace = (title) => h(Card, { title, note: '绑定并初始化工作区后，就可以在这里调整设置。' }, bindLink());
-        const desktopAvailable = Boolean(snapshot.desktop && boundId && (snapshot.desktop.running || ready));
-        const desktopButton = (primary = false) => button(snapshot.desktop?.running ? '关闭桌宠' : '打开桌宠',
-          () => save(snapshot.desktop.running ? 'desktopClose' : 'desktopOpen', { workspaceId: boundId }),
-          !desktopAvailable, primary);
+        const desktopAvailable = Boolean(snapshot.desktop && boundId && (snapshot.desktop.running || desktopPending || ready));
+        const desktopButton = (primary = false) => h(React.Fragment,null,
+          button(snapshot.desktop?.running?'关闭桌宠':desktopPending?'取消启动':desktopFailure===boundId?'重试打开桌宠':'打开桌宠',
+            ()=>save(snapshot.desktop.running||desktopPending?'desktopClose':desktopFailure===boundId?'desktopRetry':'desktopOpen',{workspaceId:boundId}),!desktopAvailable,primary),
+          desktopPending&&desktopFailure===boundId&&button('重试打开桌宠',()=>save('desktopRetry',{workspaceId:boundId}),!desktopAvailable));
         const capabilityState = (owner) => {
           if (owner === 'memory') return memoryProviderLabels[snapshot.memory?.provider] ?? '未配置';
           const labels = snapshot.capabilities.filter(item => item.owner === owner).map(item => capabilityLabels[item.state] ?? '未知');
@@ -693,33 +853,26 @@ window.__ModuleLoader__.load({
           }, keys), label);
         };
         if (active === 'overview') {
-          const memory = snapshot.memory;
-          const memoryMode = !memory?.provider ? '未配置' : memory.newSessions ? '新对话已启用' : '新对话未启用';
-          const memoryNote = memory?.newSessions === false ? '已有对话沿用原来的记忆设置。'
-            : memory?.provider && ready && snapshot.companion ? '每次最多召回 ' + snapshot.companion.memoryRecallCount + ' 块' : '';
-          return h(React.Fragment, null,
-            h('section', { className: 'cp-card cp-hero', 'aria-label': '当前角色' },
-              h('div', null, h('small', null, '当前角色'), h('h3', null, snapshot.identity.displayName)),
-              badge('桌宠' + desktopState),
-              h('div', { className: 'cp-hero-actions' }, desktopButton(desktopAvailable),
-                jump('编辑角色', 'role', 'identity', !desktopAvailable))),
-            h(Card, { title: '对话与记忆' },
-              h('div', { className: 'cp-overview-row' }, h('strong', null, '工作区'),
-                h('div', { className: 'cp-row-value', title: repo?.path }, repo?.title || '尚未选择',
-                  h('small', null, workspaceLabels[snapshot.workspace.state])),
-                repo ? jump('管理工作区', 'workspace', 'binding') : bindLink()),
-              h('div', { className: 'cp-overview-row' }, h('strong', null, '原生会话'),
-                h('div', { className: 'cp-row-value' }, snapshot.nativeConversationReady ? '已就绪' : '未就绪',
-                  h('small', null, snapshot.nativeConversationReady ? '在绑定工作区或桌宠窗口里聊天。' : '请先绑定并初始化工作区。'))),
-              h('div', { className: 'cp-overview-row' }, h('strong', null, '长期记忆'),
-                h('div', { className: 'cp-row-value' }, memoryMode, memoryNote && h('small', null, memoryNote)),
-                ready && snapshot.companion && jump('调整记忆', 'role', 'recall'))),
-            h(Card, { title: '来自 World 的功能', note: '在大肥鱼当前工作区查看人设提示、对话档案和心情。' },
-              h('div', { className: 'cp-inline-actions' }, jump('预览角色提示', 'role', 'prompt'), jump('查找对话档案', 'archive', 'archive'),
-                jump('查看心情与表达', 'desktop', 'expression'), jump('看看日常生活', 'life'))),
-            details('生活与接入', h('p', null, '日常生活页可开启生活会话、调整作息，以及查看日记和相册。')));
+          return h(React.Fragment,null,
+            h('div',{className:'cp-grid'},
+              h(Card,{title:'陪伴',status:desktopState},h('div',{className:'cp-big'},snapshot.identity.displayName),
+                h('p',{className:'cp-muted'},repo?.title||'先为大肥鱼选一个工作区。'),
+                h('div',{className:'cp-inline-actions'},desktopButton(true),jump('编辑角色','role','identity'))),
+              h(Card,{title:'对话与记忆',status:snapshot.nativeConversationReady?'已就绪':'待就绪'},
+                facts([['工作区',repo?.title||'尚未选择'],['长期记忆',snapshot.memory?.provider?snapshot.memory.error?'暂时不可用，聊天照常':snapshot.memory.enabled?'已启用':'已关闭':'未连接']]),
+                h('div',{className:'cp-inline-actions'},jump('查找档案','archive','archive'),repo?jump('管理工作区','workspace','binding'):bindLink()))),
+            h('div',{style:{height:14}}),
+            h(RoomView,{key:workspaceId||'unbound',workspaceId,request}),
+            h(Card,{title:'日常',note:'角色、记忆和心情持续保留。自主生活决定是否安排活动和主动联络。'},
+              h('div',{className:'cp-inline-actions'},jump('看看心情','emotion'),jump('管理生活','life'),jump('连接聊天渠道','connections'))));
         }
         if (active === 'life') return h(LifePage, {key: workspaceId || 'unbound', workspaceId, request});
+        if (active === 'connections') return workspaceId?h(ChannelsPage,{key:workspaceId,workspaceId,request}):needsWorkspace('连接聊天渠道');
+        if (active === 'emotion') return h(React.Fragment,null,
+          h(EmotionEditor,{key:'emotion-'+(workspaceId||'unbound'),workspaceId,request,value:document.emotion,onChange:editDocument('emotion')}),
+          snapshot.companion&&h(Card,{title:'心情记录',note:'数量与时长共同决定近期心情的保留范围。'},fields(numberField('recentMoodCount','最近心情变化（次）',100),numberField('recentMoodHours','心情保留时长（小时）',720)),saveCompanion(['recentMoodCount','recentMoodHours'],'保存心情记录设置')),
+          world.has('mood')&&worldView('emotion',null,view=>view.emotion&&h(Card,{title:'表达方式'},facts([['可用动作',view.emotion.actions.join('、')||'暂无'],['可用贴图',view.emotion.stickers.join('、')||'暂无']])))
+        );
         if (active === 'archive') {
           return h(React.Fragment, null,
             h(Card, { id: `${prefix}-archive`, title: '对话归档', note: '完整的 DSH 会话随绑定工作区保存。下方检索读取已收录且仍可查看的内容。' },
@@ -738,7 +891,9 @@ window.__ModuleLoader__.load({
               world.has('memory') && snapshot.companion && h('p', null, '每次最多召回 ' + snapshot.companion.memoryRecallCount +
                 ' 块，每块最多 ' + snapshot.companion.memoryRecallBlockChars + ' 字符。'),
               !world.has('history') && !world.has('memory') && !world.has('compaction') && sourceAbsent(),
-              snapshot.companion && jump('调整召回与整理', 'role', 'recall')));
+              snapshot.companion && h('p',{className:'cp-muted'},'记忆召回与整理参数见下方。')),
+            snapshot.companion?h(Card,{id:`${prefix}-recall`,title:'召回与整理',note:'每轮按当前话题刷新记忆，完整聊天记录继续保留。登记的外部聊天共用同一记忆库，内容区分说话人和群。'},fields(
+              numberField('memorySummaryTurns','积累对话轮数',200,1),numberField('memorySummaryIdleMinutes','空闲多久整理（分钟）',1440,1),numberField('memorySummaryMinimumMinutes','最短整理间隔（分钟）',1440),numberField('memoryRecallCount','每次召回块数',50,1),numberField('memoryRecallBlockChars','每块最多字符',4000,128)),saveCompanion(memoryKeys,'保存记忆设置')):needsWorkspace('记忆设置'));
         }
         if (active === 'role') {
           return h(React.Fragment, null,
@@ -758,55 +913,17 @@ window.__ModuleLoader__.load({
               world.has('persona') ? worldView('profile', snapshot.identity.revision + '/' + snapshot.profile.revision, view =>
                 h(React.Fragment, null, preview('角色设定 · SOUL.md', view.profile.identity), preview('用户资料 · USER.md', view.profile.user),
                   h('p', { className: 'cp-muted' }, '人设与用户资料约 ' + view.profile.estimatedTokens + ' tokens。单轮总用量见 DSH 会话。'))) : sourceAbsent()),
-            snapshot.companion ? h(React.Fragment, null,
-              h(Card, { title: '近期动作与心情', note: '数量和时长共同决定保留范围。调小会清除超出范围的记录，设为 0 可停用该类记录。' }, fields(
-                numberField('recentActionCount', '最近动作数量（次）', 500),
-                numberField('recentActionMinutes', '动作保留时长（分钟）', 10080),
-                numberField('recentMoodCount', '最近心情变化（次）', 100),
-                numberField('recentMoodHours', '心情保留时长（小时）', 720))),
-              h(Card, { id: `${prefix}-recall`, title: '长期记忆', note: '达到对话轮数或空闲时长后整理记忆。完整聊天记录会保留，每次对话只取所需的记忆块。' }, fields(
-                numberField('memorySummaryTurns', '积累对话轮数', 200, 1),
-                numberField('memorySummaryIdleMinutes', '空闲多久整理（分钟）', 1440, 1),
-                numberField('memorySummaryMinimumMinutes', '最短整理间隔（分钟）', 1440),
-                numberField('memoryRecallCount', '每次召回块数', 50, 1),
-                numberField('memoryColdHours', '会话闲置多少小时后刷新历史', 720, 1),
-                numberField('memoryRecallBlockChars', '每块最多字符', 4000, 128))),
-              saveCompanion(memoryKeys, '保存记忆设置')) : needsWorkspace('记忆设置'));
+            h(FoundationEditor,{key:'foundation-'+(workspaceId||'unbound'),workspaceId,request,value:document.foundation,onChange:editDocument('foundation')}));
         }
         if (active === 'desktop') {
           return h(React.Fragment, null,
-            h(Card, { title: '桌面蓝鱼', status: desktopState, note: '点击蓝鱼会收到回应。右键打开菜单，Cmd 或 Ctrl 加点击打开聊天。' }, desktopButton()),
-            h(Card, { id: `${prefix}-expression`, title: '心情与表达', note: '大肥鱼根据对话更新心情，并据此选择动作和贴图。' },
-              world.has('mood') ? worldView('emotion', null, view => {
-                const emotion = view.emotion;
-                if (!emotion) return h('p', null, '情绪模块未连接。');
-                return h(React.Fragment, null, emotion.current ? facts([['当前心情', emotion.current.mood],
-                  ['更新于', new Date(emotion.current.at).toLocaleString('zh-CN')]]) : h('p', null, '尚无可展示的心情。'),
-                  details('动作与贴图', facts([['可用动作', emotion.actions.join('、') || '暂无'], ['可用贴图', emotion.stickers.join('、') || '暂无']])));
-              }) : sourceAbsent()),
+            h(Card, { title: '桌面陪伴', status: desktopState, note: '点击角色会收到回应。右键打开菜单，Cmd 或 Ctrl 加点击打开聊天。' }, desktopButton()),
+            h('div',{className:'cp-migration-panel'},h(PresentationMigration,{key:'migration-'+boundId,workspaceId:boundId,migration:snapshot.presentation?.migration,request,onResolved:async()=>{const value=await request('snapshot',{},lifetime.current.signal);if(!lifetime.current.signal.aborted)setSnapshot(value);}})),
             snapshot.companion ? h(React.Fragment, null,
-              h(Card, { title: '外观与移动' }, fields(
-                numberField('desktopSize', '角色大小（像素，保存后重载桌宠）', 512, 96),
-                numberField('workAnimationDelaySeconds', '工作超过多少秒才播放工作动画', 3600),
-                switchField('desktopFixed', '固定位置（停止自主移动）'),
-                switchField('desktopWorkStatusEnabled', '跟随会话显示工作状态'),
-                switchField('desktopTrayEnabled', '显示系统托盘或菜单栏入口'),
-                switchField('desktopConfineToScreen', '限制在屏幕范围内'))),
-              h(Card, { title: '点击、气泡与贴图' }, fields(
-                switchField('desktopClickSound', '点击音效'), switchField('desktopReplyBubble', '回复显示在桌宠气泡'),
-                numberField('desktopBubbleSeconds', '文字气泡显示时长（秒）', 300, 1),
-                numberField('stickerProbabilityPercent', '想发贴图时的出现概率（%）', 100))),
-              h(Card, { title: '定时互动' }, fields(
-                switchField('desktopWhisperEnabled', '自动碎碎念／梦话（会调用当前模型）'),
-                switchField('desktopWhisperImageEnabled', '碎碎念可带贴图'),
-                numberField('desktopSleepTalkSeconds', '梦话间隔（秒）', 86400, 1),
-                numberField('desktopWhisperMinutes', '碎碎念间隔（分钟）', 1440, 1),
-                switchField('desktopBalanceEnabled', '定时查询当前服务商余额'),
-                numberField('desktopBalanceMinutes', '余额查询间隔（分钟）', 1440, 1))),
-              saveCompanion(Object.keys(snapshot.companion).filter(key => !memoryKeys.includes(key) && key !== 'desktopAppearance'), '保存桌宠设置'),
-              h(AppearanceEditor, {key:boundId, value:snapshot.companion.desktopAppearance, request,
-                onSave:desktopAppearance => save('companion', {workspaceId:boundId, expectedSettings:snapshot.companion,
-                  settings:{...snapshot.companion, desktopAppearance}}, ['desktopAppearance'])}))
+              h(Card,{title:'对话表现'},fields(switchField('desktopReplyBubble','回复显示在桌宠气泡'),numberField('desktopBubbleSeconds','文字气泡显示时长（秒）',300,1),numberField('stickerProbabilityPercent','想发贴图时的出现概率（%）',100))),
+              h(PresentationTiming,{key:'timing-'+boundId,workspaceId:boundId,initial:snapshot.presentation?.timing,value:document.timing,onChange:editDocument('timing'),request}),
+              h(Card,{title:'动作记录'},fields(numberField('recentActionCount','最近动作数量（次）',500),numberField('recentActionMinutes','动作保留时长（分钟）',10080))),
+              saveCompanion(['desktopReplyBubble','desktopBubbleSeconds','stickerProbabilityPercent','recentActionCount','recentActionMinutes'],'保存桌宠互动设置'))
               : needsWorkspace('桌宠偏好'),
             h(Card, { title: '主动联系', note: '安静模式会暂停自动碎碎念、待办提醒和定时余额查询。你仍然可以主动找蓝鱼聊天。' },
               h('label', { className: 'cp-switch' },
@@ -838,7 +955,7 @@ window.__ModuleLoader__.load({
             h('p', { className: 'cp-muted' }, snapshot.nativeConversationReady ? 'DSH 原生会话已就绪。' : 'DSH 原生会话尚未就绪。'),
             saveButton('initialize', Boolean(repo) && !workspaceDirty && !otherWorkspaceDrafts,
               () => save('initialize', { expectedPreferencesRevision: snapshot.preferences.revision }), '检查并初始化资料目录')),
-          details('高级执行限制', h('p', { className: 'cp-muted' }, '这些限制用于大肥鱼 Core 执行。模型和工具权限可在 DSH 原生会话中选择。'),
+          details('高级执行限制', h('p', { className: 'cp-muted' }, '步数、工具次数和时长只限制自主生活、电视等自动轮次，不限制主人主动对话。模型和工具权限由 DSH 原生会话管理。'),
             fields(...[
               ['maxHistoryMessages', '上下文消息数', 0, 200], ['maxContextChars', '上下文字符数', 2048, 128000],
               ['maxSteps', '单次执行步数', 1, 64], ['maxToolCalls', '工具调用次数', 0, 128], ['maxDurationMs', '单次执行时长（毫秒）', 1000, 600000],
@@ -869,7 +986,7 @@ window.__ModuleLoader__.load({
         if (target === null) return; event.preventDefault(); selectTab(sections[target][0]); tabs.current[target]?.focus();
       }
       return h('div', { className: 'chatpet-settings' }, h('style', null, css),
-        h('header', { className: 'cp-heading' }, h('h2', null, '大肥鱼设置'), dirty && badge('有未保存修改')),
+        h('header',{className:'cp-heading'},h('div',null,h('small',null,'DAFEIYU · COMPANION'),h('h2',null,(snapshot?.identity.displayName||'大肥鱼')+'的世界'),h('div',{className:'cp-state'},h('i',{className:'cp-dot'}),snapshot?workspaceLabels[snapshot.workspace.state]:'正在连接',snapshot?.preferences.workspace?' · '+snapshot.preferences.workspace.title:'')),dirty&&badge('有未保存修改')),
         h('div', { role: 'tablist', 'aria-label': '大肥鱼设置分类', className: 'cp-tabs' }, ...sections.map(([id,title],index) => h('button', {
           key: id, id: `${prefix}-${id}-tab`, type: 'button', role: 'tab', className: 'cp-tab', 'aria-selected': active === id,
           'aria-controls': `${prefix}-${id}-panel`, tabIndex: active === id ? 0 : -1, ref: element => { tabs.current[index] = element; },
@@ -877,7 +994,9 @@ window.__ModuleLoader__.load({
         error && h('p', { role: 'alert', style: { marginBottom: 16 } }, error),
         notice && h('p', { role: 'status', style: { marginBottom: 16 } }, notice),
         h('fieldset', { disabled: Boolean(busy), style: { border: 0, padding: 0, margin: 0, minWidth: 0 } },
-          h('div', { id: `${prefix}-${active}-panel`, role: 'tabpanel', 'aria-labelledby': `${prefix}-${active}-tab`, tabIndex: 0 }, content())),
+          h('div', { id: `${prefix}-${active}-panel`, className:active==='desktop'?'cp-desktop-panel':undefined, role: 'tabpanel', 'aria-labelledby': `${prefix}-${active}-tab`, tabIndex: 0 },
+            h(React.Fragment,{key:active},content()),
+            appearanceVisited&&h('div',{key:'appearance-'+(snapshot?.workspace.target?.id||'unbound'),className:'cp-appearance',hidden:active!=='desktop'},h(PlatformAppearance,{getEditor:getAppearanceEditor})))),
         h('footer', { className: 'cp-footer' }, h('p', { className: 'cp-muted', role: 'status' }, busy ? '正在保存…' : dirty ? '有尚未保存的修改。关闭设置前请保存。' : '各项设置分别保存。'),
           h('button', { type: 'button', className: 'cp-save', disabled: Boolean(busy) || loading, onClick: refresh }, '刷新设置')));
     }
@@ -907,7 +1026,7 @@ window.__ModuleLoader__.load({
           } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
         };
         ctx.slots.inject('settings.section', () => ctx.slots.register({
-          name: 'settings.section', id: 'dsh-Chatpet', order: 40, label: '大肥鱼', inject: () => ({ request }),
+          name: 'settings.section', id: 'dsh-Chatpet', order: 40, label: '大肥鱼', inject: () => ({ request, getAppearanceEditor:()=>ctx.get?.('chatpetAppearanceEditor') }),
         }, SettingsPage));
         ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
           name: 'settings.section.icon', id: 'dsh-Chatpet',

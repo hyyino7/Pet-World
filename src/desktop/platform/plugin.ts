@@ -6,18 +6,33 @@ import {createRequire} from 'node:module';
 import {tmpdir} from 'node:os';
 import {dirname, join, relative, sep} from 'node:path';
 import {setTimeout as wait} from 'node:timers/promises';
+import {isDeepStrictEqual} from 'node:util';
 import type {NativeSession} from '../conversation.js';
 import type {} from '../plugin.js';
+import {activityPresentation,eatingClips,physicalClips,sleepingClips,projectActivityConfig} from './activity.js';
+import {migratePresentation,resolvePresentationMigration,type PresentationMigrationReceipt} from './migration.js';
+import { companionFeelings } from '../../behavior/presentation.js';
+import type { PlaybackReceipt } from '../../emotion/index.js';
 
 const load = createRequire(import.meta.url);
 const root = dirname(load.resolve('dsh-Chatpet/package.json'));
 const vendor = join(root, 'vendor', 'dsh-pet', 'platform');
 const assets = join(root,'src','desktop','assets');
 const catalog = JSON.parse(readFileSync(join(assets,'catalog.json'),'utf8')) as {actions: Asset[]; stickers: Asset[]};
-interface Asset {id:string; label:string; file:string}
+interface Asset {id:string; label:string; file:string;description?:string;group?:string}
+const expressionCatalog = {
+  actions: catalog.actions.filter(asset=>!physicalClips.has(asset.label) && (asset.group==='expression' || ['点击回应-傲娇生气','悠闲哼歌','开心小跑'].includes(asset.id)))
+    .map(asset=>({name:asset.id,label:asset.label,description:asset.description || asset.label})),
+  stickers:catalog.stickers.map(asset=>({name:asset.id,label:asset.label,description:asset.description || asset.label})),
+  supportedFeelings:[...companionFeelings],
+};
 const route = '/chatpet-presentation';
 const json = (obj: unknown, status = 200) => ({kind:'json', obj, status});
-const controls = new Set(['anim','position','throw','pose','playback','lock','lock/release','broadcast','bubble/clear','menu/item','pose/report','menu/click','menu/events']);
+const controls = new Set(['anim','position','throw','pose','lock','lock/release','broadcast','bubble/clear','menu/item','pose/report','menu/click','menu/events']);
+/** Playback reports are renderer-owned; a control token may only query/wait. */
+export function controlRouteAllowed(rest:string, method:string) {
+  return controls.has(rest) || method==='GET' && /^playback\/[^/]+$/.test(rest);
+}
 const upstream = load(join(vendor,'runtime.mjs'));
 type Clean = () => void;
 declare module '@deepseek-ai/cordis' { interface Context {petPlatform: PetPlatform} }
@@ -68,6 +83,16 @@ export class PetPlatform {
   private router?: (url:string, method:string, body?:string, signal?:AbortSignal)=>Promise<any>;
   private providers: any;
   private privateDirectory?: string;
+  private behavior: any;
+  private behaviorKey = '';
+  private expressionAction?: string;
+  private refreshing?:Promise<void>;
+  private refreshAgain=false;
+  private playbackKinds=new Map<string,PlaybackReceipt['kind']>();
+  private playbackReported=new Map<string,string>();
+  private migration?:PresentationMigrationReceipt;
+  private restartPresentation?:()=>void;
+  private presentationStatus?:()=>{running:boolean;starting:boolean};
 
   constructor(private ctx: Context) {}
   private selected() {
@@ -81,6 +106,9 @@ export class PetPlatform {
     this.setup?.playback.cancelAll();
     this.setup?.state.cancelAll();
     this.bound=undefined; this.router=undefined; this.lookup=undefined; this.setup=undefined;
+    this.behavior=undefined;this.behaviorKey='';this.expressionAction=undefined;
+    this.playbackKinds.clear();this.playbackReported.clear();
+    this.migration=undefined;this.restartPresentation=undefined;this.presentationStatus=undefined;
     this.ownerToken=''; this.toolToken=''; this.mediaToken=''; this.providers=undefined;
   }
   sync() {
@@ -97,10 +125,11 @@ export class PetPlatform {
     const config=join(this.directory,'main-config.jsonc');
     if (!existsSync(config) && !existsSync(join(this.directory,'main-config.json'))) {
       const prefs=this.ctx.petCore.workspace.companionSettings();
-      const main={name:'大肥鱼',id:'main',size:prefs.desktopSize,display:'web',position:{corner:'bottom-right',marginX:50,marginY:70},
+      const main={name:'大肥鱼',id:'main',size:prefs.desktopSize,display:'none',position:{corner:'bottom-right',marginX:50,marginY:70},
         balanceEnabled:false,whisperEnabled:false,fixedEnabled:prefs.desktopFixed,workStatusEnabled:prefs.desktopWorkStatusEnabled};
       writeFileSync(config,JSON.stringify({pets:[main]},null,2),{mode:0o600,flag:'wx'});
     }
+    this.migration=migratePresentation(this.directory,this.ctx.petCore.workspace.companionSettings());
     this.scope=new AbortController();
     this.bound={id:target.id,path:target.path};
     this.ownerToken=randomBytes(32).toString('hex'); this.toolToken=randomBytes(32).toString('hex'); this.mediaToken=randomBytes(32).toString('hex');
@@ -120,8 +149,14 @@ export class PetPlatform {
       const setup=this.setup=upstream.createHostSetup(bridge,this.directory);
       const lookup=this.lookup=upstream.createPetLookup(setup);
       const work=upstream.createWorkStatusBridge(setup);
-      const notify=upstream.createSessionNotify({...setup,...work,ctx:bridge});
-      upstream.registerSessionWatch({...setup,...work,...notify,ctx:bridge});
+      // Native Desktop owns the configured delay. Keep upstream reduction and
+      // notifications, but do not publish a second immediate renderer state.
+      const watchedWork={...work,publishWorkStatus:()=>{
+        if(setup.workStatus.snapshot().state===null)
+          setup.state.writeSection('workStatus',{state:null,task:null,sessionId:null});
+      }};
+      const notify=upstream.createSessionNotify({...setup,...watchedWork,ctx:bridge});
+      upstream.registerSessionWatch({...setup,...watchedWork,...notify,ctx:bridge});
       this.cleanup.push(()=> {
         lookup.lock.releaseAll(); work.stopWorkStatusFlush();
         for(const timers of [notify.terminalTimers,notify.notifyActivityTimers]) for(const timer of timers.values())clearTimeout(timer);
@@ -129,8 +164,14 @@ export class PetPlatform {
       if (this.ctx.petDesktop.onPresentation) this.cleanup.push(this.ctx.petDesktop.onPresentation((type,value)=>{
         if (scope.signal.aborted || this.selected()?.id!==target.id) return;
         setup.state.writeSection('nativeBody/'+type,value);
+        if(type==='work') {
+          const work=value as {stage:string;session:string}|null;
+          setup.state.writeSection('workStatus',{state:work?.stage ?? null,task:null,sessionId:work?.session ?? null});
+          return;
+        }
         const frame = value as {text?:string;sticker?:string;whisper?:boolean;dream?:boolean;sleeping?:boolean;pending?:boolean};
         if(type==='balance') { setup.state.writeSection('balance',value); return; }
+        if(type==='expression') { this.presentExpression(value); return; }
         if(type!=='say' && type!=='sleep')return;
         const cfg = upstream.readAllConfig(setup.configPaths);
         for(const entry of Object.values(cfg) as any[]) for(const pet of entry.pets ?? []) {
@@ -141,34 +182,24 @@ export class PetPlatform {
             } else lookup.sleep.wake(pet.id);
           } else if(type==='say' && frame.text) {
             const image=catalog.stickers.find(sticker=>sticker.id===frame.sticker || sticker.label===frame.sticker)?.label;
-            setup.state.writePet(pet.id,'say',{text:frame.text,image,anim:frame.whisper === true && !frame.dream});
+            setup.state.writePet(pet.id,'say',{text:frame.text,image,duration:this.ctx.petCore.workspace.companionSettings().desktopBubbleSeconds*1000,anim:frame.whisper === true && !frame.dream});
           }
         }
       },()=>!scope.signal.aborted && this.selected()?.id===target.id && setup.state.waiterCount()>0));
       this.ctx.petDesktop.features?.restore(true);
-      const emotion = host.get('petEmotion',false);
-      if (emotion) this.cleanup.push(emotion.onExpression((event:any)=>{
-        if(event.workspaceId!==target.id || scope.signal.aborted)return;
-        const action=catalog.actions.find(asset=>asset.id===event.action);
-        const sticker=catalog.stickers.find(asset=>asset.id===event.sticker);
-        for (const pet of this.pets()) {
-          if(action) setup.state.writePet(pet.id,'anim',{name:action.label,playbackId:setup.playback.create(pet.id,action.label).playbackId});
-          if(sticker && event.sessionId===this.ctx.petDesktop.chat.id) {
-            const text=this.ctx.petDesktop.chat.snapshot().messages.filter(m=>m.role==='assistant' && m.turn===event.turn).at(-1)?.text;
-            if(text)setup.state.writePet(pet.id,'say',{text,image:sticker.label,anim:false});
-          }
-        }
-      }));
       const desktops=upstream.createDesktopHelper({
         ...setup, ctx:bridge, effectivePetList:()=>upstream.flattenPetList(upstream.readAllConfig(setup.configPaths)),
         reportDownload:()=>{},
         getHandlePetRoute:()=> async (raw:string,method:string,body?:string,signal?:AbortSignal)=>{
           const url=new URL(raw,'http://localhost');
           if(url.pathname.startsWith('/dsh-pet-7340/'))url.pathname=route+url.pathname.slice('/dsh-pet-7340'.length);
+          if(url.pathname===route+'/config' && method==='GET')url.pathname=route+'/config-live';
           if(scope.signal.aborted)return json({ok:false},409);
           return this.handle(url,method,body,signal ?? scope.signal);
         },
       });
+      this.restartPresentation=desktops.requestRestart;
+      this.presentationStatus=desktops.status;
       this.cleanup.push(()=>{desktops.markDisposed();desktops.stopHelper('dsh-host-stop');});
       this.router=upstream.createHttpRoute({...setup,...lookup,...work,...notify,ctx:bridge,
         assetRootFor:(ext:string)=>join(vendor,'assets',ext==='.mov'?'mov':'webm'),
@@ -181,11 +212,178 @@ export class PetPlatform {
         },
         refreshBalance:async()=>this.ctx.petDesktop.features?.balance(),
       }).handlePetRoute;
+      setup.menuRegistry.register({owner:'chatpet.room',labels:['进入房间'],target:'both'});
+      setup.menuRegistry.register({owner:'chatpet.native-chat',labels:['原生流式聊天'],target:'both'});
+      setup.state.writeSection('menu',{items:setup.menuRegistry.snapshot()});
+      this.cleanup.push(this.ctx.on('pet/behavior.changed',event=>{
+        if(event.workspaceId===target.id && !scope.signal.aborted)void this.refreshBehavior();
+      }));
+      if(typeof this.ctx.inject==='function') {
+        const fiber=this.ctx.inject(['petBehavior'],child=>{
+          void this.refreshBehavior();
+          child.effect(()=>()=>{void this.refreshBehavior();});
+        });
+        this.cleanup.push(()=>{void fiber.dispose();});
+      }
+      void this.refreshBehavior();
       desktops.startHelper();
     } catch (error) { this.close(); throw error; }
   }
   private pets(): any[] {
     return Object.values(upstream.readAllConfig(this.setup.configPaths)).flatMap((cfg:any)=>cfg.pets ?? []);
+  }
+  bodyStatus() {
+    this.sync();
+    if(!this.bound || !this.setup)return {running:false};
+    const pets=this.pets(),requested=pets.some(p=>p.display!=='none');
+    const running=pets.some(p=>['desktop','both'].includes(p.display)) && Boolean(this.presentationStatus?.().running) ||
+      pets.some(p=>['web','both'].includes(p.display)) && this.setup.state.waiterCount()>0;
+    return {running,requested,starting:requested && !running};
+  }
+  featurePreferences() {
+    this.sync();
+    if(!this.setup)return {};
+    const config=upstream.readAllConfig(this.setup.configPaths).main;
+    const pets=this.pets(), timing=config.eventsRefreshSec;
+    return {desktopWhisperEnabled:pets.some(p=>p.whisperEnabled),desktopBalanceEnabled:pets.some(p=>p.balanceEnabled),
+      desktopWhisperImageEnabled:config.whisperImageEnabled!==false,
+      desktopWhisperMinutes:timing.whisper/60,desktopSleepTalkSeconds:timing.sleepTalk,desktopBalanceMinutes:timing.balance/60};
+  }
+  async savePreference(key:string,value:boolean) {
+    this.ensure();
+    const top:Record<string,string>={desktopClickSound:'clickSoundEnabled',desktopConfineToScreen:'confineToScreen'};
+    const body:Record<string,string>={desktopFixed:'fixedEnabled',desktopWhisperEnabled:'whisperEnabled',desktopBalanceEnabled:'balanceEnabled'};
+    if(!top[key] && !body[key])throw Error('无效桌宠设置');
+    const config=upstream.readAllConfig(this.setup.configPaths).main, id=this.migration?.bodyId ?? config.pets[0]?.id;
+    const result=await this.handle(new URL(route+'/config','http://localhost'),'PUT',JSON.stringify({
+      pets:config.pets.map((pet:any)=>pet.id===id && body[key] ? {...pet,[body[key]]:value} : pet),...(top[key] ? {[top[key]]:value} : {})}),this.scope.signal);
+    if(result.status>=400 || result.obj?.ok===false)throw Error(result.obj?.message || '设置保存失败');
+    return {...this.ctx.petCore.workspace.companionSettings(),...this.featurePreferences(),[key]:value};
+  }
+  async saveTiming(workspaceId:string,expected:unknown,next:unknown) {
+    this.ownerAccess(workspaceId);
+    const config=upstream.readAllConfig(this.setup.configPaths).main;
+    if(!isDeepStrictEqual(config.eventsRefreshSec,expected))throw Error('设置已改变，请刷新后重试');
+    if(!upstream.topFieldValid('eventsRefreshSec',next))throw Error('时间间隔无效');
+    // 0.4.7 reads this section but its form-save whitelist does not write it.
+    // Preserve every other JSONC field through the original parser and an atomic scoped write.
+    this.migration=migratePresentation(this.directory,this.ctx.petCore.workspace.companionSettings());
+    const file=this.setup.configPaths.userFile, before=readFileSync(file,'utf8'), raw=upstream.readJsonc(file);
+    if(!raw || typeof raw!=='object' || Array.isArray(raw))throw Error('外观配置无法解析，已保留原文件');
+    const draft=join(this.directory,randomUUID()+'.tmp');
+    try {
+      writeFileSync(draft,JSON.stringify({...raw,eventsRefreshSec:next},null,2)+'\n',{mode:0o600,flag:'wx'});
+      if(readFileSync(file,'utf8')!==before)throw Error('设置已改变，请刷新后重试');
+      renameSync(draft,file);
+    }finally{rmSync(draft,{force:true});}
+    this.migration=migratePresentation(this.directory,this.ctx.petCore.workspace.companionSettings());
+    this.setup.state.writeSection('config',{});this.restartPresentation?.();
+    return this.status();
+  }
+  resolveMigration(workspaceId:string,field:string,choice:'legacy'|'current',expectedConfigHash:string) {
+    this.ownerAccess(workspaceId);
+    if(!/^[a-f0-9]{64}$/.test(expectedConfigHash))throw Error('请刷新后再选择配置');
+    this.migration=resolvePresentationMigration(this.directory,[{field,choice}],undefined,expectedConfigHash);
+    this.setup.state.writeSection('config',{});this.restartPresentation?.();
+    return this.status();
+  }
+  async show() {
+    this.ensure();
+    if(this.pets().some(p=>p.display==='desktop' || p.display==='both'))return this.status();
+    const pet=this.pets().find(p=>p.id==='main') ?? this.pets()[0];
+    if(!pet)throw Error('请先配置一个桌宠形象');
+    const result=await this.handle(new URL(route+'/pet-display','http://localhost'),'POST',JSON.stringify({id:pet.id,display:'desktop'}),this.scope.signal);
+    if(result.status>=400 || result.obj?.ok===false)throw Error(result.obj?.message || '桌宠暂时无法显示');
+    return this.status();
+  }
+  async hide() {
+    if(!this.bound)return;
+    for(const pet of this.pets().filter(p=>p.display!=='none')) {
+      await this.handle(new URL(route+'/pet-display','http://localhost'),'POST',JSON.stringify({id:pet.id,display:'none'}),this.scope.signal);
+    }
+  }
+  private presentExpression(event:any) {
+    if(!this.bound || event.workspaceId!==this.bound.id)return;
+    this.expressionAction=event.action;
+    const busy=this.behavior?.her && !['idle','idle_look','react_happy','react_pout','play'].includes(this.behavior.her.kind);
+    const action=catalog.actions.find(asset=>asset.id===event.action && !physicalClips.has(asset.label));
+      this.expressionAction=action?.label;
+    const sticker=catalog.stickers.find(asset=>asset.id===event.sticker);
+    for(const pet of this.pets()) {
+      const own=upstream.readAllConfig(this.setup.configPaths).main.pets.some((p:any)=>p.id===pet.id);
+      if(action && !busy && own)this.setup.state.writePet(pet.id,'anim',{name:action.label,playbackId:this.playback(pet.id,action.label,'expression')});
+      if(sticker && event.sessionId===this.ctx.petDesktop.chat.id) {
+        const text=this.ctx.petDesktop.chat.snapshot().messages.filter(m=>m.role==='assistant' && m.turn===event.turn).at(-1)?.text;
+        if(text)this.setup.state.writePet(pet.id,'say',{text,image:sticker.label,anim:false});
+      }
+    }
+    this.setup.state.writeSection('config',{});
+  }
+  private async refreshBehavior() {
+    if(this.refreshing){this.refreshAgain=true;return this.refreshing;}
+    this.refreshing=(async()=>{do {this.refreshAgain=false;await this.readBehavior();}while(this.refreshAgain && !this.scope.signal.aborted);})()
+      .finally(()=>{this.refreshing=undefined;});
+    return this.refreshing;
+  }
+  private async readBehavior() {
+    if(!this.bound || this.scope.signal.aborted)return;
+    const bound=this.bound,scope=this.scope;
+    try {
+      const service=(this.ctx as any).get('petBehavior',false);
+      const next=service ? await service.roomState(bound.id) : undefined;
+      if(this.bound!==bound || scope.signal.aborted)return;
+      this.behavior=next;
+      const emotion=(this.ctx as any).get('petEmotion',false);
+      const key=JSON.stringify([next?.her?.kind,next?.her?.asleep,next?.her?.sleepPending,next?.her?.activity,next?.emotion?.label,next?.emotion?.updatedAt,next?.emotion?.feelings,next?.presentation,Boolean(emotion)]);
+      if(key===this.behaviorKey)return;
+      this.expressionAction=catalog.actions.find(asset=>asset.id===next?.presentation?.expression?.action)?.label;
+      this.behaviorKey=key;
+      this.setup.state.writeSection('nativeBody/behavior',next ?? null);
+      this.setup.state.writeSection('config',{});
+      for(const pet of this.pets()) {
+        const cfg=Object.values(upstream.readAllConfig(this.setup.configPaths)).find((c:any)=>c.pets?.some((p:any)=>p.id===pet.id)) as any;
+        if(next?.her?.asleep) {
+          const names=upstream.pickSleepNames(cfg?.animations);
+          if(names)this.lookup.sleep.enter(pet.id,names);
+        } else {
+          this.lookup.sleep.wake(pet.id);
+          const action=this.activityAsset();
+          const own=upstream.readAllConfig(this.setup.configPaths).main.pets.some((p:any)=>p.id===pet.id);
+          if(action && own)this.setup.state.writePet(pet.id,'anim',{name:action,playbackId:this.playback(pet.id,action,physicalClips.has(action)?'idle':'expression')});
+          const notice=activityPresentation(this.behavior).notice || (!own ? this.behavior?.her?.activity : undefined);
+          if(notice)this.setup.state.writePet(pet.id,'say',{text:notice,anim:false});
+        }
+      }
+    }catch(error){this.ctx.logger(name).warn('Body presentation refresh pending',error);}
+  }
+  private activityAsset(): string | undefined {
+    return activityPresentation(this.behavior,this.expressionAction).action;
+  }
+  private playback(petId:string,name:string,kind:PlaybackReceipt['kind']) {
+    const record=this.setup.playback.create(petId,name);
+    this.playbackKinds.set(record.playbackId,kind);
+    if(this.playbackKinds.size>512) {
+      const oldest=this.playbackKinds.keys().next().value!;
+      this.playbackKinds.delete(oldest);this.playbackReported.delete(oldest);
+    }
+    return record.playbackId;
+  }
+  private reportPlayback(playbackId:string) {
+    const record=this.setup.playback.get(playbackId);
+    if(!record || record.status==='accepted' || this.playbackReported.get(playbackId)===record.status)return;
+    this.playbackReported.set(playbackId,record.status);
+    const asset=catalog.actions.find(asset=>asset.label===record.name || asset.id===record.name);
+    if(!asset)return;
+    const kind=this.playbackKinds.get(playbackId) ?? (asset.group==='expression'?'expression':'idle');
+    this.ctx.petDesktop.recordPlayback({id:playbackId,name:asset.id,status:record.status,kind,workspaceId:this.bound!.id});
+    // Host records expire after a minute; bound this observational cache too.
+    if(this.playbackReported.size>512) {
+      const oldest=this.playbackReported.keys().next().value!;
+      this.playbackReported.delete(oldest);this.playbackKinds.delete(oldest);
+    }
+  }
+  private projectConfig(config:any) {
+    return projectActivityConfig(config,this.behavior,this.expressionAction);
   }
   ownerAccess(expected?:string) {
     this.ensure();
@@ -214,8 +412,12 @@ export class PetPlatform {
     return {baseUrl:this.baseUrl(),path:route,token:this.toolToken};
   }
   status() {
-    this.ensure();
-    return {path:route,pets:this.pets().map(({id,name,display,position,assetRoot})=>({id,name,display,position,assetRoot})),packsDirectory:join(this.directory,'pet')};
+    this.sync();
+    if(!this.setup)return {path:route,pets:[],running:false};
+    return {path:route,pets:this.pets().map(({id,name,display,position,assetRoot})=>({id,name,display,position,assetRoot})),
+      running:this.bodyStatus().running,timing:upstream.readAllConfig(this.setup.configPaths).main.eventsRefreshSec,
+      migration:this.migration,
+      activity:this.behavior?.behavior,representation:activityPresentation(this.behavior,this.expressionAction),packsDirectory:join(this.directory,'pet')};
   }
   private async nativeChat(pet: string, method: string, raw: string|undefined, signal:AbortSignal) {
     const who=this.lookup.requirePet(new URLSearchParams({pet}),()=>upstream.readAllConfig(this.setup.configPaths));
@@ -267,6 +469,33 @@ export class PetPlatform {
   async handle(url:URL,method:string,raw:string|undefined,signal:AbortSignal) {
     this.ensure();
     const rest=decodeURIComponent(url.pathname.slice(route.length+1)), pet=url.searchParams.get('pet') || 'main';
+    if(rest==='presentation') {
+      if(method==='GET')return json(this.bodyStatus());
+      if(method!=='POST')return json({ok:false},405);
+      const input=JSON.parse(raw || '{}');
+      if(input.action==='show')return json(await this.show());
+      if(input.action==='hide'){await this.hide();return json(this.bodyStatus());}
+      return json({ok:false},400);
+    }
+    if(rest==='native-chat-window') {
+      if(method!=='POST')return json({ok:false},405);
+      await this.ctx.petDesktop.openChat();return json({ok:true});
+    }
+    if(rest==='room-window') {
+      if(method!=='POST')return json({ok:false},405);
+      const room=(this.ctx as any).get('petRoom',false);
+      if(!room)throw Error('房间模块未启用');
+      return json(await room.open(this.bound!.id));
+    }
+    if(rest==='menu/click' && method==='POST') {
+      const input=JSON.parse(raw || '{}');
+      if(input.owner==='chatpet.room') {
+        const room=(this.ctx as any).get('petRoom',false);
+        if(!room)throw Error('房间模块未启用');
+        await room.open(this.bound!.id);return json({ok:true});
+      }
+      if(input.owner==='chatpet.native-chat'){await this.ctx.petDesktop.openChat();return json({ok:true});}
+    }
     if(rest==='native-preferences') {
       if(method==='GET')return json(this.ctx.petCore.workspace.companionSettings());
       if(method==='POST')return json(await this.ctx.petDesktop.savePreference(JSON.parse(raw || '{}')));
@@ -274,7 +503,10 @@ export class PetPlatform {
     }
     if(rest==='native-playback') {
       if(method!=='POST')return json({ok:false},405);
-      this.ctx.petDesktop.recordPlayback(JSON.parse(raw || '{}'));
+      const receipt=JSON.parse(raw || '{}');
+      const asset=catalog.actions.find(asset=>asset.id===receipt.name || asset.label===receipt.name);
+      if(asset && !physicalClips.has(asset.label) && ['expression','random'].includes(receipt.kind))
+        this.ctx.petDesktop.recordPlayback({...receipt,name:asset.id,workspaceId:this.bound!.id});
       return json({ok:true});
     }
     if(rest==='native-feature') {
@@ -312,11 +544,45 @@ export class PetPlatform {
     }
     safeConfig(this.directory);
     const requestScope=this.scope;
-    const result=await this.router!(url.pathname+url.search,method,raw,AbortSignal.any([signal,requestScope.signal]));
+    const live=rest==='config-live' && method==='GET';
+    if(live)await this.refreshBehavior();
+    const pathname=live ? route+'/config' : url.pathname;
+    if(rest==='lock' && method==='POST' && this.behavior?.her?.asleep)return json({ok:false,reason:'sleeping',message:'请先叫醒，再开始互动'},409);
+    if(rest==='anim' && method==='POST') {
+      const input=JSON.parse(raw || '{}'),requested=input.name;
+      const cfg=upstream.readAllConfig(this.setup.configPaths);
+      const decision=upstream.decideAnim({cfg,requested:String(url.searchParams.get('pet') ?? ''),name:input.name,url:input.url,facing:input.facing});
+      if(decision.ok) {
+        const blocked=this.lookup.surfaceBlocked(cfg,decision.petId,url.searchParams) || this.lookup.lockBlocked(decision.petId,url.searchParams);
+        if(blocked)return blocked;
+        await this.refreshBehavior();
+        const behavior=(this.ctx as any).get('petBehavior',false);
+        let her=this.behavior?.her;
+        let busy=her && (her.asleep || her.walking || !['idle','play','idle_look','react_happy','react_pout','react_shy','react_scare'].includes(her.kind));
+        const gameClip=url.searchParams.has('lock') && Object.values(cfg).some((entry:any)=>entry.pets?.some((p:any)=>p.id===decision.petId) && entry.animations?.baifan?.includes(requested));
+        if(behavior && gameClip && !eatingClips.has(requested) && ['idle','eat'].includes(her?.kind)) {
+          await behavior.act(this.bound!.id,'play');await this.refreshBehavior();her=this.behavior?.her;busy=false;
+        }
+        if(behavior && (sleepingClips.has(requested) || requested==='睡觉-起来')) {
+          const result=await behavior.act(this.bound!.id,requested==='睡觉-起来' ? 'wake' : 'sleep');
+          await this.refreshBehavior();
+          return json({ok:true,accepted:true,home:result?.home,behavior:this.behavior?.behavior});
+        }
+        if(behavior && eatingClips.has(requested) && her?.kind!=='eat') {
+          if(busy)return json({ok:false,reason:'activity-busy',message:'当前活动进行中，请先完成或结束该活动'},409);
+          await behavior.act(this.bound!.id,'feed');await this.refreshBehavior();
+        } else if(behavior && physicalClips.has(requested) && !eatingClips.has(requested))return json({ok:false,reason:'activity-required',message:'请通过共享行为操作执行这项活动'},409);
+        if(busy && requested!==this.activityAsset() && !(her.kind==='eat' && eatingClips.has(requested)))return json({ok:false,reason:'activity-busy',message:'当前活动进行中，请先完成或结束该活动'},409);
+        requestScope.signal.throwIfAborted();
+      }
+    }
+    const result=await this.router!(pathname+url.search,method,raw,AbortSignal.any([signal,requestScope.signal]));
     if (requestScope.signal.aborted) return json({ok:false,message:'工作区已切换'},409);
+    const report=/^playback\/([^/]+)\/report$/.exec(rest);
+    if(report && method==='POST' && result.kind==='json' && result.obj?.ok===true)this.reportPlayback(report[1]);
     const data=result.status===404 ? this.builtinMedia(rest) ?? result : result;
     if (data.kind==='file' && ![this.directory,vendor,assets].some(base=>inside(base,data.file))) return json({ok:false},403);
-    return data;
+    return live && data.kind==='json' ? {...data,obj:this.projectConfig(data.obj)} : data;
   }
   async http(req:IncomingMessage,res:ServerResponse) {
     const abort=new AbortController(), stop=()=>abort.abort();
@@ -334,7 +600,7 @@ export class PetPlatform {
         /^(thumb\/|pic\/|font\/|sound\/|logo$|character$|pet-avatar$)/.test(rest);
       const bearer=String(req.headers.authorization ?? '').replace(/^Bearer /,'');
       const owner=!!this.ownerToken && matches(bearer,this.ownerToken);
-      const tool=!!this.toolToken && matches(bearer,this.toolToken) && controls.has(rest);
+      const tool=!!this.toolToken && matches(bearer,this.toolToken) && controlRouteAllowed(rest,req.method || 'GET');
       if(!owner && !tool && !media)return upstream.sendJson(res,401,{ok:false});
       const authorizedScope=this.scope;
       const method=req.method || 'GET';
@@ -360,5 +626,9 @@ export function apply(ctx:Context) {
   const web=(ctx as any).webServer;
   ctx.effect(()=>web.register({kind:'prefix',path:route,handler:(req:IncomingMessage,res:ServerResponse)=>platform.http(req,res)}));
   const off=ctx.on('pet/core.changed',()=>platform.sync());
+  ctx.inject(['petEmotion'],scope=>{
+    const release=scope.petEmotion.registerCatalog('desktop',expressionCatalog);
+    scope.effect(()=>release);
+  });
   ctx.effect(()=>()=>{off();platform.close();});
 }

@@ -1,16 +1,29 @@
 # Chatpet Settings
 
 Open **DSH Settings → 大肥鱼** for the bound Dafeiyu companion.
-The independent dsh-world plugin registers **世界控制台** as a separate settings entry.
+This guide follows the current source, including the approved
+[native-service refactor](planning/native-service-refactor.md). Build
+`c18f11e04c85` is installed and enabled for the owner's trial. Exact preparation,
+installation and owner-trial status belong in the [current handover](handover/README.md).
+The independent dsh-world plugin's **世界控制台** remains a separate upstream plugin;
+it is not a second Dafeiyu settings home.
 
 | Page | Where to go |
 | --- | --- |
-| **概览** | Open or close the fish and see the current role, workspace and memory mode. **来自 World 的功能** links to the prompt preview, conversation archive and expression view. |
-| **角色与记忆** | Edit the companion and owner profiles. Preview their saved contribution to a bound conversation and its estimated token count. Configure recent actions and mood retention, recall and batch consolidation. |
-| **对话与档案** | See the number of native conversations attached to the bound workspace. Search this companion's Mnemosyne Bank by keyword. Open a result to read the current record and expand its eligible source text. |
-| **桌宠互动** | View the current companion mood and available action and sticker names. Open or close the fish and adjust appearance, movement, click feedback, bubbles, stickers, timed interactions and quiet mode. |
-| **日常生活** | Open the 3D room, garden and TV. Set the companion’s day, browse diaries and photos, and manage the local bridge or external accounts. |
-| **工作区与维护** | Select, bind or initialize the Repo. Inspect service health and Core execution limits. **World 功能的接入情况** groups the sixteen source components by purpose and describes which are connected to Dafeiyu. |
+| **概览** | See the bound companion and service status, show/hide the normal desktop body, or choose **打开房间** for the independent Room window. |
+| **角色** | Edit SOUL and USER, inspect their saved prompt contribution, and edit **基础说明**. The foundation remains active when Life is paused or absent. |
+| **情绪** | Read and edit the continuing mood, reason and structured feelings; inspect expressions and configure recent mood retention. |
+| **记忆与档案** | Inspect native conversation counts, search eligible Mnemosyne records and read their sources; adjust per-turn recall and batch consolidation. |
+| **桌宠** | Control the same normal body, use the original Pet appearance/physics/action editor, and manage reply display, recent actions, quiet mode and timing. Preserved presentation-configuration conflicts must be resolved before replacing saved choices. |
+| **生活** | Pause/resume autonomous Life, adjust its schedule and review preferences, browse eligible diaries/photos, perform directed care and open Room in its own window. |
+| **连接** | Manage device-local QQ/WeChat/bridge settings and each allowed group's public-facing material. |
+| **工作区** | Bind/initialize the Repo and inspect execution limits, capabilities and advanced maintenance information. |
+
+The checkout has eight topic pages. Isolated settings and real Electron checks
+covered the single Pet host, framed chat-only carrier and preserved settings.
+The installed startup path is now observed as described above; the fixture
+checks and startup observation do not substitute for the owner's detailed
+appearance and interaction trial. [Current evidence and delivery status](mvp-runtime.md#installed-native-service-refactor-2026-11-12)
 
 The preview uses the saved identity and user sections from Core's native
 context reader. World's estimate covers those two sections. DSH records the
@@ -26,38 +39,65 @@ opening a result. A corrected result shows its current content and evidence.
 A withdrawn result is unavailable. Chat transcripts retained for recovery stay
 under DSH ownership. The search covers material admitted to this Bank.
 
-The overview reports whether **new conversations** use long-term memory. Existing
-conversations keep their recorded choice. **工作区与维护 → 运行状态** shows whether
-the provider process is running. Opening settings reads its state without
-starting it. The provider starts when a conversation needs it.
+The overview reports whether long-term Memory is enabled for the **next turn**,
+including existing conversations. A provider outage leaves chat available and
+removes the previous recall block; the overview reports the temporary outage.
+**工作区 → 运行状态** shows whether the provider process is running. Opening
+settings reads its state without starting it. The provider starts on demand.
 
 For a first launch, bind and initialize the companion Repo, then open the fish in
-**桌宠互动**. Click the fish for animation feedback. Cmd/Ctrl+click, the right-click
+**桌宠**. Click the fish for animation feedback. Cmd/Ctrl+click, the right-click
 menu or hover + L opens compact chat. Drag to reposition the fish. **收起** folds
 the window. **新会话** starts a fresh conversation and archives the preceding one.
 [Installation and verification](handover/README.md)
 
 ## Desktop interactions
 
-**桌宠互动** exposes the desktop controls for the bound workspace. Existing configuration files receive defaults on read.
+Use **桌宠** for the managed companion's presentation. Appearance, size,
+position/confinement, original movement and action controls use the original Pet
+editor on this same page. It manages deliberately added bodies explicitly;
+opening another settings page or compact chat must not create an extra normal body.
+The original body host and compact chat use separate presentation-only carriers;
+compact chat carries no extra body or tray. Startup displays **启动中** until the
+helper actually runs, supports cancellation and retry, and keeps unsaved form
+values while it checks status. Final host/configuration evidence is recorded in
+the runtime report.
 
-| Control | Default | Effect |
-| --- | --- | --- |
-| Character size | 232 pixels | 96–512; saving reloads the body while retaining the native chat. |
-| Fixed position | Off | Stops autonomous roaming; manual drag and menu playback remain available. |
-| Confine to screen | Off | Uses the original motion confinement rule. |
-| Click sound | On | Original packaged sound, volume and throttling; can be muted. |
-| Reply bubble | On | Displays the existing final native reply through the original bubble renderer; no extra inference. |
-| Bubble duration | 10 seconds | 1–300; long reply text can scroll. |
-| Automatic whisper / sleep talk | Off | Uses the original one-shot generator over DSH's current model and SOUL; enabling permits additional model requests. Manual whisper is also available from the menu. |
-| Whisper interval | 5 minutes | 1–1440; the same interval applies to sleep talk. Quiet mode, active work and a closed helper suppress scheduled calls. |
-| Automatic balance | Off | Queries the current provider via the original balance adapters and native credentials/account service. Unsupported providers show a reason, never a fabricated number. |
-| Balance interval | 30 minutes | 1–1440. Manual balance remains available from the menu. |
+**对话表现** controls final-reply bubbles, bubble duration and selected-sticker
+probability. **动作记录** sets the number and age of retained observed actions.
+**互动间隔** uses seconds for whisper, sleep talk and balance checks; use the
+original Pet editor for their enable switches. Save each section, then inspect
+its saved/effective value. A preserved migration conflict is shown for a choice
+rather than silently overwriting either configuration. Automatic migration fills
+only absent fields. An existing explicit value is preserved even if it equals an
+upstream default. A conflict choice is checked against the configuration hash, so
+an older open form cannot overwrite a later edit.
 
-Right-click offers native chat, whisper/illustrated whisper, balance, todos,
-sleep/wake, original action selection, sound/fixed/automatic-whisper switches,
-bubble clearing, reload and home. Hover shortcuts reuse upstream L (chat), S
-(screenshot), D (todos), Z (sleep). In compact chat, hold the microphone button, review or edit the transcript, then send it. Each assistant reply offers manual speech playback.
+Quiet mode suppresses proactive contact while normal owner replies remain
+available. Enabling automatic whisper/sleep talk permits additional native model
+requests; it starts disabled in a new companion configuration. Life and Desktop
+coordinate these opportunities so one scheduled event does not create two
+independent assistant turns. Balance reads the current provider's actual account
+capability; unsupported providers report unavailability.
+
+The pet menu opens compact chat and provides **进入房间**, plus available original
+Pet actions, sound, sleep/wake, todos, whisper and balance. Room opens in a normal
+independent window, even with Desktop hidden or unloaded. No global Room shortcut
+is required by this implementation. Hover shortcuts retain upstream L (chat), S
+(screenshot), D (todos) and Z (sleep). Sleep/wake is an explicit request to the
+shared Behavior service; it remains available with autonomous Life paused.
+
+Food and sleep commands, and the original locked Baifan phases, go through the
+same Behavior path after the original action/surface/lock checks. A clip cannot
+claim the body has finished an activity. Eating continues through a loop ending
+or an emotional change until Behavior changes the actual activity. Where the
+installed pack has no dedicated drinking/garden animation, the desktop shows
+accurate activity text with a neutral pose. Custom packs retain valid local media
+and activity text; detailed new action assets have not been invented.
+
+In compact chat, the microphone action uses the configured recognizer; review or
+edit the transcript before sending. Each assistant reply offers manual speech
+playback. Voice and original menu items depend on their owning capabilities.
 
 The original todo panel supports create, complete/reopen, delete, deadlines and
 reminders. Its original store/policy are reused in `.chatpet/data/desktop/todos.json`.
@@ -76,7 +116,6 @@ The selected model must support images for a useful visual answer.
 
 | Control | Default | Effect |
 | --- | ---: | --- |
-| Work-animation delay | 5 seconds | A turn must run strictly longer before the work chain can start. Short turns have no work completion animation. |
 | Sticker probability | 35% | Applied once per eligible reply when the fish selects an available sticker. 0 suppresses stickers and 100 accepts every selected sticker. Body expression is independent. |
 | Recent action count / age | 10 / 30 minutes | Both limits apply to observed distinctive actions and related feedback. |
 | Recent mood changes / age | 3 / 24 hours | Both limits apply to retained mood changes; the continuing current emotion is separate. |
@@ -93,9 +132,15 @@ workspace's configuration. A zero count or retention period removes that class
 of recent experience on its next read. Durable preferences remain with Mnemosyne.
 Recent interaction data lives in `.chatpet/data/memory/recent-interactions.sqlite`.
 
-The five recall and batch controls use editable trial defaults. Current emotion
-persists across expiry of the recent-change list. Correcting or forgetting a
-linked cause retires the affected state and reason.
+The recall and batch controls use editable trial defaults. Current emotion
+persists across expiry of the recent-change list. Its canonical file is
+`.chatpet/data/emotion/state.json`, separate from the recent-change ledger.
+**情绪** edits its text, reason and structured feelings with revision/hash checks.
+Existing text-only states do not receive invented numeric values; existing Room
+0–100 values are retained when present. Corrected, withdrawn or unprovable linked
+material is revalidated on reload and before disclosure; affected state is shown
+as unavailable while the original file remains recoverable. A damaged file is
+reported and retained. Emotion does not write a second Room mood file.
 
 ## Entry And Ownership
 
@@ -113,8 +158,8 @@ services validate and save durable state. Closing the page retains acknowledged 
 DSH loads the browser factory from the package's `./client` export.
 The **大肥鱼** section and its icon both use the stable ID `dsh-Chatpet` in the native `settings.section`
 and `settings.section.icon` slots. The bundle mounts the `chatpet-settings`
-carrier and separately declares `00-Core`, `10-Memory`, `20-Emotion` and
-`30-Desktop`. Memory enrollment changes apply to newly opened conversations.
+carrier and separately declares `00-Core`, `10-Memory`, `20-Emotion`,
+`25-Behavior`, `30-Desktop`, Pet presentation, Life, Room and channel capabilities. Memory enrollment changes apply to newly opened conversations.
 Existing conversations keep their recorded mode and eligibility checks.
 
 The settings page calls owner-authenticated native Connection routes under
@@ -122,7 +167,9 @@ The settings page calls owner-authenticated native Connection routes under
 `worldView`, `archiveFind` and `archiveRead` routes, saves `identity`, `profile`,
 `quiet`, `preferences` and `companion`, initializes the selected Repo with
 `initialize`, and requests `desktopOpen` or `desktopClose` for the bound
-workspace. The handler checks the request shape, binding and revision as
+workspace. It also reads/saves the Core foundation and Emotion state, opens Room
+through `roomOpen`, and calls the owning presentation timing/reconciliation
+operations. The handler checks the request shape, binding and revision as
 appropriate. The native connection identifies the owner. The page receives a
 readable error when its backing service is unavailable.
 [Route registration](../src/console/plugin.ts) · [Operation handlers](../src/console/settings.ts)
@@ -133,7 +180,7 @@ readable error when its backing service is unavailable.
 | --- | --- |
 | Role name and character | Read/write existing Core identity with its expected revision; saved values are used by subsequent Core runs and survive restart |
 | Quiet mode | Revisioned policy update; suppresses proactive contact while owner replies remain admitted. Does not start autonomy |
-| Execution limits | Save history count, context characters, steps, tools and duration; validated existing bounds; subsequent Core-managed runs read the saved preferences |
+| Execution limits | Save history count, context characters, steps, tools and duration; validated existing bounds; subsequent autonomous/background runs read the saved limits; ordinary owner turns use native DSH execution |
 | Workspace target | Native Workspace Registry list, live directory check, save/clear selected ID and canonical host metadata; persisted across restart |
 | Modules | Read actual Core-reported capability states; module-owned settings are not fabricated |
 | Maintenance | Honest unavailable/partial-coverage explanation; no inactive export/restore form masquerading as a usable operation |
@@ -147,7 +194,25 @@ additive `preferences/current` record in Core's existing SQLite schema. Missing
 preferences inherit the host's validated conversation defaults; saved preferences
 override that seed after restart. Owner checks, quiescence and request replay
 controls are the existing Core controls, not a parallel authorization system.
-No identity, data directory or provider/model route migration is introduced.
+The redesign preserves identity and provider/model routing. Presentation reconciliation and the additive Emotion/Behavior transition are recorded separately; they do not authorize replacing personal records.
+
+## Foundation and self-description
+
+**角色 → 基础说明** edits `.chatpet/COMPANION.md`. Until the owner saves a
+custom version, the bundled default is used without adding a required manifest
+entry or changing older Repos. The next eligible native request receives changed
+content. Core assembles it with SOUL/USER and only the capabilities actually
+available to that conversation. Native DSH permissions remain authoritative.
+
+The companion's self-description remains at `.chatpet/data/life/self.md` for
+compatibility. Core's scoped reader/writer integration permits ordinary
+conversation updates without autonomous Life. It remains distinct from the
+owner-authored persona, the user's profile and Memory facts. Life's daily review
+is another opportunity to inspect it, not a prerequisite. Self-description and diaries remain scoped owner documents; their availability
+does not depend on a running Memory provider. Forgetting a Bank record does not
+erase these documents or the original transcripts. Diary and album data/tools stay with their owning
+capabilities; when that optional provider is unavailable the foundation must not
+claim the capability exists.
 
 ## Workspace and recovery
 
@@ -191,7 +256,7 @@ the [workspace contract](workspace.md).
 
 ## Daily Life
 
-Open **Settings → 大肥鱼 → 日常生活**. Life is a separate `40-Life`
+Open **Settings → 大肥鱼 → 生活**. Life is a separate `40-Life`
 component in the existing package. A new Repo starts paused. Opening this
 page, reading status, feeding, watering and local interactions do not request
 a model. Enabling Life starts a dedicated native DSH home session using the
@@ -200,8 +265,8 @@ It can make model requests while the owner is not chatting.
 
 The page shows the original template's virtual activity and descriptive body
 state, recent events, World alarm, home availability and tool activity. It
-does not represent physical health. The original movement, dwell, needs,
-sleep and event-cooldown rules are unchanged. The template uses the machine's
+does not represent physical health. Behavior reuses the original movement, dwell, needs, sleep and event-cooldown
+rules, with the bounded host pause policy described below. The template uses the machine's
 local time; the World schedule uses that same timezone, shown on the page.
 The initial World fallback wake is 09:00 and review is 22:00. `plan_next`
 lets the companion choose its next alarm (upstream minimum: one minute).
@@ -212,10 +277,13 @@ The switch and state live in `.chatpet/data/life/` in the bound Repo:
 `diary/` and companion-authored `self.md` when used. Complete home-session
 events use Core's existing portable native transcript copies and Mnemosyne
 enrollment. Life has no separate Memory extractor or Bank. It reuses the
-existing turn/idle Memory batching. Pause retains the alarm and event records;
-on re-enable the original template accounts for elapsed time (up to its
-eight-hour cap). Enabled component reload restores the saved native home and
-schedule. Invalid JSON is reported and preserved rather than silently reset.
+existing turn/idle Memory batching. Pause retains alarm and event records. It stops autonomous model wakeups,
+new spontaneous body goals and automatic garden tasks. Directed feeding, touch,
+sleep/wake, movement and requested garden work still use `25-Behavior`, even if
+Life is unloaded. Accepted manual route/dwell work can finish; stopped automatic
+work cannot manufacture a completion effect. Paused passive needs/crop time is
+not caught up on resume. Enabling Life retains the body and explicit requests;
+reloading the components restores the saved native home and current eligibility. Invalid JSON is reported and preserved rather than silently reset.
 
 Quiet mode suppresses `reach_out` desktop bubbles, with an explicit failed
 outlet receipt; Life can keep progressing and recording. A stopped desktop
@@ -223,23 +291,24 @@ also reports delivery failure. Home replies are not automatically repeated as
 ordinary reply bubbles; proactive delivery uses World's `reach_out` once.
 Life pauses automatic Desktop whispers while running and aborts an in-flight
 whisper when starting. Manual whispers and normal conversations remain
-available. Disabling/unloading Life cancels its current home turn, removes its
-timers/tools and closes background admission. Native Core limits still apply
+available. Disabling/unloading Life cancels its current autonomous home turn and removes
+its schedules and background admission. It does not unload Behavior or erase the
+foreground native-home identity, retained self-description or conversations. Autonomous Core limits still apply to background input; ordinary owner chat uses DSH limits
 to each turn; no aggregate daily spending cap has been added.
 
 [Reuse and verification evidence](mvp-runtime.md#life-integration-2026-11-11).
 
 ## Pet, World and Room
 
-**设置 → 大肥鱼 → 日常生活** opens the shared daily routine. The clock controls use the displayed Life time zone. The budget is a reminder based on usage reported by the home session. The activity view shows the estimate. The evening-review switch puts a completed review on the existing Memory batch queue.
+**设置 → 大肥鱼 → 生活** configures the shared daily routine; the interactive Room itself opens in a separate window. The clock controls use the displayed Life time zone. The budget is a reminder based on usage reported by the home session. The activity view shows the estimate. The evening-review switch puts a completed review on the existing Memory batch queue.
 
-- **房间与菜园 → 进入 3D 房间** opens the original set, garden, camera, lighting and model-quality controls. Wake, rest, feeding, touch and movement use the saved body. Start Life for actions that advance its state. The TV uses the browser’s display picker. The companion can comment on a selected frame in its native room conversation. Closing the page releases its capture.
+- **概览 → 打开房间**, **生活 → 房间与菜园 → 打开房间**, or the pet menu's **进入房间** opens the same independent window. Repeating the command focuses it. Wake, rest, feeding, touch, movement and requested garden actions share Behavior's saved body with Desktop and remain usable while Life is paused. Closing Room releases its renderer/request lifetime; it does not reset the body or start another Agent. The TV asks the operating system to select a shared source and uses the existing native Room conversation for frame commentary. Actual physical source sharing remains a separate owner trial.
 - **日记／相册** browses dates, eligible diary and activity records, searches eligible original dialogue and diary excerpts, and opens or removes saved images. The Life home's original photo tools can keep a picture from a native attachment. Changing workspaces closes the previous view.
-- **外部联络 → 管理渠道** configures the current companion’s device-local accounts. For QQ, select a loopback OneBot WebSocket, specify the account, and allow individual private conversations and groups. The token field names a device environment variable. For WeChat, provide the account and allowed chats, then connect a compatible adapter using its private discovery file. Status and receipts report connectivity, queue state and provider-reported usage. A verified owner private chat can use the Life home. Group/private guest chats have independent native histories. Each allowed QQ group has its own public character card, relationship material, phrase review and stickers.
+- **连接 → 外部联络 → 管理渠道** configures the current companion’s device-local accounts. For QQ, select a loopback OneBot WebSocket, specify the account, and allow individual private conversations and groups. The token field names a device environment variable. For WeChat, provide the account and allowed chats, then connect a compatible adapter using its private discovery file. Status and receipts report connectivity, queue state and provider-reported usage. A verified owner private chat resolves the retained companion home even while autonomous Life is paused or unloaded. Group/private guest chats have independent native histories. Each allowed QQ group has its own public character card, relationship material, phrase review and stickers.
 - Open an allowed QQ group to choose its public role card and how it participates. V1 replies to directed messages. V2 can observe a conversation, wake on the configured triggers and choose whether to send. The group panel shows unread activity and its observation reports. A verified owner can ask to publish a saved public QQ Space draft in private chat. Enabling the schedule also publishes queued drafts at the selected Beijing times.
 - **本地程序和推送** enables the original World token-authenticated home bridge. The private discovery file contains the current home address and token. Each configured HTTP destination chooses which of `reach`, `reply` and `busy` it accepts. Turning the bridge off, switching the bound Repo or stopping Life withdraws the old bridge.
-- **桌宠互动** controls tray visibility, work-state animation, dream interval, whisper illustrations, confinement, and the original physics, animation and text settings. The original Pet presentation settings manage individual bodies and their artwork, phone motion, notification behavior and browser placement. Each body follows the bound companion. Installed packs use the companion’s `.chatpet/data/pet-platform/pet/` directory.
-- **桌宠互动 → 独立桌宠** can issue a private connection file for the current binding or copy a limited animation-control credential for another trusted program. Run `dafeiyu-standalone` to open the fish without DSH chat. Run `dafeiyu-standalone --connection "/absolute/path/to/standalone.json"` for the current native conversation. In a source checkout, run `source ./scripts/env.sh` and `node src/desktop/standalone.mjs`. The helper uses the device’s DSH Electron or the executable selected via `DSH_CHATBOT_ELECTRON_PATH`.
+- **桌宠** controls tray visibility, work-state animation, dream interval, whisper illustrations, confinement, and the original physics, animation and text settings. The original Pet editor on the same page manages deliberately added bodies and their artwork, phone motion, notification behavior and browser placement. Each body follows the bound companion. Installed packs use the companion’s `.chatpet/data/pet-platform/pet/` directory.
+- **桌宠 → 独立桌宠** can issue a private connection file for the current binding or copy a limited animation-control credential for another trusted program. Run `dafeiyu-standalone` to open the fish without DSH chat. Run `dafeiyu-standalone --connection "/absolute/path/to/standalone.json"` for the current native conversation. In a source checkout, run `source ./scripts/env.sh` and `node src/desktop/standalone.mjs`. The helper uses the device’s DSH Electron or the executable selected via `DSH_CHATBOT_ELECTRON_PATH`.
 - **语音** uses DSH’s enabled recognizer for input. For playback the Pet service uses its configured synthesizer and cache. The bundled default is the original Edge network synthesizer, so manually choosing to read a reply can send that reply to the speech service. Offline voice tests use a local fixture.
 
-[Integration evidence](mvp-runtime.md#three-reference-integration)
+[Current redesign evidence](mvp-runtime.md#four-feedback-redesign-implementation-2026-11-12) · [Previous installed integration](mvp-runtime.md#three-reference-integration)

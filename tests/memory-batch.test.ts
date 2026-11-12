@@ -26,13 +26,15 @@ test('idle batching retains a committed native summary for retry without a secon
     if(name==='workspaceRegistry') return {get:()=>({path:repo,sessionIds:['session']})};
     if(name==='agentPresets') return {serviceFor:()=>engine};
   }, agents:{get:()=>agent}, on(_name:string,fn:typeof event) {event=fn;},effect(fn:()=>typeof dispose) {dispose=fn();},logger:()=>({warn(){}})};
-  host.native.memory = {prepare:async()=>{},capture:async()=>{},close:async()=>{},connection:{call:async()=>{
+  host.native.resolveScope=()=>({workspaceId:'repo',path:repo,storageId:host.workspace.storageId(),guest:false});
+  host.native.memory = {prepare:async()=>{},capture:async()=>{},close:async()=>{},connection:{validate:async()=>'eligible',call:async()=>{
     if(++writes===1) throw Error('Temporary provider outage');
-    return {};
+    return {id:'summary-42'};
   }}} as unknown as NonNullable<typeof host.native.memory>;
   try {
     t.mock.timers.enable({apis:['Date','setInterval'],now:1_800_000_000_000});
     host.workspace.runtime.store.put('native-session-sources','session',['owner-source']);
+    host.workspace.runtime.store.put('memory-source-work','owner-source',{workspaceId:host.workspace.storageId(),state:'acknowledged'});
     installMemoryBatch(ctx as unknown as Context,host);
     event(session,{type:'turn/end',time:Date.now(),data:{turn:1,reason:{kind:'completed'}}});
     t.mock.timers.tick(59_000); await new Promise(resolve=>setImmediate(resolve));
@@ -45,5 +47,17 @@ test('idle batching retains a committed native summary for retry without a secon
     t.mock.timers.tick(1000); await new Promise(resolve=>setImmediate(resolve));
     assert.equal(inferences,1,'Retry must reuse the successful native summary'); assert.equal(writes,2);
     assert.equal(host.workspace.runtime.store.get<{turns:number}>('memory-batch','session')!.turns,0);
+    // A retained native checkpoint can include a period when Memory was off.
+    // It must still compact locally without backfilling that period into Bank.
+    host.workspace.runtime.store.put('native-session-sources','session',['owner-source','off-source']);
+    event(session,{type:'turn/end',time:Date.now(),data:{turn:2,reason:{kind:'completed'}}});
+    t.mock.timers.tick(60_000);await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(inferences,2,'Native idle compaction still runs');
+    assert.equal(writes,2,'Mixed Memory-off checkpoint is not sent to Bank');
+    const withheld=host.workspace.runtime.store.get<{turns:number;summary?:unknown;lastSummary:{state:string;reason:string}}>('memory-batch','session')!;
+    assert.equal(withheld.turns,0);assert.equal(withheld.summary,undefined);
+    assert.deepEqual({state:withheld.lastSummary.state,reason:withheld.lastSummary.reason},{state:'withheld',reason:'memory_off_sources_not_observed'});
+    t.mock.timers.tick(300_000);await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(writes,2,'The withheld checkpoint is not retried forever');
   } finally { await dispose?.(); t.mock.timers.reset(); await host.close(); rmSync(root,{recursive:true,force:true}); }
 });

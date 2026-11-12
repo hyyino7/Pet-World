@@ -32,6 +32,18 @@ async function start() {
     console.log('Usage: dafeiyu-standalone [--connection PATH]'); return;
   }
   const remote = connection(args[1]);
+  // Connected launch addresses the managed presentation; it never creates a second body.
+  if (remote) {
+    for (const [path,body] of [['presentation',{action:'show'}],['native-chat-window',{}]]) {
+      const response=await fetch(remote.baseUrl+'/'+path,{method:'POST',redirect:'error',
+        signal:AbortSignal.timeout(60000),headers:{Authorization:'Bearer '+remote.token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(!response.ok)throw Error(response.status===401 || response.status===403 ? '当前绑定已改变，请重新生成连接文件' : 'DSH 暂时无法打开桌宠');
+      const value=await response.json();
+      if(value.ok===false)throw Error(value.message || 'DSH 暂时无法打开桌宠');
+    }
+    console.log('已打开当前大肥鱼和原生聊天窗口。');
+    return;
+  }
   const binary = process.env.DSH_CHATBOT_ELECTRON_PATH || join(process.env.DSH_HOME || join(homedir(),'.dsh'),'electron/Electron.app/Contents/MacOS/Electron');
   if (!existsSync(binary)) throw Error('找不到 Electron，请设置 DSH_CHATBOT_ELECTRON_PATH');
   const env = {...process.env}; delete env.ELECTRON_RUN_AS_NODE;

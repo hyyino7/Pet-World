@@ -6,7 +6,7 @@ import type { CompanionEmotion } from '../emotion/plugin.js';
 import type { CompanionLife } from '../life/plugin.js';
 import { estimateTokens } from '#dsh-world/console/snapshot';
 import { desktopAppearanceDefaults } from '../desktop/appearance.js';
-interface RoomControls { request(workspaceId: string, endpoint: string, data: Record<string, unknown>, requestId: string, signal: AbortSignal): Promise<unknown> }
+interface RoomControls { request(workspaceId: string, endpoint: string, data: Record<string, unknown>, requestId: string, signal: AbortSignal): Promise<unknown>; open?(workspaceId:string):Promise<unknown> }
 
 /** Structural subset of the native Connection RPC contract; no new transport. */
 export type SettingsReply = { ok: true; value: unknown } | { ok: false; error: { code: string; message: string; details: Record<string, never> } };
@@ -54,11 +54,11 @@ interface DesktopControls {
 }
 export function settingsHandler(getHost: () => PetCoreHost | undefined, getWorkspaces: () => SettingsWorkspaceRegistry | undefined,
   getDesktop?: (host: PetCoreHost) => DesktopControls | undefined, getWorldModules?: () => readonly string[],
-  getEmotion?: () => Pick<CompanionEmotion, 'current' | 'catalog'> | undefined,
+  getEmotion?: () => Pick<CompanionEmotion, 'current' | 'catalog'> & Partial<Pick<CompanionEmotion,'read'|'update'>> | undefined,
   getLife?: () => (Pick<CompanionLife, 'snapshot' | 'control' | 'act'> & Partial<Pick<CompanionLife, 'settings' | 'library'>>) | undefined,
   getRoom?: () => RoomControls | undefined,
   getChannels?: () => Pick<import('../channels/plugin.js').CompanionChannels,'request'> | undefined,
-  getPlatform?: () => Pick<import('../desktop/platform/plugin.js').PetPlatform, 'ownerAccess' | 'controlAccess' | 'standaloneAccess'> | undefined): SettingsHandler {
+  getPlatform?: () => Pick<import('../desktop/platform/plugin.js').PetPlatform, 'ownerAccess' | 'controlAccess' | 'standaloneAccess'> & Partial<Pick<import('../desktop/platform/plugin.js').PetPlatform,'status'|'saveTiming'|'resolveMigration'>> | undefined): SettingsHandler {
   return async (endpoint, payload, signal, peer) => {
     try {
       if (peer.principal.kind !== 'owner' || peer.signal.aborted) fail('UNAUTHORIZED');
@@ -68,7 +68,54 @@ export function settingsHandler(getHost: () => PetCoreHost | undefined, getWorks
       if (typeof body.requestId !== 'string' || body.requestId.length < 1 || body.requestId.length > 160) fail('INVALID_ARGUMENT');
       const context = () => host.operator.request(`settings:${endpoint}:${body.requestId}`);
       const options = { signal };
+      if(endpoint==='foundation') {
+        const writing=Boolean(body.input && typeof body.input==='object' && Object.hasOwn(body.input,'text'));
+        const input=object(body.input,writing ? ['workspaceId','expectedRevision','text'] : ['workspaceId']);
+        if(host.workspace.status().target?.id!==input.workspaceId)fail('STALE_BINDING');
+        const value=writing ? unwrap(await host.services.workspace.saveFoundation(context(),{
+          workspaceId:requiredText(input.workspaceId,200),expectedRevision:requiredText(input.expectedRevision,256),text:input.text as string},options))
+          : unwrap(await host.services.workspace.readFoundation(context(),{},options));
+        return {ok:true,value};
+      }
+      if(endpoint==='emotionState' || endpoint==='emotionUpdate') {
+        const raw=body.input as Record<string,unknown>;
+        if(!raw || typeof raw!=='object')fail('INVALID_ARGUMENT');
+        const id=requiredText(raw.workspaceId,200);
+        if(host.workspace.status().target?.id!==id)fail('STALE_BINDING');
+        const emotion=getEmotion?.();
+        if(!emotion?.read || !emotion.update)fail('UNAVAILABLE');
+        const {workspaceId:_id,...update}=raw;
+        const value=endpoint==='emotionState' ? await emotion.read(id) : await emotion.update(id,update as unknown as import('../contracts/emotion.js').EmotionUpdate);
+        if(getEmotion?.()!==emotion || host.workspace.status().target?.id!==id)fail('STALE_BINDING');
+        return {ok:true,value};
+      }
+      if(endpoint==='roomOpen') {
+        const input=object(body.input,['workspaceId']);
+        const id=requiredText(input.workspaceId,200),room=getRoom?.();
+        if(host.workspace.status().target?.id!==id)fail('STALE_BINDING');
+        if(!room?.open)fail('UNAVAILABLE');
+        const value=await room.open(id);
+        if(getRoom?.()!==room || host.workspace.status().target?.id!==id)fail('STALE_BINDING');
+        return {ok:true,value};
+      }
       if (endpoint === 'desktopAppearance') { object(body.input, []); return {ok:true, value:desktopAppearanceDefaults()}; }
+      if(endpoint==='presentationTiming' || endpoint==='presentationMigration') {
+        const input=object(body.input,endpoint==='presentationTiming' ? ['workspaceId','expected','eventsRefreshSec'] : ['workspaceId','field','choice','expectedConfigHash']);
+        const id=requiredText(input.workspaceId,200), platform=getPlatform?.();
+        if(host.workspace.status().target?.id!==id)fail('STALE_BINDING');
+        if(!platform)fail('UNAVAILABLE');
+        let value;
+        if(endpoint==='presentationTiming') {
+          if(!platform.saveTiming)fail('UNAVAILABLE');
+          value=await platform.saveTiming(id,input.expected,input.eventsRefreshSec);
+        }else {
+          if(!platform.resolveMigration || !['legacy','current'].includes(String(input.choice)))fail('INVALID_ARGUMENT');
+          value=platform.resolveMigration(id,requiredText(input.field,300),input.choice as 'legacy'|'current',requiredText(input.expectedConfigHash,64));
+        }
+        if(signal.aborted || peer.signal.aborted)fail('CANCELLED');
+        if(getPlatform?.()!==platform || host.workspace.status().target?.id!==id)fail('STALE_BINDING');
+        return {ok:true,value};
+      }
       if (['petPlatformAccess','petControlAccess','petStandaloneAccess'].includes(endpoint)) {
         const input = object(body.input,['workspaceId']);
         const target = host.workspace.status();
@@ -96,7 +143,7 @@ export function settingsHandler(getHost: () => PetCoreHost | undefined, getWorks
         if (signal.aborted || peer.signal.aborted) fail('CANCELLED');
         return {ok:true, value};
       }
-      if (['roomState','roomAction','roomGarden','roomPlant','roomCare','roomChat','roomTelevision','roomHistory'].includes(endpoint)) {
+      if (['roomState','roomAction','roomGarden','roomPlant','roomCare','roomChat','roomTelevision','roomHistory','roomVoice'].includes(endpoint)) {
         const input = object(body.input, ['workspaceId', 'data']);
         const id = requiredText(input.workspaceId, 200), room = getRoom?.();
         if (!room) fail('UNAVAILABLE');
@@ -158,8 +205,10 @@ export function settingsHandler(getHost: () => PetCoreHost | undefined, getWorks
           policy, preferences: prefs, capabilities, workspaces, workspaceAvailable: Boolean(registry), workspace, profile,
           desktop: getDesktop?.(host)?.status() ?? null,
           platformAvailable:Boolean(getPlatform?.()),
-          memory: { newSessions: Boolean(host.native.memory && host.native.memoryEnabledForNewSessions),
-            provider: host.native.memory?.connection.lifecycle ?? null },
+          presentation:getPlatform?.()?.status?.() ?? null,
+          memory: { enabled: Boolean(host.native.memory && host.native.memoryEnabledForNewSessions),
+            provider: host.native.memory?.connection.lifecycle ?? null,
+            error: host.native.memory?.lastError ?? null },
           worldModules: getWorldModules?.() ?? [],
           companion: workspace.state === 'ready' ? host.workspace.companionSettings() : null,
           nativeConversationReady: workspace.state === 'ready' && Boolean(registry) } };

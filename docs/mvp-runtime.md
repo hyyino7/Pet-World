@@ -1,5 +1,299 @@
 # Dafeiyu MVP runtime evidence
 
+## Native-service refactor (2026-11-12)
+
+The owner approved the [amended direction](planning/native-service-refactor.md)
+after review of Claude's proposal: “可以，按这个方向推进吧”. Source integration
+and the owner-approved installation are complete. Build `c18f11e04c85` is installed
+and enabled; `99a9fb2a2fd9` remains available for rollback. No account delivery,
+commit or detailed owner acceptance is recorded by these checks.
+
+### Implemented critical paths
+
+- Ordinary native owner/registered-guest turns use DSH execution and scoped
+  service adapters, without Core activity/execution records, serial execution
+  slots, per-chunk Memory gates or ordinary step/tool/time limits. Autonomous
+  Life/TV retain explicit-source admission and bounded native-turn counters.
+- SOUL is pinned within a turn; edits apply on the next turn. Guest presets
+  share SOUL and the Bank through explicit native-preset hook attachment;
+  static USER is not directly injected. Native histories and group-local tools
+  remain separate, with no guest owner/file/Memory mutation tools.
+- Every turn replaces recall, including an empty replacement on off/failure.
+  Attributed input and final assistant text are observed with stable provider
+  source keys. Tool output is not automatically ingested. Provider failure
+  leaves chat available. Scope is checked after asynchronous preparation.
+- Core-owned execution dependencies no longer decide whether an ordinary
+  conversation or matter record remains usable. Bank correction/withdrawal
+  still controls future retrieval. Original dialogue, self/diary files and
+  independent emotional state are retained rather than retroactively erased.
+- One Emotion file works without Memory or displays, retains legacy optional
+  numeric values, supports nine semantic labels, and serializes concurrent
+  footer updates without an additional model call. Guest footer updates use
+  the same service. Owner tools retain their own authority boundaries.
+- Behavior publishes the authoritative activity and a semantic presentation
+  projection. Desktop uses events/initial snapshots instead of 500ms polling;
+  Room has accurate text fallback. Eating/sleep takes precedence over expression.
+- Actual normal-host and random playback starts reach Emotion's recent ledger;
+  accepted requests alone do not count as playback. The normal host obeys the
+  saved strict work-animation delay. Restricted external control can query/wait
+  for playback results but cannot report results or use owner routes.
+- Compact speech reuses its existing original Pet controls. Room now uses those
+  controls through a finite scoped `roomVoice` RPC, with cancellation/rebinding
+  checks. The test uses synthetic microphone/audio services, not a real device.
+- `dafeiyu-backup` provides offline file-level backup/verification/recovery with
+  hashes, matching-code checks and a mandatory current-state safety copy. It
+  replaces only companion/selected native workspaces, merges scoped registry
+  entries, preserves unrelated workspaces/settings and adds immutable shared
+  attachments only when missing. Current Qzone/WeChat delivery journals,
+  group read/quota records, Core delivery/deduplication/usage rows and Life spend
+  are retained: restoring an older local snapshot must not replay an external
+  send or reset real expenditure. Missing current journals require explicit
+  reconciliation rather than restoring an old pending queue. No live personal
+  recovery was performed.
+- Development SDKs match the observed runtime: DSH `0.2.2-rc.1` and Cordis `4.1.0`.
+  Package installation used the repo-local tools and ignored package scripts;
+  no global runtime or installed DSH application was replaced.
+
+### Verification and limits
+
+The current checkpoint includes a passing 82-case unit/World suite, 16 Python
+provider cases, focused native Core/recall/batch cases, real DSH workspace and
+channel fixtures, seven platform cases (including temporary HTTP), isolated
+normal-renderer video-to-ledger checks and synthetic Room speech. A new
+per-observation daily-review regression also passes. The final aggregate and
+package readback are recorded at delivery below; do not add overlapping case
+counts together. Fixture models make no paid inference calls.
+
+Independent review identified old-turn asynchronous cleanup and cold-background
+Memory ordering/duplicate-input defects during integration. Both were repaired
+and covered by the real native-service fixture rather than ignored as passing
+types. The first shared-memory fixture assertion was tightened to require a
+completed native turn, preventing graceful fallback from masquerading as Bank
+success.
+
+Native turn/idle compaction remains available. A checkpoint that includes
+Memory-off or withdrawn/unavailable source material is withheld from Bank rather
+than silently backfilled or retried forever; `memory-batch.lastSummary` records
+why. Per-turn Bank writes/recall and original native logs remain available.
+This does not promise that every retained native checkpoint becomes a Bank
+summary. Future Bank-only forgetting does not promise erasure of facts already
+present in old native dialogue or independent emotion/self files.
+
+Physical microphone use, actual online QQ/WeChat delivery/Qzone publication,
+long real-model tasks, subjective expression quality, day-long Life stability
+and owner acceptance remain separate checks. The installed startup observation
+below does not replace those checks.
+
+
+### Prepared delivery and recorded checks
+
+Candidate **`c18f11e04c85`** passed preparation and was subsequently installed as
+recorded below. Its 1,030 regular files
+passed archive readback; every source payload matches the portable package, and
+only the Core machine binding differs in the prepared archive. `pnpm` omits the
+source-only `packageManager` field when packing; no runtime manifest change was
+ignored. The prepared Core configuration exactly matched the pre-installation
+companion configuration, including identities, paths and model routing.
+
+- Portable archive: `.cache/native-service-refactor/release/dsh-Chatpet-0.0.0.tgz`.
+- Prepared archive: `.cache/native-service-refactor/release/prepared/dsh-Chatpet-local-c18f11e04c85.tgz`.
+- SHA-256: `c18f11e04c85bc00ed2b50f770350eb918cd339f2248a2b20633164aeb1d74a4`.
+- Combined receipt: `.cache/native-service-refactor/verification.json`.
+- Final logs: `.cache/native-service-refactor/checks/` (82 unit/World cases,
+  16 provider cases, 20 backup/platform cases, real native-service integration,
+  synthetic microphone/speech and event-driven Room checks).
+- The Room fixture excluded the original 1200ms fallback when measuring immediate
+  mirroring (7ms in the recorded run) and rejected wrong-workspace, old-revision
+  and old-boot responses. Speech verified delayed-permission cancellation,
+  stopped late tracks and wrapper cleanup without a real microphone.
+- Earlier updated native-memory/workspace/channel fixtures remain recorded in
+  `.cache/native-service-refactor/native-memory.log` and the implementation
+  task's verification output. No external model calls were made.
+
+Source preservation and the previous installed archive remain intact. No commit
+or publication has been requested. Detailed installed owner acceptance remains
+open; this checkpoint must not be marked as full acceptance.
+
+### Installed native-service refactor (2026-11-12)
+
+The owner explicitly selected “现在安装供我测试”. DSH was gracefully closed before
+the fresh offline backup and native plugin update. The exact approved archive
+`c18f11e04c85` was installed offline with package scripts disabled. The existing
+profile patch, Core binding and bundle activation were retained; no installed
+DSH application or global toolchain was replaced.
+
+- Installation receipt: `.cache/native-service-refactor/install/installation.json`.
+- Fresh private backup: `.cache/native-service-refactor/install/pre-install-backup/`;
+  verified before replacement, with profile package/lock/config references in
+  `install/profile-before/`. The previous matching-code archive remains available
+  for rollback. No personal restore was performed.
+- Integrity receipt: `.cache/native-service-refactor/install/verification.json`.
+  All **1,030 installed files** match the prepared archive. Before startup, all
+  **26 protected roots / 116 files** matched their saved existence, type, file
+  set and SHA-256; selected workspace registration and archive/pin metadata for
+  **18 native sessions** also matched. This does not claim a full backup of all
+  unrelated global account or workspace data.
+- Startup receipt: `.cache/native-service-refactor/install/startup.json`.
+  Native accessibility observation confirmed **Settings → 大肥鱼**, all eight
+  topic tabs, **小汐的世界**, and **已就绪 · Deepseek-Test**. Long-term Memory
+  remained enabled; the normal body remained hidden as saved. The independent
+  **打开房间** control was present.
+- After startup, all 18 retained native transcript copies and their 979 original
+  events remained intact. The observed differences were the new Core lock and
+  updated garden/home state and Pet log; no protected files were removed. These
+  are startup observations, not a claim that running state remains byte-identical.
+- The native installer's profile peer warnings were compared with the saved
+  pre-install lockfile: the warning categories were already present; only the
+  declared Chatpet host-version ranges changed as intended. Source dependency
+  checks and native runtime fixtures are recorded separately above.
+
+Installation and startup verification sent no model messages and performed no
+real microphone or account-delivery tests. The build is ready for the owner's
+detailed trial; subjective behavior and full acceptance remain open.
+
+## Four-feedback redesign implementation (2026-11-12)
+
+The owner authorized execution of the [four-feedback plan](planning/feedback-redesign-plan.md):
+“按照计划执行吧，测试可以基础一些，后面我会详细测试”. The current checkpoint is
+repository implementation and focused verification: W1-W6 source work and the
+requested basic checks are complete. Conservative presentation reconciliation is
+implemented. The final portable and pre-install machine-prepared archives passed
+readback. Following the owner's explicit installation request, applied build
+`99a9fb2a2fd9` replaced `6e5c1796d459`; the installation is recorded separately
+below. Implementation fixtures used disposable profiles and local scripted models.
+Installation verification made no model calls. Owner acceptance remains open.
+
+### Implemented paths at this checkpoint
+
+| Package | Source behavior | Verification actually recorded |
+| --- | --- | --- |
+| W1: Core foundation | `.chatpet/COMPANION.md` is an optional owner-editable foundation; old Repos use the bundled default until saved. Core scopes the foundation and self-description to eligible native conversations independently of Life. Ordinary self-description updates retain source checks. Foreground verified-owner messages can resolve the retained native home while autonomous Life is off. | `companion-foundation.test.ts` and `workspace.test.ts`: 8 focused cases passed. `check-native-channel-homes.mjs`: isolated native DSH/local fixture passed, four guest conversations remained isolated, owner private input reused its home and guest tools were empty. |
+| W2: Shared Behavior | `25-Behavior` / `petBehavior` owns one retained `home.json` and `garden.json` writer. Life controls autonomous eligibility; directed care and requested route/dwell work remain available without Life. Room/Desktop read the same body and phase. The original garden effect/receipt commit remains authoritative. | The original body baseline passed before adaptation. The updated `life-body.test.ts` has two passing cases covering sleep arrival/cancellation/restart/rebinding, paused directed care, requested garden completion/replay, no passive catch-up and stopping automatic work without inventing a harvest. A native Cordis service fixture also passed reload/admission and disclosure checks. |
+| W3: Emotion | `.chatpet/data/emotion/state.json` is the canonical editable state, with expected revision and content-hash checks. One-time legacy import retains text and optional existing Room values. No score is invented for text-only emotion. Structured `anger`, `boredom` and `happy` support shared presentation; source-linked content is revalidated after reload and before disclosure. | `emotion.test.ts` and `emotion-state.test.ts`: five focused cases passed, including retained state, legacy import, stale edits, invalidation and damaged-file preservation. Room presentation source syntax and a small VM check covered the three structured feelings and sleep/eat/move priority. |
+| W4: One normal Desktop body | The original Pet host is the only normal body carrier. Compact chat uses a separate framed chat-only helper. Shared activity affects only the rendered configuration; the original editor keeps its saved values. Runtime configuration refresh is generated from the hash-checked upstream helper input, and updates existing sprites without rebuilding the window. | A real original-host/React/Electron-helper fixture observed one native body, zero browser bodies, persistent eating with anger, eating after the original animation-end handler, sleep and return to idle. All sampled video elements decoded the selected current clip. The chat-only fixture observed one framed/resizable window, no body/tray, three Chinese stream snapshots and send/stop/new/reopen behavior. |
+| W5: Independent Room | Room depends on Behavior rather than Life. `Room.open()` opens the existing scene in a framed, isolated Electron window; repeated opens focus that process. A finite preload bridge admits only eight Room operations and carries no owner credential into the renderer. The existing native Room conversation, image admission and TV observation boundary remain in use. | A real isolated Electron process loaded the shipped scene and used the native state/garden/history bridge. Rebinding closed the window, aborted a pending native bridge request, closed an actual Chromium fetch and exited the renderer process. |
+| W6: Eight-page settings and presentation reconciliation | One companion settings entry exposes eight topics and the original Pet editor. Foundation/Emotion/timing operations use their owning services. Startup success follows actual running state; starting can be cancelled/retried, and bounded status polling does not replace unsaved drafts. Migration fills absent fields only; even an explicit value equal to a default remains an explicit choice. Conflict resolution requires the configuration hash to match the owner's displayed choice. | The isolated settings fixture passed eight tabs, no iframes, no overflow at 460px, saved foundation/Emotion and canonical timing, 33 original-editor inputs, hidden disconnected persona/model controls, cross-page/appearance draft retention and startup readiness/cancel/retry. Its Room.open call is a controlled substitute proving settings routing; the separate real-window case proves actual Room opening. Two focused migration cases passed malformed-file and explicit-conflict preservation. |
+
+The bounded feiyu adaptation separates autonomous goal selection and passive time
+from explicitly accepted task progress. New autonomous body/garden goals and
+model wakeups remain stopped while Life is paused; requested work may still reach
+its original completion checkpoint. Existing needs/crop values do not gain
+paused-time catch-up. Legacy home/garden file locations and state are retained,
+with additive host attribution for accepted manual work. Life no longer owns a
+second body instance or ticker.
+
+The lifecycle follow-up repaired three concrete boundaries: a stale optional
+Behavior binding cannot prevent stopping/cancelling the previous native home;
+Behavior reload restores the current Life admission; and Behavior awaits Emotion's
+validated read before decisions or disclosure. Current automatic activities also
+receive their own activity identity instead of reusing a finished manual action.
+These are runtime-control checks, not evidence of natural long-term behavior.
+
+Desktop physical actions retain the original action-selection, surface and lock
+checks before mapping food, sleep and locked Baifan phases to the same Behavior
+service. An animation cannot commit an invented physical effect. Existing eating
+continues until the actual body activity changes, including after the original
+clip-end callback. Drinking and garden work without a matching native clip use
+accurate activity text with a neutral pose. Custom packs keep valid local media
+and activity text; this is not a claim that new drinking/garden/custom-pack action
+assets were authored or that their detailed appearance has been accepted.
+
+The final focused source suite passed 17 cases, including Core foundation,
+Emotion, shared body, presentation migration and the original Pet host adapters.
+The native Room integration also passed with 11 local scripted-model calls,
+paidCalls=0: Room-to-Agent action tools updated/read the real Behavior state,
+replay did not repeat the turn, TV input kept its observation boundary and the
+cross-session album cases passed. These replace neither matched natural-model
+quality evaluation nor the owner's planned detailed trial.
+
+### Retained evidence and limits
+
+- [Focused source suite](../.cache/feedback-redesign/basic-checks.log) records 17 passing cases. [Native Room integration](../.cache/feedback-redesign/native-room-check.log) records the mounted installed Standard preset and the successful 11-call local fixture, without first-person `--photo` capture in this run.
+- [Actual native body fixture](../.cache/feedback-redesign/check-body-live.json), [log](../.cache/feedback-redesign/check-body-live.log) and [eating screenshot](../.cache/feedback-redesign/check-body-live.eat.png) record original-renderer playback, one body/window, activity priority and live configuration. Its body/Emotion inputs are controlled fixtures; it uses no personal profile or model.
+- [Chat-only window](../.cache/feedback-redesign/check-chat-window.json), [log](../.cache/feedback-redesign/check-chat-window.log) and [Chinese streaming screenshot](../.cache/feedback-redesign/check-chat-window.stream.png) record the independent framed chat carrier with no second body.
+- [Settings fixture](../tests/companion-settings-window.cjs), [World reference](../.cache/settings-redesign/world-reference.png), [overview](../.cache/settings-redesign/after.png), [role](../.cache/settings-redesign/after-角色.png), [emotion](../.cache/settings-redesign/after-情绪.png), [Desktop](../.cache/settings-redesign/after-桌宠.png), [Life](../.cache/settings-redesign/after-生活.png) and [narrow layout](../.cache/settings-redesign/after-narrow.png) retain the isolated UI checks and visual reference. Draft/timing/state checks use real owning services; desktop-readiness and Room-open timing use controlled service substitutes.
+- [Body checks](../.cache/feedback-redesign/life-body-check.log) record the two passing body cases.
+- [Native lifecycle fixture](../.cache/feedback-redesign/check-behavior-lifecycle.mjs), [result](../.cache/feedback-redesign/behavior-lifecycle-result.json) and [log](../.cache/feedback-redesign/behavior-lifecycle-check.log) record actual Cordis reload, current Emotion reads, paused manual care and old-home cancellation. The old-home regression uses a controlled native-runtime receipt substitute; no model executes.
+- [Independent-window fixture](../.cache/feedback-redesign/check-room-window.mjs), [result](../.cache/feedback-redesign/room-window-result.json) and [log](../.cache/feedback-redesign/room-window-check.log) record the shipped page, real preload/IPC, single process, pending-request abort, actual fetch closure and process exit. The binary was the device's `~/.dsh/electron/Electron.app`; its user data and body records were temporary.
+- The maintained W1/W3 tests accompany the recorded focused runs: their [foundation](../tests/companion-foundation.test.ts), [workspace](../tests/workspace.test.ts), [emotion](../tests/emotion.test.ts) and [emotion-state](../tests/emotion-state.test.ts) cases remain the reproducible inputs. They do not establish personal-channel delivery or owner acceptance.
+
+Physical screen sharing/capture was not exercised in the independent-window
+fixture; renderer-process destruction and request cancellation were. The Room's
+anger/boredom expressions reuse existing sprite and simple 3D posture/face paths;
+they are not newly authored detailed animation packs. Natural emotional quality,
+continuous manual feel, the final settings appearance and the integrated installed
+experience require the owner's later detailed trial. The installed-settings
+observation below is limited to startup; it does not establish detailed owner
+acceptance.
+
+The `.cache/feedback-redesign/` evidence is ignored local output, not source
+committed to Git. Retain it with package/rollback evidence until delivery is
+verified. Neither prepared artifact is an installed build or an owner-acceptance
+receipt; the code delivery does not wait for the owner's separate detailed trial.
+
+### Prepared delivery (2026-11-12)
+
+W1-W6 repository implementation, the requested basic verification and final
+package preparation are complete. The last focused run passed 17/17 cases.
+The [readback receipt](../.cache/feedback-redesign/release/package-verification.json)
+records the following immutable archive identities:
+
+| Artifact | Result |
+| --- | --- |
+| [Portable package](../.cache/feedback-redesign/release/dsh-Chatpet-0.0.0.tgz) | Prepared; 126,405,780 bytes; 1,022 files. SHA-256 `959a80dbedfb6aa1e11ed581c6774aa7ef1170d03748abb998146d906239bfe5`. |
+| [Pre-install machine-prepared package](../.cache/feedback-redesign/prepared/dsh-Chatpet-local-55a28e880eb9.tgz) | Prepared build `55a28e880eb9`; `applied: false`. SHA-256 `55a28e880eb9adcf7fbb4a4fd4a14405cccf6c3d01c47c8b8bc78bda8037e201`. |
+
+All portable archive files matched the final source inputs. Readback verified the
+new native entry exports, both Room `.cjs` helpers and the current generated
+settings client. The final settings guide was included before the last pack.
+Machine preparation reused the installed Core workspace binding and current
+provider/model configuration; its [preparation receipt](../.cache/feedback-redesign/prepared/installation.json)
+is not an application/installation receipt. Preparation did not replace the
+installed plugin, restart the owner's app or make personal model requests.
+This is the pre-install preparation checkpoint: `55a28e880eb9` was not the archive
+later applied. Its identity and source SHA remain unchanged. The subsequent
+owner-requested installation used the new machine-bound archive below.
+
+### Installed redesign (2026-11-12)
+
+The owner explicitly requested installation after source delivery. The native DSH
+installer completed the offline package update and retained bundle activation.
+Actual installed/enabled build: **`99a9fb2a2fd9`**, from
+[the applied archive](../.cache/feedback-redesign/install/dsh-Chatpet-local-99a9fb2a2fd9.tgz).
+Its SHA-256 is `99a9fb2a2fd9f0fe7e99731519231cd030389709322f2ea193d6478d3b3e2878`.
+The [installation receipt](../.cache/feedback-redesign/install/installation.json)
+and [verification](../.cache/feedback-redesign/install/verification.json) record:
+
+- All 1,022 installed package files matched the applied archive.
+- Before reopening DSH, all 45 retained companion files and 168 native-session
+  files matched their pre-install content hashes. The personal profile patch was
+  unchanged. This preservation comparison precedes normal app-startup writes.
+- The installer backed up the prior profile/Core/Memory at
+  `/Users/hy-yin/.dsh/profiles/desktop/backups/codex-pet/2026-11-12T00-59-37-944Z`.
+  Complete companion/native-session offline preservation copies are retained
+  under `.cache/feedback-redesign/install/preservation/`.
+- Installation and its integrity verification used zero model calls. No full
+  functional matrix or paid-model trial was rerun for installation.
+
+A subsequent actual-app observation reopened DSH and entered **设置 → 大肥鱼**.
+There was one Dafeiyu settings entry, and all eight pages loaded: 概览、角色、情绪、
+记忆与档案、桌宠、生活、连接、工作区. The original role identity was retained and
+the binding remained **Deepseek-Test**. Desktop status was closed; the independent
+**打开房间** button was visible. No chat message was sent. This proves installation
+and the limited settings/startup path; it does not establish detailed Room,
+Desktop, emotional-quality, microphone, external-account or physical-screen
+acceptance. The owner's detailed trial remains pending.
+
+The [separate startup receipt](../.cache/feedback-redesign/install/startup.json)
+records expected runtime initialization changes: canonical Emotion/presentation
+migration and normal locks, WAL and log updates. The pre-startup unchanged-file
+result must not be extended to those later writes. A post-startup check verified
+all 17 portable native transcripts: all 888 original events remained exact
+prefixes, with only two session/end-seed events added. SOUL and USER retained
+their original bytes. There were no owner messages or model tests. This preserves
+the difference between offline installation integrity and ordinary runtime
+initialization without treating legitimate startup writes as data loss.
+
 ## Three-reference integration
 
 The selected versions are dsh-pet 0.4.7, dsh-world 0.7.4 and feiyu-room-template `9df0a6b`. The packaged Room models, textures, media, garden and original interaction logic are served locally through the native host. Origin manifests and [third-party notices](../THIRD_PARTY_NOTICES.md) identify code, media and their respective licenses.
@@ -16,6 +310,8 @@ The selected versions are dsh-pet 0.4.7, dsh-world 0.7.4 and feiyu-room-template
 The original Pet client rendered two separately controlled bodies. A throw transferred motion to the second body in both the browser and two macOS windows. A browser test delivered simulated phone-motion events and verified vibration requests. A notification callback opened the originating native session. The packaged standalone command opened real offline and connected windows. The connected window followed the existing conversation, room reminders and sleep state.
 
 ### Installed desktop build
+
+Historical 2026-11-11 checkpoint, superseded by [the installed redesign](#installed-redesign-2026-11-12).
 
 On 2026-11-11 the DSH desktop profile installed and enabled `6e5c1796d459`. All 989 files matched the prepared package. The workspace binding, SOUL, USER, Core configuration, personal DSH patch and installed dsh-world and dsh-pet package trees matched the pre-update checks. The installer backed up Core and Memory before replacement. The installed QQ bridge and speech library loaded under this machine’s Node runtime. Room’s QQ SDK `1.14.20` is deprecated upstream. It was selected for compatibility with the installed host’s Node 24.21.
 

@@ -7,6 +7,7 @@ import {digest} from '../core/storage.js';
 import type {PetCoreHost} from '../core/index.js';
 import {bridgePrefix, LocalBridge, privateDeviceDirectory} from './bridge.js';
 import {createMessaging} from './messaging.js';
+import {isCompanionHome, resolveCompanionHome} from '../core/companion-foundation.js';
 
 interface Services {
   webServer: {getOrigin(): string; register(route: ReturnType<typeof bridgeRoute>): () => void};
@@ -38,15 +39,12 @@ export class CompanionChannels {
     if (!this.bound) {
       const id = current.id, deviceDirectory = privateDeviceDirectory(privateDeviceDirectory(this.profileDir, 'chatpet-channels'), digest(storageId));
       const active = () => this.target()?.id === id && this.host.workspace.storageId() === storageId;
-      const isHome = (sessionId: string) => active() && (this.ctx.get('petLife')?.isHome(sessionId) ?? false);
+      const isHome = (sessionId: string) => active() && isCompanionHome(this.ctx,this.host,sessionId);
       const ownerHome = async () => {
-        const life = this.ctx.get('petLife');
-        if (!active() || !life?.running()) throw Error('主人生活会话尚未开启');
-        const home = (await life.snapshot(id)).life.homeSessionId;
-        if (!home || !isHome(home)) throw Error('主人生活会话暂不可用');
-        const result = await this.services.sessionController.resolveAgent(home);
-        if (!result.agent || !isHome(result.agent.id)) throw Error('生活会话已切换');
-        return result.agent;
+        if (!active()) throw Error('主人会话工作区已切换');
+        const agent = await resolveCompanionHome(this.ctx,this.host);
+        if (!active() || !isHome(agent.id)) throw Error('主人会话已切换');
+        return agent;
       };
       const bridge = new LocalBridge(this.ctx, deviceDirectory, () => this.services.webServer.getOrigin(), ownerHome, isHome,
         () => this.host.workspace.runtime.policy().quiet, () => this.host.workspace.runtime.identity().displayName,
@@ -55,7 +53,7 @@ export class CompanionChannels {
       if (!active()) { bridge.stop(); await messaging.close(); return; }
       this.bound = {id, storageId, messaging, bridge};
     }
-    this.bound.bridge.sync(Boolean(this.ctx.get('petLife')?.running()));
+    this.bound.bridge.sync(true);
     return this.bound;
   }
   refresh() { return this.serial(() => this.reconcile()); }
@@ -94,7 +92,7 @@ export class CompanionChannels {
       if (operation === 'bridgeSettings') {
         if (!isDeepStrictEqual(input.expected,bound.bridge.status().preferences)) throw {code:'STALE_REVISION'};
         bound.bridge.configure(input.next);
-        bound.bridge.sync(Boolean(this.ctx.get('petLife')?.running()));
+        bound.bridge.sync(true);
       } else if (operation === 'messagingSettings') {
         if (!isDeepStrictEqual(input.expected, bound.messaging.status().config)) throw {code:'STALE_REVISION'};
         await bound.messaging.configure(input.next as Parameters<typeof bound.messaging.configure>[0]);

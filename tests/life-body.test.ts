@@ -9,6 +9,7 @@ import { emptyHomeState } from '#feiyu-home';
 import { createGarden } from '#feiyu-garden';
 import { DesktopFeatures } from '../src/desktop/features.js';
 import { CompanionLife } from '../src/life/plugin.js';
+import { CompanionBehavior } from '../src/behavior/plugin.js';
 import type { RoomMood } from '../src/emotion/index.js';
 
 test('the desktop and room use one saved body through pending sleep, arrival, cancellation, restart and rebinding', async t => {
@@ -30,22 +31,25 @@ test('the desktop and room use one saved body through pending sleep, arrival, ca
     writeFileSync(join(directory, 'garden.json'), JSON.stringify(garden));
   }
   const registry = {get: (id: string) => workspaces.find(w => w.id === id)};
-  const host = {native: {}, workspace: {status: () => ({state: 'ready', target})}} as unknown as PetCoreHost;
+  const host = {native: {}, workspace: {status: () => ({state: 'ready', target}), storageId: () => target.id}} as unknown as PetCoreHost;
   const frames: {type: string; value: any}[] = [];
   let mood: RoomMood | undefined = {mood: 78, dims: {happy: 35}};
-  let features: DesktopFeatures, life: CompanionLife;
+  let features: DesktopFeatures, life: CompanionLife, behavior: CompanionBehavior;
   const context = {
     get(name: string) {
       if (name === 'petLife') return life;
+      if (name === 'petBehavior') return behavior;
       if (name === 'petDesktop') return {features};
       if (name === 'workspaceRegistry') return registry;
       if (name === 'petEmotion') return {roomSnapshot: () => mood && {...mood, label: 'current mood', updatedAt: now}};
     },
-    tools: {register() {}}, on: () => () => {}, effect: () => () => {},
+    tools: {register() {}}, on: () => () => {}, effect: () => () => {}, emit() {},
   } as unknown as Context;
   features = new DesktopFeatures(context, host, (type, value) => frames.push({type, value}), () => true, () => false);
   life = new CompanionLife(context, host, 'standard');
-  t.after(async () => {await life.close(); await features.close();});
+  behavior = new CompanionBehavior(context, host);
+  await behavior.setAutonomy(target.id, true);
+  t.after(async () => {await life.close(); await behavior.close(); await features.close();});
   const desktop = (path: string) => features.request({path, method: 'POST'});
   const rest = () => frames.filter(frame => frame.type === 'sleep').at(-1)?.value;
   const pet = await life.act(target.id, 'pet');
@@ -100,4 +104,68 @@ test('the desktop and room use one saved body through pending sleep, arrival, ca
   assert.equal((await life.roomState(target.id)).room.notes.length, 0);
   target = workspaces[0];
   assert.deepEqual((await life.roomState(target.id)).room.notes.map((n: {text: string}) => n.text), [note.text, 'Later']);
+});
+
+test('paused or absent Life permits explicit body and garden work without passive catch-up or autonomous jobs', async t => {
+  const base = mkdtempSync(join(tmpdir(), 'companion-paused-'));
+  t.after(() => rmSync(base,{recursive:true,force:true}));
+  const target = {id:'repo',path:base};
+  const now = new Date(2026,10,11,12,10).getTime();
+  t.mock.timers.enable({apis:['Date'],now});
+  const directory = join(base,'.chatpet/data/life'); mkdirSync(directory,{recursive:true});
+  const body = emptyHomeState(now); body.lastInteractionAt = 0;
+  const garden = createGarden(now); garden.care.autoEnabled = true;
+  writeFileSync(join(directory,'home.json'),JSON.stringify(body));
+  writeFileSync(join(directory,'garden.json'),JSON.stringify(garden));
+  const host = {native:{},workspace:{status:()=>({state:'ready',target}),storageId:()=>target.id}} as unknown as PetCoreHost;
+  const changes: unknown[]=[];
+  let behavior:CompanionBehavior;
+  const ctx = {get:(name:string)=>name==='petBehavior'?behavior:name==='workspaceRegistry'?{get:()=>({...target,sessionIds:[]})}:undefined,
+    emit:(_name:string,change:unknown)=>changes.push(change),tools:{register(){}},on:()=>()=>{},effect:()=>()=>{}} as unknown as Context;
+  behavior = new CompanionBehavior(ctx,host); t.after(()=>behavior.close());
+  const initial = await behavior.snapshot(target.id);
+  const originalNeeds = {...initial.home.body};
+  const originalGarden = (await behavior.garden(target.id,'state')).garden;
+  t.mock.timers.tick(3_600_000);
+  const paused = await behavior.snapshot(target.id);
+  const unchanged = (await behavior.garden(target.id,'state')).garden;
+  assert.deepEqual(paused.home.body,originalNeeds);
+  assert.deepEqual(unchanged.plots,originalGarden.plots);
+  assert.equal(unchanged.care.task,null,'No automatic task starts while Life is absent');
+  assert.equal(paused.autonomyEnabled,false);
+  const fed = await behavior.act(target.id,'feed');
+  assert.ok(fed.home.body.hunger < originalNeeds.hunger);
+  t.mock.timers.tick(13_000); await behavior.roomState(target.id);
+  const plotId=unchanged.plots.find((plot:any)=>!plot.tilled).id;
+  const request={type:'till',plotId,requestId:'one-request'};
+  const accepted=await behavior.garden(target.id,'control',request);
+  assert.equal((accepted as {accepted?:boolean}).accepted,true);
+  // Original caretaker uses the body interaction cool-down before dispatch.
+  t.mock.timers.tick(2*60_000);await behavior.garden(target.id,'state');
+  const homeFile=join(directory,'home.json');
+  let saved=JSON.parse(readFileSync(homeFile,'utf8'));
+  assert.ok(saved.route?.target.gardenJobId);
+  t.mock.timers.tick(Math.ceil(saved.route.arriveAt-Date.now())+1);await behavior.garden(target.id,'state');
+  saved=JSON.parse(readFileSync(homeFile,'utf8'));
+  assert.ok(saved.dwell?.target.gardenJobId);
+  t.mock.timers.tick(Math.ceil(saved.dwell.until-Date.now())+1);
+  const completed=(await behavior.garden(target.id,'state')).garden;
+  assert.equal(completed.plots[plotId].tilled,true);
+  assert.equal(completed.care.receipts.find((row:any)=>row.requestId==='one-request').status,'completed');
+  await behavior.garden(target.id,'control',request);
+  const replay=(await behavior.garden(target.id,'state')).garden;
+  assert.equal(replay.care.receipts.filter((row:any)=>row.requestId==='one-request').length,1);
+  assert.equal(replay.care.task,null,'Autonomy does not start after requested completion');
+  await behavior.setAutonomy(target.id,true);
+  t.mock.timers.tick(3_000);
+  const automatic=(await behavior.garden(target.id,'state')).garden;
+  assert.equal(automatic.care.task?.source,'auto');
+  await behavior.setAutonomy(target.id,false);
+  const stopped=(await behavior.garden(target.id,'state')).garden;
+  assert.equal(stopped.care.task,null);
+  assert.deepEqual(stopped.inventory,replay.inventory,'Stopping automatic work does not manufacture its harvest');
+  const life=new CompanionLife(ctx,host,'standard');
+  await life.control(target.id,false);await life.close();
+  assert.ok((await behavior.act(target.id,'pet')).changed,'Unloading the actual Life owner leaves the body service operational');
+  assert.ok(changes.length);
 });

@@ -15,7 +15,7 @@ const fixture = () => {
   return { directory, config };
 };
 
-test('settings distinguish new-session memory enrollment from its on-demand provider', async () => {
+test('settings distinguish the current-turn Memory switch from its on-demand provider', async () => {
   const f = fixture();
   const host = createCore({ ...f.config, memory: { dataDir: join(f.directory, 'memory'), python: '/unused/python' } });
   const handler = settingsHandler(() => host, () => undefined);
@@ -26,7 +26,7 @@ test('settings distinguish new-session memory enrollment from its on-demand prov
       const response = await handler('snapshot', { requestId: `memory-${enabled}`, input: {} },
         signal, { principal: { kind: 'owner' }, signal });
       assert.ok(response.ok);
-      assert.deepEqual((response.value as { memory: unknown }).memory, { newSessions: enabled, provider: 'stopped' });
+      assert.deepEqual((response.value as { memory: unknown }).memory, { enabled, provider: 'stopped', error: null });
     }
   } finally { await host.close(); rmSync(f.directory, { recursive: true, force: true }); }
 });
@@ -85,7 +85,7 @@ test('native settings RPC rejects forged authority and unknown workspaces; indep
     const snapshot = await call('snapshot', {}); assert.equal(snapshot.ok, true);
     if (!snapshot.ok) return;
     const data = snapshot.value as { identity: { revision: number }; preferences: { revision: number; conversation: Record<string, number> }; workspaces: unknown[]; worldModules: string[] };
-    assert.deepEqual((snapshot.value as { memory: unknown }).memory, { newSessions: false, provider: null });
+    assert.deepEqual((snapshot.value as { memory: unknown }).memory, { enabled: false, provider: null, error: null });
     assert.deepEqual(data.worldModules, ['persona', 'archive']);
     worldModules = [];
     const unmounted = await call('snapshot', {}, 'world-unmounted');

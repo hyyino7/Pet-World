@@ -6,8 +6,22 @@ const endpoints = new Map([
 ]);
 export function roomRequest(url, options = {}) {
   const endpoint = endpoints.get(new URL(url, location.origin).pathname);
-  if (!endpoint || parent === window) return Promise.reject(new Error('请从大肥鱼的日常生活页进入房间'));
+  if (!endpoint) return Promise.reject(new Error('未知的房间操作'));
   const data = options.body ? JSON.parse(options.body) : {};
+  if (window.chatpetRoomBridge) {
+    const requestId=crypto.randomUUID();
+    return new Promise((resolve,reject)=>{
+      const finish=()=>{clearTimeout(timer);options.signal?.removeEventListener('abort',abort);};
+      const abort=()=>{finish();window.chatpetRoomBridge.cancel(requestId);reject(new Error('房间请求已结束'));};
+      const timer=setTimeout(abort,['roomTelevision','roomChat'].includes(endpoint)?310000:20000);
+      if(options.signal?.aborted){abort();return;}
+      options.signal?.addEventListener('abort',abort,{once:true});
+      window.chatpetRoomBridge.request(endpoint,data,requestId).then(value=>{
+        finish();resolve(new Response(JSON.stringify(value),{status:200,headers:{'content-type':'application/json'}}));
+      },error=>{finish();reject(error);});
+    });
+  }
+  if (parent === window) return Promise.reject(new Error('请从大肥鱼入口打开房间'));
   return new Promise((resolve, reject) => {
     const channel = new MessageChannel();
     const finish = () => { clearTimeout(timer); options.signal?.removeEventListener('abort', abort); channel.port1.close(); };

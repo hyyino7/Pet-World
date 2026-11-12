@@ -11,7 +11,7 @@ export interface DialogueLine {
   id: string; sessionId: string; time: string; role: 'user' | 'assistant'; text: string;
 }
 
-/** Native session enrollment and original message identity come from Core. The
+/** Per-observation enrollment and original message identity come from Core. The
  * Bank decides what is still readable on each page, including excerpt withdrawals.
  * No second daily text archive is created. */
 export async function readReviewDialogue(runtime: CoreRuntime, bank: string, sessionIds: readonly string[],
@@ -24,7 +24,7 @@ export async function readReviewDialogue(runtime: CoreRuntime, bank: string, ses
   let coverage: 'eligible' | 'partial' = 'eligible';
   for (const sessionId of new Set(sessionIds)) {
     const session = runtime.store.get<{workspaceId: string}>('memory-session', sessionId);
-    if (session?.workspaceId !== bank || runtime.store.get<boolean>('native-memory-enabled', sessionId) === false) continue;
+    if (session?.workspaceId !== bank) continue;
     for (const id of runtime.store.get<string[]>('native-session-sources', sessionId) ?? []) {
       const source = runtime.store.get<EvidenceSource>('source', id);
       if (!source || (source.origin !== 'owner_statement' && source.origin !== 'model_interpretation')) continue;

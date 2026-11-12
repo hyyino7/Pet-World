@@ -100,7 +100,8 @@ try {
   for (const row of calls.filter(row => row.id !== home.id)) {
     assert.deepEqual(row.tools, []);
     assert.ok(row.text.includes(guestPrompt));
-    assert.doesNotMatch(row.text, /PRIVATE_FIXTURE|\.chatpet\/|pet_memory_/);
+    assert.ok(row.text.includes('PRIVATE_FIXTURE_PERSONA'),'Guest shares the same companion persona');
+    assert.ok(!row.text.includes('PRIVATE_FIXTURE_USER_MARKER'),'Static owner profile is not directly injected into guest chats');
     if (row.id !== a.id) assert.ok(!row.text.includes('FRIEND_ONLY_FIXTURE'));
     if (row.id !== c.id) assert.ok(!row.text.includes('GROUP_ONLY_FIXTURE'));
     if (row.id !== b.id) assert.ok(!row.text.includes('OTHER_ONLY_FIXTURE'));
@@ -118,7 +119,7 @@ try {
   assert.equal(calls.length,before);
   homes = createChannelHomes(ctx,host,config);
   assert.equal((await send(friend,'after reopen')).id,a.id);
-  console.log(JSON.stringify({ok:true, paidCalls:0, guests:4, separateGroups:true, guestTools:[], ownerPrivate:true, sessionRecovery:true}));
+  console.log(JSON.stringify({ok:true, paidCalls:0, guests:4, separateGroups:true, guestTools:[],sharedPersona:true,ownerProfilePrivate:true,sessionRecovery:true}));
   if(process.argv.includes('--messaging')) {
     homes.stop();
     const {checkMessaging} = await import('./lib/check-messaging.mjs');

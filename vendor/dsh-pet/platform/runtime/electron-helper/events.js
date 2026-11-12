@@ -422,6 +422,23 @@ function applyMenuLeaf(leaf) {
 }
 
 /** 跑一拍 /state。返回 true = 按长轮询命中（宿主支持长轮询，可以立刻再请求）。 */
+
+async function refreshCompanionPresentation() {
+  const next = await loadConfig();
+  for (const sprite of sprites) {
+    const pet = next.pets.find(pet => pet.id === sprite.pet.id);
+    if (!pet) continue;
+    sprite.pet = {...sprite.pet, ...pet};
+    sprite.animations = pet.animations;
+    sprite.weights = pet.animationWeights;
+    if (!pet.workStatusEnabled) {
+      sprite.workState = null;
+      sprite.prevWorkState = null;
+    }
+  }
+  config = next;
+}
+
 async function pollStateOnce() {
   try {
     const s = await S.fetchState(
@@ -434,6 +451,7 @@ async function pollStateOnce() {
     stateLongPoll = typeof s.counter === 'number';
     if (stateLongPoll) stateSince = s.counter;
     if (stateBaseline === null) {
+      await refreshCompanionPresentation();
       stateBaseline = S.flattenCounters(s); // 首拉：只记基线，不渲染（避免启动/重载时重放旧气泡）
       // 第三方菜单项是状态而不是事件：首拉就要装上，否则 helper 重启后要等下次注册才出现
       applyMenuLeaf(s.sections ? s.sections.menu : null);
@@ -446,7 +464,8 @@ async function pollStateOnce() {
     }
     for (const change of S.takeChanged(s, stateBaseline)) {
       if (change.leaf.data === null) continue;
-      if (change.path === 'sections.balance') applyBalanceLeaf(change.leaf);
+      if (change.path === 'sections.config') await refreshCompanionPresentation();
+      else if (change.path === 'sections.balance') applyBalanceLeaf(change.leaf);
       else if (change.path === 'sections.workStatus') applyWorkStatusLeaf(change.leaf);
       else if (change.path === 'sections.menu') applyMenuLeaf(change.leaf);
       else if (change.path.startsWith('pets.') && change.path.endsWith('.say')) {
@@ -503,3 +522,45 @@ function startLoops() {
   };
   void stateLoop();
 }
+
+// Included by the presentation build in both native renderers. This observer
+// never chooses or starts an animation; callers invoke it after actual playback.
+function createCompanionPlaybackObserver(send, allowedNames, createId = () => crypto.randomUUID()) {
+  const active = new WeakMap();
+  return (video, name, petId) => {
+    if (!allowedNames.has(name) || video.paused || video.readyState < 2) return;
+    const old = active.get(video);
+    if (old?.name === name && old.source === video.src) return;
+    old?.finish('cancelled');
+    const id = 'random-' + createId(), source = video.src;
+    let stopped = false;
+    const publish = status => {try {void Promise.resolve(send({id, name, petId, status, kind:'random'})).catch(()=>{});}catch {}};
+    const ended = () => {if(video.ended)finish(video.src===source?'ended':'cancelled');};
+    const paused = () => {if(video.paused)finish(video.ended && video.src===source ? 'ended' : 'cancelled');};
+    const failed = () => {if(video.error)finish(video.src===source?'failed':'cancelled');};
+    const finish = status => {
+      if (stopped) return;
+      stopped = true;
+      video.removeEventListener('ended', ended);
+      video.removeEventListener('pause', paused);
+      video.removeEventListener('error', failed);
+      if (active.get(video)?.id === id) active.delete(video);
+      publish(status);
+    };
+    active.set(video, {id,name,source,finish});
+    video.addEventListener('ended', ended);
+    video.addEventListener('pause', paused);
+    video.addEventListener('error', failed);
+    publish('playing');
+    return id;
+  };
+}
+
+const observeCompanionRandomPlayback = createCompanionPlaybackObserver(
+  receipt => S.postAction(BASE + '/native-playback', receipt), new Set(["小幅度原地360度旋转展示","点击回应-元气挥手","用鲸鱼尾巴拍打地面","鲸鱼吐泡泡特效","凭空生花","超大伸懒腰","悠闲哼歌","轻快摇摆舞","三球抛接","下五子棋","中秋赏月吃月饼","优雅女仆舞","偷吃零食被抓住","写代码","写福字","动物环绕","原地专心玩魔方","原地小憩沉眠","原地敲击桌面互动","原地跳跃抓碎头顶物品","原地蹲下玩玩具汽车","原地重力下蹲压缩","变鸽子","可爱宅舞","吃Token","吃冰淇淋融化","吃午餐","吃大闸蟹","吃年糕","吃早餐","吃晚餐","吃汤圆","吃白饭","吃粽子","吃糖葫芦","吃腊八粥","吃西瓜","吃重阳糕","吃长寿面","吃青团","吃饺子","吹气球","吹笛子","哈欠连天","堆雪人","大口吃零食","女仆屈膝礼仪","小提琴演奏","扑克魔术","打瞌睡被惊醒","抽陀螺","拆礼物","插茱萸赏菊","摇扇纳凉","撸猫","收红包","放孔明灯","放河灯","放烟花","放风筝","整体换装试色","是啊，吃什么","晨间刷牙","涮火锅","深度思考碎碎念","照镜子","玩水枪","玩游戏气急败坏","穿针乞巧","舞狮头","荡秋千","萌化小幽灵","蓝鲸现世","蝴蝶蜜蜂环绕头顶开花","被吓一跳","被落叶淹没","装点圣诞树","讨糖南瓜灯","踢毽子","轻快记录","骑木马"]));
+document.addEventListener('playing', event => {
+  const video = event.target;
+  const sprite = sprites.find(sprite => sprite.videoA === video || sprite.videoB === video);
+  if (!sprite || sprite.playback || video !== (sprite.front === 0 ? sprite.videoA : sprite.videoB)) return;
+  observeCompanionRandomPlayback(video, sprite.anim, sprite.pet.id);
+}, true);

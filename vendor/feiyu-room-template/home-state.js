@@ -1112,8 +1112,13 @@ function commandTarget(command, now) {
 export function advanceHomeState(input, now = Date.now(), env = {}) {
   const state = normalizeHomeState(input, now);
   let changed = false;
+  // Optional host policy: explicit routes/dwells keep their real task clock,
+  // while paused autonomy neither chooses goals nor catches up passive needs.
+  // Defaults preserve the original reference workflow.
+  const autonomous = env.autonomy !== false;
 
-  const elapsed = Math.max(0, Math.min(now - state.lastTickAt, MAX_ELAPSED_HOURS * HOUR));
+  const elapsed = env.passive === false ? 0 : Math.max(0, Math.min(now - state.lastTickAt, MAX_ELAPSED_HOURS * HOUR));
+  if (env.passive === false) state.lastTickAt = now;
   if (elapsed > 0) {
     const h = elapsed / HOUR;
     const n = state.needs;
@@ -1132,6 +1137,7 @@ export function advanceHomeState(input, now = Date.now(), env = {}) {
   const n = state.needs;
   const immobile = n.pain >= 0.7;
 
+  if (autonomous) {
   // 睡觉 / 醒来
   if (!state.asleep && !state.sleepPending && (hour >= 23.2 || (hour < 6.5 && n.energy < 0.5))) {
     if (n.energy < 0.62 || hour >= 23.8) {
@@ -1190,6 +1196,8 @@ export function advanceHomeState(input, now = Date.now(), env = {}) {
     }
   }
 
+  }
+
   // 路线推进
   if (state.route && now >= state.route.arriveAt) {
     arrive(state, now);
@@ -1236,6 +1244,25 @@ export function advanceHomeState(input, now = Date.now(), env = {}) {
         return { state, changed };
       }
     }
+  }
+
+  // A paused companion can still finish a requested trip/sleep. Automatic
+  // sleep/wake, illness routines and next-goal selection stay above/below this
+  // boundary; their absence must not block an explicit owner's command.
+  if (!autonomous) {
+    if (!state.route && !state.dwell && !state.asleep) {
+      const target = state.sleepPending
+        ? decideTarget(state, now, env)
+        : state.command && now < state.command.until ? commandTarget(state.command, now) : null;
+      if (target && !(state.room === target.room && state.spot === target.spot)) {
+        beginRoute(state, target, now, env);
+        changed = true;
+      } else if (target && state.command) {
+        state.command = null;
+        changed = true;
+      }
+    }
+    return { state, changed };
   }
 
   if (state.asleep) {
@@ -1542,9 +1569,10 @@ export function homeView(state, now = Date.now(), env = {}) {
   const events = recentEvents(s, now, EVENT_TTL);
   const walking = s.walking === true && !!s.route;
   const emotion = env.emotion && typeof env.emotion === 'object' ? {
-    mood: Number(env.emotion.mood) || 0,
+    ...(typeof env.emotion.mood === 'number' && Number.isFinite(env.emotion.mood) ? {mood:env.emotion.mood} : {}),
     label: sanitizeText(env.emotion.label, 20),
     dims: env.emotion.dims || {},
+    ...(Array.isArray(env.emotion.feelings) ? {feelings:env.emotion.feelings.filter(value=>typeof value==='string')} : {}),
     updatedAt: Number(env.emotion.updatedAt) || null,
     source: 'dsh-feiyu-mood'
   } : null;
@@ -1569,6 +1597,10 @@ export function homeView(state, now = Date.now(), env = {}) {
       spotLabel: spot?.label || (s.spot === 'free' ? '你指的地方' : ''),
       activity: s.activity,
       kind: s.kind,
+      // This is expression-only metadata. Rendering it must not replace an
+      // eating, sleeping or moving fact with an unrelated idle animation.
+      expression: !asleep && !walking && !s.dwell && s.kind === 'idle'
+        ? ['anger','boredom','happy'].find(feeling=>emotion?.feelings?.includes(feeling)) ?? null : null,
       pose: s.pose,
       pos: [Math.round(pos[0] * 1000) / 1000, Math.round(pos[1] * 1000) / 1000],
       facing: Math.round(currentFacing(s, now) * 10) / 10,

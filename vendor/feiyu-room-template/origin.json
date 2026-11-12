@@ -3,8 +3,8 @@
   "commit": "9df0a6b76b563abc738b6d4b7ae137381c425424",
   "source": "src/home-state.js",
   "license": "MIT",
-  "sha256": "cd304d35a61e0fdb5f3cebb684b40f092bb1f57698727f848311c96c7fbf7488",
-  "treatment": "Original Room presentation, garden and visitor state. Body simulation is shared with Life. The room request transport and chat history use the native DSH connection.",
+  "sha256": "003dec6b1697a145ce297e09547f50001fdbc117e3a7c14cd68c1dbc030094b0",
+  "treatment": "Original pinned Room presentation, garden and visitor state, adapted to the shared Behavior service and optional Life autonomy. Structured Emotion colors idle presentation without replacing actual behavior. Room uses the owner-authenticated DSH frame or independent-window bridge and native chat history.",
   "gitBlob": "7fda4d0d16430a861a20d30c88f26a3026030219",
   "archive_sha256": "ce2c90908d3b0eaf12aa52d52f450c26d3a58d273772d4a1174a11f82901e4fb",
   "assets_notices": [
@@ -25,17 +25,25 @@
       "sha256": "9ce03b8a90ce8b074e1a11514133605cebeb2f6912e6a352c5e8e4bf40521a54"
     },
     "home-state.js": {
-      "sha256": "cd304d35a61e0fdb5f3cebb684b40f092bb1f57698727f848311c96c7fbf7488"
+      "sha256": "003dec6b1697a145ce297e09547f50001fdbc117e3a7c14cd68c1dbc030094b0",
+      "upstream_sha256": "cd304d35a61e0fdb5f3cebb684b40f092bb1f57698727f848311c96c7fbf7488",
+      "upstream_file": "src/home-state.js",
+      "treatment": "Expose explicit host autonomy/passive policy while preserving the original default workflow; advance requested routes and care while autonomy is paused, and project structured Emotion feelings without changing actual behavior or inventing numeric mood."
     },
     "public/room/actor.js": {
       "sha256": "f9cee7a82af7d7f50a737700ce51ced60a1e700ea02fed400aa45976ed1cceb0"
     },
     "public/room/actor3d.js": {
-      "sha256": "7dd52b02cfbc0338553b2b3a48f36109c0c3a9db9fbc4fd8d2fd0569fe670881"
+      "sha256": "b3754a993b5225410ecfed79c7e0e2d5cf86b25b4a46f628eea0a287fb93de86",
+      "upstream_sha256": "7dd52b02cfbc0338553b2b3a48f36109c0c3a9db9fbc4fd8d2fd0569fe670881",
+      "upstream_file": "public/room/actor3d.js",
+      "treatment": "Render structured anger, boredom and happiness using the original Chibi skeleton and motion parameters; actual sleep, eating and movement take precedence. No new image assets."
     },
     "public/room/app.js": {
-      "sha256": "d7db7a6c82a9957ea37727b414d659da24a1b515f15affa725af785e788cad9e",
-      "upstream_sha256": "13125c572839773c45809319bb5c4bb01d4209e17bad2071cf4f67b0a1fe1f18"
+      "sha256": "ad3970169c5cf2b04be5bed2cbc207542d760ef7bd5827176338617b9e84ee22",
+      "upstream_sha256": "13125c572839773c45809319bb5c4bb01d4209e17bad2071cf4f67b0a1fe1f18",
+      "upstream_file": "public/room/app.js",
+      "treatment": "Retain the native Connection/chat adapters and source-backed Room state; render shared structured feelings with original idle clips and static-model root motion, preserving actual behavior and the settings-independent Room carrier."
     },
     "public/room/assets/models/README.md": {
       "sha256": "0079c4d16bbb25292b5dd92c30e1628a0caff4d2d713903ad6cec1e101a14e2b"
@@ -283,8 +291,9 @@
       "sha256": "4ded7a6928ace5f2738c6fe661814cfb11dfd2b30d19366570aa1c991abae045"
     },
     "public/room/native-room.js": {
-      "sha256": "bca54bca53df7a4150b13ca7112099e38cc59a55846c0b07b5f8664dc9f3c804",
-      "local": true
+      "sha256": "17171311a4673252b20558bedf5898586edeb98ca24b3326f311531a6c36e4bc",
+      "local": true,
+      "treatment": "Local DSH transport adapter: accept the narrow authenticated independent-window preload bridge, preserve the owner-frame MessageChannel route, and retain bounded timeout/cancellation without a separate assistant or state writer."
     },
     "public/room/vendor/BufferGeometryUtils.js": {
       "sha256": "3a6701d824adfe05dc28c09b6c1d64aeab9a183bc3b944d85f15f596e5c6c2b3"
@@ -302,7 +311,10 @@
       "sha256": "8a8fb5036cc90f206f91ef2e659035c824138700c58ce969fdd28565e164c6fc"
     },
     "src/garden-autonomy.js": {
-      "sha256": "51fde1095ff49415d25dede2178746ca4d583e854a988ae32169427f00e56dd0"
+      "sha256": "e61367d2ad408e1437d284cefd13e6a07a6ba3b250de857dc31e2ca2cdaa0ef5",
+      "upstream_sha256": "51fde1095ff49415d25dede2178746ca4d583e854a988ae32169427f00e56dd0",
+      "upstream_file": "src/garden-autonomy.js",
+      "treatment": "Honor the shared host autonomy/passive policy; cancel automatic work when paused, preserve requested work and idempotent one-shot care through the original planner, route, dwell and receipt flow."
     },
     "src/garden-store.js": {
       "sha256": "3303f75140a85eaed855aae68ce04d7542c47c3c9d8f875c7ebc5708d90931fe"
@@ -345,5 +357,6 @@
       "upstream_file": "src/bridge.js",
       "treatment": "V1 silence, V2 wake predicates and validated read receipts from the original Room bridge. The host supplies the group nickname."
     }
-  }
+  },
+  "upstream_sha256": "cd304d35a61e0fdb5f3cebb684b40f092bb1f57698727f848311c96c7fbf7488"
 }

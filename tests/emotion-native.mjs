@@ -4,6 +4,7 @@ import { emotionFor } from '../dist/src/emotion/plugin.js';
 /** Real DSH tools and Mnemosyne, using the calling fixture's disposable workspace and scripted model. */
 export async function checkActionPreference({ host, workspace, open, send, call, say, setProgram }) {
   const emotion = emotionFor(host);
+  const unregisterCatalog=emotion.registerCatalog('native-action-preference-fixture',{actions:[{name:'spin',description:'A synthetic observed spin.'}],stickers:[]});
   const ledger = emotion.ledger(workspace.id);
   const playbackId = 'fixture-observed-spin';
   const fact = '用户希望大肥鱼开心时多表演转圈。';
@@ -16,7 +17,7 @@ export async function checkActionPreference({ host, workspace, open, send, call,
       message.content.some(block => block.type === 'text' && block.text.includes(catalog)));
     assert.deepEqual(guides.map(message => message.role), ['system'],
       'The asset catalog appears only in the stable per-agent system prompt');
-    const snapshots = options.messages.filter(message => message.source?.kind === 'runtime-context');
+    const snapshots=options.messages.filter(message=>message.role==='system');
     assert.ok(snapshots.some(message => message.content.some(block =>
       block.type === 'text' && block.text.includes(playbackId))),
       'The current playback evidence remains available in the native context');
@@ -63,5 +64,6 @@ export async function checkActionPreference({ host, workspace, open, send, call,
   });
   assert.deepEqual(await find(fact), []);
   assert.deepEqual(await find(revision), []);
+  unregisterCatalog();
   console.log(JSON.stringify({ check: 'native-action-preference', status: 'passed', externalModels: 0 }));
 }

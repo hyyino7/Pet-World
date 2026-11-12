@@ -1349,6 +1349,14 @@ function isSideRun(her = state?.her) {
   return viewDiff(her) >= 48;
 }
 
+// The optional GLB is a static mesh: reuse its existing root sway without touching behavior or inventing face assets.
+function applyModelExpression(model, her, time = performance.now() / 1000) {
+  if (!model?.inner || !her || her.asleep || her.walking || her.kind !== 'idle' || her.pose === 'lie') return;
+  if (her.expression === 'anger') model.inner.rotation.z = Math.sin(time * 7) * .015;
+  else if (her.expression === 'boredom') model.inner.rotation.z = .06 + Math.sin(time * .4) * .01;
+  else if (her.expression === 'happy') model.inner.rotation.z = Math.sin(time * 2.2) * .025;
+}
+
 function clipFor(her) {
   if (!her) return 'idle';
   if (petActionOverride && !her.asleep && Date.now() < petActionOverride.until) return petActionOverride.clip;
@@ -1395,6 +1403,10 @@ function clipFor(her) {
     default: {
       if (her.pose === 'lie') return 'nap';
       if (her.pose === 'sit') return 'mutter';
+      // A structured shared expression can choose a quiet idle clip, never rewrite her actual kind.
+      if (her.expression === 'anger') return 'mutter';
+      if (her.expression === 'boredom') return 'idle_look';
+      if (her.expression === 'happy') return 'idle_hum';
       const hour = state?.hour ?? 12;
       if (hour >= 22 || hour < 6) return 'yawn';
       const mood = state?.emotion?.mood;
@@ -1451,7 +1463,7 @@ function syncCharacter() {
 
   const pose = {
     pos: her.pos, elev: her.elev, pose: her.pose, kind: her.kind, walking: her.walking,
-    facing: her.facing, asleep: her.asleep, activity: her.activity, runStyle: her.runStyle
+    facing: her.facing, asleep: her.asleep, activity: her.activity, runStyle: her.runStyle, expression: her.expression
   };
   model3d?.setPose(pose);
   if (chibi) chibi.setPose(pose);
@@ -2008,11 +2020,12 @@ function frame(now) {
     });
     const pose = {
       pos: displayPos, elev: her.elev, pose: her.pose, kind: her.kind, walking: walkingNow,
-      facing: her.facing, asleep: her.asleep, activity: her.activity, runStyle: her.runStyle
+      facing: her.facing, asleep: her.asleep, activity: her.activity, runStyle: her.runStyle, expression: her.expression
     };
     if (modelReady && model3d) {
       model3d.setPose(pose);
       model3d.update(dt, camera, { mode: VIEW.mode, lookAtCamera: !walkingNow && !her.gardenWork });
+      applyModelExpression(model3d, { ...her, walking: walkingNow });
     }
     if (chibiReady && chibi && !modelReady) {
       chibi.setPose(pose);
@@ -2295,11 +2308,12 @@ async function boot() {
         gardenShot?.animateCharacter(performance.now());
         actor.update(0.016, camera, { pos: her.pos, elev: her.elev || 0, walking: false, flip: false });
         if (charMode === '3d' && modelReady && model3d) {
-          model3d.setPose({ pos: her.pos, elev: her.elev, pose: her.pose, kind: her.kind, walking: false, facing: her.facing, asleep: her.asleep, activity: her.activity });
+          model3d.setPose({ pos: her.pos, elev: her.elev, pose: her.pose, kind: her.kind, walking: false, facing: her.facing, asleep: her.asleep, activity: her.activity, expression: her.expression });
           model3d.setVisible(true);
           model3d.update(0.016, camera, { mode: 'overview', lookAtCamera: !her.gardenWork });
+          applyModelExpression(model3d, her);
         } else if (charMode === '3d' && chibi && chibiReady) {
-          chibi.setPose({ pos: her.pos, elev: her.elev, pose: her.pose, kind: her.kind, walking: false, facing: her.facing, asleep: her.asleep, activity: her.activity });
+          chibi.setPose({ pos: her.pos, elev: her.elev, pose: her.pose, kind: her.kind, walking: false, facing: her.facing, asleep: her.asleep, activity: her.activity, expression: her.expression });
           chibi.update(0.016, camera, { mode: 'overview', lookAtCamera: !her.gardenWork });
         }
         world.updateCutaway(camera.position, new THREE.Vector3(her.pos[0], 1, her.pos[1]), true);

@@ -7,6 +7,7 @@ const { mkdtempSync, rmSync } = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const { tmpdir } = require('node:os');
 const catalog = require('../assets/catalog.json');
+const chatOnly = process.env.CHATPET_CHAT_ONLY === '1';
 const {buildDeskGeometry} = require('./upstream/desktop-geometry.js');
 const {decideWindowIgnore, spriteHitRect, pointerZone, leavesBody} = require('./upstream/pointer-target.js');
 protocol.registerSchemesAsPrivileged([{scheme:'dsh-pet-bridge',privileges:{standard:true,secure:true,supportFetchAPI:true,stream:true,corsEnabled:true}}]);
@@ -85,13 +86,16 @@ createInterface({ input: process.stdin }).on('line', line => {
     else if (type === 'show') {
         if (body && chat) setDesktopVisible(true);
     }
+    else if (type === 'show-chat' && chat) {
+        positionChat(); chat.show(); chat.focus(); emit(chat,'open',null);
+    }
     else if (type === 'expression') {
         emit(body, type, value);
         if (value.sessionId === lastChat?.sessionId)
             emit(chat, type, value);
     }
     else if (type === 'preferences') {
-        refreshTray(value.desktopTrayEnabled !== false);
+        if (!chatOnly) refreshTray(value.desktopTrayEnabled !== false);
         emit(body, type, value);
     }
     else if (['say','sleep','sleep-text','balance','notice'].includes(type)) emit(body, type, value);
@@ -101,8 +105,13 @@ createInterface({ input: process.stdin }).on('line', line => {
 process.stdout.on('error', () => app.quit());
 const clamp = (value, low, high) => Math.max(low, Math.min(value, high));
 function positionChat() {
-    if (!chat || !body)
+    if (!chat)
         return;
+    if (!body) {
+        const a=screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+        const w=Math.min(420,a.width),h=Math.min(480,a.height);
+        chat.setBounds({width:w,height:h,x:a.x+a.width-w-24,y:a.y+a.height-h-24}); return;
+    }
     const bounds = body.getBounds(), hit = spriteHitRect(bounds,margins);
     const b = {x:hit.left,y:hit.top,width:hit.right-hit.left,height:hit.bottom-hit.top};
     const a = screen.getDisplayMatching(bounds).workArea;
@@ -132,10 +141,10 @@ function toggleChat() {
         emit(chat, 'open', null);
 }
 ipcMain.handle('pet:command', async (event, action, input) => {
-    if (quitting || !body || body.isDestroyed() || !chat || chat.isDestroyed()) return;
+    if (quitting || !chat || chat.isDestroyed()) return;
     if (event.senderFrame !== event.sender.mainFrame)
         throw Error('无效窗口');
-    if (action === 'catalog' && [body.webContents, chat.webContents].includes(event.sender))
+    if (action === 'catalog' && [body?.webContents, chat.webContents].includes(event.sender))
         return catalog;
     if (event.sender === chat.webContents) {
         if (action === 'hide')
@@ -144,7 +153,7 @@ ipcMain.handle('pet:command', async (event, action, input) => {
         if (['open', 'new', 'send', 'stop'].includes(action))
             return request(action, input);
     }
-    if (event.sender !== body.webContents)
+    if (!body || event.sender !== body.webContents)
         throw Error('无效请求');
     if (action === 'preferences') {
         const value = await request(action, input);
@@ -188,7 +197,7 @@ ipcMain.handle('pet:command', async (event, action, input) => {
 });
 async function requestCapture() {
         if (process.platform === 'darwin' && systemPreferences.getMediaAccessStatus('screen') !== 'granted') throw Error('请先在系统设置中允许桌宠运行环境录屏');
-        const display = screen.getDisplayMatching(body.getBounds());
+        const display = screen.getDisplayMatching((body ?? chat).getBounds());
         const sources = await desktopCapturer.getSources({types:['screen'],thumbnailSize:{width:Math.min(1600,display.size.width),height:Math.min(1000,display.size.height)}});
         const source = sources.find(s => s.display_id === String(display.id));
         if (!source || source.thumbnail.isEmpty()) throw Error('没有取得当前屏幕画面');
@@ -212,6 +221,12 @@ app.whenReady().then(() => {
     });
     app.dock?.hide();
     const a = screen.getPrimaryDisplay().workArea;
+    if (chatOnly) {
+        chat=createWindow('chat',{frame:true,alwaysOnTop:false,skipTaskbar:false,resizable:true,width:420,height:480,backgroundColor:'#f6f8f8',title:'大肥鱼聊天'});
+        chat.webContents.once('did-finish-load',()=>{loaded=true;out({type:'ready'});});
+        chat.on('close',e=>{if(!quitting){e.preventDefault();chat.hide();}});
+        return;
+    }
     // Upstream main/windows.js permits bubble/menu margins above the menu bar.
     body = createWindow('body', { hasShadow: false, useContentSize: true, enableLargerThanScreen: true, transparent: true, width: 146, height: 132, x: a.x + a.width - 195, y: a.y + a.height - 195, title: '大肥鱼' });
     body.webContents.setBackgroundThrottling(false);

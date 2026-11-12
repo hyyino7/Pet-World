@@ -1,10 +1,12 @@
 import type {Context} from '@deepseek-ai/cordis';
 import {lstatSync, mkdirSync} from 'node:fs';
 import {join} from 'node:path';
+import {createRequire} from 'node:module';
 import {digest} from '../core/storage.js';
 import type {PetCoreHost} from '../core/index.js';
 
 const upstream = (part: string): Promise<any> => import('../desktop/upstream/host/' + part + '.js');
+const requireUpstream = createRequire(import.meta.url);
 export interface VoiceRequest {rest: string; method: string; body?: string; signal?: AbortSignal}
 type VoiceResponse = {kind:'json'; status:number; obj:unknown} | {kind:'file'; file:string; contentType:string};
 
@@ -13,8 +15,13 @@ export class CompanionVoice {
   private scope?: {id:string; workspaceId:string; tools:Promise<{voice:unknown; speech:unknown}>};
   constructor(private host: PetCoreHost, private directory: string, private recognizer: () => unknown) {}
   canTranscribe() {
-    const service = this.recognizer() as {transcribe?:unknown}|undefined;
-    return typeof service?.transcribe === 'function';
+    // Use the same original Pet registry as hear(): external providers take
+    // precedence even when no host speech-to-text service has been enabled.
+    const registry = requireUpstream('../desktop/upstream/host/voice/speech-registry.js') as {activeSpeechProvider():unknown};
+    if (registry.activeSpeechProvider()) return true;
+    const service = this.recognizer() as {transcribe?:unknown;resolve?:unknown;listProviders?:()=>readonly unknown[]}|undefined;
+    return typeof service?.transcribe === 'function' && typeof service.resolve === 'function'
+      && typeof service.listProviders === 'function' && service.listProviders().length > 0;
   }
   private binding() {
     const state = this.host.workspace.status();

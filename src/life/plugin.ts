@@ -4,13 +4,13 @@ import { existsSync, lstatSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createLifeRuntime } from '#dsh-world/life/runtime';
 import { createLifeStore, durableWrite } from '#dsh-world/life/lifeStore';
-import { buildHomePromptLine } from '#feiyu-home';
 import { registerWorldPrompt } from '../core/world-prompt.js';
 import type { PetCoreHost } from '../core/index.js';
+import { resolveCompanionHome } from '../core/companion-foundation.js';
 import { defaultLifePreferences, LifeLibrary, parseLifePreferences, type LifePreferences } from './library.js';
 import {registerAlbumTools} from './album-tools.js';
 import { installLifeReview, readLifeWriting, REVIEW_ALARM_FILE } from './review.js';
-import { CompanionRoom } from './room.js';
+import type {} from '../behavior/plugin.js';
 
 type Runtime = ReturnType<typeof createLifeRuntime>;
 interface Workspace { id: string; path: string; sessionIds: readonly string[]; attachSession(id: string): Promise<void> }
@@ -23,7 +23,7 @@ interface Native {
     cancel(input: {sessionId: string}): unknown;
   };
 }
-interface Bound { id: string; path: string; directory: string; library: LifeLibrary; room: CompanionRoom }
+interface Bound { id: string; path: string; directory: string; library: LifeLibrary }
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'] as const;
 
 /** The upstream fact layer is the only state writer. World owns scheduling,
@@ -31,7 +31,6 @@ const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'] as const;
 export class CompanionLife {
   private binding?: Bound;
   private runtime?: Runtime;
-  private get state() { return this.binding?.room.state; }
   private enabled = false;
   private preferences: LifePreferences = {...defaultLifePreferences};
   private closed = false;
@@ -56,7 +55,7 @@ export class CompanionLife {
     });
     registerWorldPrompt(ctx, 'chatpet.life', 34, agent => {
       if (!this.running() || ctx.petWorld.sessionStatus(agent.session)?.state !== 'ready') return '';
-      const body = buildHomePromptLine(this.state, {now: Date.now(), allowActivity: true});
+      const body = this.ctx.get('petBehavior')?.promptLine(this.current()?.id ?? '') ?? '';
       return [body, this.runtime?.isHome(agent.id) ?
         '这是你自己的生活会话。生活状态是虚拟生活的事实记录。使用 plan_next 安排下一次醒来，check_alarm 查看计划。需要主动找伙伴时使用 reach_out；不必每轮都主动发言。保持已有角色与记忆；不要把生活事件当成用户说过的话。' : ''].filter(Boolean).join('\n');
     });
@@ -82,9 +81,7 @@ export class CompanionLife {
   /** Presentation reads the original body's two distinct states: walking to bed
    * can be cancelled, but the sleeping animation starts only after arrival. */
   restState(workspaceId: string) {
-    if (this.closed || !this.enabled || this.binding?.id !== workspaceId ||
-        this.current()?.path !== this.binding.path || !this.state) return;
-    return {sleeping: this.state.asleep === true, pending: this.state.sleepPending === true};
+    return this.ctx.get('petBehavior')?.restState(workspaceId);
   }
   private publishRest() { this.ctx.get('petDesktop')?.features?.restore(false); }
   private safe(file: string) {
@@ -107,7 +104,6 @@ export class CompanionLife {
     const selected = this.current();
     if (selected?.id === this.binding?.id && selected?.path === this.binding?.path) return;
     await this.stopRuntime();
-    this.binding?.room.flush();
     this.binding?.library.close();
     this.binding = undefined; this.enabled = false; this.fault = undefined;
     const current = this.current();
@@ -119,8 +115,7 @@ export class CompanionLife {
     if (settings.version !== 1 || typeof settings.enabled !== 'boolean') throw Error('生活开关文件无效，已保留原文件');
     this.enabled = settings.enabled;
     this.preferences = settings.preferences === undefined ? {...defaultLifePreferences} : parseLifePreferences(settings.preferences);
-    this.binding = {id: current.id, path: current.path, directory, library: new LifeLibrary(directory, this.timeZone),
-      room: new CompanionRoom(directory, () => this.ctx.get('petEmotion')?.roomSnapshot(current.id))};
+    this.binding = {id: current.id, path: current.path, directory, library: new LifeLibrary(directory, this.timeZone)};
   }
   private async startRuntime(resumed = false) {
     if (this.runtime || !this.binding || !this.enabled || this.closed) return;
@@ -129,6 +124,7 @@ export class CompanionLife {
     await this.ctx.get('petTranscripts')?.restore();
     const selected = this.current();
     if (selected?.id !== bound.id || selected.path !== bound.path || this.closed || !this.enabled) return;
+    await resolveCompanionHome(this.ctx, this.host, this.preset);
     const store = createLifeStore(bound.directory, this.timeZone);
     const runtime = createLifeRuntime({
       ctx: this.ctx, store,
@@ -142,7 +138,7 @@ export class CompanionLife {
         if (id && this.preferences.compactAfterReview && this.running()) this.ctx.emit('pet/life.review', id);
       },
       inWorkspace: id => this.current()?.id === bound.id && this.current()?.sessionIds.includes(id) === true && store.read().homeSessionId === id,
-      alarmContext: () => buildHomePromptLine(this.state, {now: Date.now(), allowActivity: true}),
+      alarmContext: () => this.ctx.get('petBehavior')?.promptLine(bound.id) ?? '',
       host: {
         workspace: async () => {
           const current = this.current();
@@ -176,25 +172,41 @@ export class CompanionLife {
       }}]},
     });
     this.runtime = runtime;
-    try { await runtime.start({resumed}); } catch (error) { runtime.stop(); this.runtime = undefined; throw error; }
+    try {
+      await runtime.start({resumed});
+      await this.ctx.get('petBehavior')?.setAutonomy(bound.id, true);
+    } catch (error) {
+      runtime.stop(); this.runtime = undefined;
+      const current=this.current();
+      if(current?.id===bound.id&&current.path===bound.path)
+        await this.ctx.get('petBehavior')?.setAutonomy(bound.id, false);
+      throw error;
+    }
     this.ctx.emit('pet/life.changed');
   }
   private async stopRuntime() {
     const runtime = this.runtime;
-    if (!runtime) return;
     this.runtime = undefined;
-    this.ctx.emit('pet/life.changed');
-    const id = runtime.snapshot().homeSessionId;
-    runtime.stop();
-    if (id) this.native().get('sessionController').cancel({sessionId: id});
-    await runtime.settled();
+    let bodyError:unknown;
+    try {
+      const current=this.current();
+      if(this.binding&&current?.id===this.binding.id&&current.path===this.binding.path)
+        await this.ctx.get('petBehavior')?.setAutonomy(this.binding.id,false);
+    }catch(error){bodyError=error;}
+    // A stale or unavailable optional body must never prevent cancellation of
+    // the old native home after rebinding or during component disposal.
+    if(runtime){
+      this.ctx.emit('pet/life.changed');
+      const id=runtime.snapshot().homeSessionId;runtime.stop();
+      if(id)this.native().get('sessionController').cancel({sessionId:id});
+      await runtime.settled();
+    }
+    if(bodyError)throw bodyError;
   }
   private async tick() {
     if (this.closed) return;
     await this.synchronize();
     if (!this.enabled || !this.binding) return;
-    this.binding.room.tick();
-    this.publishRest();
     await this.startRuntime();
   }
   snapshot(workspaceId: string) {
@@ -203,7 +215,7 @@ export class CompanionLife {
       if (this.binding?.id !== workspaceId) throw Error('生活工作区已切换');
       const store = createLifeStore(this.binding.directory, this.timeZone);
       return {workspaceId, enabled: this.enabled, running: this.running(), timeZone: this.timeZone, preferences: {...this.preferences},
-        home: this.binding.room.view(this.enabled ? Date.now() : this.state.lastTickAt), life: this.runtime?.snapshot() ?? store.read(),
+        home: await this.ctx.get('petBehavior')?.roomState(workspaceId) ?? null, life: this.runtime?.snapshot() ?? store.read(),
         activity: store.activityDays().slice(0, 2).reverse().flatMap(day => store.activity(day)).slice(-20),
         fault: this.fault ?? null};
     });
@@ -213,10 +225,9 @@ export class CompanionLife {
       await this.synchronize();
       if (this.binding?.id !== workspaceId) throw Error('生活工作区已切换');
       const file = join(this.binding.directory, 'control.json'); this.safe(file);
-      if (!enabled) this.binding.room.flush();
       durableWrite(file, JSON.stringify({version: 1, enabled, preferences: this.preferences}, null, 2));
       this.enabled = enabled; this.fault = undefined;
-      if (enabled) { this.binding.room.tick(); this.publishRest(); await this.startRuntime(true); }
+      if (enabled) { await this.startRuntime(true); }
       else { this.publishRest(); await this.stopRuntime(); }
       return {enabled, running: this.running()};
     });
@@ -225,42 +236,21 @@ export class CompanionLife {
     if (!actions.includes(action as typeof actions[number])) return Promise.reject(Error('未知的生活动作'));
     return this.roomAction(workspaceId, {action});
   }
-  /** Disabled Life leaves the optional Desktop component available on its own. */
+  /** Compatibility methods delegate; Behavior remains available after Life unload. */
   desktopRest(workspaceId: string, action: 'sleep' | 'wake') {
-    return this.enqueue(async () => {
-      const bound = await this.checkedBinding(workspaceId);
-      if (this.enabled) return this.applyAction(bound, {action}, '伙伴');
-    });
+    return this.behavior().act(workspaceId, action);
   }
-  private async checkedBinding(workspaceId: string) {
-    await this.synchronize();
-    if (this.closed || this.binding?.id !== workspaceId || this.current()?.path !== this.binding.path) throw Error('生活工作区已切换');
-    return this.binding;
-  }
-  private applyAction(bound: Bound, input: unknown, by: string) {
-    if (!this.enabled) throw Error('请先开启当前工作区的生活');
-    const now = Date.now();
-    bound.room.tick(now);
-    const result = bound.room.act(input, by, now);
-    this.publishRest();
-    return result;
+  private behavior() {
+    const behavior = this.ctx.get('petBehavior');
+    if (!behavior) throw Error('共享身体组件尚未启用');
+    return behavior;
   }
   roomAction(workspaceId: string, input: unknown, by = '伙伴') {
-    return this.enqueue(async () => this.applyAction(await this.checkedBinding(workspaceId), input, by));
+    return this.behavior().roomAction(workspaceId, input, by);
   }
-  roomState(workspaceId: string) {
-    return this.enqueue(async () => {
-      const {room} = await this.checkedBinding(workspaceId);
-      return {...room.view(this.enabled ? Date.now() : room.state.lastTickAt), lifeEnabled:this.enabled};
-    });
-  }
+  roomState(workspaceId: string) { return this.behavior().roomState(workspaceId); }
   garden(workspaceId: string, operation: 'state' | 'act' | 'control', input?: unknown) {
-    return this.enqueue(async () => {
-      const bound = await this.checkedBinding(workspaceId);
-      const result = bound.room.garden(operation, input, this.enabled);
-      this.publishRest();
-      return result;
-    });
+    return this.behavior().garden(workspaceId, operation, input);
   }
   settings(workspaceId: string, expected: unknown, next: unknown) {
     return this.enqueue(async () => {
@@ -319,7 +309,7 @@ export class CompanionLife {
     this.publishRest();
     this.host.native.lifeAdmission = undefined;
     await this.enqueue(async () => {
-      try { await this.stopRuntime(); this.binding?.room.flush(); }
+      try { await this.stopRuntime(); }
       finally { this.binding?.library.close(); }
     });
   }

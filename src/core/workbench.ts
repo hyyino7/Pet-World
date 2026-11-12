@@ -1,7 +1,7 @@
 import type { CoreRuntime, StoredActivity } from './core.js';
 import type { Commitment, CommitmentProgress, ActivitySnapshot } from '../contracts/core.js';
 import type { EvidenceSource, ServiceCall } from '../contracts/common.js';
-import { reject, text } from './storage.js';
+import { text } from './storage.js';
 
 export interface WorkbenchSnapshot {
   matters: readonly Commitment[]; activities: readonly (ActivitySnapshot & { executionId: string | null })[];
@@ -20,7 +20,7 @@ export function createWorkbench(runtime: CoreRuntime): WorkbenchService {
   return {
     snapshot: runtime.call('workbench.snapshot', false, () => {
       const allMatters = runtime.store.all<Commitment>('commitment'), allActivities = runtime.store.all<StoredActivity>('activity');
-      const matters = allMatters.filter(value => runtime.eligible([...value.sourceIds, ...value.resultSourceIds]));
+      const matters = allMatters;
       const activities = allActivities.filter(value => runtime.eligible(value.proposal.sourceIds));
       const executions = runtime.store.all<{ executionId: string; activityId: string }>('execution');
       return { matters: matters.slice(-25).reverse(), omittedMatters: Math.max(0, matters.length - 25),
@@ -32,9 +32,8 @@ export function createWorkbench(runtime: CoreRuntime): WorkbenchService {
     matter: runtime.call('workbench.matter', false, input => {
       text(input.commitmentId, 'commitmentId', 256);
       const matter = runtime.store.require<Commitment>('commitment', input.commitmentId);
-      if (!runtime.eligible([...matter.sourceIds, ...matter.resultSourceIds])) reject('INELIGIBLE', 'Matter sources are no longer eligible');
       const progress = runtime.store.all<CommitmentProgress>('commitment-progress')
-        .filter(value => value.commitmentId === matter.commitmentId && runtime.eligible(value.sourceIds));
+        .filter(value => value.commitmentId === matter.commitmentId);
       return { matter, progress: progress.slice(-100), omittedProgress: Math.max(0, progress.length - 100),
         results: matter.resultSourceIds.map(sourceId => runtime.store.require<EvidenceSource>('source', sourceId)) };
     }, true),

@@ -3,7 +3,7 @@ import test from 'node:test';
 import type { Session } from '@deepseek-ai/dsh-session';
 import { WorldRecall } from '../src/core/world-recall.js';
 
-test('World reloads after compaction or the configured silence measured from the last actual request', () => {
+test('World reloads once per turn and explicitly retires prior recall on empty replacement', () => {
   let clock = 0;
   const recall = new WorldRecall(() => clock);
   const old = {type:'user/message', data:{id:'old',source:{kind:'chatpet-recall'}}};
@@ -15,12 +15,12 @@ test('World reloads after compaction or the configured silence measured from the
   recall.request(session,1,1,true);
   assert.equal(replacements.length,1);
   clock = 23*3_600_000;
-  assert.equal(recall.refresh(session,'bound',true,24),false);
+  assert.equal(recall.refresh(session,'bound',true,24),true);
   recall.request(session,2,1,true);
   clock += 24*3_600_000;
   assert.equal(recall.refresh(session,'bound',false,24),false);
   assert.equal(recall.refresh(session,'bound',true,24),true);
-  assert.equal(recall.refresh(session,'bound',true,25),false);
+  assert.equal(recall.refresh(session,'bound',true,25),true);
   recall.prepare(session,'');
   recall.request(session,3,1,true);
   assert.equal(replacements.length,2);

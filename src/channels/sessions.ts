@@ -11,7 +11,7 @@ import {GUEST_PRESET} from './guest.js';
 
 interface Workspace {id: string; path: string; sessionIds: readonly string[]; attachSession(id: string): Promise<void>}
 interface Services {
-  get(key: 'workspaceRegistry'): {create(path: string, title: string): Promise<Workspace>; archivedSessionIds: readonly string[]};
+  get(key: 'workspaceRegistry'): {get(id:string):Workspace|undefined; create(path: string, title: string): Promise<Workspace>; archivedSessionIds: readonly string[]};
   get(key: 'sessionController'): {
     create(input: {sessionId: string; workspaceId: string; agentPreset: string}): Promise<{sessionId: string}>;
     resolveAgent(id: string): Promise<{agent?: Agent; error?: {code: string}}>;
@@ -42,7 +42,9 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
   const active = () => !stopped && options.active();
   const allowed = (identity: SpeakerIdentity) => active() && !!identity.conversationType && options.identityAllowed(identity);
   const isOwner = (identity: SpeakerIdentity) => identity.conversationType === 'private' && options.ownerIdentity(identity);
-  const ownerAlive = (id: string) => owner?.id === id && ctx.get('petLife')?.isHome(id) === true;
+  const ownerAlive = (id: string) => !!owner && owner.id === id && active()
+    && host.workspace.sessionStatus(owner.session,native.get('workspaceRegistry'))?.state === 'ready'
+    && !registry.archivedSessionIds.includes(id);
   function guest(id: string) {
     const row = guests.get(id);
     return !!row && allowed(row.identity) && !isOwner(row.identity) && row.agent.session.header.cwd === row.directory

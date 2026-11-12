@@ -45,3 +45,23 @@ test('shared Pet speech resolves the selected native recognizer and reuses the s
   await voice.handle(input); assert.equal(spoken,1);
   id='b'; voice.refresh(); await voice.handle(input); assert.equal(spoken,2);
 });
+
+test('speech capability reflects enabled providers and binding changes reject in-flight results', async t=>{
+  const root=mkdtempSync(join(tmpdir(),'fish-voice-cancel-'));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  let id='a', enabled=false, ready!:()=>void, complete!:(value:{text:string})=>void;
+  const started=new Promise<void>(resolve=>{ready=resolve;});
+  const host={workspace:{status:()=>({state:'ready',target:{id}}),storageId:()=>id}} as unknown as PetCoreHost;
+  const voice=new CompanionVoice(host,root,()=>({listProviders:()=>enabled?['fixture']:[],resolve:(value:unknown)=>value,
+    transcribe:async()=>{ready();return new Promise<{text:string}>(resolve=>{complete=resolve;});}}));
+  t.after(()=>voice.release());
+  assert.equal(voice.canTranscribe(),false);
+  const registryFile='../src/desktop/upstream/host/voice/speech-registry.js';
+  const {registerSpeechProvider}=await import(registryFile);
+  const release=registerSpeechProvider({id:'fixture-external',name:'fixture-external',transcribe:async()=> 'external text'});
+  assert.equal(voice.canTranscribe(),true);release();assert.equal(voice.canTranscribe(),false);
+  enabled=true;assert.equal(voice.canTranscribe(),true);
+  const pending=voice.handle({rest:'voice/hear',method:'POST',body:JSON.stringify({audio:'AQI='})});
+  await started;id='b';voice.refresh();complete({text:'old workspace text'});
+  await assert.rejects(pending,/abort/i);
+});

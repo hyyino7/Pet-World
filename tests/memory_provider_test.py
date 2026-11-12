@@ -305,6 +305,18 @@ class ProviderConformance(unittest.TestCase):
         with self.assertRaises(ConflictError):
             self.port.context(self.scope, query="", max_chars=10)
 
+    def test_shared_bank_recent_context_preserves_guest_actor_and_group(self):
+        self.port.observe(self.scope, source_id="guest-turn", content="The guest grew a sunflower.", revision="1",
+                          actor_id="qq:friend", source_kind="user_statement", conversation_context=True,
+                          attribution={"channel": "qq", "accountId": "fixture", "conversationId": "garden-group", "speakerId": "qq:friend"})
+        self.port.observe(self.scope, source_id="guest-reply", content="I liked hearing about the sunflower.", revision="1",
+                          actor_id="fish", source_kind="agent_inference", conversation_context=True,
+                          roots=[{"id": "guest-turn", "revision": "1"}])
+        context = self.port.context(self.scope, query="what did the guest grow", include_recent=True, max_chars=24000)
+        self.assertIn("sunflower", context["text"])
+        self.assertIn("qq:friend", context["text"])
+        self.assertIn("garden-group", context["text"])
+
 
 if __name__ == "__main__":
     unittest.main()

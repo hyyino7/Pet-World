@@ -14,8 +14,20 @@ test('upstream Desktop todos survive restart; malformed data is preserved; nativ
   const prefs=ok(await host.services.preferences.read(host.operator.request('read'),{}));
   const saved=ok(await host.services.preferences.save(host.operator.request('bind'),{expectedRevision:prefs.revision,workspace:{id:'repo',path:repo,title:'repo'},conversation:prefs.conversation}));
   ok(await host.services.workspace.initialize(host.operator.request('init'),{expectedPreferencesRevision:saved.revision}));
-  const frames:{type:string;value:any}[]=[];let calls=0;let lifeRunning=false;
+  const frames:{type:string;value:any}[]=[];let calls=0;let lifeRunning=false;let sleeping=false;
+  const bodyRequests:string[]=[];
+  // Actual pending/arrival sleep transitions are covered by life-body.test.ts.
+  // This fixture verifies the feature adapter's public Behavior delegation.
+  const behavior={
+    restState(id:string){assert.equal(id,'repo');return {sleeping,pending:false};},
+    async act(id:string,action:string){
+      assert.equal(id,'repo');assert.ok(action==='sleep'||action==='wake');bodyRequests.push(action);
+      const next=action==='sleep',changed=next!==sleeping;sleeping=next;
+      return {changed,home:{her:{activity:sleeping?'正在睡觉':'醒来了'}}};
+    },
+  };
   const ctx={get(name:string){
+    if(name==='petBehavior')return behavior;
     if(name==='petLife')return {running:()=>lifeRunning};
     if(name==='agentDefaultModel')return {currentSelection:()=>({provider:'fixture',model:'local'})};
     if(name==='llm')return {async *stream(options:any){calls++;assert.match(options.system,/Preserved personality/);yield {type:'block-start',index:0,blockType:'text'};yield {type:'text-delta',index:0,text:'今天也慢慢来。'};yield {type:'block-end',index:0,block:{type:'text',text:'今天也慢慢来。'}};yield {type:'finish',reason:{kind:'stop'}};}};
@@ -60,7 +72,8 @@ test('upstream Desktop todos survive restart; malformed data is preserved; nativ
     assert.deepEqual([frames.at(-1)?.value.dream,frames.at(-1)?.value.whisper,frames.at(-1)?.value.sticker],[true,false,undefined]);
     await features.request({path:'/wake',method:'POST'});
     t.mock.timers.reset();
+    assert.deepEqual(bodyRequests,['sleep','wake','sleep','wake']);
     const file=join(repo,'.chatpet/data/desktop/todos.json');writeFileSync(file,'broken original');
     await assert.rejects(features.request({path:'/todos',method:'POST',body:'{"text":"cannot overwrite"}'}));assert.equal(readFileSync(file,'utf8'),'broken original');
-  } finally {await features.close();await host.close();rmSync(root,{recursive:true,force:true});}
+  } finally {t.mock.timers.reset();await features.close();await host.close();rmSync(root,{recursive:true,force:true});}
 });

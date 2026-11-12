@@ -2,7 +2,7 @@
 const {app,BrowserWindow} = require('electron');
 const fs=require('node:fs'), path=require('node:path'), os=require('node:os');
 const {createServer}=require('node:http'), assert=require('node:assert/strict');
-const dir=fs.mkdtempSync(path.join(os.tmpdir(),'chatpet-platform-window-'));
+const dir=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'chatpet-platform-window-')));
 app.setPath('userData',path.join(dir,'profile'));
 const repo=path.join(dir,'bound'); fs.mkdirSync(repo);
 process.env.CHATPET_PRESENTATION_PROFILE=path.join(dir,'native-helper-profile');
@@ -31,19 +31,36 @@ window.__ModuleLoader__={load(e){window.plugin=e;},create({staticModules}){windo
 async function main(){
  await app.whenReady();
  const {PetPlatform}=await import('../dist/src/desktop/platform/plugin.js');
+ const {RecentLedger}=await import('../dist/src/emotion/recent.js');
+ const {DEFAULT_COMPANION_SETTINGS}=await import('../dist/src/core/companion-settings.js');
+ const receipts=[];
+ const ledger=new RecentLedger({id:'test',path:repo},()=>DEFAULT_COMPANION_SETTINGS);
  const chat={id:'session',snapshot:()=>({messages:[],sessionId:'session',workspaceId:'test',generating:false}),run:async()=>chat.snapshot()};
  const handlers=new Set();
  ctx={get:()=>undefined,logger:console,connection:{broadcast(){},authenticatedUrl:url=>url},on:(name,fn)=>{
    if(name==='session/event')handlers.add(fn);return ()=>handlers.delete(fn);
- },petDesktop:{chat},webServer:{getOrigin:()=>address},
-   petCore:{workspace:{companionSettings:()=>({desktopSize:232,desktopFixed:false,desktopWorkStatusEnabled:true}),sessionStatus:()=>({target:{id:'test'}}),status:()=>({state:'ready',target:{id:'test',path:repo}})}}};
+ },petDesktop:{chat,recordPlayback(receipt){receipts.push(receipt);ledger.playback(receipt);}},webServer:{getOrigin:()=>address},
+   petCore:{workspace:{companionSettings:()=>({...DEFAULT_COMPANION_SETTINGS,desktopSize:232,desktopFixed:false,desktopWorkStatusEnabled:true}),sessionStatus:()=>({target:{id:'test'}}),status:()=>({state:'ready',target:{id:'test',path:repo}})}}};
  platform=new PetPlatform(ctx);
  const access=platform.ownerAccess('test');
  const dispatch=(r,method='GET',input)=>platform.handle(new URL('http://localhost/chatpet-presentation/'+r),method,input?JSON.stringify(input):undefined,new AbortController().signal);
  const mainConfig=(await dispatch('config')).obj.main;
  const original=mainConfig.pets[0];
  const left={...original,id:'second',name:'第二只',position:{corner:'top-left',marginX:5,marginY:5}};
- await dispatch('config','PUT',{pets:[original,left],physics:{...mainConfig.physics,gravity:0}});
+ const randomAnimations={...mainConfig.animations,idle:['点击回应-元气挥手'],turn:['点击回应-元气挥手'],categories:[],moves:{...mainConfig.animations.moves,actions:[]}};
+ const setPools=random=>{
+   // Upstream's form-save route intentionally does not edit animation pools.
+   // Prepare only this disposable fixture's original JSONC configuration.
+   const file=path.join(repo,'.chatpet/data/pet-platform/main-config.jsonc');
+   const config=JSON.parse(fs.readFileSync(file,'utf8'));
+   config.animations=random?randomAnimations:mainConfig.animations;
+   config.animationWeights=random?{idle:100,turn:0,move:0}:mainConfig.animationWeights;
+   fs.writeFileSync(file,JSON.stringify(config));
+ };
+ setPools(true);
+ await dispatch('config','PUT',{pets:[{...original,display:'web'},{...left,display:'web'}],physics:{...mainConfig.physics,gravity:0},
+   animations:randomAnimations,animationWeights:{idle:100,turn:0,move:0}});
+ assert.deepEqual((await dispatch('config')).obj.main.animations.idle,['点击回应-元气挥手']);
  server=createServer((req,res)=>{
    const url=new URL(req.url,'http://localhost');
    if(url.pathname.startsWith('/chatpet-presentation/')){
@@ -81,6 +98,11 @@ async function main(){
  })()`);
  await mount();
  await until(()=>ev('[...document.querySelectorAll("video")].filter(v=>v.videoWidth>0).length >= 2'), 'two decoded browser pets');
+ await until(()=>ledger.read().actions.some(action=>action.name==='wave'),'decoded browser random start reaches recent Emotion ledger').catch(async error=>{
+   console.error(JSON.stringify({receipts,videos:await ev("[...document.querySelectorAll('video')].map(v=>({src:v.src,paused:v.paused,time:v.currentTime,classes:v.className}))")}));throw error;
+ });
+ assert.ok(receipts.some(receipt=>receipt.kind==='random' && receipt.name==='wave' && receipt.status==='playing'));
+ setPools(false);await dispatch('config','PUT',{physics:mainConfig.physics});
  const poses=await until(()=>ev(`JSON.stringify(['main','second'].map(id=>window.testServices.get('chatpetPresentation').pose(id)))`).then(text=>{const list=JSON.parse(text);return list.every(x=>x)?list:false;}),'two live pose reports');
  await dispatch('anim?pet=second&surface=web','POST',{name:'螃蟹走路'});
  await until(()=>ev("JSON.stringify(window.testServices.get('chatpetPresentation').progress('second') || {})").then(v=>v.includes('螃蟹走路')),'third-party animation on second pet');
@@ -124,12 +146,19 @@ async function main(){
  await ev("window.testNotifications[0].onclick()");
  assert.equal(await ev('window.notificationSession'),'notif-test');
  await ev('window.stopPets()');
- const result=await dispatch('config','PUT',{trayEnabled:false,physics:{...mainConfig.physics,gravity:0,petCollision:true},pets:[{...original,display:'desktop'},{...left,display:'desktop'}]});
+ const browserRandomCount=receipts.filter(receipt=>receipt.kind==='random' && receipt.status==='playing').length;
+ setPools(true);
+ const result=await dispatch('config','PUT',{trayEnabled:false,physics:{...mainConfig.physics,gravity:0,petCollision:true},pets:[{...original,display:'desktop'},{...left,display:'desktop'}],
+   animations:randomAnimations,animationWeights:{idle:100,turn:0,move:0}});
  assert.equal(result.obj.main.pets.filter(p=>p.display==='desktop').length,2);
  const desktopPoses=await until(async()=>{
    const reports=await Promise.all(['main','second'].map(p=>dispatch('pose?pet='+p)));
    return reports.every(r=>r.obj?.ok)?reports.map(r=>r.obj):false;
  },'two original native helper windows report their poses',22000);
+ await until(()=>receipts.filter(receipt=>receipt.kind==='random' && receipt.status==='playing').length>browserRandomCount,
+   'decoded native random start reaches recent Emotion ledger');
+ assert.ok(ledger.read().actions.some(action=>action.name==='wave'));
+ setPools(false);await dispatch('config','PUT',{physics:mainConfig.physics});
  assert.notEqual(desktopPoses[0].x,desktopPoses[1].x);
  const nativePose=async id=>(await dispatch('pose?pet='+id)).obj;
  for(const [id,x] of [['main',.32],['second',.5]]) {
@@ -140,7 +169,7 @@ async function main(){
  assert.equal((await dispatch('throw?surface=desktop&pet=main','POST',{angle:0,power:1})).obj.ok,true);
  await until(()=>fs.readFileSync(collisions,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse).some(hit=>hit.targetId==='second' && hit.vx>0),'native helper transfers throw impulse to the other window',6500);
  await until(async()=>(await nativePose('second')).x>.5015,'second desktop pet responds to the impulse',3500);
- console.log(JSON.stringify({status:'passed',browserPets:poses.length,decodedMedia:true,thirdPartyAnimation:true,riceScene:true,browserCollision:true,hapticRequests:haptics,syntheticShake:sensorKinds.every(k=>k==='function'),nativeWindows:desktopPoses.length,nativeCollision:true,sessionNotification:true}));
+ console.log(JSON.stringify({status:'passed',browserPets:poses.length,decodedMedia:true,thirdPartyAnimation:true,randomPlaybackToLedger:{browser:true,native:true},riceScene:true,browserCollision:true,hapticRequests:haptics,syntheticShake:sensorKinds.every(k=>k==='function'),nativeWindows:desktopPoses.length,nativeCollision:true,sessionNotification:true}));
 }
 main().then(()=>app.quit()).catch(error=>{console.error(error);app.exit(1);}).finally(()=>{
  win?.destroy();platform?.close();server?.closeAllConnections();server?.close();fs.rmSync(dir,{recursive:true,force:true});

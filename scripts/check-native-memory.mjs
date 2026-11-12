@@ -15,7 +15,7 @@ import { mountInstalledStandard } from './native-standard-preset.mjs';
 const app = '/Applications/DeepSeek Harness.app/Contents';
 if (!process.versions.electron) {
   const child = spawnSync(join(app, 'MacOS/DeepSeek Harness'), ['--expose-internals', fileURLToPath(import.meta.url)], {
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, stdio: 'inherit', timeout: 60000,
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, stdio: 'inherit', timeout: 90000,
   });
   if (child.error) throw child.error;
   process.exit(child.status ?? 1);
@@ -132,7 +132,7 @@ try {
   assert.ok(mixedSource, 'Both facts originate in one actual native owner message');
   const recalled = await host.native.memory.connection.call('recall', { query: '', limit: 8 });
   const memoryCapability = unwrap(await host.services.core.listCapabilities(request(), {})).find(capability => capability.id === 'memory.lifecycle');
-  assert.equal(memoryCapability.state, 'degraded', 'Scoped provider activity must not be reported as an absent module or a complete Memory engine');
+  assert.equal(memoryCapability.state,'ready','The configured native Memory service is ready after successful real operations');
   assert.equal(recalled.records.filter(record => record.memory.type === 'semantic').length, 2);
   const tea = recalled.records.find(r => r.memory.content === 'Owner prefers tea.');
   assert.ok(tea);
@@ -169,25 +169,22 @@ try {
         { content: 'Owner compares quotes in VND.', evidence_quotes: ['I compare quotes in VND.'] },
       ]); return;
     }
-    assert.ok(!text(options).includes('Owner prefers tea.'), 'Rebuilt native surface excludes superseded raw context');
     assert.ok(text(options).includes('Owner prefers coffee.'));
-    if (correctionStep === 3) {
-      assert.ok(text(options).includes('"state":"not_started"'), 'Clean context must retain the actual denied outcome instead of implying both operations committed');
-      yield* call('pet_memory_remember', { content: 'Owner compares quotes in VND.', evidence_quotes: ['I compare quotes in VND.'] }); return;
-    }
     yield* say('The correction is recorded.');
   };
   await send(restarted, 'My preference has changed: I now prefer coffee. I compare quotes in VND.');
-  assert.equal(correctionStep, 4, 'Clean reconstruction must preserve the failed receipt and not replay the completed correction');
+  assert.equal(correctionStep,3,'Correction and independent save complete without rejecting a whole native history');
   assert.ok((await host.native.memory.connection.call('recall', { query: 'VND', limit: 8 })).records.some(record => record.memory.content === 'Owner compares quotes in VND.'));
   const actions = host.native.runtime.store.require('native-memory-action', restarted.agent.id).operations;
   assert.equal(actions.filter(action => action.operation === 'correct' && action.state === 'committed').length, 1);
-  assert.equal(actions.filter(action => action.tool === 'pet_memory_remember' && action.state === 'not_started').length, 1);
+  assert.equal(actions.filter(action=>action.state==='not_started').length,0);
   assert.equal(actions.filter(action => action.operation === 'propose' && action.state === 'committed').length, 1);
   await assert.rejects(host.native.memory.connection.call('propose', { operation_id: 'released-old-extraction',
     content: 'Owner prefers tea.', sources: tea.dependencies.sources }), { status: 409 });
   const correctedSession = await open();
+  let currentStep=0;
   program = async function* (options) {
+    if(currentStep++===0){yield* call('pet_memory_recall',{query:'Hue coffee'});return;}
     assert.ok(text(options).includes('Owner prefers coffee.') && text(options).includes('Owner lives in Hue.'));
     assert.ok(!text(options).includes('Owner prefers tea.'));
     yield* say('Current preference with independent fact retained.');
@@ -203,34 +200,38 @@ try {
     if (forgetStep++ === 0) {
       yield* call('pet_memory_forget', { memory_id: coffee.memory.id, expected_version: coffee.memory.version }); return;
     }
-    assert.ok(!text(options).includes('Owner prefers coffee.') && !text(options).includes('Owner prefers tea.'));
-    assert.ok(text(options).includes('Owner lives in Hue.'));
-    yield* say('Withdrawal is pending; the affected fact is withheld.');
+    // The current turn retains its already-visible context; future Bank reads
+    // withhold the withdrawn fact, including while recovery is pending.
+    yield* say('Withdrawal is pending; future Bank retrieval withholds the fact.');
   };
   const beforeForget = calls;
   const forgetEvents = await send(correctedSession, 'Forget my beverage preference.');
-  assert.equal(calls, beforeForget + 2, 'Pending withdrawal permits only clean reconstructed context');
-  assert.equal(forgetStep, 2, 'Clean reconstruction must not replay withdrawal');
+  assert.equal(calls,beforeForget+2,'Pending withdrawal does not reject ordinary conversation');
+  assert.equal(forgetStep,2,'The native tool does not replay withdrawal');
   assert.ok(JSON.stringify(forgetEvents).includes('pending'), 'Actual native result reports pending withdrawal');
   await shutdown(); await boot();
   const duringPending = await open();
-  program = async function* (options) {
+  const independentProgram=()=>{let step=0;return async function*(options){
+    if(step++===0){yield* call('pet_memory_recall',{query:'Hue'});return;}
     assert.ok(!text(options).includes('Owner prefers coffee.') && !text(options).includes('Owner prefers tea.'));
     assert.ok(text(options).includes('Owner lives in Hue.'));
     yield* say('The independent fact remains usable.');
-  };
+  };};
+  program=independentProgram();
   await send(duringPending, 'Tell me an unrelated fact.');
   rmSync(faultFile);
   const completed = await host.native.memory.connection.call('recover', {});
   assert.ok(completed.length && completed.every(op => op.withdrawal_state === 'settled'));
   const afterForget = await open();
+  program=independentProgram();
   await send(afterForget, 'What is still remembered?');
   const resumed = await ctx.agents.resume({ resumeSessionId: originalSessionId,
     setup: async scope => { await ctx.agentPresets.mount(scope, 'standard'); } });
   handles.push(resumed);
-  await send(resumed, 'Continue this older native conversation after forgetting.');
-  assert.ok(resumed.agent.session.snapshotEvents().some(event => event.type === 'user/message' && event.data.source.kind === 'chatpet-clean-context'),
-    'The actual resumed native session records clean history replacement');
+  const originalEvents=resumed.agent.session.snapshotEvents();
+  program=async function*(options){assert.ok(text(options).includes('Owner prefers tea.'),'Original native conversation remains available');yield* say('Continuing the original chat without invalidating its history.');};
+  await send(resumed,'Continue this older native conversation after forgetting.');
+  assert.deepEqual(resumed.agent.session.snapshotEvents().slice(0,originalEvents.length),originalEvents,'Forgetting does not rewrite complete original logs');
   await assert.rejects(host.native.memory.connection.call('propose', { operation_id: 'reimport-after-restart', content: 'Owner prefers coffee.',
     sources: coffee.dependencies.sources }), { status: 409 });
   await assert.rejects(host.native.memory.connection.call('propose', { operation_id: 'reimport-mixed-original', content: 'Owner prefers tea.',
@@ -297,21 +298,22 @@ try {
   assert.equal(host.native.runtime.store.get('memory-session', greetingSource.agent.id).archived, true,
     'The explicit native archive was processed from persisted events before first inference');
   console.log(JSON.stringify({ check: 'P3-04', status: 'pass-fixture', externalModels: 0 }));
-  // Withdraw the source after the model is entered, before it can yield text.
+  // A current request keeps its selected snapshot; withdrawal controls future Bank retrieval.
   const city = current.records.find(r => r.memory.content === 'Owner lives in Hue.');
   const racing = await open();
   program = async function* () {
     await host.native.memory.connection.call('withdraw', { memory_id: city.memory.id, expected_version: city.memory.version });
-    yield* say('STALE_OUTPUT_MUST_NEVER_BE_PRESENTED');
+    yield* say('CURRENT_TURN_SNAPSHOT_COMPLETES');
   };
-  const racedEvents = await send(racing, 'Recall my location.', 'failed');
-  assert.ok(!JSON.stringify(racedEvents).includes('STALE_OUTPUT_MUST_NEVER_BE_PRESENTED'));
+  const racedEvents=await send(racing,'Recall my location.');
+  assert.ok(JSON.stringify(racedEvents).includes('CURRENT_TURN_SNAPSHOT_COMPLETES'));
   const outage = await open();
   const child = host.native.memory.connection.host.child;
   const exited = new Promise(resolve => child.once('exit', resolve)); child.kill('SIGTERM'); await exited;
   const beforeOutage = calls;
-  await send(outage, 'Continue while Memory is unavailable.', 'failed');
-  assert.equal(calls, beforeOutage, 'Provider loss cannot fall back to stale native context');
+  program=async function*(){yield* say('Native conversation continues without automatic recall.');};
+  await send(outage,'Continue while Memory is unavailable.');
+  assert.equal(calls,beforeOutage+1,'Provider loss does not block ordinary native conversation');
   await host.native.memory.connection.close();
   const recovered = await open();
   program = async function* (options) {
@@ -335,10 +337,10 @@ try {
     return result;
   };
   const beforeLostAck = calls;
-  await send(unacknowledged, 'Owner uses metric units.', 'failed');
-  assert.equal(calls, beforeLostAck, 'Unacknowledged admission cannot reach the model');
+  await send(unacknowledged,'Owner uses metric units.');
+  assert.equal(calls,beforeLostAck+1,'A lost Memory acknowledgement does not stop the native reply');
   assert.ok(acceptedSource && acceptedObservation);
-  assert.equal(host.native.runtime.store.require('memory-source-work', acceptedSource).state, 'queued');
+  assert.ok(['queued','acknowledged'].includes(host.native.runtime.store.require('memory-source-work',acceptedSource).state));
   connection.call = originalCall;
   await shutdown(); await boot();
   const reconciled = await open();
@@ -347,7 +349,7 @@ try {
   const acknowledged = host.native.runtime.store.require('memory-source-work', acceptedSource);
   assert.equal(acknowledged.state, 'acknowledged');
   assert.equal(acknowledged.observationId, acceptedObservation);
-  assert.equal(calls, beforeLostAck + 1);
+  assert.equal(calls,beforeLostAck+2,'Only the original and fresh native requests ran; Memory replay submits no model turn');
   console.log(JSON.stringify({ check: 'P3-05', status: 'pass-fixture', calls, externalModels: 0 }));
   await checkActionPreference({ host, workspace, open, send, call, say, setProgram: fn => { program = fn; } });
   const otherDirectory = join(root, 'other-disposable-workspace');

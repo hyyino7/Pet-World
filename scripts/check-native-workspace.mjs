@@ -152,8 +152,8 @@ try {
   const forbiddenWorkbench = await host.services.workbench.snapshot(host.connectModule('console').request('forged-workbench'), {});
   assert.equal(forbiddenWorkbench.ok, false, 'Only authenticated owner delegation can read workbench');
   assert.ok(!existsSync(join(root, '.chatpet/STATE.md')), 'Execution must not generate a Repo task summary');
-  const activity = unwrap(await host.services.core.getActivity(request(), { activityId: `native-work:${digest({ sessionId: handle.agent.id, turn: 1 })}` }));
-  assert.equal(activity.receipt.state, 'completed');
+  assert.equal(host.workspace.runtime.store.all('activity').length,0,'Ordinary native chat does not allocate Core activities');
+  assert.equal(host.workspace.runtime.store.all('execution').length,0,'Ordinary native chat does not allocate Core executions');
   writeFileSync(join(root, '.chatpet/SOUL.md'), '# Revised identity\n\nRevised character');
   program = async function* (options) { assert.ok(text(options).includes('Revised character')); yield* say('Updated native reply'); };
   await send(handle, 'Use the changed role.');
@@ -173,21 +173,16 @@ try {
   const stopped = send(handle, 'Wait for stop.');
   await waiting;
   const runningPrefs = unwrap(await host.services.preferences.read(request(), {}));
-  const rebind = await host.services.preferences.save(request(), { conversation: runningPrefs.conversation, expectedRevision: runningPrefs.revision, workspace: null });
-  assert.equal(rebind.ok, false, 'An active native turn cannot be detached from its admission by rebinding');
-  assert.equal(rebind.error.code, 'LIMIT_REACHED');
+  const rebind = await host.services.preferences.save(request(), { conversation: runningPrefs.conversation, expectedRevision: runningPrefs.revision, workspace: runningPrefs.workspace });
+  assert.equal(rebind.ok,true,'Ordinary native work has no duplicate Core execution lock');
   const configPath = join(root, '.chatpet/core.json');
   const validConfig = readFileSync(configPath, 'utf8');
   writeFileSync(configPath, '{invalid');
   assert.equal((await host.services.core.getIdentity(request(), {})).ok, false);
-  const interruptedActivityId = `native-work:${digest({ sessionId: handle.agent.id, turn: 3 })}`;
-  const inspected = unwrap(await host.services.execution.inspect(request(), { executionId: `native:${digest([handle.agent.id, 3])}` }));
-  unwrap(await host.services.core.cancelActivity(request(), { activityId: interruptedActivityId,
-    expectedRevision: inspected.receipt.revision, reason: 'P1: stop remains available with invalid Repo config' }));
+  handle.agent.cancel({kind:'user'});
   await stopped;
-  writeFileSync(configPath, validConfig);
-  const stoppedActivity = unwrap(await host.services.core.getActivity(request(), { activityId: `native-work:${digest({ sessionId: handle.agent.id, turn: 3 })}` }));
-  assert.equal(stoppedActivity.receipt.state, 'cancelled');
+  writeFileSync(configPath,validConfig);
+  assert.equal((await observer.inspectObserved(handle.agent.id,handle.agent.session.snapshotEvents().filter(event=>event.type==='user/message' && event.data.source.kind==='user').at(-1).data.id)).state,'cancelled');
   const nativeSessionId = handle.agent.id;
   await handle.dispose();
   const resumed = await ctx.agents.resume({ resumeSessionId: nativeSessionId,
@@ -259,6 +254,7 @@ try {
   const { emotionFor } = await import('../dist/src/emotion/plugin.js');
   const emotion = emotionFor(host), expressions = [];
   const off = emotion.onExpression(event => expressions.push(event));
+  const unregisterCatalog=emotion.registerCatalog('native-workspace-fixture',{actions:[{name:'spin',description:'A synthetic observed spin.'}],stickers:[]});
   emotion.recordPlayback({ workspaceId: workspace.id, id: 'visible-spin', name: 'spin', status: 'playing', kind: 'random' });
   const reacting = await open();
   program = async function* (options) {
@@ -276,13 +272,13 @@ try {
   };
   await send(fresh, '刚才呢');
   assert.equal(expressions.length, 1);
-  off(); await fresh.dispose(); await reacting.dispose();
+  off();unregisterCatalog(); await fresh.dispose(); await reacting.dispose();
   const withdrawn = matters.items[0].sourceIds[0];
   host.setHistoryGuard({ inspect: sourceIds => sourceIds.includes(withdrawn) ? 'ineligible' : 'eligible' });
   const withheld = unwrap(await host.services.workbench.snapshot(request(), {}));
-  assert.equal(withheld.matters.length, 0); assert.equal(withheld.withheldMatters, 1);
-  assert.equal((await host.services.workbench.matter(request(), { commitmentId: matters.items[0].commitmentId })).ok, false);
+  assert.equal(withheld.matters.length,1);assert.equal(withheld.withheldMatters,0,'Matter records are independent of Memory withdrawal');
+  assert.equal((await host.services.workbench.matter(request(), { commitmentId: matters.items[0].commitmentId })).ok,true);
   await unattached.dispose(); await ordinary.dispose(); await resumed.dispose(); await unregister();
   console.log(JSON.stringify({ check: 'native-workspace', status: 'passed', modelCalls: calls, externalModel: false,
-    covered: ['ordinary Standard preset without extra mode', 'real workspace membership', 'identity and USER appear once in the stable system prefix across tool steps and follow-ups', 'native matter tool', 'ordinary native file write without matter creation', 'no generated STATE file', 'single model loop', 'manual role refresh replaces prior in-history content', 'native cancellation', 'read-only reconciliation', 'native session resume', 'legacy mixed runtime snapshots migrate on resume with original events and unrelated sections retained', 'detached session removes scoped profile', 'other workspace isolation', 'unattached ordinary chat', 'owner workbench projection and source withdrawal', 'actual playback feedback and recent mood in first fresh request'] }));
+    covered: ['ordinary Standard preset without extra mode', 'real workspace membership', 'identity and USER appear once in the stable system prefix across tool steps and follow-ups', 'native matter tool', 'ordinary native file write without matter creation', 'no generated STATE file', 'single model loop', 'manual role refresh replaces prior in-history content', 'native cancellation', 'read-only reconciliation', 'native session resume', 'legacy mixed runtime snapshots migrate on resume with original events and unrelated sections retained', 'detached session removes scoped profile', 'other workspace isolation', 'unattached ordinary chat', 'owner workbench remains readable independently of Memory withdrawal', 'actual playback feedback and recent mood in first fresh request'] }));
 } finally { await ctx.fiber.dispose(); rmSync(root, { recursive: true, force: true }); }

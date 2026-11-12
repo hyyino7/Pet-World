@@ -5,7 +5,8 @@ import type { CoreRuntime, StoredActivity } from './core.js';
 import type { CoreResources } from './resources.js';
 import { bytesDigest, canonical, check, id, now, reject, revision, timestamp, unavailable } from './storage.js';
 
-/** C1 maintenance: durable local Core snapshots; guarded restore stays unavailable. */
+/** Legacy online Core snapshots. Full file-level recovery is an offline command
+ * (scripts/companion-backup.mjs); an open Core database cannot restore itself. */
 export class CoreMaintenance {
   readonly port: MaintenanceService;
   readonly module: ModulePort;
@@ -58,16 +59,18 @@ export class CoreMaintenance {
         const backup = store.require<BackupRecord>('backup', input.backupId);
         const restoreId = id('restore');
         const result: RestoreRecord = { restoreId, revision: 1, backupId: backup.backupId, companionId: backup.companionId,
-          scopeId: backup.scopeId, compatible: false, receipt: { ...runtime.receipt(restoreId, 'waiting'), waitingReason: 'Restore prerequisites are unavailable' },
+          scopeId: backup.scopeId, compatible: false, receipt: { ...runtime.receipt(restoreId, 'waiting'), waitingReason: 'Full data recovery requires the offline companion-backup command with DSH closed' },
           steps: [], withdrawalGuard: null, preRestoreBackupId: null,
-          limitations: ['Memory withdrawal guard is unavailable', 'Cross-module freeze/import coordinator is not implemented', 'Backup is a partial Core snapshot; protected receipts, native logs and resource bytes are not restorable from it'] };
+          limitations: ['This legacy artifact is a partial Core snapshot, not an offline file backup',
+            'Use scripts/companion-backup.mjs create/verify/restore with the installed receipt and DSH closed',
+            'Offline recovery includes companion files and selected native workspaces, validates package/data hashes, and preserves unrelated workspaces'] };
         store.put('restore', restoreId, result); return result;
       }, true),
       inspectRestore: runtime.call('maintenance.inspectRestore', false, input => store.require<RestoreRecord>('restore', input.restoreId), true),
       listRestores: runtime.call('maintenance.listRestores', false, input => store.page(store.all<RestoreRecord>('restore'), input), true),
       applyRestore: runtime.call('maintenance.applyRestore', false, input => {
         const record = store.require<RestoreRecord>('restore', input.restoreId); revision(record.revision, input.expectedRevision);
-        unavailable('Restore is disabled until withdrawal guard, freeze and protected-ledger preservation are implemented');
+        unavailable('An active Core database cannot restore itself. Quit DSH and use scripts/companion-backup.mjs restore with a verified offline backup and a new --before safety-backup directory');
       }, true),
       reconcileRestore: runtime.call('maintenance.reconcileRestore', false, input => {
         const record = store.require<RestoreRecord>('restore', input.restoreId); revision(record.revision, input.expectedRevision); return record;
@@ -81,9 +84,9 @@ export class CoreMaintenance {
     this.module = {
       health: runtime.call('health', false, () => this.health()),
       describeState: runtime.call('describeState', false, () => ({ mode: 'owned', formatId: 'codex-pet.core-state', schemaVersion: '1', revision: null })),
-      exportState: runtime.call('exportState', false, () => unavailable('Use maintenance.createBackup for the partial Core snapshot; full owner snapshots await C3'), true),
-      prepareImport: runtime.call('prepareImport', false, () => unavailable('Guarded import is not implemented'), true),
-      applyImport: runtime.call('applyImport', false, () => unavailable('Guarded import is not implemented'), true),
+      exportState: runtime.call('exportState', false, () => unavailable('Use scripts/companion-backup.mjs create for a full offline file backup; maintenance.createBackup is a legacy partial Core snapshot'), true),
+      prepareImport: runtime.call('prepareImport', false, () => unavailable('Offline file recovery is provided by scripts/companion-backup.mjs; device migration uses the native resume-repo installer'), true),
+      applyImport: runtime.call('applyImport', false, () => unavailable('Quit DSH before offline file recovery; online module import is not supported'), true),
       quiesce: runtime.call('quiesce', true, input => {
         timestamp(input.deadline); check(['disable', 'shutdown', 'upgrade', 'restore'].includes(input.reason), 'Invalid quiescence reason');
         const value = { quiescenceId: id('quiescence'), module: 'core' as const, admissionClosed: true, stateRevision: null,
