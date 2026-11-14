@@ -36,7 +36,7 @@ createInterface({input:process.stdin}).on('line',line=>{
   if(message.type==='changed'&&win&&!win.isDestroyed()&&win.webContents.mainFrame.url===url) {
     const change=message.change;
     if(change&&typeof change.workspaceId==='string'&&typeof change.bootId==='string'&&Number.isSafeInteger(change.revision)&&change.revision>=0)
-      win.webContents.send('chatpet-room:changed',{workspaceId:change.workspaceId,bootId:change.bootId,revision:change.revision});
+      win.webContents.send('chatpet-room:changed',{workspaceId:change.workspaceId,bootId:change.bootId,revision:change.revision,reason:change.reason});
   }
   if(message.type==='response'){
     const waiter=pending.get(message.id);if(!waiter)return;pending.delete(message.id);

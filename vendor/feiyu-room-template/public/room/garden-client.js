@@ -7,6 +7,7 @@ export function createGardenClient({world,renderer,camera,api,onOpen,onClose,onH
   const model=createGardenWorld(world,renderer,{quality:world.quality});
   let opened=false,view=null,selected=0,readBusy=false,writeBusy=false,revision=0,failures=0;
   let visible=false,disposed=false,refreshPending=false,refreshTimer,readController;
+  let expectedVersion=null,appliedVersion=null,refreshForced=false;
   const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
   const notice=document.createElement('div');notice.className='garden-connection';notice.setAttribute('role','status');notice.hidden=true;
   const noticeText=document.createElement('span');const retry=document.createElement('button');retry.type='button';retry.textContent='重试连接';notice.append(noticeText,retry);document.body.append(notice);
@@ -57,7 +58,11 @@ export function createGardenClient({world,renderer,camera,api,onOpen,onClose,onH
   }
   function scheduleRefresh() {
     if(disposed||!visible||document.hidden){clearRefresh();return;}
-    if(refreshPending){changed();return;}
+    if(refreshPending){
+      const covered=expectedVersion&&appliedVersion&&expectedVersion.bootId===appliedVersion.bootId&&expectedVersion.revision<=appliedVersion.revision;
+      if(!refreshForced&&covered)refreshPending=false;
+      else {changed(refreshForced?undefined:expectedVersion);return;}
+    }
     clearRefresh();
     if(readBusy||writeBusy)return;
     const delay=refreshDelay();
@@ -65,10 +70,13 @@ export function createGardenClient({world,renderer,camera,api,onOpen,onClose,onH
   }
   async function refresh(force=false) {
     if(disposed||!visible||document.hidden)return;
-    if(readBusy||writeBusy){refreshPending=true;return;}
-    clearRefresh();refreshPending=false;
+    if(readBusy||writeBusy){refreshPending=true;refreshForced ||= force;return;}
+    clearRefresh();refreshPending=false;refreshForced=false;
     readBusy=true;const ticket=revision,controller=new AbortController();readController=controller;
-    try {const data=await request('/api/garden/state',undefined,controller.signal);if(ticket===revision&&visible&&!disposed&&!document.hidden){accept(data.garden);failures=0;}}
+    try {const data=await request('/api/garden/state',undefined,controller.signal);if(ticket===revision&&visible&&!disposed&&!document.hidden){
+      const version=data.behavior;
+      if(version&&expectedVersion&&(version.bootId!==expectedVersion.bootId||version.revision<expectedVersion.revision)){refreshPending=true;return;}
+      accept(data.garden);if(version)appliedVersion=version;failures=0;}}
     catch(e){
       if(controller.signal.aborted||ticket!==revision||!visible||disposed||document.hidden)return;
       failures++;
@@ -80,9 +88,14 @@ export function createGardenClient({world,renderer,camera,api,onOpen,onClose,onH
       scheduleRefresh();
     }
   }
-  function changed(){
+  function changed(change){
     if(disposed||!visible||document.hidden)return;
-    refreshPending=true;clearRefresh();
+    if(change&&typeof change.bootId==='string'&&Number.isSafeInteger(change.revision)){
+      if(appliedVersion?.bootId===change.bootId&&appliedVersion.revision>=change.revision)return;
+      if(expectedVersion?.bootId===change.bootId&&expectedVersion.revision>change.revision)return;
+      expectedVersion={bootId:change.bootId,revision:change.revision};
+    }else refreshForced=true;
+    refreshPending=true;if(readBusy||writeBusy)return;clearRefresh();
     refreshTimer=setTimeout(()=>{refreshTimer=undefined;void refresh();},0);
   }
   function setVisible(value){

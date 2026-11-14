@@ -60,6 +60,7 @@ jobs:
           pnpm run check:types
           pnpm test
           pnpm run check:release
+          pnpm run test:refresh
           pnpm run test:release
           if [ "$EVENT_NAME" = workflow_dispatch ] && [ "${REUSE_TAG:-0}" != 1 ]; then
             git config user.name github-actions[bot]

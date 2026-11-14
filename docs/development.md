@@ -28,12 +28,22 @@ pnpm run test:life-integration
 pnpm run test:release
 pnpm run build
 pnpm run check:release
+pnpm run test:refresh
 ```
 
 `pnpm test` retains its previous scope: compiled TypeScript tests plus World
 JavaScript tests. `test:life-integration` retains the explicit existing regression
 suites. Moving tests does not remove their assertions or broaden them into live
 account/model checks. Python provider tests are under `tests/memory/`.
+`test:refresh` covers bounded Room/garden/Desktop refresh convergence, stale
+responses, explicit refreshes, intentional frame rates and resize/draw ordering.
+On macOS, the isolated compositor check uses the existing Electron runtime:
+
+```sh
+"$HOME/.dsh/electron/Electron.app/Contents/MacOS/Electron" tests/manual/room-canvas.cjs
+pnpm run test:room-refresh
+```
+
 Native/window checks in `scripts/checks/` and fixtures in `tests/manual/` require
 explicit isolated environments; they must not run against personal companion data.
 

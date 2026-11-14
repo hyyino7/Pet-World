@@ -111,6 +111,7 @@ test('a real sustained Life plan does not reschedule itself through observation-
   assert.ok(f.counters.ticks-before<=3,'Dispatch and its receipt settle in bounded passes');
   const current=f.plan.read().plan!,id=current.operationId;
   assert.ok(id);assert.equal(current.status,'active');
+  const rawBefore=(await f.behavior.snapshot(f.workspace.id)).needs;
   const settledTicks=f.counters.ticks,changeOffset=f.changes.length;
   for(let i=0;i<12;i++){
     await f.advance(1);
@@ -119,7 +120,8 @@ test('a real sustained Life plan does not reschedule itself through observation-
     await f.settle();
   }
   assert.equal(f.counters.ticks,settledTicks,'Millisecond need changes from view/receipt observations cannot wake Life');
-  assert.ok(f.changes.slice(changeOffset).some(change=>change.reason==='observation'),'The test exercised actual changed observations');
+  assert.equal(f.changes.length,changeOffset,'Sub-display reads do not broadcast');
+  assert.ok((await f.behavior.snapshot(f.workspace.id)).needs.thirst>rawBefore.thirst,'Physical time still advances at full precision');
   assert.equal(f.plan.read().plan!.operationId,id);
   assert.ok(JSON.parse(readFileSync(join(f.directory,'home.json'),'utf8')).plannedExecutions[id!]);
 });

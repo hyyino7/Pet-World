@@ -20,6 +20,7 @@ jobs:
           pnpm run check:types
           pnpm test
           pnpm run check:release
+          pnpm run test:refresh
           pnpm run test:release
           mkdir -p .cache/release
           COPYFILE_DISABLE=1 pnpm pack --pack-destination .cache/release

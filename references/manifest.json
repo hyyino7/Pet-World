@@ -935,8 +935,8 @@
           "upstream_sha256": "7dd52b02cfbc0338553b2b3a48f36109c0c3a9db9fbc4fd8d2fd0569fe670881"
         },
         "vendor/feiyu-room-template/public/room/app.js": {
-          "sha256": "74d7629bfde1aee95f780aca22e28ffeada88baa8ad0e2316674abb055d3f1f3",
-          "treatment": "Retain the native Connection/chat adapters and source-backed Room state; render shared structured feelings with original idle clips and static-model root motion, preserving actual behavior and the settings-independent Room carrier. Preserve the monotonic clock of an unchanged walking route across delayed snapshots and use ETA to locate ordered route progress, including overlapping legs. Compensate delivery age using the native Room/host shared device clock and let the eyes camera consume continuous display coordinates. Register the original model-quality callback and initial status once during startup, outside character-mode click handlers. Align all three actors to the actual Body position and elevation only for the initial one-shot photograph; retain regular frame smoothing. Scope TV opinion requests to their originating cast and native caller AbortSignal, cancel them when the cast or following intent ends, and reject stale replies/errors/finalizers without changing the original opinion cadence or manual toast.",
+          "sha256": "c5fe53d88ef120950019c4cecf237e560a227f90cb8aa114f1cf2f11e52d956f",
+          "treatment": "Retain the native Connection/chat adapters and source-backed Room state; render shared structured feelings with original idle clips and static-model root motion, preserving actual behavior and the settings-independent Room carrier. Preserve the monotonic clock of an unchanged walking route across delayed snapshots and use ETA to locate ordered route progress, including overlapping legs. Compensate delivery age using the native Room/host shared device clock and let the eyes camera consume continuous display coordinates. Register the original model-quality callback and initial status once during startup, outside character-mode click handlers. Align all three actors to the actual Body position and elevation only for the initial one-shot photograph; retain regular frame smoothing. Scope TV opinion requests to their originating cast and native caller AbortSignal, cancel them when the cast or following intent ends, and reject stale replies/errors/finalizers without changing the original opinion cadence or manual toast. Adapt quality to the intentional presentation FPS and tier; apply canvas resizing before the same frame is drawn, including window resize.",
           "source": "public/room/app.js",
           "upstream_sha256": "13125c572839773c45809319bb5c4bb01d4209e17bad2071cf4f67b0a1fe1f18"
         },
@@ -960,8 +960,8 @@
         "vendor/feiyu-room-template/public/room/garden-client.js": {
           "source": "public/room/garden-client.js",
           "upstream_sha256": "5004f469caa1515888a7ddf771b830461a925b7b2ed96b30937791c0bd15b828",
-          "sha256": "52ced1f6657bc7d37c8af9c2b80a6c8e8fda29a110e7b4471c1deffd3dffe329",
-          "treatment": "Reuse the existing home-action callback and RPC for all seven companion controls. One visibility-scoped refresh timer reads the authoritative garden projection for natural crop changes and after manual transitions; coalesce native events, retain the original retry cadence, and reject stale read/write presentation without reversing accepted work. No client growth authority, model wake or automatic goal/harvest is introduced."
+          "sha256": "2009b36c606a28bf6078326ea4e3eb9d0b4cbebb9f9cc3b8173d7810bf1ea4eb",
+          "treatment": "Reuse the existing home-action callback and RPC for all seven companion controls. One visibility-scoped refresh timer reads the authoritative garden projection for natural crop changes and after manual transitions; coalesce native events, retain the original retry cadence, and reject stale read/write presentation without reversing accepted work. No client growth authority, model wake or automatic goal/harvest is introduced. Use Body boot/revision coverage to coalesce read notifications without dropping newer or explicit refreshes; retain visibility and crop-time refresh ownership."
         },
         "vendor/feiyu-room-template/public/room/actor.js": {
           "source": "public/room/actor.js",

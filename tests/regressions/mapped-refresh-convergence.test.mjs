@@ -1,3 +1,4 @@
+import {roomReaders} from '../fixtures/room-readers.mjs';
 import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
@@ -113,6 +114,7 @@ test('actual ensure and Body: an observation-producing roomState converges, whil
   const f=await fixture(t,{real:true});
   assert.equal(f.reads,1,'The snapshot observation is already covered by its own returned projection');
   const reads=f.reads;await f.platform.refreshBehavior();await f.drain();assert.equal(f.reads,reads+1);
+  f.body.binding.room.state.needs.thirst+=.02;
   t.mock.timers.setTime(Date.now()+100);await f.body.snapshot(f.target.id);await f.drain();
   assert.equal(f.reads,reads+2,'An external Body snapshot still causes one platform read');
   assert.equal(f.platform.behavior.behavior.revision,f.body.revision);
@@ -187,7 +189,7 @@ test('actual direct Body: a queued owner feed published after the observation re
     if(!injected && event.reason==='observation') {injected=true;action=f.body.act(f.target.id,'feed','tail-feed','desktop');}
     if(event.reason==='transition')transitions.push({reading:Boolean(f.platform.behaviorRead),refreshing:Boolean(f.platform.refreshing)});
   });
-  t.after(stop);t.mock.timers.setTime(Date.now()+10);
+  t.after(stop);f.body.binding.room.state.needs.thirst+=.02;t.mock.timers.setTime(Date.now()+10);
   await f.platform.refreshBehavior();assert.equal(injected,true);await action;
   assert.ok(transitions.some(event=>!event.reading && event.refreshing),'The real Body transition reached the settling gap');
   assert.equal(f.body.binding.room.state.kind,'eat');assert.equal(f.platform.behavior.her.kind,'eat');
@@ -221,4 +223,14 @@ for(const rebind of [false,true])test('actual refresh tail: '+(rebind?'a replace
   assert.equal(f.reads,before+(rebind?2:1));
   assert.equal(f.platform.behavior?.behavior.bootId,rebind?'replacement-boot':undefined);
   assert.equal(f.platform.refreshAgain,false);assert.equal(f.platform.refreshing,undefined);
+});
+
+test('Room, garden and actual Desktop settle together after reads and an owner action',async t=>{
+  const f=await fixture(t,{real:true,direct:true});
+  const readers=roomReaders(async()=>{t.mock.timers.setTime(Date.now()+1);return f.body.roomState(f.target.id);},async()=>{t.mock.timers.setTime(Date.now()+1);return f.body.garden(f.target.id,'state');});
+  const stop=f.ctx.on('pet/behavior.changed',event=>readers.changed(event));t.after(stop);
+  await readers.start();await readers.drain();await f.drain();
+  assert.ok(readers.counts.main<=2&&readers.counts.garden<=2);
+  await f.body.act(f.target.id,'water','shared-water','desktop');await readers.drain();await f.drain();
+  assert.equal(f.platform.behavior.her.kind,'drink');assert.ok(readers.counts.main<=4&&readers.counts.garden<=4);
 });

@@ -56,6 +56,7 @@ export function adaptRoomRefresh(source:string):string {
   };
   replace('let requestInFlight = false;',`let requestInFlight = false;
 let companionRefreshPending = false;
+let companionExplicitRefreshPending = false;
 let companionExpectedVersion = null;
 let companionAppliedVersion = null;
 function refreshCompanionRoom(change) {
@@ -63,8 +64,9 @@ function refreshCompanionRoom(change) {
   if (companionAppliedVersion?.bootId === change.bootId && companionAppliedVersion.revision >= change.revision) return;
   if (companionExpectedVersion?.bootId === change.bootId && companionExpectedVersion.revision > change.revision) return;
   companionExpectedVersion = {bootId:change.bootId,revision:change.revision};
-  requestViewRefresh();
-  gardenController?.changed();
+  if (requestInFlight) companionRefreshPending = true;
+  else requestViewRefresh();
+  gardenController?.changed(change);
 }`);
   replace('function applyState(next) {\n  if (!next) return;',`function applyState(next) {
   if (!next) return;
@@ -76,9 +78,14 @@ function refreshCompanionRoom(change) {
     companionAppliedVersion = {bootId:version.bootId,revision:version.revision};
   }`);
   replace('  if (requestInFlight) return;',
-    '  if (requestInFlight) { companionRefreshPending = true; return; }');
+    '  if (requestInFlight) { companionExplicitRefreshPending = true; return; }');
   replace('    requestInFlight = false;',`    requestInFlight = false;
-    if (companionRefreshPending) { companionRefreshPending = false; requestViewRefresh(); }`);
+    const uncovered = companionRefreshPending && (!companionAppliedVersion || !companionExpectedVersion
+      || companionAppliedVersion.bootId !== companionExpectedVersion.bootId
+      || companionAppliedVersion.revision < companionExpectedVersion.revision);
+    const repeat = companionExplicitRefreshPending || uncovered;
+    companionRefreshPending = false; companionExplicitRefreshPending = false;
+    if (repeat) requestViewRefresh();`);
   replace('  startPresentation();',`  startPresentation();
   const stopCompanionChanges = window.chatpetRoomBridge?.onChanged?.(refreshCompanionRoom);
   window.addEventListener('pagehide', () => {

@@ -82,6 +82,7 @@ test('the desktop and room use one saved body through pending sleep, arrival, ca
   const frames: {type: string; value: any}[] = [];
   let mood: RoomMood | undefined = {mood: 78, dims: {happy: 35}};
   let features: DesktopFeatures, life: CompanionLife, behavior: CompanionBehavior;
+  const listeners=new Map<string,Set<(...args:any[])=>void>>();
   const context = {
     get(name: string) {
       if (name === 'petLife') return life;
@@ -90,7 +91,7 @@ test('the desktop and room use one saved body through pending sleep, arrival, ca
       if (name === 'workspaceRegistry') return registry;
       if (name === 'petEmotion') return {roomSnapshot: () => mood && {...mood, label: 'current mood', updatedAt: now}};
     },
-    tools: {register() {}}, on: () => () => {}, effect: () => () => {}, emit() {},logger:()=>({warn(){}}),
+    tools: {register() {}}, on(name:string,fn:(...args:any[])=>void){const set=listeners.get(name)??new Set();listeners.set(name,set);set.add(fn);return()=>set.delete(fn);}, effect: () => () => {}, emit(name:string,...args:any[]){for(const fn of listeners.get(name)??[])fn(...args);},logger:()=>({warn(){}}),
   } as unknown as Context;
   features = new DesktopFeatures(context, host, (type, value) => frames.push({type, value}), () => true, () => false);
   life = new CompanionLife(context, host, 'standard');

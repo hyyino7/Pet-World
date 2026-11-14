@@ -12,7 +12,7 @@ const visibility=(_event,value)=>{
 };
 const changed=(_event,value)=>{
   if(!value||typeof value.workspaceId!=='string'||typeof value.bootId!=='string'||!Number.isSafeInteger(value.revision)||value.revision<0)return;
-  latestChange={workspaceId:value.workspaceId,bootId:value.bootId,revision:value.revision};
+  latestChange={workspaceId:value.workspaceId,bootId:value.bootId,revision:value.revision,reason:value.reason};
   for(const listener of changeListeners)listener({...latestChange});
 };
 ipcRenderer.on('chatpet-room:changed',changed);

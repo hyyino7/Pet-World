@@ -2113,12 +2113,13 @@ function synchronizePresentation() {
   else clearOpenViewKeys();
 }
 
+function presentationFps() {
+  const moving = state?.her?.walking || state?.her?.gardenWork || charDrag?.active || clickMarkerUntil > performance.now();
+  return moving || tvStream || performance.now() < activeViewUntil ? 30 : state?.her ? 6 : 0;
+}
 function startPresentation() {
   presentationReady = true;
-  presentationLoop = createPresentationLoop({draw: frame, fps: () => {
-    const moving = state?.her?.walking || state?.her?.gardenWork || charDrag?.active || clickMarkerUntil > performance.now();
-    return moving || tvStream || performance.now() < activeViewUntil ? 30 : state?.her ? 6 : 0;
-  }});
+  presentationLoop = createPresentationLoop({draw: frame, fps: presentationFps});
   const onInput = () => { activeViewUntil = performance.now() + 600; presentationLoop.invalidate(); };
   for (const event of ['pointerdown','pointermove','wheel','keydown']) window.addEventListener(event,onInput,{passive:true});
   const stopVisibility = window.chatpetRoomBridge?.onVisibility?.(value => {
@@ -2146,10 +2147,12 @@ let fpsAcc = 0;
 let fpsN = 0;
 let lastAdapt = 0;
 let ratio = renderer.getPixelRatio();
+let measuredFps = 0, presentationResizePending = false;
 
 function frame(now) {
   if (!displayAllowed() || presentationNeedsSnapshot) return;
-  const dt = Math.min(0.2, (now - prevT) / 1000);
+  const elapsed = Math.max(0, (now - prevT) / 1000);
+  const dt = Math.min(0.2, elapsed);
   prevT = now;
   gardenController?.tick(now);
   updateOpenView(dt);
@@ -2246,23 +2249,29 @@ function frame(now) {
   }
 
   if (tvStream && tvMat) tvMat.emissiveIntensity = 0.95;
-  renderer.render(scene, camera);
-  world.setClock?.(state?.hour || 0, 0);
-
   // 自适应：帧率低了降像素比，连续高了再升回来
-  fpsAcc += dt; fpsN += 1;
+  const targetFps = presentationFps();
+  if (targetFps !== measuredFps) { fpsAcc = 0; fpsN = 0; lastAdapt = now; measuredFps = targetFps; }
+  fpsAcc += elapsed; fpsN += 1;
   if (fpsN >= 60 && now - lastAdapt > 8000 && !SHOT) {
-    const fps = fpsN / fpsAcc;
+    const fps = fpsN / fpsAcc, target = presentationFps(), ceiling = Math.min(devicePixelRatio || 1, tier === 'low' ? 1 : 1.35);
     fpsAcc = 0; fpsN = 0;
     lastAdapt = now;
-    if (fps < 22 && ratio > 1.0) {
+    if (fps < target * 22 / 30 && ratio > 1.0) {
       ratio = Math.max(1.0, ratio - 0.2);
       renderer.setPixelRatio(ratio);
-    } else if (fps > 28 && ratio < Math.min(devicePixelRatio || 1, 1.35)) {
-      ratio = Math.min(Math.min(devicePixelRatio || 1, 1.35), ratio + 0.1);
+    } else if (fps > target * 28 / 30 && ratio < ceiling) {
+      ratio = Math.min(ceiling, ratio + 0.1);
       renderer.setPixelRatio(ratio);
     }
   }
+  if (presentationResizePending) {
+    presentationResizePending = false;
+    if (canvas.width !== Math.floor(innerWidth * ratio) || canvas.height !== Math.floor(innerHeight * ratio))
+      renderer.setSize(innerWidth, innerHeight, false);
+  }
+  renderer.render(scene, camera);
+  world.setClock?.(state?.hour || 0, 0);
 }
 
 // 灯影刷新：太阳角度变了才重画阴影
@@ -2274,7 +2283,7 @@ world.updateEnvironment = (opts) => {
 };
 
 function onResize() {
-  renderer.setSize(innerWidth, innerHeight, false);
+  presentationResizePending = true;
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   if (gardenController?.isOpen) focusGarden();

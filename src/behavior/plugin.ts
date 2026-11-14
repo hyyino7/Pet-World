@@ -13,7 +13,7 @@ import type { CompanionFactActor } from '../contracts/interaction.js';
 import type { RoomInteractionContext } from './room.js';
 export type { PlannedActivity, PlannedExecution } from '../contracts/behavior.js';
 
-interface Binding {id: string; path: string; storageId: string; room: CompanionRoom; fingerprint?: string}
+interface Binding {id: string; path: string; storageId: string; room: CompanionRoom; fingerprint?: string; presentationFingerprint?: string}
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'] as const;
 const owners = new WeakMap<PetCoreHost, CompanionBehavior>();
 
@@ -188,12 +188,17 @@ export class CompanionBehavior {
       // Domain history may exceed the incoming Core payload budget. Hash the
       // program-owned JSON save directly without admitting it as a new request
       // or deleting operation/fact receipts needed for replay protection.
-      const persisted=JSON.stringify([semantic,this.activity(),this.autonomous,bound.room.view().emotion ?? null,this.expression ?? null]);
+      const home=bound.room.view(),activity=this.activity();
+      const persisted=JSON.stringify([semantic,activity,this.autonomous,home.emotion ?? null,this.expression ?? null]);
+      // Reuse the existing public Body projection; saved metrics stay full precision.
+      const presentationFingerprint=createHash('sha256').update(JSON.stringify([{...semantic,needs:home.body},activity,this.autonomous,home.emotion ?? null,this.expression ?? null])).digest('hex');
       const fingerprint='sha256:'+createHash('sha256').update(persisted).digest('hex');
-      if (fingerprint === bound.fingerprint && !this.publicationFault) return;
-      if(fingerprint!==bound.fingerprint) {bound.fingerprint=fingerprint;this.revision++;}
+      const changed=fingerprint!==bound.fingerprint;
+      const visibleChanged=presentationFingerprint!==bound.presentationFingerprint;
+      if(changed) {bound.fingerprint=fingerprint;this.revision++;}
+      bound.presentationFingerprint=presentationFingerprint;
+      if(!this.publicationFault && (!changed || reason==='observation' && !visibleChanged))return;
       this.ctx.emit('pet/behavior.changed', {workspaceId:bound.id,bootId:this.bootId,revision:this.revision,reason});
-      this.ctx.get('petDesktop')?.features?.restore(false);
       this.publicationFault=undefined;
     } catch(error) {
       // Body work and its durable receipt have already committed. A failed
@@ -269,8 +274,11 @@ export class CompanionBehavior {
     return this.enqueue(async () => {
       const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);
       const bound=this.checked(workspaceId);if(bound!==before)throw Error('身体工作区已切换');
-      const result = bound.room.garden(operation,input); this.publish();
-      return 'home' in result && result.home ? {...result,home:this.presentHome(result.home)} : result;
+      const execution=JSON.stringify(bound.room.plannedState());
+      const result = bound.room.garden(operation,input);
+      this.publish(operation==='state' && execution===JSON.stringify(bound.room.plannedState())?'observation':'transition');
+      const behavior={...this.activity(),revision:this.revision,bootId:this.bootId};
+      return {...result,behavior,...('home' in result && result.home ? {home:this.presentHome(result.home)} : {})};
     });
   }
   setAutonomy(workspaceId: string, enabled: boolean) {
