@@ -1,24 +1,15 @@
-# Her World release notes
+# Her World 0.1.0
 
-This prerelease adds npm publication for DSH's native installed-plugin version
-and Update controls. The checked archive is published unchanged to npm and
-GitHub, with immutable integrity verification and token-free GitHub OIDC.
-Prereleases use the `next` tag. GitHub installations need a one-time dependency
-source switch; subsequent updates use the native DSH update dialog.
+Fixes caretaker pause/resume replays that could interrupt a Life activity after
+explicit recovery and restart even though the garden job had not changed.
+Repeated controls now preserve existing work and phase progress; real pause,
+resume and cancel operations remain effective on the original job.
 
-The Room/garden/Desktop refresh convergence and canvas blank-frame repairs from
-rc.4 remain included. No companion data format, bundle ID or runtime behavior
-changes in this publication.
+Includes the Room/garden/Desktop refresh and canvas blank-frame repairs.
+Regression coverage checks restart recovery, unchanged wallet/inventory,
+live controls and cross-view refresh convergence using disposable workspaces.
 
-The old `dsh-Chatpet` package requires the one-time transition described in
-[the update guide](https://github.com/hyyino7/her-world/blob/main/docs/github-updates.md). Existing companion data formats and
-module entry IDs are unchanged. Never enable both packages together.
-
-Known P2: replaying an old unfinished caretaker pause/resume after explicit Life
-resume and a restart can interrupt the restored hold again without changing the
-garden job's effective state. This publication does not repair that issue.
-Stable publication remains blocked by `docs/release/status.json`.
-
-CI and archive checks do not establish installed visual, resource, device,
-provider or owner acceptance. No installation or personal-data migration is
-performed by the release workflow.
+Published to npm's stable `latest` channel. DSH's normal version/update controls
+no longer need the prerelease filter. Existing GitHub installations require the
+one-time native source switch described in [the update guide](https://github.com/hyyino7/her-world/blob/main/docs/github-updates.md).
+No installation or companion-data migration is performed by this release.

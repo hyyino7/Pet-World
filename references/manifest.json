@@ -923,8 +923,8 @@
           "upstream_sha256": "cd304d35a61e0fdb5f3cebb684b40f092bb1f57698727f848311c96c7fbf7488"
         },
         "vendor/feiyu-room-template/src/garden-autonomy.js": {
-          "sha256": "c64b1c91a0f10eafe24eb23069ce13afe521f3ebe41177011fdffe3d16ea0825",
-          "treatment": "Retain the original route/dwell/job executor with the Economy storage adapter. A requested generic visit does not implicitly choose harvest, sale or sowing in economic mode; preserved accepted jobs retain their receipts.",
+          "sha256": "9277e083f807e8ff610c8ae102266b5b0269217fa2295baf42efcbdabc72fb4a",
+          "treatment": "Retain the original route/dwell/job executor with the Economy storage adapter. A requested generic visit does not implicitly choose harvest, sale or sowing in economic mode; preserved accepted jobs retain their receipts. Report whether a caretaker control actually changes its job; repeated pause/resume reads preserve live phases and unrelated Body work, while stale physical checkpoints are reconciled only for the original job.",
           "source": "src/garden-autonomy.js",
           "upstream_sha256": "51fde1095ff49415d25dede2178746ca4d583e854a988ae32169427f00e56dd0"
         },

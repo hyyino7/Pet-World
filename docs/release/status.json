@@ -1,4 +1,4 @@
 {
-  "stableReady": false,
-  "reason": "Known P2: replaying unfinished caretaker pause/resume after Life resume and restart can interrupt the restored hold again."
+  "stableReady": true,
+  "reason": "Caretaker pause/resume no-op replay after Life recovery and restart is covered by mapped-refused-movement regressions."
 }

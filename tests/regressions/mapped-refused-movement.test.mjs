@@ -217,8 +217,21 @@ for(const owner of ['caretaker','body-row'])test('live '+owner+' garden pause/re
     else {assert.equal(receipt.status,'cancelled');assert.equal(jobs.length,0);assert.equal(f.state().route,null);assert.equal(f.state().dwell,null);}
     if(owner==='body-row')assert.equal(f.state().plannedExecutions[requestId].status,type==='pause'?'paused':type==='resume'?'running':'cancelled');
     const after=f.capture();assert.deepEqual(await f.request('roomCare',{type,requestId},'live-control-'+type),result);unchanged(f,after);
+    if(owner==='caretaker' && type==='resume'){await f.reopen();const running=f.capture();assert.equal((await f.request('roomCare',{type,requestId},'live-control-'+type)).accepted,false);unchanged(f,running);}
   }
   const after=f.store().snapshot();assert.equal(after.balance,stock.balance);assert.deepEqual(after.inventory,stock.inventory);assert.deepEqual(after.pendingUses,stock.pendingUses);assert.deepEqual(f.store().ledger(),ledger);
   assert.equal(f.garden().plots[0].tilled,false,'Control never completes the unfinished till effect');
 });
 
+for(const type of ['pause','resume'])test('unfinished caretaker '+type+' replay after Life resume and restart preserves accepted work',async t=>{
+  const f=await fixture(t),job='unfinished-'+type;
+  await f.request('roomCare',{type:'careNow',decision:'defer'},job);
+  const requestId=digest(['workspace',f.host.workspace.storageId(),'roomCare',job]),input={type,requestId};
+  await f.request('roomCare',input,'old-control');
+  await f.plan.control(f.plan.read().revision,'pause','Pause before explicit recovery',f.body,'workspace');
+  await f.plan.control(f.plan.read().revision,'resume','Continue the original wait',f.body,'workspace');
+  await f.reopen();const before=f.capture();
+  const result=await f.request('roomCare',input,'old-control');assert.equal(result.ok,true);unchanged(f,before);assert.equal(result.accepted,false);
+  await f.plan.advance('workspace',f.body);assert.equal(f.plan.read().plan.status,'active');
+  assert.equal(f.plan.read().plan.cursor,0);assert.equal(f.plan.read().plan.steps[1].action,'water');
+});

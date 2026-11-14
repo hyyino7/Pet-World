@@ -326,10 +326,19 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
       if (!job) {
         // A prior garden commit may have won the crash race with its home
         // checkpoint. Finish physical cancellation even when the job is gone.
-        if (receipt && ['pause','cancel'].includes(type)) {
+        if (receipt && ['pause','cancel'].includes(type) && [h.route?.target,h.dwell?.target].some(target=>target?.gardenJobId===receipt.jobId)) {
           h=pausePlannedHomeActivity(h,receipt.jobId,now);storage.saveHomeState(homeFile,h,now);
         }
-        return {ok:receipt?.status==='completed',status:receipt?.status || 'failed',message:receipt?.message || '原任务不存在',garden:publicView(g,h,now),home:homeView(h,now,env)};
+        return {ok:receipt?.status==='completed',accepted:false,status:receipt?.status || 'failed',message:receipt?.message || '原任务不存在',garden:publicView(g,h,now),home:homeView(h,now,env)};
+      }
+      // Repeated controls observe the original job, not a new owner decision.
+      // A paused job may still own an older home checkpoint after a crash.
+      if(type==='pause' && job.pausedAt || type==='resume' && !job.pausedAt) {
+        if(type==='pause' && [h.route?.target,h.dwell?.target].some(target=>target?.gardenJobId===job.id)) {
+          h=pausePlannedHomeActivity(h,job.id,now);storage.saveHomeState(homeFile,h,now);
+        }
+        return {ok:true,accepted:false,reused:true,status:job.pausedAt?'paused':g.care.task===job?'running':'queued',
+          message:receipt?.message || '原任务状态未变',garden:publicView(g,h,now),home:homeView(h,now,env)};
       }
       if (type==='pause') {
         if (!job.pausedAt) {
@@ -353,7 +362,7 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
       }
       g.care.status=type==='cancel'?'原任务已取消':type==='pause'?'原任务已暂停':'原任务已恢复，等待执行';
       storage.saveGarden(gardenFile,g);storage.saveHomeState(homeFile,h,now);
-      return {ok:true,status:type==='cancel'?'cancelled':type==='pause'?'paused':'queued',message:type==='cancel'?'原任务已取消':type==='pause'?'原任务已暂停':'原任务继续执行',garden:publicView(g,h,now),home:homeView(h,now,env)};
+      return {ok:true,accepted:true,status:type==='cancel'?'cancelled':type==='pause'?'paused':'queued',message:type==='cancel'?'原任务已取消':type==='pause'?'原任务已暂停':'原任务继续执行',garden:publicView(g,h,now),home:homeView(h,now,env)};
     }
     if(![...ACTIONS,'visit','auto','careNow'].includes(type))return {ok:false,message:'没有识别出这项照料安排'};
     if(input.requestId!==undefined && (typeof input.requestId!=='string'||!input.requestId.trim()||input.requestId.length>96||/[\u0000-\u001f\u007f]/.test(input.requestId)))return {ok:false,message:'请求编号必须是 1 到 96 字的文本'};

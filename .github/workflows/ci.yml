@@ -21,6 +21,7 @@ jobs:
           pnpm test
           pnpm run check:release
           pnpm run test:refresh
+          node --test tests/regressions/mapped-refused-movement.test.mjs
           pnpm run test:release
           mkdir -p .cache/release
           COPYFILE_DISABLE=1 pnpm pack --pack-destination .cache/release

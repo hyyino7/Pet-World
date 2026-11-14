@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Exact version, for example 0.1.0-rc.2 (stable remains blocked while the known P2 is open)'
+        description: 'Exact version, for example 0.1.0'
         required: true
         type: string
 permissions:
@@ -63,6 +63,7 @@ jobs:
           pnpm test
           pnpm run check:release
           pnpm run test:refresh
+          node --test tests/regressions/mapped-refused-movement.test.mjs
           pnpm run test:release
           if [ "$EVENT_NAME" = workflow_dispatch ] && [ "${REUSE_TAG:-0}" != 1 ]; then
             git config user.name github-actions[bot]

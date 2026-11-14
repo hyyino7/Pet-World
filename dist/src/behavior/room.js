@@ -1274,7 +1274,7 @@ export class CompanionRoom {
                     result = { ...result, garden: this.tick(now), home: this.view(now) };
                 }
             }
-            else if (result.ok && result.accepted !== false && result.status !== 'completed' && !['careNow', 'auto', 'state'].includes(String(action.type))) {
+            else if (result.ok && result.accepted === true && result.status !== 'completed' && !['careNow', 'auto', 'state'].includes(String(action.type))) {
                 this.interruptPlanned(now, '新的菜园安排打断了当前计划');
                 result = { ...result, garden: this.tick(now), home: this.view(now) };
             }
