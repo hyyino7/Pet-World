@@ -1,0 +1,39 @@
+{
+  "format": 1,
+  "title": {
+    "en": "Her World",
+    "zh": "Her World"
+  },
+  "plugins": [
+    {
+      "name": "her-world",
+      "title": {
+        "en": "Her World",
+        "zh": "Her World"
+      },
+      "description": {
+        "en": "A modular DSH-backed companion.",
+        "zh": "基于 DSH 的模块化陪伴助手。"
+      },
+      "author": "hyyino7",
+      "homepage": "https://github.com/hyyino7/her-world",
+      "repository": {
+        "url": "https://github.com/hyyino7/her-world"
+      },
+      "versions": [
+        {
+          "version": "0.1.0-rc.2",
+          "publishTimestamp": 1794643806,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/hyyino7/her-world",
+            "commit": "3b380a6f7cc1d0e312c70e2d05e31a09121b45fb"
+          },
+          "engines": {
+            "dsh": ">=0.2.2-rc.1 <0.3.0-0"
+          }
+        }
+      ]
+    }
+  ]
+}
