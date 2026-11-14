@@ -10,6 +10,7 @@ on:
         type: string
 permissions:
   contents: write
+  id-token: write
 concurrency:
   group: her-world-release
   cancel-in-progress: false
@@ -83,6 +84,11 @@ jobs:
           pnpm run check:package .cache/release/her-world-*.tgz
           cd .cache/release
           shasum -a 256 her-world-*.tgz > SHA256SUMS
+      - name: Publish checked archive to npm through trusted publishing
+        shell: bash
+        run: |
+          source ./scripts/env.sh
+          node scripts/publish-npm.mjs .cache/release/her-world-$RELEASE_VERSION.tgz
       - name: Promote verified runtime to the default GitHub install branch
         env:
           RELEASE_COMMIT: ${{ steps.frozen.outputs.commit }}

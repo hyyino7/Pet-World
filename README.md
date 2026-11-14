@@ -5,14 +5,14 @@ chat, Room and Desktop. This checkout contains the current implementation only.
 
 ## Install or update in DSH
 
-Open **Plugins → Add plugin**, enter the same repository address for installation
-or a replacement update, then enable Her World:
+Install **her-world@next** from **Plugins → Add plugin** in DSH. Once installed
+from npm, open its plugin detail page and use **Check versions → Update**.
+No custom plugin index is required. Source and checked GitHub archives remain
+available at <https://github.com/hyyino7/her-world>.
 
-```text
-https://github.com/hyyino7/her-world
-```
-
-No custom plugin index is required. Disable the old `dsh-Chatpet` bundle before
+Existing GitHub installations need the one-time source switch in
+[the update guide](docs/github-updates.md) before the native npm update button
+can appear. Disable the old `dsh-Chatpet` bundle before
 first enabling Her World. The owner reported a successful installation on
 2026-11-14; broader functional acceptance is separate. The known caretaker
 pause/resume replay P2 remains unresolved, so releases remain prereleases.

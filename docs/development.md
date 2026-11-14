@@ -42,6 +42,7 @@ On macOS, the isolated compositor check uses the existing Electron runtime:
 ```sh
 "$HOME/.dsh/electron/Electron.app/Contents/MacOS/Electron" tests/manual/room-canvas.cjs
 pnpm run test:room-refresh
+ELECTRON_RUN_AS_NODE=1 "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness" tests/manual/npm-update.cjs
 ```
 
 Native/window checks in `scripts/checks/` and fixtures in `tests/manual/` require

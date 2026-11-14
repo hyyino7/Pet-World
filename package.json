@@ -177,5 +177,9 @@
     "companion",
     "desktop-pet",
     "dafeiyu"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
 }
