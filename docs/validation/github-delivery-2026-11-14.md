@@ -83,10 +83,34 @@ dependencies. CI and fresh-clone instructions now install the existing exact
 `vendor/mnemosyne/requirements-test.lock` before default tests. These failures
 occurred before an `rc.2` tag, Release or market version was created.
 
-Prepared replacement version: `0.1.0-rc.2`. Publication completion and run links
-will be recorded after remote readback. Local Git authentication was absent
-during the first push probe; the owner completed GitHub's device authorization.
-No credential was printed or included in a commit.
+Published replacement version: **0.1.0-rc.2**, marked prerelease.
+
+- [Source/runtime CI](https://github.com/hyyino7/her-world/actions/runs/43574393296):
+  success, including clean environment setup, tests and archive verification.
+- [Manual release workflow](https://github.com/hyyino7/her-world/actions/runs/43574430772):
+  success. This exercises the same **Run workflow** entry the owner can use later.
+- [Release and assets](https://github.com/hyyino7/her-world/releases/tag/v0.1.0-rc.2):
+  archive `her-world-0.1.0-rc.2.tgz`, 114,958,072 bytes, plus `SHA256SUMS`.
+  Published archive SHA256:
+  `50067198735af1725f542ebd84aa1f4fe5cc8dedb7cca446c0c37901739b24ea`.
+- Tag and index both pin
+  `3b380a6f7cc1d0e312c70e2d05e31a09121b45fb`, on `releases/v0.1.0-rc.2`.
+  The commit contains 1,435 files, no source maps or development environments,
+  and `release.json` records source commit `3844125`.
+- The [raw DSH index](https://raw.githubusercontent.com/hyyino7/her-world/market/index.json)
+  was fetched and read back after publication. It contains only the successful
+  `her-world` release, the exact full commit and the declared DSH compatibility.
+- Main readback contains 115 TypeScript implementation files and 107 test files;
+  no `.venv`, `.tools`, `.cache`, `node_modules` or reference checkout is tracked.
+- A fresh isolated pnpm consumer installed the exact indexed Git spec with
+  `--ignore-scripts`. Every concrete package export exists; Core and console
+  imports succeed with the renamed package/version. Tests are excluded from
+  the installed runtime. No DSH process, data store or model call was started.
+  Evidence: `.cache/her-world-git-consumer.log` and its disposable consumer.
+
+Local Git authentication was absent during the first push probe; the owner
+completed GitHub's device authorization. No credential was printed or included
+in a commit. No force push, failed-tag rewrite or source-history replacement.
 
 The known unfinished caretaker pause/resume replay P2 remains open. Stable
 publication is blocked by `docs/release/status.json`. No live installation,

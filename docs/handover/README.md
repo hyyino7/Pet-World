@@ -19,6 +19,9 @@ embedded device binding must be exported before replacement; do not publish it.
 
 Current publication evidence belongs to the
 [delivery record](../validation/github-delivery-2026-11-14.md).
+Full sources are uploaded. Clean cloud CI and manual publication succeeded;
+`0.1.0-rc.2` is published with archive/checksum assets and a validated DSH index
+pinning commit `3b380a6f7cc1d0e312c70e2d05e31a09121b45fb`.
 The restored source and online import histories must both remain reachable;
 the existing handoff-only changes are preserved. No force push or live install.
 The candidate remains a prerelease with the known P2 below; publication is not
