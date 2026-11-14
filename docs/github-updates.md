@@ -102,6 +102,7 @@ The workflow:
 4. Publishes that same archive to npm through GitHub OIDC, using `next` for
    prereleases and `latest` for stable versions. An existing npm version must
    match the archive integrity exactly; a conflicting version stops publication.
+   The workflow waits for npm processing before accepting the public archive.
 5. After npm verification, fast-forwards the default `main` branch to the
    built release commit so the same plain GitHub address receives that version.
    No custom index is generated or published. A concurrent newer source commit
