@@ -1,0 +1,239 @@
+{
+  "repository": "PC2005-cloud/dsh-pet",
+  "distribution": "dsh-pet@0.4.7",
+  "files": {
+    "upstream/host.mjs": {
+      "source": "lib/index.js",
+      "sha256": "55f4b63a8f73c4f0bdd3e482c292c7dfc3f351a86917795f8f942cc4f38ee049"
+    },
+    "upstream/client.js": {
+      "source": "lib/client.js",
+      "sha256": "32bfffc88eeda99c8db6f232a62b3e7ad8215149c4dee427a8c936b69e3b5c14"
+    },
+    "assets/config.jsonc": {
+      "source": "assets/config.jsonc",
+      "sha256": "c5c6d7f6ddcc5e68a501b3a58ba7cf5863c2f283207877c20f4319054762a987"
+    },
+    "assets/main-character.png": {
+      "source": "assets/main-character.png",
+      "sha256": "90e6d4b2fe01e1ead9a02827ac9a9cc249161b4474dc61c37cee9034f72e8ebf"
+    },
+    "assets/logo.png": {
+      "source": "assets/logo.png",
+      "sha256": "fc73bbee8bca13b40ede3ec42af1a827f705ab6dd76b7eaaad489650e0848560"
+    },
+    "assets/pic/notify-truncated.png": {
+      "source": "assets/pic/notify-truncated.png",
+      "sha256": "4bb6cf8d920ab88230441f085b8979d5a49e7afb24afc18fcedf1c8550afe490"
+    },
+    "assets/pic/cursor-grab.png": {
+      "source": "assets/pic/cursor-grab.png",
+      "sha256": "440fc673beedd7450c913741f09ad874e5daf902d5b067775f8a8a72c2783a8c"
+    },
+    "assets/pic/cursor-grabbing.png": {
+      "source": "assets/pic/cursor-grabbing.png",
+      "sha256": "77465d8055cf8f5ee18a1fd7fd173118fe82d33a63bc4a3e0efd7e7e25dbd3ef"
+    },
+    "assets/pic/notify-approval.png": {
+      "source": "assets/pic/notify-approval.png",
+      "sha256": "02cbcc01865d696a6ee0917b8db0057bba11c0761e066874f9932f5980637f24"
+    },
+    "assets/pic/notify-error.png": {
+      "source": "assets/pic/notify-error.png",
+      "sha256": "193eca2e34140ab1d6fb3b7736cade720d7599762e3cee3cdd817aedd3ee1074"
+    },
+    "assets/pic/notify-question.png": {
+      "source": "assets/pic/notify-question.png",
+      "sha256": "c0e0f92e70a42d40fc5e8f8089954e93fbc68df19fd394a68d16de295d099775"
+    },
+    "assets/pic/notify-test.png": {
+      "source": "assets/pic/notify-test.png",
+      "sha256": "8677e74c67b460ee015d689ac2f94ca9075608998fa2d57f6d83ef5db7ebcad4"
+    },
+    "assets/pic/notify-done.png": {
+      "source": "assets/pic/notify-done.png",
+      "sha256": "72a00d121871a0531cf55ce05639f49ef5d08c979be444bd32d1c1519c2d3b13"
+    },
+    "runtime/electron-helper/constants.js": {
+      "source": "runtime/electron-helper/constants.js",
+      "sha256": "dd05194d457b3c3335e246450bc36ca866995729624f0aaeb2a05cb34cd14942"
+    },
+    "runtime/electron-helper/desktop-geometry.js": {
+      "source": "runtime/electron-helper/desktop-geometry.js",
+      "sha256": "61cb545170ef2259f4e75e2b3006759de4eace61d07ea1b8f62621eb91e11e90"
+    },
+    "runtime/electron-helper/dpi-linearization.js": {
+      "source": "runtime/electron-helper/dpi-linearization.js",
+      "sha256": "6ea137ae8d4fadfebadc2d89ffe298256a0d94b6b9591069628631aa8f9b2462"
+    },
+    "runtime/electron-helper/host-liveness.js": {
+      "source": "runtime/electron-helper/host-liveness.js",
+      "sha256": "ccbde1a267f08d184a7f2dabd7292a58f179a06f57c908dc15b02b8014ceaf07"
+    },
+    "runtime/electron-helper/index.html": {
+      "source": "runtime/electron-helper/index.html",
+      "sha256": "27bc02437783d6da035799aea1370b30d6f10c061fbe528a55bed1592279666e"
+    },
+    "runtime/electron-helper/main/bridge.js": {
+      "source": "runtime/electron-helper/main/bridge.js",
+      "sha256": "8fc9e8c1d952ab9ca70e684cd41a0b958e0c5555d21d52030385cb2bd4ba08a4",
+      "upstream_sha256": "5e3bc10120e6351f93cef3b30bf22d0a91a153b0d5f7c47ea4dca52abaa57147"
+    },
+    "runtime/electron-helper/main/displays.js": {
+      "source": "runtime/electron-helper/main/displays.js",
+      "sha256": "9df4eb31c2467165d329282494f49fbef7f720c0b5c9458b5a2107bbf4506d4f"
+    },
+    "runtime/electron-helper/main/dpi.js": {
+      "source": "runtime/electron-helper/main/dpi.js",
+      "sha256": "5ce7b29d835c0599ca2dabb6584586fc3e76dbd256baa90178d232c98a524fea"
+    },
+    "runtime/electron-helper/main/ipc.js": {
+      "source": "runtime/electron-helper/main/ipc.js",
+      "sha256": "040fea02ebadb8d765d17d282b5dec1db2d5974e312dac15b2e2219b7366d3ee"
+    },
+    "runtime/electron-helper/main/smoke.js": {
+      "source": "runtime/electron-helper/main/smoke.js",
+      "sha256": "2b8bedbe208e0d5398fc2189b81c93002c722cab720129c257d8b9057db82114"
+    },
+    "runtime/electron-helper/main/tray.js": {
+      "source": "runtime/electron-helper/main/tray.js",
+      "sha256": "e0f9436fe6db4d527419d3d657be7975c598972c928da08034043f4e99511edc"
+    },
+    "runtime/electron-helper/main/user-data.js": {
+      "source": "runtime/electron-helper/main/user-data.js",
+      "sha256": "5e2468c427d83379c6f915d991aab859cd159c5662a9540dd54272ad55710509"
+    },
+    "runtime/electron-helper/main/windows.js": {
+      "source": "runtime/electron-helper/main/windows.js",
+      "sha256": "29d438b54bd2e9eb2e99ca5f6283e18505a56e9b9447c9bf9760154c023be2f5",
+      "upstream_sha256": "5b60c629e0105e6ae92dadc718b8149649bd1dd6f6be054aa016d7c9550e1fb3"
+    },
+    "runtime/electron-helper/package.json": {
+      "source": "runtime/electron-helper/package.json",
+      "sha256": "8cf1275c9a520d92c4e997b7e28074de9881c6394522c6ca15d0fc84cd8c7ca1"
+    },
+    "runtime/electron-helper/pointer-target.js": {
+      "source": "runtime/electron-helper/pointer-target.js",
+      "sha256": "d83112e4552ffc4f0276c5917b05f3090dd6ce443433423084900f1669ee9964"
+    },
+    "runtime/electron-helper/preload.js": {
+      "source": "runtime/electron-helper/preload.js",
+      "sha256": "b1ac6b08a3eaf5e12d3530331a0e2ee959868b9418d2be129cb93f4b79252551",
+      "upstream_sha256": "102dad829ea4e2107c6bd051f4363e0d025c42ece8098ff7b7a410c85cf37ce4"
+    },
+    "runtime/electron-helper/range.js": {
+      "source": "runtime/electron-helper/range.js",
+      "sha256": "b9c5536a05c9c85dac8abd31df4dbc1083aa888bc37fa6efc372bc1224794d3e"
+    },
+    "runtime/electron-helper/renderer.js": {
+      "source": "runtime/electron-helper/renderer.js",
+      "sha256": "48a06cfca8a9751c183d37af4a3a430364749c9a58e8bd16b906fbf31273b082"
+    },
+    "runtime/electron-helper/sprite/bubble.js": {
+      "source": "runtime/electron-helper/sprite/bubble.js",
+      "sha256": "3391c1d10cd912c1abf5c3cbaf985762f454ea33531ed020fe92b9a42c3394d5"
+    },
+    "runtime/electron-helper/sprite/init.js": {
+      "source": "runtime/electron-helper/sprite/init.js",
+      "sha256": "799fea415976bf35a1f8bf25ba49a7c285d2203ead35cd822205bb5d4a206716"
+    },
+    "runtime/electron-helper/sprite/input.js": {
+      "source": "runtime/electron-helper/sprite/input.js",
+      "sha256": "86f021db46d7907273e47a9a9971dd7c181c72f9fdcb42c13fb6f790cd3b61aa"
+    },
+    "runtime/electron-helper/sprite/menu.js": {
+      "source": "runtime/electron-helper/sprite/menu.js",
+      "sha256": "5ef496d6e02c3a4e4ec2543b4ff362caf2a6e29892008371e3322452adc1ff5b"
+    },
+    "runtime/electron-helper/sprite/motion.js": {
+      "source": "runtime/electron-helper/sprite/motion.js",
+      "sha256": "0b2edc32d05cd5bdf86f265647c5bbd639f67e3a5764cfee3b9e125274d5cdd6"
+    },
+    "runtime/electron-helper/sprite/playback.js": {
+      "source": "runtime/electron-helper/sprite/playback.js",
+      "sha256": "187f68fde1f28606360b77c07d804e7a8ae8ace53b4d93ba2143abf2e1ba889f"
+    },
+    "runtime/electron-helper/sprite/window-fit.js": {
+      "source": "runtime/electron-helper/sprite/window-fit.js",
+      "sha256": "1a2f33f31b7d8c52bb520e42cd2494dd0d515da6bb7ed4596cea535562b45e64"
+    },
+    "runtime/electron-helper/sprite.js": {
+      "source": "runtime/electron-helper/sprite.js",
+      "sha256": "d107e7abdfe2d63716d2c5e1e153372322119069e191971aafbaf2f35f69f7eb"
+    },
+    "runtime/electron-helper/taskbar-watchdog.js": {
+      "source": "runtime/electron-helper/taskbar-watchdog.js",
+      "sha256": "5a9a68b89abe54c8c8cef74654a45e5bac4491b9f8fa9f53a177cfc1d3846928"
+    },
+    "runtime/electron-helper/topmost-watchdog.js": {
+      "source": "runtime/electron-helper/topmost-watchdog.js",
+      "sha256": "71fd4976e79045ded009004f259feef1ef194543b973f0ff2b2f4aafcbfe3618"
+    },
+    "runtime/electron-helper/tray-platform.js": {
+      "source": "runtime/electron-helper/tray-platform.js",
+      "sha256": "c5ba0d66439fb8ad4991b8b47613eb3a3d2d69d1dff7cd86a1e0b3bc92a24fff"
+    },
+    "runtime/electron-helper/x11-pointer.js": {
+      "source": "runtime/electron-helper/x11-pointer.js",
+      "sha256": "604ec86abc2b2f771daf817fd5bfc45e395b550e3c67da496f7a7c61a5c0d247"
+    },
+    "assets/pic/baifan/bowl-empty.png": {
+      "source": "assets/pic/baifan/bowl-empty.png",
+      "sha256": "c5f4bd97923b9f9983ca49d70c85de441517c5c7fab1dfadcdb8120f27e02e55"
+    },
+    "assets/pic/baifan/bowl-full.png": {
+      "source": "assets/pic/baifan/bowl-full.png",
+      "sha256": "1e639ac6eda0bc94210b9a7ec278ee583488415f783592024f0f01fda6523057"
+    },
+    "assets/pic/baifan/rice-ball.png": {
+      "source": "assets/pic/baifan/rice-ball.png",
+      "sha256": "da0d18ba50d204e3940820a136e6cd40c6331c7b6f44fbea8db88c9fdc820c27"
+    },
+    "upstream/helper-main.js": {
+      "source": "runtime/electron-helper/main.js",
+      "sha256": "313485a4aead0eb178ac896c391dc1813413d75a93edbc820907eee6f0269411"
+    },
+    "upstream/helper-events.js": {
+      "source": "runtime/electron-helper/events.js",
+      "sha256": "3fa99a880c8fee2f182c03f947461f9bd5469b778cee63b1b2eb54d1b187882c"
+    },
+    "upstream/helper-shared-core.js": {
+      "source": "runtime/electron-helper/shared-core.js",
+      "sha256": "3ea957c0cf65e321ca3af02b7e951cd7063177baa2104fefed4986b5573cd539"
+    }
+  },
+  "adaptations": {
+    "runtime/electron-helper/events.js": {
+      "note": "Generated from pinned helper-events.js; shared sampled playback with explicit horizontal mirroring, native visibility/fresh-state/lock reconciliation and original loaders. No second resolver, world state or assistant runtime.",
+      "sha256": "e530fbc1f6fa6749cfdf12814afd048a6e54b9ac79ccd2ab64e4ffc1a2a43416"
+    },
+    "runtime/electron-helper/main/windows.js": {
+      "note": "Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run.",
+      "sha256": "29d438b54bd2e9eb2e99ca5f6283e18505a56e9b9447c9bf9760154c023be2f5"
+    },
+    "runtime/electron-helper/main/bridge.js": {
+      "note": "Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run.",
+      "sha256": "8fc9e8c1d952ab9ca70e684cd41a0b958e0c5555d21d52030385cb2bd4ba08a4"
+    },
+    "runtime/electron-helper/preload.js": {
+      "note": "Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run.",
+      "sha256": "b1ac6b08a3eaf5e12d3530331a0e2ee959868b9418d2be129cb93f4b79252551"
+    },
+    "runtime/electron-helper/main.js": {
+      "note": "Generated from the pinned upstream helper-main.js for the shared presentation lifecycle; omit the upstream screenshot-and-exit smoke-test import and branch from the released runtime. The upstream input and test module remain in the repository for provenance, outside the installable package.",
+      "sha256": "07716033cedbc5d93ddd3d29efa6238fd39064b650a5b387fb85f4d05706a52b"
+    },
+    "runtime/electron-helper/shared-core.js": {
+      "note": "Generated from pinned upstream/helper-shared-core.js with the same recorder-disposal and absolute say-expiry adapters as the web carrier. Ordinary say/clear retains original behavior; finite expiresAt rejects expired delivery and caps its existing duration. No new bubble clock or assistant runtime.",
+      "sha256": "57951e69fa6fd6f9c5738eb13a5f9da2b28bc8b182db3dc1bbd1e8e5363b5c57"
+    },
+    "runtime/electron-helper/sprite/playback.js": {
+      "sha256": "183211e71ebe2a1c5028e7482fe16d89a29a4823970e9d98822d476ae71bc783",
+      "note": "Preserve loader generation, cancel managed bindings, and route original load timeout to the shared renderer failure handler without new timers."
+    },
+    "runtime/electron-helper/sprite/input.js": {
+      "sha256": "e0cdeceff7a3a8f269c7bd1f7a85284e16ecf4699e013c9ea911a792fa3b458a",
+      "note": "Generated from existing pinned src/desktop/helper/upstream/sprite/input.js after checking original digest. Preserve input/shortcut/drag/score and sleep guards; shared ordinary taps use the existing authenticated native-feature Body pet care route without a legacy movie or pending squash. No independent physical or Memory state."
+    }
+  }
+}

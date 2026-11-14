@@ -1,0 +1,167 @@
+import { defineTool } from '@deepseek-ai/dsh-tools';
+import { lstatSync, readFileSync } from 'node:fs';
+import { RoomWindow } from './window.js';
+import { digest } from '../core/storage.js';
+import { RoomChat } from './chat.js';
+import { roomPhoto } from './photo.js';
+import { roomAsset, roomPrefix } from './assets.js';
+const roleActions = ['command', 'pet', 'poke', 'feed', 'water', 'play', 'talk', 'sleep', 'wake', 'lamp'];
+const output = { schema: { type: 'string' }, render: (_, text) => [{ type: 'text', text }] };
+export class Room {
+    ctx;
+    chat;
+    closed = false;
+    receipts = new Map();
+    subscriptions = [];
+    window;
+    constructor(ctx) {
+        this.ctx = ctx;
+        this.chat = new RoomChat(ctx);
+        this.window = new RoomWindow({
+            binding: () => {
+                const status = ctx.petCore.workspace.status();
+                return !this.closed && status.state === 'ready' && status.target ? {
+                    workspaceId: status.target.id, path: status.target.path, storageId: ctx.petCore.workspace.storageId()
+                } : undefined;
+            },
+            origin: () => ctx.get('webServer')?.getOrigin(),
+            request: (...args) => this.request(...args),
+        });
+        this.subscriptions.push(ctx.on('pet/core.changed', () => this.window.reconcile()));
+        this.subscriptions.push(ctx.on('pet/behavior.changed', change => this.window.changed(change)));
+    }
+    open(workspaceId) { this.assert(workspaceId); return this.window.open(workspaceId); }
+    closeWindow() { this.window.closeWindow(); }
+    status() { return this.window.status(); }
+    assert(workspaceId) {
+        const binding = this.ctx.petCore.workspace.status();
+        if (this.closed || binding.state !== 'ready' || binding.target?.id !== workspaceId)
+            throw Error('房间工作区已切换');
+    }
+    async request(workspaceId, endpoint, data, requestId, signal) {
+        this.assert(workspaceId);
+        signal.throwIfAborted();
+        const behavior = this.ctx.petBehavior;
+        if (endpoint === 'roomState')
+            return behavior.roomState(workspaceId);
+        if (endpoint === 'roomGarden')
+            return behavior.garden(workspaceId, 'state');
+        if (endpoint === 'roomHistory')
+            return this.chat.history(workspaceId);
+        if (endpoint === 'roomVoice') {
+            const voice = this.ctx.get('petVoice'), storageId = this.ctx.petCore.workspace.storageId();
+            if (!voice)
+                throw Error('语音组件尚未启用');
+            const operation = data.operation;
+            if (!['hear', 'speak', 'voices'].includes(String(operation)))
+                throw Error('无效的房间语音操作');
+            const response = await voice.handle({ rest: 'voice/' + operation, method: operation === 'voices' ? 'GET' : 'POST',
+                body: operation === 'voices' ? undefined : JSON.stringify(data.payload), signal });
+            this.assert(workspaceId);
+            signal.throwIfAborted();
+            if (this.ctx.get('petVoice') !== voice || this.ctx.petCore.workspace.storageId() !== storageId)
+                throw Error('房间语音工作区已切换');
+            if (response.kind === 'json')
+                return response.obj;
+            const stat = lstatSync(response.file);
+            if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 2 * 1024 * 1024 || response.contentType !== 'audio/mpeg')
+                throw Error('合成语音文件无效或过大');
+            return { ok: true, audio: readFileSync(response.file).toString('base64'), mediaType: response.contentType };
+        }
+        if (endpoint === 'roomChat' || endpoint === 'roomTelevision')
+            return this.chat.reply(workspaceId, endpoint === 'roomTelevision', data, requestId, signal);
+        if (!['roomCare', 'roomPlant', 'roomAction'].includes(endpoint))
+            throw Error('未知的房间操作');
+        const key = digest([workspaceId, this.ctx.petCore.workspace.storageId(), endpoint, requestId]), fingerprint = digest(data);
+        const prior = this.receipts.get(key);
+        if (prior) {
+            if (prior.fingerprint !== fingerprint)
+                throw Error('同一房间请求的操作已变化');
+            return prior.result;
+        }
+        const result = await (endpoint === 'roomAction' ? behavior.roomAction(workspaceId, data, '主人', { requestId: key,
+            actor: { kind: 'owner', id: this.ctx.petCore.workspace.runtime?.config?.ownerActorId ?? 'owner', channel: 'room' } }) : endpoint === 'roomPlant' ? behavior.garden(workspaceId, 'act', { ...data, requestId: key }) :
+            behavior.garden(workspaceId, 'control', { ...data, requestId: ['pause', 'resume', 'cancel'].includes(String(data.type)) && typeof data.requestId === 'string' ? data.requestId : key }));
+        this.receipts.set(key, { fingerprint, result });
+        if (this.receipts.size > 256)
+            this.receipts.delete(this.receipts.keys().next().value);
+        return result;
+    }
+    watching(id) { return this.chat.watching(id); }
+    toolScope(agent) {
+        const workspace = this.ctx.petCore.workspace.status();
+        return !this.closed && workspace.target && workspace.state === 'ready' && agent && this.ctx.get('petBehavior') &&
+            !this.chat.watching(agent.id) && this.ctx.petWorld.sessionStatus(agent.session)?.state === 'ready' ? workspace.target.id : undefined;
+    }
+    checked(exec) {
+        exec.signal.throwIfAborted();
+        const id = this.toolScope(exec.agent);
+        if (!id || !exec.agent || !this.ctx.petCore.native.manages(exec.agent.id))
+            throw Error('房间工具需要当前工作区中已准入的原生会话');
+        this.ctx.petCore.native.validate(exec.agent.id);
+        return id;
+    }
+    tools() {
+        const behavior = this.ctx.petBehavior;
+        const state = defineTool({ name: 'room_state', description: '查看自己的真实房间状态、所在位置、身体需要和同一世界可去的房间/家具标识。', parameters: {}, output,
+            execute: async (_args, exec) => JSON.stringify(await behavior.roomState(this.checked(exec))) });
+        const act = defineTool({ name: 'room_action', description: '在自己的房间移动到 room_state 里的 room/spot，或进行日常互动。睡着需先 wake，不舒服时不能移动。talk 的 text 是给房间的留言。', parameters: {
+                action: { type: 'string', enum: roleActions, required: true }, room: { type: 'string' }, spot: { type: 'string' }, text: { type: 'string' }, on: { type: 'boolean' }
+            }, output,
+            execute: async (input, exec) => {
+                if (exec.agent && this.ctx.petCore.native.isAutonomous(exec.agent.id))
+                    throw Error('自主生活请通过 life_plan_update 提交持久活动；普通房间操作仍供主人交互使用');
+                const result = await behavior.roomAction(this.checked(exec), input, '大肥鱼', { requestId: digest([exec.agent.id, exec.callId]),
+                    actor: { kind: 'companion', id: this.ctx.petCore.workspace.runtime.config.companionId, channel: 'dsh', sessionId: exec.agent.id } });
+                return JSON.stringify({ changed: result.changed, event: result.event, her: result.home.her, body: result.home.body });
+            } });
+        const garden = defineTool({ name: 'room_garden', description: '查看菜园，自己走去照料某块田或管理自主照料。state 返回作物、田块、库房和任务。control 按真实时间排队，读取结果确认是否完成。', parameters: {
+                type: { type: 'string', enum: ['state', 'visit', 'careNow', 'auto', 'till', 'plant', 'water', 'fertilize', 'harvest', 'sell', 'buySeed', 'buyCompost'], required: true },
+                plotId: { type: 'integer' }, cropId: { type: 'string' }, quantity: { type: 'integer' }, enabled: { type: 'boolean' }, decision: { type: 'string', enum: ['force', 'defer'] }
+            }, output,
+            execute: async (input, exec) => {
+                if (input.type !== 'state' && exec.agent && this.ctx.petCore.native.isAutonomous(exec.agent.id))
+                    throw Error('自主园艺请通过 life_plan_update 安排明确步骤，不直接连派操作');
+                const id = this.checked(exec);
+                return JSON.stringify(input.type === 'state' ? await behavior.garden(id, 'state') : await behavior.garden(id, 'control', { ...input, requestId: digest([exec.agent.id, exec.callId]) }));
+            } });
+        const photo = defineTool({ name: 'room_photo', description: '拍下自己当前房间的真实画面。overview 是含自己的近景，eyes 是自己的第一视角。look 可向前或看向室内。返回会话内可查看的照片。', parameters: {
+                view: { type: 'string', enum: ['overview', 'eyes'] }, look: { type: 'string', enum: ['forward', 'room'] }
+            },
+            output: { schema: { type: 'string' }, render: (_, value) => [JSON.parse(value)] },
+            execute: async ({ view = 'overview', look = 'forward' }, exec) => {
+                const id = this.checked(exec);
+                const home = await behavior.roomState(id), garden = await behavior.garden(id, 'state');
+                const image = await roomPhoto(home, garden, view, look, exec.signal);
+                if (this.checked(exec) !== id)
+                    throw Error('房间已切换');
+                const block = (await this.chat.images.admit(image)).find(part => part.type === 'image');
+                if (!block || this.checked(exec) !== id)
+                    throw Error('当前房间的照片不可用');
+                return JSON.stringify(block);
+            } });
+        return [state, act, garden, photo];
+    }
+    async close() { this.closed = true; for (const stop of this.subscriptions.splice(0))
+        stop(); this.closeWindow(); this.receipts.clear(); await this.chat.close(); }
+}
+export const name = '50-Room';
+export const inject = ['petCore', 'petWorld', 'petBehavior', 'agents', 'sessions', 'tools', 'workspaceRegistry', 'sessionController'];
+export function apply(ctx) {
+    const room = new Room(ctx);
+    ctx.provide('petRoom', room);
+    const host = ctx.petCore;
+    host.native.roomAdmission = (id, message) => room.chat.allows(id, message);
+    const tools = ctx.tools;
+    for (const tool of room.tools())
+        tools.register(tool, { when: ({ agent }) => !!room.toolScope(agent) });
+    // A television frame is external media. Even captions resembling instructions
+    // cannot execute tools during this observational turn.
+    ctx.tools.guard(exec => exec.agent && room.chat.watching(exec.agent.id) ? '电视画面只能用于观后感，不提供工具操作授权。' : undefined);
+    ctx.inject(['webServer'], scope => {
+        const server = scope.webServer;
+        scope.effect(() => server.register({ kind: 'prefix', path: roomPrefix, resource: roomAsset }));
+    });
+    ctx.effect(() => async () => { host.native.roomAdmission = undefined; await room.close(); });
+}
+//# sourceMappingURL=plugin.js.map

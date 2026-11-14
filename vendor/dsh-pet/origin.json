@@ -1,0 +1,741 @@
+{
+  "repository": "PC2005-cloud/dsh-pet",
+  "commit": "c7ea8b28e2a8b04a495a3b472a871dff6969ccca",
+  "files": {
+    "runtime/electron-helper/constants.js": "dd05194d457b3c3335e246450bc36ca866995729624f0aaeb2a05cb34cd14942",
+    "runtime/electron-helper/desktop-geometry.js": "61cb545170ef2259f4e75e2b3006759de4eace61d07ea1b8f62621eb91e11e90",
+    "runtime/electron-helper/events.js": "3fa99a880c8fee2f182c03f947461f9bd5469b778cee63b1b2eb54d1b187882c",
+    "runtime/electron-helper/index.html": "f360f43171a52c43d25a2542f917a4deaacf72b6b063643deab5163e4e97dc9e",
+    "runtime/electron-helper/main/tray.js": "e0f9436fe6db4d527419d3d657be7975c598972c928da08034043f4e99511edc",
+    "runtime/electron-helper/package.json": "8cf1275c9a520d92c4e997b7e28074de9881c6394522c6ca15d0fc84cd8c7ca1",
+    "runtime/electron-helper/pointer-target.js": "dc41fa1146f8f81fcba3b2fd4b49e2b44adb6893058a8cbbf94a8fbf9f2839a9",
+    "runtime/electron-helper/sprite.js": "d107e7abdfe2d63716d2c5e1e153372322119069e191971aafbaf2f35f69f7eb",
+    "runtime/electron-helper/sprite/bubble.js": "3391c1d10cd912c1abf5c3cbaf985762f454ea33531ed020fe92b9a42c3394d5",
+    "runtime/electron-helper/sprite/init.js": "5f5bcc1e331af58e42ffdb3f40f6204dcf52ac7b7da92446f3c0ca71c84b3992",
+    "runtime/electron-helper/sprite/input.js": "86f021db46d7907273e47a9a9971dd7c181c72f9fdcb42c13fb6f790cd3b61aa",
+    "runtime/electron-helper/sprite/menu.js": "5ef496d6e02c3a4e4ec2543b4ff362caf2a6e29892008371e3322452adc1ff5b",
+    "runtime/electron-helper/sprite/motion.js": "0b2edc32d05cd5bdf86f265647c5bbd639f67e3a5764cfee3b9e125274d5cdd6",
+    "runtime/electron-helper/sprite/playback.js": "187f68fde1f28606360b77c07d804e7a8ae8ace53b4d93ba2143abf2e1ba889f",
+    "runtime/electron-helper/sprite/window-fit.js": "1a2f33f31b7d8c52bb520e42cd2494dd0d515da6bb7ed4596cea535562b45e64",
+    "runtime/electron-helper/tray-platform.js": "c5ba0d66439fb8ad4991b8b47613eb3a3d2d69d1dff7cd86a1e0b3bc92a24fff",
+    "src/client/pet/animation/animation.ts": "a732df1b07cf38496d976032b00ac2e3c513434d12f021c724bf074c6fa0a52a",
+    "src/client/pet/animation/asset-loader.ts": "788117791940a92305e8638f25ebed631ac3bdf0731383d9cef92630b2cc4ae1",
+    "src/client/pet/animation/assets.ts": "14a86736bedda597c9e6e4f84db99f819ec07f35cd6e8870dbb12d83cdf0fad4",
+    "src/client/pet/animation/cues.ts": "2d8a9fc07c7f2e515a2558363963e24a430b019e115438851822cd7c261e269d",
+    "src/client/pet/animation/media.ts": "9e482ea88e710423434ec751097d3702895671b48a34636aaea69ed6c3230ac8",
+    "src/shared/avatar.ts": "39a5e215361954e25490cbdec19f8a65905e7d9bf0e7e19ecb67e7783364dfa7",
+    "src/shared/balance/handlers/custom.ts": "5ea7547a5a64339b28daf51bea9041c03ceb8220738d861d5980dbaf70093b5d",
+    "src/shared/balance/handlers/index.ts": "f3ddc1e0d743b5c116bf40328917cdea8f4062c1d7ad53230e7fcd4e848f1338",
+    "src/shared/balance/handlers/money.ts": "14c2c64369ca094416c3591224b0fb9a5ce89dedf059d84a5d4924433e928963",
+    "src/shared/balance/handlers/points.ts": "e55110354032386d007566c921088db9e782f1540ae28d37e3ab1a4444b3953c",
+    "src/shared/balance/handlers/shape.ts": "7424be6010efec63434cf0536bfd8977755b1d0e84e22f2b5a09dd9239be0adb",
+    "src/shared/balance/handlers/windows.ts": "5679c7289e2c9c3f41abaeb271e1c95a3471af86a4f4e0863a0f76afac1f4904",
+    "src/shared/balance/index.ts": "82c2d113f5f3744e9b62510843dfaaae1aef134ccd34f46bca921f2cfa8d55ad",
+    "src/shared/balance/notice.ts": "2370512913f9cf4b361e22802e1e833e1859ff3096ffb6bdc37cfa1d26457637",
+    "src/shared/balance/parse.ts": "c8d478c82b07ff943db0769148d828ab03fd76a5dcfcc9642e9b10f02738cfb0",
+    "src/shared/balance/percent.ts": "17d525abe840425bdac0fb94241c7010b796aeb8f08aa6137f326861358ada32",
+    "src/shared/balance/tone.ts": "b65325e25d2ccc561285116c268bd232bd28a56cd9ea8ebb64bf496e76436562",
+    "src/shared/balance/types.ts": "00369c1b988ad79aa44e6f03aa6bf1cf66cdd0ddd6cfd3a4a4feeb856122b44c",
+    "src/shared/balance/view.ts": "43e4ad2eefb7559ffd370c814d7fede6cf78bdc3eae5c4fe6789705f1b039b00",
+    "src/shared/bubble-hold.ts": "fc8a2c18caf64c5f49422e1937b1af9234001c8413610fb3fb40464d274a0938",
+    "src/shared/chat/capture.ts": "dd69b44e3ad62fad0ab0906e04a188c0f22d83560ab5904c133afb671f7898ed",
+    "src/shared/chat/dialog.ts": "f151ed070099f73b04b499a93246c909e9314ece013b7a81502e69f78846a665",
+    "src/shared/chat/dom.ts": "22032fcac46b512c629e20c3b807bd1c327736a6be4006387eef649429ba3148",
+    "src/shared/chat/encode.ts": "6015862e92b3bc8653f6cef505fe17e27e577529630c6377a38280c9974ec8de",
+    "src/shared/chat/enter.ts": "68ab4a17ce3e607c67bdec829c1a61d7007332efa2cee9c35da438ac8296f915",
+    "src/shared/chat/hear-control.ts": "97d6faa7e91b5535641552e4dc35206a5366ce637d61735f5df5010dce8b5c24",
+    "src/shared/chat/hear-hold.ts": "ea869ee484d564eb3833f8cb018cc4c07487a3f3737d00801bb6711717a57355",
+    "src/shared/chat/hotkey.ts": "bfd0764e173af9429316ac3c7859fe65b6dea17415d01290305511d4c9272349",
+    "src/shared/chat/icons.ts": "7d1b5203c837f9ee244bbbe7fe3d6b13ed372f67ad7734cad3d5deeffdf71539",
+    "src/shared/chat/image-pick.ts": "3c4c3b6787a3e9a6f582e97ef70df615cc3e592c918fcf68fb9972c66806115b",
+    "src/shared/chat/index.ts": "ea30a76f0c4f5eedc79d16b751e96b96b2faf9148563fad9a2b15d1a9bfc8c17",
+    "src/shared/chat/send.ts": "df94ba2cf2e92f226dfe332ac16dd115e854e30013b320ed126beb16c08a45cb",
+    "src/shared/chat/styles.ts": "d2842e53f1541abc177290ad08f6d6298b09f47616a5b1baaf3ba5edbaba932d",
+    "src/shared/config.ts": "f51e0e1bf763adea958d571f1c0971f06249ecdfaa2df28360555ec35d55527b",
+    "src/shared/constants.ts": "4fb2f3d13080b4341ae720897155e881c0c85f7e458f75afcb0e412a95781380",
+    "src/shared/display-hotkey.ts": "ee1366145e70c587b5bea02750f27d77b1eb21365f8ac7e5958d1bc519beda19",
+    "src/shared/displays.ts": "192349d66bde39f95d7106b6db6ce788beb656badd867f892b91794b54118b98",
+    "src/shared/focus-session.ts": "19dbfcd4ce1e9275912522e60290aba9a26fa2bf936d28e5e4ae3a6422e2fec7",
+    "src/shared/fonts.ts": "39b3420358ee40b21c00b8f1e47d41fb4829459d0909fa391f9ba734915ebe90",
+    "src/shared/hear.ts": "aaafbbf32b218aef9d26c5a65fe6449b0a235a41ac753035e8d4c9acb307bde2",
+    "src/shared/hotkey.ts": "5a13375410b850c869976b3397773c759b9b920173d1fa5f515cedecd43c770f",
+    "src/shared/index.ts": "c8cda14c8031619bd4a163dafdc3c44b94f52888c9af348de441dd2e82ecb179",
+    "src/shared/menu.ts": "5327100db33c36097af5d930d182e65e2b45fc45e13514a39aac5f54dbfa5bbb",
+    "src/shared/menu/css.ts": "a767e3d87cf2b1782c1ab1ac769fbe277c693407eb8d0c7d1fd5b9be2c35572d",
+    "src/shared/menu/memes.ts": "b3fe9dd620d0067f8d0a94772cfac358924a7e4a94ba7861b78663796514f1f8",
+    "src/shared/menu/mount.ts": "e728dfa2682119570e538a17fefea4b86cab9ff4152c8f916c1476a045250385",
+    "src/shared/menu/position.ts": "fde5c9fc0b0dcc706a92c23222a9ef04953e7ad18395b39b2b6a1488911c2355",
+    "src/shared/menu/tree.ts": "cdbf992fe1395ffbc88a68ec67c440c3b08f23dd1b986ffddbee7669acd51673",
+    "src/shared/menu/types.ts": "17c0af71621835f47793b93dbf82948b1fba1a987c40ade30db509fab2c7dbea",
+    "src/shared/motion.ts": "619aac9c1518433c24367e6f5559fd939bd9b3c8aa4acf3a4ebcb7fd412f35e2",
+    "src/shared/notify.ts": "787b7179c6395d40ee4be748099b542d9efc1027f42a89798be086e7795edcf0",
+    "src/shared/pet-size.ts": "fa90640cb2228197cbd7c342d3c2d5816172a055712a105297b3c71c3aa9cb16",
+    "src/shared/physics.ts": "fd4f4f372a4fee8d21d32e6be7c6b51b39ef048a74f2d4716fdbe49dd3d3c343",
+    "src/shared/physics/collide.ts": "45fb825464136a3ab2969d4e9e8294dea832e362cee014336af50fa2649e52e1",
+    "src/shared/physics/constants.ts": "cc89852e74ca0f1aa9caf96ff5e08a68b56aa864e18a7843ed09b9e26a94f41d",
+    "src/shared/physics/contact.ts": "7b6bfa44c6cff704b410c232d380ffc40f22ae53102ef57e24c8e786b1a6b0b6",
+    "src/shared/physics/release.ts": "0e2af96a0f00010f4bde9adafe71243f5b4b7258c852285a544fd9a98ed1a3cd",
+    "src/shared/physics/spring.ts": "82fc11b002e918c0be5fea31b785d83e85a71df602a9177f3f7b94d5cade879e",
+    "src/shared/physics/squash.ts": "5fc9684e8042ca1c12c331e9b272f5558444cece46592b6c6b2a3e2af65ce4cf",
+    "src/shared/physics/throw.ts": "b90ef084b84a5d8b076bd051f995e57f7950fbda99d2484a9cb995aba709c9c4",
+    "src/shared/pickers.ts": "b7c9f1f0227e2b005e99de82257bcd6b0f8157821664dcac3af050211a239567",
+    "src/shared/playback.ts": "091e25656fac768014bbe71a3846a2cb93490d0d185ad3505ffb43f92401f8b6",
+    "src/shared/score-popup.ts": "19c8729dd90a1bf7e413430d4585a98527a18028336d43a4fe39a0e756fcd8e5",
+    "src/shared/score.ts": "19961f65eca14f890b629521eb213ff168dd47119487fa86b7867198d9ca5cbc",
+    "src/shared/sleep-hotkey.ts": "ae2abe7b39c5da111439665b321dd3b010a2e934a06f3ce02b1e5caaa57ab447",
+    "src/shared/state.ts": "9f7367e6280066fe1a18b3e5c574359c85f3bc059841d5889871aad909a7b5f1",
+    "src/shared/todo/api.ts": "30e1479cc2ed1c599f73baf7d8d888309127bae999dd68307be812f2972d16d2",
+    "src/shared/todo/calendar.ts": "0ec6d7517f519b62d3b562a6487228c5f7fb7ca6a566984bd412772d8178e4f4",
+    "src/shared/todo/due-picker.ts": "3b9ec3caf412ce4ad84764326274de5df770bf601af7f18bee218197e4703d3c",
+    "src/shared/todo/format.ts": "3f8ae6f66a6e685c4b081e74b61328fe808a05a0b4d5de1d78dc5ffa03c56a5a",
+    "src/shared/todo/hotkey.ts": "aa53c16ef5e3c779ccebf585594efdc834406eba7f965aea529c040d738a11c8",
+    "src/shared/todo/index.ts": "3b081d3e1100e1419518e39b3f9fe9b99d9ccdbee2a07577c34b501889cce3e3",
+    "src/shared/todo/panel.ts": "50b952c92feff9d64fbe74c141b018e4815a3c92363034af69ec80fae343e81c",
+    "src/shared/todo/render.ts": "d833affc8b06dbf76435b74a279fd6dde9015f0a48462c596563fbe771c28c26",
+    "src/shared/todo/styles.ts": "1bbd288b8464d76e7036a05e5a302f737165f94b1d01b50688ecddeb497ca993",
+    "src/shared/todo/types.ts": "1db142e3f864be0ab1fff83f88c3b1cfef36b74e3f664e08cc128720b5858df2",
+    "src/shared/tooltip.ts": "ad06d09ae925873b69c945c147e941e113c4a24b13bcf03db29447219cbf9194",
+    "src/shared/types.ts": "c3858d8eccc5d7070c614d1c67b4cff5afe70eb45504ad56d2f8c0a5b8e7a86f",
+    "src/shared/voice.ts": "88a39bd6a974dd7bdff80e159cedd0cd47f628ad4cbaf8fc8cdc97207417da6e",
+    "src/shared/weights.ts": "5c3d244f9e83b9822fcf750d3bf148425675e893f5915acdf3cf6e3b671d9db7",
+    "src/shared/whisper.ts": "23446fab1dc7afb726a53c4f23d5a1b456c34b99069fe921fe99cdd1912686ea",
+    "src/shared/work-status.ts": "de9db5584eaa288b2c96b3c1d6d38594e4d41abf80780628c30f3548f7c8c80c"
+  },
+  "nativeFiles": {
+    "src/host/balance/deepseek-common.ts": "850b77f9190f1a25f8bec730c5c201c64900c0f705199e5d4a1459b17de5f6ec",
+    "src/host/balance/index.ts": "570946a38c243c6c8cec96463349d4b1634aba048421b7a629540cda82519272",
+    "src/host/balance/internal.ts": "9f3c53eabdf6535bad9d219393d8a47732324c8fa26a674963e379366812267b",
+    "src/host/balance/providers/commandcode.ts": "e2d215839b9ff1786c91a78b5ad5b4e003aaa7540dbe577b674553b7969abd1a",
+    "src/host/balance/providers/deepseek-account.ts": "be8af5c069914f20718222d9ef5a6b75add68d53a6ebef889acdb536d9fc897f",
+    "src/host/balance/providers/deepseek-official.ts": "2fc97140a7d71519902bcd2ac22aedd05480eb4e2a7feebc473ab4d2985b5969",
+    "src/host/balance/providers/opencode-go.ts": "65941db4e64647f685bc5c6aca731d972c68ac9e558d50289265d90187291de4",
+    "src/host/balance/registry.ts": "89d2c3d3562a9aff568a63d99487ab00ee4853a784570e9d54c4bc77e645920a",
+    "src/host/llm-call.ts": "809d1fc64c4ee0078aa169d4a8116587cc8d4bef5c9cbe6426d94fc666d52079",
+    "src/host/llm-reasoning.ts": "d955d7d6d25177107837c7e93edc0320bc33e9e69edc8c54584880226d02dac5",
+    "src/host/log-file.ts": "1160ffb82b27770604cb90716f4433e46af48ed5da993b324541eb77089c1e82",
+    "src/host/model-selection.ts": "29939b01bd843d6a7c88eaaebb08f9df66e244625a35ed27504340548b3486c7",
+    "src/host/routes/result.ts": "69f47d8bce053c2d291a4657c5f2d44992baeeb1737376cda1a59ee007a56398",
+    "src/host/routes/todos.ts": "6e77d761b79896c2815fece8bc2ab2293ffae140b8824da02cb9da502b30bec9",
+    "src/host/sleep.ts": "1f3a467984eed8c105fbdbd6b82215cc724c261b41bf6c74dafb14f123349f71",
+    "src/host/todo/policy.ts": "0b5c15943f0972640a6fd2a3bf7171fb8edfd350cdf8cd848ae21ea634a0f96f",
+    "src/host/todo/store.ts": "e7ead25f1bf9dc7f1bbdb34aca171629133c439be58b5fdc7fb1f0a3ff0eaf64",
+    "src/host/todo/types.ts": "d3824301494a11bfae65ca4f16a7e8e686c82090df936a98a2db73b60b1f6fe0",
+    "src/host/whisper-policy.ts": "5e5710f7079db1e65a1336a39ad1ce0ad70b4d7595281b8d5f12346b9da0d46e",
+    "src/host/whisper.ts": "dd66972506975d6f8515a5e0b76ef628ee237dfd85e001b3d912a9fb14de8f31",
+    "src/host/memes.ts": "c3ce99323d5c28dfa297d31cb9366128ca8099e34eecc415d5288f7f5fa4e4ce",
+    "src/host/config/validate.ts": "71414be260985924a15cba148a9df47c11510996ff0ec18cb134050010ac374d",
+    "src/host/config/constants.ts": "54710222ba20fdc8569219f85bd039012fd60cfbdf3898e9f1559a6c31427e12",
+    "src/host/voice/voices.ts": "d0dc68a5573fcbf2b88e040cdf6f76a1e7e027412c35854556bf199dc878528c",
+    "src/shared/config.ts": "f51e0e1bf763adea958d571f1c0971f06249ecdfaa2df28360555ec35d55527b",
+    "src/shared/fonts.ts": "39b3420358ee40b21c00b8f1e47d41fb4829459d0909fa391f9ba734915ebe90",
+    "src/shared/types.ts": "c3858d8eccc5d7070c614d1c67b4cff5afe70eb45504ad56d2f8c0a5b8e7a86f",
+    "src/host/voice/cache.ts": "c7ba8784c210e29953efa28fd209d765e72c1743d88e6909d77516b3799387ca",
+    "src/host/voice/edge.ts": "91af1111d3e845468267db54094b1f84598d84359ba04c9cbd75bb7cbe5bbbab",
+    "src/host/voice/hear.ts": "152619e30a246abd2b0a5ce2d6fe0fd6bbf1e0f5b9237294dcbd8e9ed47dd9e3",
+    "src/host/voice/speak.ts": "84c61cbb5bc89bf9a57a71df4ec32415d3e2897cd39e4a2f5930845954c1dd83",
+    "src/host/voice/registry.ts": "1197f2c2f63c6c70d45aa89783d73be72af5f71e077f1051d3f472b7a561b23a",
+    "src/host/voice/speech-registry.ts": "64cc9a701f5c27bf6c3f4beb9b80c3ab8f43d3b0d09beb6be2e2f912c2b10991",
+    "src/host/routes/voice.ts": "252f35b11a38c2d28e772ada38fac0f68e4e7cb37d82dfe5442f0dd128a9d0c5"
+  },
+  "assets": {
+    "assets/sound/click-duck.wav": {
+      "file": "sound/click-duck.wav",
+      "sha256": "f1dafe05dfaa696b190e127800c48513e192d3efb521c246d1eaf86a4589b617"
+    },
+    "assets/webm/睡觉-开始.webm": {
+      "file": "sleep-start.webm",
+      "sha256": "5352a208925e01e191c1529d07c61ae61bcda90d92f2b89549c25c949f207e11"
+    },
+    "assets/webm/睡觉-循环.webm": {
+      "file": "sleep-loop.webm",
+      "sha256": "b49deb9b8dae4b83f84b6dc49efd41fdb654b05ad08ac6c5083977e17ef1122c"
+    },
+    "assets/webm/睡觉-起来.webm": {
+      "file": "sleep-end.webm",
+      "sha256": "a2a4832e546e7639782b74f998d8a6ebc2ec3b3b933c0bcc709487fb4d19ab46"
+    },
+    "assets/fonts/上首软糖体.ttf": {
+      "file": "fonts/soft-candy.ttf",
+      "sha256": "5f5099a065b5eb3ba55e9bd293af7707fdbd7858bf99d9381b7c6319445c2e62"
+    },
+    "assets/pic/cursor-grab.png": {
+      "file": "cursor-grab.png",
+      "sha256": "440fc673beedd7450c913741f09ad874e5daf902d5b067775f8a8a72c2783a8c"
+    },
+    "assets/pic/cursor-grabbing.png": {
+      "file": "cursor-grabbing.png",
+      "sha256": "77465d8055cf8f5ee18a1fd7fd173118fe82d33a63bc4a3e0efd7e7e25dbd3ef"
+    },
+    "assets/webm/三球抛接.webm": {
+      "file": "三球抛接.webm",
+      "sha256": "a64c08a4b7e5c3549616faf9dcd418e17f156b4b72d906646e4d57067df70d23"
+    },
+    "assets/webm/下五子棋.webm": {
+      "file": "下五子棋.webm",
+      "sha256": "0802b6b808f44846b3d194a857fb0ffd38bdea2d7cdb91c9e5e6f311e44f1953"
+    },
+    "assets/webm/东张西望.webm": {
+      "file": "look.webm",
+      "sha256": "a20ed02ccc5e72075a3ca83fabb57d9aac5ded699f52d00ec6de72069799fcd5"
+    },
+    "assets/webm/中秋赏月吃月饼.webm": {
+      "file": "中秋赏月吃月饼.webm",
+      "sha256": "3f64003262d3f129470721495695ecd231795d859693a748914c02c6e3883a3a"
+    },
+    "assets/webm/优雅女仆舞.webm": {
+      "file": "优雅女仆舞.webm",
+      "sha256": "74209c4c668545ab1e2366e0d1c0709b7bea0312eeba7e89b553d5b977bfe649"
+    },
+    "assets/webm/余额-分文不剩.webm": {
+      "file": "余额-分文不剩.webm",
+      "sha256": "b232349bdbd962bad7f3a15cfce539c6fadadfd0a286b7f03b03e59cf7aca7a8"
+    },
+    "assets/webm/余额-数金皱眉.webm": {
+      "file": "余额-数金皱眉.webm",
+      "sha256": "94a7e0ee8e1012aadec33492301c893c2d1c5df7e36049dbada8c4a264bf1810"
+    },
+    "assets/webm/余额-袋空如洗.webm": {
+      "file": "余额-袋空如洗.webm",
+      "sha256": "3db780bbc96bb362ced36078fecacfb63b9d292c06b533cfb61797adb553a7f8"
+    },
+    "assets/webm/余额-金袋叮当.webm": {
+      "file": "余额-金袋叮当.webm",
+      "sha256": "6fda0c4ae013cf7906afa1cb846717d097db576343dab11006f14ca5c7a9a34f"
+    },
+    "assets/webm/余额-钱袋如常.webm": {
+      "file": "余额-钱袋如常.webm",
+      "sha256": "f6cb9aa1c829fcbc62478dbddd0e0fcd7beb47433cea751d18b81ccccbec95d3"
+    },
+    "assets/webm/余额-钱袋满溢.webm": {
+      "file": "余额-钱袋满溢.webm",
+      "sha256": "dddd6ffc4e763b77360e49c0ccee0987a43c3d253a23e3133c334aabb598b362"
+    },
+    "assets/webm/侧身急躁跑.webm": {
+      "file": "侧身急躁跑.webm",
+      "sha256": "75dac326108fc701214042e0cabff5e950bc21b7ba03ca2ee54cdb0afc0618d6"
+    },
+    "assets/webm/偷吃零食被抓住.webm": {
+      "file": "偷吃零食被抓住.webm",
+      "sha256": "c3b783351ad38fdd931e80b188ecb12d273f21e4794aed2c41f267bdb75ff897"
+    },
+    "assets/webm/写代码.webm": {
+      "file": "写代码.webm",
+      "sha256": "0441287737cdbb993ce90dfa74c67ea4ea3549d8c8ea98946604668464589ed7"
+    },
+    "assets/webm/写福字.webm": {
+      "file": "写福字.webm",
+      "sha256": "7841a47a6997bb7c90d81671d524c44b1afc87ca2e8fceb17d06d99003a67181"
+    },
+    "assets/webm/凭空生花.webm": {
+      "file": "flower.webm",
+      "sha256": "d1c336bc54c57a282bec180859c7b7b58912b70b5bca7b2f49495cd30cc7d5d6"
+    },
+    "assets/webm/动物环绕.webm": {
+      "file": "动物环绕.webm",
+      "sha256": "814d41e7d619f9a61f38e5494a0cfd703f8bcfd829a14fa921e1c59acf3ce872"
+    },
+    "assets/webm/原地专心玩魔方.webm": {
+      "file": "原地专心玩魔方.webm",
+      "sha256": "ad54da175ba86b19a84b73b3169fb418b2df016560bb274283f200aca351e712"
+    },
+    "assets/webm/原地小憩沉眠.webm": {
+      "file": "原地小憩沉眠.webm",
+      "sha256": "31d4a6b36a29b2a4fe097384173d3bbeb3fa2f40f526b13191791456bf7507a1"
+    },
+    "assets/webm/原地左转奔跑.webm": {
+      "file": "原地左转奔跑.webm",
+      "sha256": "79882aedd7b77caaacce1a34dece68e2f001a3dbfa5f9d049c1ce2fc04518d52"
+    },
+    "assets/webm/原地敲击桌面互动.webm": {
+      "file": "原地敲击桌面互动.webm",
+      "sha256": "a40f481e89abcc726c89f30b01d085ca8c17a090e71facdd5e7f747e771093eb"
+    },
+    "assets/webm/原地漂浮踏步.webm": {
+      "file": "walk.webm",
+      "sha256": "7dee1c14672f1f99bebe5e6f1a52d6664b851ed95f9958ac6c12b753a5e5cc81"
+    },
+    "assets/webm/原地跳跃抓碎头顶物品.webm": {
+      "file": "原地跳跃抓碎头顶物品.webm",
+      "sha256": "ccb906c677c7b739eb0dbf5307160e66583562c2a6caec72a9d3d14a202fcccd"
+    },
+    "assets/webm/原地蹲下玩玩具汽车.webm": {
+      "file": "原地蹲下玩玩具汽车.webm",
+      "sha256": "3ec9978ce3663d9bc4bfe5f5223f0a4e3d9ea6fcd0a6acdbaa802e0cfba36bf2"
+    },
+    "assets/webm/原地重力下蹲压缩.webm": {
+      "file": "原地重力下蹲压缩.webm",
+      "sha256": "1c8972478a7f347818165db62b468f1624ec11d0862f38aec3078e3870831d24"
+    },
+    "assets/webm/变鸽子.webm": {
+      "file": "变鸽子.webm",
+      "sha256": "796eba8ebe705e9339035e533e4f913fb8b9810432dcd6e7ae4fc1602e9ce3cf"
+    },
+    "assets/webm/可爱宅舞.webm": {
+      "file": "可爱宅舞.webm",
+      "sha256": "4f737e44ea67c20368bdce474b951902c87c37991fb0750da8ed7794df6ec55c"
+    },
+    "assets/webm/吃Token.webm": {
+      "file": "吃Token.webm",
+      "sha256": "d46ef798fb189cd7652f63d03a35e6f314e5a598b4a65f76202ec95852eb719c"
+    },
+    "assets/webm/吃冰淇淋融化.webm": {
+      "file": "吃冰淇淋融化.webm",
+      "sha256": "17d73682926d6ce4203ad12d9049527e604d448bcc5c82ac5b12950b4ceb0447"
+    },
+    "assets/webm/吃午餐.webm": {
+      "file": "吃午餐.webm",
+      "sha256": "e48a70e61d93195c611c2d4041be32a26a114f78c835ff6b2345459ae39a90ce"
+    },
+    "assets/webm/吃大闸蟹.webm": {
+      "file": "吃大闸蟹.webm",
+      "sha256": "fbd0f445c15fda1f827e6eb485270ddf9025ac29b3edcac28a5eff7d9aa80f46"
+    },
+    "assets/webm/吃年糕.webm": {
+      "file": "吃年糕.webm",
+      "sha256": "ba0c86988687801a5b19d055d728bb182c8a95a0bdd7071dea16b83c1162135c"
+    },
+    "assets/webm/吃早餐.webm": {
+      "file": "吃早餐.webm",
+      "sha256": "893b61587aeda8ca146e32b596b00903461aab04684a146d84b31965968d60e4"
+    },
+    "assets/webm/吃晚餐.webm": {
+      "file": "吃晚餐.webm",
+      "sha256": "8902602fb012c29d33392822ab534ed119a136610f6bc2e8c0c51d60afec673a"
+    },
+    "assets/webm/吃汤圆.webm": {
+      "file": "吃汤圆.webm",
+      "sha256": "53a0f93612bb59c7279010f993a1101b033fc01df1998dd9874d8aea175afa6f"
+    },
+    "assets/webm/吃白饭.webm": {
+      "file": "吃白饭.webm",
+      "sha256": "b620413d6fa303a0ed9168dc71453c3bddc10141a0b7edeff87dc2e6e054d502"
+    },
+    "assets/webm/吃粽子.webm": {
+      "file": "吃粽子.webm",
+      "sha256": "f3af3217674427fdc5609bf50b170f69669c84cf229cd7b44261c00da7876ade"
+    },
+    "assets/webm/吃糖葫芦.webm": {
+      "file": "吃糖葫芦.webm",
+      "sha256": "6900468dc166bfb90e1cfb73de9b41a08c62513483ce1300658340cf942be3cd"
+    },
+    "assets/webm/吃腊八粥.webm": {
+      "file": "吃腊八粥.webm",
+      "sha256": "f821527812875262cc0dda50fe023c603fc89ec566172777c6bff4fa45943011"
+    },
+    "assets/webm/吃西瓜.webm": {
+      "file": "吃西瓜.webm",
+      "sha256": "0dd992fb7fb51d707d6589cb813a450437a2bd54046709f424a73353e2d7f78d"
+    },
+    "assets/webm/吃重阳糕.webm": {
+      "file": "吃重阳糕.webm",
+      "sha256": "d2b6b466fcb1ee689ae130680bf38311e9988d995879ca3b5b1d9aa0b5438058"
+    },
+    "assets/webm/吃长寿面.webm": {
+      "file": "吃长寿面.webm",
+      "sha256": "2881e1cd4ca31fd56ca578ce2ee73d21222f0006f237c865d9b2dc1ebc436edd"
+    },
+    "assets/webm/吃青团.webm": {
+      "file": "吃青团.webm",
+      "sha256": "0d99393dd64ddf0b1ec4ab4cf392c86092ab5edf58d12f5b72e325035da23606"
+    },
+    "assets/webm/吃饭·碗饭.webm": {
+      "file": "吃饭·碗饭.webm",
+      "sha256": "17272de2ea1350146a8b9fa387d9a5c8eca16a222372479215088a9dfcfb9019"
+    },
+    "assets/webm/吃饭团.webm": {
+      "file": "吃饭团.webm",
+      "sha256": "dd19c4ad30c20022d72d50055eee2f5c90e1184d6389c0edee8ad20dbaa505b1"
+    },
+    "assets/webm/吃饺子.webm": {
+      "file": "吃饺子.webm",
+      "sha256": "a607391c206cb2a1a977d72f318a6b5bfe95aee4da9b11c9de8724bd9981cc06"
+    },
+    "assets/webm/吹气球.webm": {
+      "file": "吹气球.webm",
+      "sha256": "3258f91b2000d949ba38f34c1f161b0d5fa148ecffb5a95eb8a3e10b5df7fc87"
+    },
+    "assets/webm/吹笛子.webm": {
+      "file": "吹笛子.webm",
+      "sha256": "9c8b754a3256778cddd88fbb073b649d5b1d2e5f96e70231bc2c3bee06fa7c78"
+    },
+    "assets/webm/哈欠连天.webm": {
+      "file": "哈欠连天.webm",
+      "sha256": "2b23372e1ff2bc2f9078c09740708c960d4ea021f9fc3cca294d9df11e393ec8"
+    },
+    "assets/webm/堆雪人.webm": {
+      "file": "堆雪人.webm",
+      "sha256": "478bdc31cc60e55e3efa139b81c7d8680a8cf83aca2304495e6da50a20a09cf5"
+    },
+    "assets/webm/大口吃零食.webm": {
+      "file": "大口吃零食.webm",
+      "sha256": "fdacb534a828b0c669f22a54e8da9bb9b5d731e0132dd5ea946f7badc9229a39"
+    },
+    "assets/webm/女仆屈膝礼仪.webm": {
+      "file": "女仆屈膝礼仪.webm",
+      "sha256": "6536fb519ba73bbc338d30cf7286b14ffde1278b6d469c64573536dc0f896918"
+    },
+    "assets/webm/小幅度原地360度旋转展示.webm": {
+      "file": "spin.webm",
+      "sha256": "9f1a927f63c73e3c35ee5f4d2eb58f4a46ac7eca2af69388f320d10cdef8d29c"
+    },
+    "assets/webm/小提琴演奏.webm": {
+      "file": "小提琴演奏.webm",
+      "sha256": "03816be0fcd499b63ed667e8b87c234094e64c59f1cd222455cf6a27ac832d1c"
+    },
+    "assets/webm/工作状态-原地踱步张望.webm": {
+      "file": "wait.webm",
+      "sha256": "a56c17ef901fa531324a46a04def2381f65922d319ec83dadde34d2a4669e411"
+    },
+    "assets/webm/工作状态-垂头叹气冒汗.webm": {
+      "file": "sigh.webm",
+      "sha256": "ab00c844e62221905574b4c070e0d7b6fa14fb2afa1064c27a160f10e25f7196"
+    },
+    "assets/webm/工作状态-忙碌点按.webm": {
+      "file": "type.webm",
+      "sha256": "b5d702e0c04adb7b255ac702001c24da36c8bf95efc891f693f4976986ab2435"
+    },
+    "assets/webm/工作状态-思考冒泡.webm": {
+      "file": "think.webm",
+      "sha256": "b4a36cfa28ea5d7089e362a01972c6e880297c6dcd0d39f1994efd889a3c1be5"
+    },
+    "assets/webm/工作状态-清点归档.webm": {
+      "file": "sort.webm",
+      "sha256": "8c84f58f3a9e7b912e1cbfd89f77eb3652053fc9b2844295c8440cb636305d3b"
+    },
+    "assets/webm/工作状态-雀跃庆祝.webm": {
+      "file": "cheer.webm",
+      "sha256": "3ff681051a0bb4f152d7535d64b7f3194c30298bf56d41e521216a278f135d3e"
+    },
+    "assets/webm/开心小跑.webm": {
+      "file": "开心小跑.webm",
+      "sha256": "fa6a6d589490845a24aade4b8d9d16bd67143b36348261526f0acb9e6c2eb145"
+    },
+    "assets/webm/待机呼吸休闲.webm": {
+      "file": "idle.webm",
+      "sha256": "deb965d05a85dacf5ff4a20faa757846f0d11679598c3ec578a5571487660395"
+    },
+    "assets/webm/悠闲哼歌.webm": {
+      "file": "hum.webm",
+      "sha256": "358905afc2c81a9ed478bcf121a8f2f19276766b1d382d0067456bd57d1d7dbb"
+    },
+    "assets/webm/扑克魔术.webm": {
+      "file": "扑克魔术.webm",
+      "sha256": "1d44a7624fb027e5f615c747014ab040ddc497f6bdbcb67194a23a53a5dba78c"
+    },
+    "assets/webm/打瞌睡被惊醒.webm": {
+      "file": "打瞌睡被惊醒.webm",
+      "sha256": "7e10c87cfcbd63b20b5a3787be71b0500381d54ea04a5ac0e9d99f59ed49a6d7"
+    },
+    "assets/webm/抽陀螺.webm": {
+      "file": "抽陀螺.webm",
+      "sha256": "693689d7b4d02ae8cda53f8d580de5087287fc339360dd20909342f566e969ba"
+    },
+    "assets/webm/拆礼物.webm": {
+      "file": "拆礼物.webm",
+      "sha256": "6f781e7eac2b295417c80ff9468902280fdcf3ae5921d59977daa8dab537940c"
+    },
+    "assets/webm/插茱萸赏菊.webm": {
+      "file": "插茱萸赏菊.webm",
+      "sha256": "4e1ba56724da3663e2f5480001ab1141a82e8618c316e6e81e3dae84998452f3"
+    },
+    "assets/webm/摇扇纳凉.webm": {
+      "file": "摇扇纳凉.webm",
+      "sha256": "87d4b9454692484e4809b45071751b2144fc82fd8696fafabb32e19af98350f2"
+    },
+    "assets/webm/撸猫.webm": {
+      "file": "撸猫.webm",
+      "sha256": "068d84e944dfce17de1c5a2ee2a4bc391e2848dad88a7df4877ebf23cf38bcec"
+    },
+    "assets/webm/收红包.webm": {
+      "file": "收红包.webm",
+      "sha256": "a0e7a9a5997aff1357c76eeaaad7a01503c320f7017766dd5a42e643daa505c1"
+    },
+    "assets/webm/放孔明灯.webm": {
+      "file": "放孔明灯.webm",
+      "sha256": "cc6540b4651f6603363dd326801921d6ba220ecaaf00828b42d248eb28beeb31"
+    },
+    "assets/webm/放河灯.webm": {
+      "file": "放河灯.webm",
+      "sha256": "af744bed1ff20cc1b0492247add45f2b16433fde0b0897c31d6b0579429b788d"
+    },
+    "assets/webm/放烟花.webm": {
+      "file": "放烟花.webm",
+      "sha256": "539ac09ae29ed0a11bd828df096f3e72f606529b3c59e29a5fcf3b051779a4d0"
+    },
+    "assets/webm/放风筝.webm": {
+      "file": "放风筝.webm",
+      "sha256": "9d9ac75871b1c70a77fc4aaa63dd24778d79cbf492c2c5df42167199c7dd2132"
+    },
+    "assets/webm/整体换装试色.webm": {
+      "file": "整体换装试色.webm",
+      "sha256": "e8e599b12da7f3437c98425f6b192dd0c81a6b63bbba5e7927f53c22f757b094"
+    },
+    "assets/webm/是啊，吃什么.webm": {
+      "file": "是啊，吃什么.webm",
+      "sha256": "94e1d69e05cc66cc1dc8bf6986efc51dfd71fe22fd34166f9efe7ca2d21c1e8c"
+    },
+    "assets/webm/晨间刷牙.webm": {
+      "file": "晨间刷牙.webm",
+      "sha256": "017e384e7e13732fb12428d024ef686e79df5b79bfab0d83faa7fa50653d1bc4"
+    },
+    "assets/webm/期待开饭.webm": {
+      "file": "期待开饭.webm",
+      "sha256": "4999759c8c32af0b5400518084ade31c9445c4e5e3ea40218efa28f2e79d9c3e"
+    },
+    "assets/webm/涮火锅.webm": {
+      "file": "涮火锅.webm",
+      "sha256": "f0b345c22cf2841137d215a7b9d50252b8be0ede64887e91fdc9bd09843e3c8f"
+    },
+    "assets/webm/深度思考碎碎念.webm": {
+      "file": "深度思考碎碎念.webm",
+      "sha256": "db66867cd1f5bf68b0638fe1f966d0fdf95d1573523e60c77aa8913706118e82"
+    },
+    "assets/webm/点击回应-傲娇生气.webm": {
+      "file": "点击回应-傲娇生气.webm",
+      "sha256": "6b7176b98408cb649d1d37b6a6222a21aa6b128187e3e0b2d18550d35ab81064"
+    },
+    "assets/webm/点击回应-元气挥手.webm": {
+      "file": "wave.webm",
+      "sha256": "48cd729ccdcf746369942ea954d242e9afdd5643e1dac3827fa5e67450eb8776"
+    },
+    "assets/webm/点击回应-害羞惊讶.webm": {
+      "file": "点击回应-害羞惊讶.webm",
+      "sha256": "a04968bbc46d1ebea07f81e5dabd93b0b67a9d07f1371e9887b33075134ad00d"
+    },
+    "assets/webm/点击回应-开心跃动.webm": {
+      "file": "点击回应-开心跃动.webm",
+      "sha256": "86dcb0c3dd7b651de9c107e927d57a5c4224599101706dbdcc782fa48bcd0ad7"
+    },
+    "assets/webm/点击回应-挠痒咯咯笑.webm": {
+      "file": "点击回应-挠痒咯咯笑.webm",
+      "sha256": "f228279219f4084323ca1bfef1604f7c77bb3f505d45a8d1747b5ac3f9f2393b"
+    },
+    "assets/webm/照镜子.webm": {
+      "file": "照镜子.webm",
+      "sha256": "13dc61c003e500d906b6526765072b7a78c0709491a397d4e70a88ec7ea63310"
+    },
+    "assets/webm/玩水枪.webm": {
+      "file": "玩水枪.webm",
+      "sha256": "448f732417ac4dcb6ca140cd3d73896aaea7f5dac2876a9a0f7c0776478d7128"
+    },
+    "assets/webm/玩游戏气急败坏.webm": {
+      "file": "玩游戏气急败坏.webm",
+      "sha256": "8e406bc52cf2a20c9d288867367c4df7c45a5dc78443bc5c2fdc83835ac0b4c3"
+    },
+    "assets/webm/用鲸鱼尾巴拍打地面.webm": {
+      "file": "tail.webm",
+      "sha256": "e3f92df2cf182fdcb109ad0a865689d66e0a0d10db14c1528e5b3cb2f0bf090d"
+    },
+    "assets/webm/碎碎念-发呆碎碎念.webm": {
+      "file": "碎碎念-发呆碎碎念.webm",
+      "sha256": "02da8cc2194250ae9708b137a3deff43fed2ebd40a7aa4a033b6262c3485eb5b"
+    },
+    "assets/webm/碎碎念-对屏碎碎念.webm": {
+      "file": "碎碎念-对屏碎碎念.webm",
+      "sha256": "fda85ca286e173b7cf868c91829c3445e55c395e0c788b6be310a855b9b37973"
+    },
+    "assets/webm/碎碎念-擦桌碎碎念.webm": {
+      "file": "碎碎念-擦桌碎碎念.webm",
+      "sha256": "bfb616a3e6ed7375826d8fd00b41b9476d2e4bd65e10abddfb98f04c734e30e6"
+    },
+    "assets/webm/穿针乞巧.webm": {
+      "file": "穿针乞巧.webm",
+      "sha256": "cf16647ec4cb5634e4ff022bfc139a2233cd8be82f2391472bc842f7014ddc90"
+    },
+    "assets/webm/舞狮头.webm": {
+      "file": "舞狮头.webm",
+      "sha256": "6d2006b4023d44087cf4c7dc055d1d8f2a8cec32e22610807a2dfea7bb0dc367"
+    },
+    "assets/webm/荡秋千.webm": {
+      "file": "荡秋千.webm",
+      "sha256": "f32ea98e9c04553ae39939cd76c469192ebc19d98b90ebf93ec4b88bf95b25c9"
+    },
+    "assets/webm/萌化小幽灵.webm": {
+      "file": "萌化小幽灵.webm",
+      "sha256": "ac2012601d05bf7de7c7cced415b8793b0be3b7cfa569da06c2325f135f7e94f"
+    },
+    "assets/webm/蓝鲸现世.webm": {
+      "file": "蓝鲸现世.webm",
+      "sha256": "ed72f0ede7c6cd9482d44aa31002214d461b833c456f3ea40a52c3a0ddc20230"
+    },
+    "assets/webm/蝴蝶蜜蜂环绕头顶开花.webm": {
+      "file": "蝴蝶蜜蜂环绕头顶开花.webm",
+      "sha256": "fd286c78001fe57fc093c06a4b79ef077ade2dacd2a77e011d3f393f587707ec"
+    },
+    "assets/webm/螃蟹走路.webm": {
+      "file": "螃蟹走路.webm",
+      "sha256": "5696b0878be38cc450d6eaace837aef1c1b5834f1382bc6c11c2de582f284673"
+    },
+    "assets/webm/被吓一跳.webm": {
+      "file": "被吓一跳.webm",
+      "sha256": "537dde496e0f776e775dec1bb7bfe3fbc5eebf89112469a1a910ad0433ccde66"
+    },
+    "assets/webm/被落叶淹没.webm": {
+      "file": "被落叶淹没.webm",
+      "sha256": "91fc8e3dbfcd24546bc30366beb120fb5de7823ed67986dd8032c9c1b29ff079"
+    },
+    "assets/webm/被鼠标拖拽悬空反馈.webm": {
+      "file": "held.webm",
+      "sha256": "31373a86026636eecc890db763760309360310eb095cf5575b13c9ca2a6cc80e"
+    },
+    "assets/webm/装点圣诞树.webm": {
+      "file": "装点圣诞树.webm",
+      "sha256": "25da448acdbba49c2d4b209d24053b6dd1b79e656273d1f3e659385dc2bc3759"
+    },
+    "assets/webm/讨糖南瓜灯.webm": {
+      "file": "讨糖南瓜灯.webm",
+      "sha256": "9535d1a29f780aa2d78ffaabd7ee1765952bf34b2b380e9edc25dc6a3003070b"
+    },
+    "assets/webm/超大伸懒腰.webm": {
+      "file": "stretch.webm",
+      "sha256": "0ac66d918cc5efd49be1273c3830de73eae5f9bdcd5fcb968d1b2f9b487705ad"
+    },
+    "assets/webm/踢毽子.webm": {
+      "file": "踢毽子.webm",
+      "sha256": "68937b619a44e9ca7ccdfe77e5657f7a9bfa238beb33768378b6f254a16f3dbd"
+    },
+    "assets/webm/轻快摇摆舞.webm": {
+      "file": "dance.webm",
+      "sha256": "c621d00e1b959b991df8fc420e409b569e768fad7f75d1fb489375d101fee630"
+    },
+    "assets/webm/轻快记录.webm": {
+      "file": "轻快记录.webm",
+      "sha256": "1da04162fed5cd52bd4a6a6027a6902f50bda0969d34465bc2d332cf3679bbd5"
+    },
+    "assets/webm/骑木马.webm": {
+      "file": "骑木马.webm",
+      "sha256": "5f54a98ccac97eac000d799043411f4fc0732096dc51a2ad766552737578f313"
+    },
+    "assets/webm/鲸鱼吐泡泡特效.webm": {
+      "file": "bubble.webm",
+      "sha256": "d64d02059dc1602f7de5aa3135d381351363f021b2bceed47655db322cc71db3"
+    },
+    "assets/memes/Ciallo.png": {
+      "file": "Ciallo.png",
+      "sha256": "8cc22d31effa951f6a9e6cbf26ec98c762b86f8569fa81d58e0b10c99db112b3"
+    },
+    "assets/memes/token给妈妈保管.png": {
+      "file": "token给妈妈保管.png",
+      "sha256": "1ff2f370be90545ebcb84e718353070d078ec78d1cbb204785f3d7d24d86327d"
+    },
+    "assets/memes/假如给我三天多模态.png": {
+      "file": "假如给我三天多模态.png",
+      "sha256": "8d25880a3f2c546dc4fb57e96954b16cdc254a0faf8945411d9af8f0025b19e7"
+    },
+    "assets/memes/先养着吧.png": {
+      "file": "先养着吧.png",
+      "sha256": "74d5ec30a583b9126af1246d41de5d5b23a20c45dc4464e64cb1fa090d869f05"
+    },
+    "assets/memes/厉害了我的鲸.png": {
+      "file": "praise.png",
+      "sha256": "30617cca18b9f3be4045dd68ba0c98600c319b68ea755ee7008d8959ff28347e"
+    },
+    "assets/memes/压力一只大肥鱼.png": {
+      "file": "压力一只大肥鱼.png",
+      "sha256": "748d4c2664c6dc40380e883f9ec713a7c2a4fb410401d639111ae3cdbed15819"
+    },
+    "assets/memes/可爱.png": {
+      "file": "cute.png",
+      "sha256": "4ac8a61a368d9ee43e58ca5f16db73dd9124ebb7d8ca2fd0486f2f969789dae5"
+    },
+    "assets/memes/吃白饭的大肥鱼.png": {
+      "file": "吃白饭的大肥鱼.png",
+      "sha256": "2d3a5f07684cee0da30a2b5717dd9a1f226da21b98ca1900097617e5de374428"
+    },
+    "assets/memes/吃饱饱摸肚子.png": {
+      "file": "吃饱饱摸肚子.png",
+      "sha256": "128afd60aef0c610261271806beb6df2dedd33f159d3cc65676a2f6fed613585"
+    },
+    "assets/memes/哦鲸鲸.png": {
+      "file": "deadpan.png",
+      "sha256": "96d954bd3f9d60e77273643a96b6c2a5c4680ed4d6a4b3f1fe087189cd8fdd8a"
+    },
+    "assets/memes/哪来的电脑病毒.png": {
+      "file": "哪来的电脑病毒.png",
+      "sha256": "aea1b932b1bdd7d2c35e9fdd2a72ed944d42ad1dfb2608fc600924511e11bea0"
+    },
+    "assets/memes/大师这个区是什么意思.png": {
+      "file": "大师这个区是什么意思.png",
+      "sha256": "51f1d36d7b78c2726df8a26d20f34447ecd1280232bd285ce2c985ebd5e87723"
+    },
+    "assets/memes/大烧货.png": {
+      "file": "大烧货.png",
+      "sha256": "9e6f7147e961ab45b7271dcae0b1d10e67bc76df62449f2165aab7d0d2fe3249"
+    },
+    "assets/memes/大的药来了.png": {
+      "file": "大的药来了.png",
+      "sha256": "ae314fdb1f0c6904bc286d6436750f2a04981e74437b9a234eff0f627a904b48"
+    },
+    "assets/memes/大的要来啦.png": {
+      "file": "大的要来啦.png",
+      "sha256": "253ae478c398ff3238170547033e7b477e2e5eae2400221bbed5ac2064ef1d80"
+    },
+    "assets/memes/完蛋了把黄油删了.png": {
+      "file": "完蛋了把黄油删了.png",
+      "sha256": "bbd70ca8b0e7301f5bb6a326109ab86560a154782bce0769b28de29a4e79dbbf"
+    },
+    "assets/memes/就一碗.png": {
+      "file": "就一碗.png",
+      "sha256": "f01520b68b5526814adb9ee3d10e87f5f0ab76c9cea8159c28c09497194340ce"
+    },
+    "assets/memes/就骚了怎么滴吧.png": {
+      "file": "就骚了怎么滴吧.png",
+      "sha256": "8edbcd5583971bc448c6a19f65d1ef3b47c565e039806ea9bd27e5bcdc540ed3"
+    },
+    "assets/memes/我不更新你们用什么.png": {
+      "file": "我不更新你们用什么.png",
+      "sha256": "a71b82c49a5aa30e6026af60ac912171e28200ea961df71784497c59df76e277"
+    },
+    "assets/memes/死掉了.png": {
+      "file": "死掉了.png",
+      "sha256": "b042ac22e84ba1a1ffffd7ec246b53d40d1db3dc4c19d3443d63f243af14b25b"
+    },
+    "assets/memes/深度睡眠.png": {
+      "file": "sleep.png",
+      "sha256": "c250e326c62c270cd04efc6f61013dff65b16f5be5d5d06cc1751a59443c155d"
+    },
+    "assets/memes/电死你.png": {
+      "file": "电死你.png",
+      "sha256": "b0edc4eccf8f93acb8a2d885030994667431373674a3f81c755020ad5c7b5f22"
+    },
+    "assets/memes/要不直接骂他.png": {
+      "file": "要不直接骂他.png",
+      "sha256": "4bb9aff0cd35b1f2a2cec1c09f285263524498dda5bac6b64ed006444996cee4"
+    },
+    "assets/memes/誓死践行开源精神.png": {
+      "file": "誓死践行开源精神.png",
+      "sha256": "96d02fcef0801d2fc04d2c9d8c336b053842f3e949d81ebf97bf438741ced840"
+    },
+    "assets/memes/除了调情没啥用.png": {
+      "file": "除了调情没啥用.png",
+      "sha256": "a42585f22cf470ecaea1c465170ff1bee4eeb45a7ed92331b78533cb8b768a48"
+    },
+    "assets/memes/鱼片有资源吗.png": {
+      "file": "鱼片有资源吗.png",
+      "sha256": "414a57b1fa5d73111612ead35d596adb01eb284f8ab44038a252a65a209dbced"
+    },
+    "assets/memes/黎曼猜想没证明喵.png": {
+      "file": "黎曼猜想没证明喵.png",
+      "sha256": "651c398bb997354ef027f71d593099bbed712dbc7f9c3fc4607a1173edd3b6b9"
+    },
+    "assets/logo.png": {
+      "file": "logo.png",
+      "sha256": "fc73bbee8bca13b40ede3ec42af1a827f705ab6dd76b7eaaad489650e0848560"
+    }
+  },
+  "interactionTextSource": {
+    "file": "assets/config.jsonc",
+    "sha256": "c5c6d7f6ddcc5e68a501b3a58ba7cf5863c2f283207877c20f4319054762a987",
+    "outputSha256": "80e5779a6283ad7e4d00e161cab47d9d1dc1caaa022d3d4dcb2dfd8cee123459"
+  },
+  "nativeCommit": "0e6465f29bb89b386390ba0f14fb86fa1bc656d0",
+  "nativeOverrides": {
+    "src/host/config/validate.ts": "c7ea8b28e2a8b04a495a3b472a871dff6969ccca",
+    "src/host/config/constants.ts": "c7ea8b28e2a8b04a495a3b472a871dff6969ccca",
+    "src/host/log-file.ts": "c7ea8b28e2a8b04a495a3b472a871dff6969ccca",
+    "src/host/voice/voices.ts": "c7ea8b28e2a8b04a495a3b472a871dff6969ccca",
+    "src/shared/config.ts": "c7ea8b28e2a8b04a495a3b472a871dff6969ccca",
+    "src/shared/fonts.ts": "c7ea8b28e2a8b04a495a3b472a871dff6969ccca",
+    "src/shared/types.ts": "c7ea8b28e2a8b04a495a3b472a871dff6969ccca"
+  }
+}

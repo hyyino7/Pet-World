@@ -1,0 +1,20 @@
+/** One selected location per resource. Existing Life records remain authoritative
+ * until an explicit migration moves them; a blank new file never hides them. */
+export declare function companionRecordPaths(root: string): {
+    directory: string;
+    selfFile: string;
+    diaryDir: string;
+    historyDir: string;
+    lifeDirectory: string;
+    photoDirectory: string;
+};
+export declare function prepareRecordDirectory(directory: string): void;
+/** Reuse the upstream schema initializer without a Life service or model turn. */
+export declare function initializeCompanionRecords(root: string): {
+    directory: string;
+    selfFile: string;
+    diaryDir: string;
+    historyDir: string;
+    lifeDirectory: string;
+    photoDirectory: string;
+};

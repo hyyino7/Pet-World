@@ -1,0 +1,125 @@
+import { chmodSync, lstatSync, mkdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createBridge } from '#dsh-world/ecosystem/bridge/bridge';
+import { createOutlet } from '#dsh-world/ecosystem/shared/outlets';
+import { durableWrite } from '#dsh-world/life/lifeStore';
+import { digest } from '../core/storage.js';
+export const bridgePrefix = '/chatpet-connect';
+const empty = { enabled: false, outlets: [] };
+export function bridgePreferences(raw) {
+    const prefs = raw;
+    if (!prefs || typeof prefs.enabled !== 'boolean' || !Array.isArray(prefs.outlets) || prefs.outlets.length > 24)
+        throw { code: 'INVALID_ARGUMENT' };
+    const names = new Set();
+    const outlets = prefs.outlets.map(outlet => {
+        if (!outlet || typeof outlet.name !== 'string' || !outlet.name.trim() || outlet.name.length > 120 || names.has(outlet.name.trim()) ||
+            typeof outlet.url !== 'string' || outlet.url.length > 2048 || !Array.isArray(outlet.kinds) || !outlet.kinds.length ||
+            !outlet.kinds.every(k => ['reply', 'busy', 'reach'].includes(k)))
+            throw { code: 'INVALID_ARGUMENT' };
+        const url = new URL(outlet.url);
+        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password)
+            throw { code: 'INVALID_ARGUMENT' };
+        names.add(outlet.name.trim());
+        return { name: outlet.name.trim(), url: url.href, kinds: [...new Set(outlet.kinds)] };
+    });
+    return { enabled: prefs.enabled, outlets };
+}
+export function privateDeviceDirectory(root, name) {
+    const path = join(root, name);
+    mkdirSync(path, { recursive: true, mode: 0o700 });
+    const stat = lstatSync(path);
+    if (!stat.isDirectory() || stat.isSymbolicLink())
+        throw Error('设备接入目录无效');
+    return path;
+}
+export class LocalBridge {
+    ctx;
+    directory;
+    origin;
+    home;
+    isHome;
+    quiet;
+    name;
+    store;
+    storageId;
+    preferences;
+    instance;
+    settingsFile;
+    discovery;
+    constructor(ctx, directory, origin, home, isHome, quiet, name, store, storageId) {
+        this.ctx = ctx;
+        this.directory = directory;
+        this.origin = origin;
+        this.home = home;
+        this.isHome = isHome;
+        this.quiet = quiet;
+        this.name = name;
+        this.store = store;
+        this.storageId = storageId;
+        this.settingsFile = join(directory, 'local-bridge.json');
+        this.discovery = join(directory, 'bridge.json');
+        const stat = lstatSync(this.settingsFile, { throwIfNoEntry: false });
+        if (stat && (!stat.isFile() || stat.nlink !== 1))
+            throw Error('本地接入设置路径无效');
+        this.preferences = stat ? bridgePreferences(JSON.parse(readFileSync(this.settingsFile, 'utf8'))) : { ...empty };
+    }
+    get current() { return this.instance; }
+    status() {
+        return { preferences: this.preferences, running: Boolean(this.instance), discovery: this.instance ? this.discovery : null,
+            faults: this.instance?.faults() ?? [] };
+    }
+    configure(raw) {
+        const prefs = bridgePreferences(raw);
+        durableWrite(this.settingsFile, JSON.stringify(prefs, null, 2));
+        this.stop();
+        this.preferences = prefs;
+    }
+    outlets() { return this.preferences.outlets.map(o => createOutlet(o, this.origin)); }
+    sync(available) {
+        if (!available || !this.preferences.enabled) {
+            this.stop();
+            return;
+        }
+        if (this.instance)
+            return;
+        const file = lstatSync(this.discovery, { throwIfNoEntry: false });
+        if (file && (!file.isFile() || file.nlink !== 1))
+            throw Error('本地桥接路径无效');
+        const bridge = createBridge({ ctx: this.ctx, prefix: bridgePrefix, home: this.home,
+            inWorld: session => this.isHome(session.id), outlets: this.outlets(), origin: this.origin, file: this.discovery, name: this.name() });
+        try {
+            bridge.start();
+            const discovery = JSON.parse(readFileSync(this.discovery, 'utf8'));
+            if (!bridge.checkToken(discovery.token))
+                throw Error('桥接凭据尚未就绪');
+            chmodSync(this.discovery, 0o600);
+            this.instance = bridge;
+        }
+        catch (error) {
+            bridge.stop();
+            throw error;
+        }
+    }
+    async reach(push, homeId) {
+        if (!this.instance || this.quiet())
+            return [];
+        const destinations = this.preferences.outlets.filter(o => o.kinds.includes('reach'));
+        return Promise.allSettled(destinations.map(async (destination) => {
+            const key = push.deliveryId && digest([this.storageId, homeId, destination.url, push.deliveryId]);
+            if (key) {
+                const previous = this.store.get('life-outlet-delivery', key);
+                if (previous === 'sent')
+                    return destination.name;
+                if (previous)
+                    throw Error('上次推送送达状态待核实');
+                this.store.put('life-outlet-delivery', key, 'pending');
+            }
+            await createOutlet(destination, this.origin).send(push);
+            if (key)
+                this.store.put('life-outlet-delivery', key, 'sent');
+            return destination.name;
+        }));
+    }
+    stop() { this.instance?.stop(); this.instance = undefined; }
+}
+//# sourceMappingURL=bridge.js.map

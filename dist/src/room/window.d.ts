@@ -1,0 +1,39 @@
+import type { BehaviorChange } from '../contracts/behavior.js';
+export declare const ROOM_ENDPOINTS: readonly ["roomState", "roomAction", "roomGarden", "roomPlant", "roomCare", "roomChat", "roomTelevision", "roomHistory", "roomVoice"];
+interface Binding {
+    workspaceId: string;
+    storageId: string;
+    path: string;
+}
+interface Host {
+    binding(): Binding | undefined;
+    origin(): string | undefined;
+    request(workspaceId: string, endpoint: string, data: Record<string, unknown>, requestId: string, signal: AbortSignal): Promise<unknown>;
+}
+/** Presentation-only process. Owner state and every native turn stay in DSH. */
+export declare class RoomWindow {
+    private host;
+    private child?;
+    private bound?;
+    private ready?;
+    private loaded;
+    private lifetime?;
+    private requests;
+    constructor(host: Host);
+    status(): {
+        running: boolean;
+        ready: boolean;
+        workspaceId: string | null;
+    };
+    reconcile(): void;
+    changed(change: BehaviorChange): void;
+    open(workspaceId: string): Promise<{
+        running: boolean;
+        ready: boolean;
+        workspaceId: string | null;
+    }>;
+    private send;
+    private handle;
+    closeWindow(): void;
+}
+export {};

@@ -1,0 +1,2361 @@
+export const animationAssets = {
+    "idle": {
+        "id": "idle",
+        "roomClip": "idle",
+        "desktopClip": "待机呼吸休闲",
+        "file": "idle.webm",
+        "durationMs": 10042
+    },
+    "walk": {
+        "id": "walk",
+        "roomClip": "mapped-walk",
+        "desktopClip": "原地漂浮踏步",
+        "file": "walk.webm",
+        "durationMs": 10042
+    },
+    "look": {
+        "id": "look",
+        "roomClip": "idle_look",
+        "desktopClip": "东张西望",
+        "file": "look.webm",
+        "durationMs": 10042
+    },
+    "held": {
+        "id": "held",
+        "roomClip": "mapped-held",
+        "desktopClip": "被鼠标拖拽悬空反馈",
+        "file": "held.webm",
+        "durationMs": 10042
+    },
+    "think": {
+        "id": "think",
+        "roomClip": "mapped-think",
+        "desktopClip": "工作状态-思考冒泡",
+        "file": "think.webm",
+        "durationMs": 10042
+    },
+    "type": {
+        "id": "type",
+        "roomClip": "mapped-type",
+        "desktopClip": "工作状态-忙碌点按",
+        "file": "type.webm",
+        "durationMs": 10042
+    },
+    "sort": {
+        "id": "sort",
+        "roomClip": "mapped-sort",
+        "desktopClip": "工作状态-清点归档",
+        "file": "sort.webm",
+        "durationMs": 10042
+    },
+    "wait": {
+        "id": "wait",
+        "roomClip": "mapped-wait",
+        "desktopClip": "工作状态-原地踱步张望",
+        "file": "wait.webm",
+        "durationMs": 10042
+    },
+    "cheer": {
+        "id": "cheer",
+        "roomClip": "mapped-cheer",
+        "desktopClip": "工作状态-雀跃庆祝",
+        "file": "cheer.webm",
+        "durationMs": 10042
+    },
+    "sigh": {
+        "id": "sigh",
+        "roomClip": "sick",
+        "desktopClip": "工作状态-垂头叹气冒汗",
+        "file": "sigh.webm",
+        "durationMs": 4917
+    },
+    "spin": {
+        "id": "spin",
+        "roomClip": "mapped-spin",
+        "desktopClip": "小幅度原地360度旋转展示",
+        "file": "spin.webm",
+        "durationMs": 10042
+    },
+    "wave": {
+        "id": "wave",
+        "roomClip": "mapped-wave",
+        "desktopClip": "点击回应-元气挥手",
+        "file": "wave.webm",
+        "durationMs": 10042
+    },
+    "tail": {
+        "id": "tail",
+        "roomClip": "mapped-tail",
+        "desktopClip": "用鲸鱼尾巴拍打地面",
+        "file": "tail.webm",
+        "durationMs": 10042
+    },
+    "bubble": {
+        "id": "bubble",
+        "roomClip": "mapped-bubble",
+        "desktopClip": "鲸鱼吐泡泡特效",
+        "file": "bubble.webm",
+        "durationMs": 10042
+    },
+    "flower": {
+        "id": "flower",
+        "roomClip": "mapped-flower",
+        "desktopClip": "凭空生花",
+        "file": "flower.webm",
+        "durationMs": 10042
+    },
+    "stretch": {
+        "id": "stretch",
+        "roomClip": "stretch",
+        "desktopClip": "超大伸懒腰",
+        "file": "stretch.webm",
+        "durationMs": 10042
+    },
+    "hum": {
+        "id": "hum",
+        "roomClip": "idle_hum",
+        "desktopClip": "悠闲哼歌",
+        "file": "hum.webm",
+        "durationMs": 10042
+    },
+    "dance": {
+        "id": "dance",
+        "roomClip": "dance",
+        "desktopClip": "轻快摇摆舞",
+        "file": "dance.webm",
+        "durationMs": 10042
+    },
+    "sleep-start": {
+        "id": "sleep-start",
+        "roomClip": "sleep_in",
+        "desktopClip": "睡觉-开始",
+        "file": "sleep-start.webm",
+        "durationMs": 10042
+    },
+    "sleep-loop": {
+        "id": "sleep-loop",
+        "roomClip": "sleep_loop",
+        "desktopClip": "睡觉-循环",
+        "file": "sleep-loop.webm",
+        "durationMs": 10042
+    },
+    "sleep-end": {
+        "id": "sleep-end",
+        "roomClip": "sleep_out",
+        "desktopClip": "睡觉-起来",
+        "file": "sleep-end.webm",
+        "durationMs": 10042
+    },
+    "三球抛接": {
+        "id": "三球抛接",
+        "roomClip": "mapped-三球抛接",
+        "desktopClip": "三球抛接",
+        "file": "三球抛接.webm",
+        "durationMs": 10042
+    },
+    "下五子棋": {
+        "id": "下五子棋",
+        "roomClip": "mapped-下五子棋",
+        "desktopClip": "下五子棋",
+        "file": "下五子棋.webm",
+        "durationMs": 10042
+    },
+    "中秋赏月吃月饼": {
+        "id": "中秋赏月吃月饼",
+        "roomClip": "mooncake",
+        "desktopClip": "中秋赏月吃月饼",
+        "file": "中秋赏月吃月饼.webm",
+        "durationMs": 10042
+    },
+    "优雅女仆舞": {
+        "id": "优雅女仆舞",
+        "roomClip": "mapped-优雅女仆舞",
+        "desktopClip": "优雅女仆舞",
+        "file": "优雅女仆舞.webm",
+        "durationMs": 10042
+    },
+    "余额-分文不剩": {
+        "id": "余额-分文不剩",
+        "roomClip": "mapped-余额-分文不剩",
+        "desktopClip": "余额-分文不剩",
+        "file": "余额-分文不剩.webm",
+        "durationMs": 10042
+    },
+    "余额-数金皱眉": {
+        "id": "余额-数金皱眉",
+        "roomClip": "mapped-余额-数金皱眉",
+        "desktopClip": "余额-数金皱眉",
+        "file": "余额-数金皱眉.webm",
+        "durationMs": 10042
+    },
+    "余额-袋空如洗": {
+        "id": "余额-袋空如洗",
+        "roomClip": "mapped-余额-袋空如洗",
+        "desktopClip": "余额-袋空如洗",
+        "file": "余额-袋空如洗.webm",
+        "durationMs": 10042
+    },
+    "余额-金袋叮当": {
+        "id": "余额-金袋叮当",
+        "roomClip": "mapped-余额-金袋叮当",
+        "desktopClip": "余额-金袋叮当",
+        "file": "余额-金袋叮当.webm",
+        "durationMs": 10042
+    },
+    "余额-钱袋如常": {
+        "id": "余额-钱袋如常",
+        "roomClip": "mapped-余额-钱袋如常",
+        "desktopClip": "余额-钱袋如常",
+        "file": "余额-钱袋如常.webm",
+        "durationMs": 10042
+    },
+    "余额-钱袋满溢": {
+        "id": "余额-钱袋满溢",
+        "roomClip": "mapped-余额-钱袋满溢",
+        "desktopClip": "余额-钱袋满溢",
+        "file": "余额-钱袋满溢.webm",
+        "durationMs": 10042
+    },
+    "侧身急躁跑": {
+        "id": "侧身急躁跑",
+        "roomClip": "run_hurry",
+        "desktopClip": "侧身急躁跑",
+        "file": "侧身急躁跑.webm",
+        "durationMs": 10042
+    },
+    "偷吃零食被抓住": {
+        "id": "偷吃零食被抓住",
+        "roomClip": "mapped-偷吃零食被抓住",
+        "desktopClip": "偷吃零食被抓住",
+        "file": "偷吃零食被抓住.webm",
+        "durationMs": 10042
+    },
+    "写代码": {
+        "id": "写代码",
+        "roomClip": "desk_code",
+        "desktopClip": "写代码",
+        "file": "写代码.webm",
+        "durationMs": 10042
+    },
+    "写福字": {
+        "id": "写福字",
+        "roomClip": "mapped-写福字",
+        "desktopClip": "写福字",
+        "file": "写福字.webm",
+        "durationMs": 10042
+    },
+    "动物环绕": {
+        "id": "动物环绕",
+        "roomClip": "mapped-动物环绕",
+        "desktopClip": "动物环绕",
+        "file": "动物环绕.webm",
+        "durationMs": 10042
+    },
+    "原地专心玩魔方": {
+        "id": "原地专心玩魔方",
+        "roomClip": "mapped-原地专心玩魔方",
+        "desktopClip": "原地专心玩魔方",
+        "file": "原地专心玩魔方.webm",
+        "durationMs": 10042
+    },
+    "原地小憩沉眠": {
+        "id": "原地小憩沉眠",
+        "roomClip": "nap",
+        "desktopClip": "原地小憩沉眠",
+        "file": "原地小憩沉眠.webm",
+        "durationMs": 10042
+    },
+    "原地左转奔跑": {
+        "id": "原地左转奔跑",
+        "roomClip": "mapped-原地左转奔跑",
+        "desktopClip": "原地左转奔跑",
+        "file": "原地左转奔跑.webm",
+        "durationMs": 10042
+    },
+    "原地敲击桌面互动": {
+        "id": "原地敲击桌面互动",
+        "roomClip": "desk_tap",
+        "desktopClip": "原地敲击桌面互动",
+        "file": "原地敲击桌面互动.webm",
+        "durationMs": 10042
+    },
+    "原地跳跃抓碎头顶物品": {
+        "id": "原地跳跃抓碎头顶物品",
+        "roomClip": "mapped-原地跳跃抓碎头顶物品",
+        "desktopClip": "原地跳跃抓碎头顶物品",
+        "file": "原地跳跃抓碎头顶物品.webm",
+        "durationMs": 10042
+    },
+    "原地蹲下玩玩具汽车": {
+        "id": "原地蹲下玩玩具汽车",
+        "roomClip": "mapped-原地蹲下玩玩具汽车",
+        "desktopClip": "原地蹲下玩玩具汽车",
+        "file": "原地蹲下玩玩具汽车.webm",
+        "durationMs": 10042
+    },
+    "原地重力下蹲压缩": {
+        "id": "原地重力下蹲压缩",
+        "roomClip": "mapped-原地重力下蹲压缩",
+        "desktopClip": "原地重力下蹲压缩",
+        "file": "原地重力下蹲压缩.webm",
+        "durationMs": 10042
+    },
+    "变鸽子": {
+        "id": "变鸽子",
+        "roomClip": "mapped-变鸽子",
+        "desktopClip": "变鸽子",
+        "file": "变鸽子.webm",
+        "durationMs": 10042
+    },
+    "可爱宅舞": {
+        "id": "可爱宅舞",
+        "roomClip": "mapped-可爱宅舞",
+        "desktopClip": "可爱宅舞",
+        "file": "可爱宅舞.webm",
+        "durationMs": 10042
+    },
+    "吃Token": {
+        "id": "吃Token",
+        "roomClip": "mapped-吃Token",
+        "desktopClip": "吃Token",
+        "file": "吃Token.webm",
+        "durationMs": 10042
+    },
+    "吃冰淇淋融化": {
+        "id": "吃冰淇淋融化",
+        "roomClip": "mapped-吃冰淇淋融化",
+        "desktopClip": "吃冰淇淋融化",
+        "file": "吃冰淇淋融化.webm",
+        "durationMs": 10042
+    },
+    "吃午餐": {
+        "id": "吃午餐",
+        "roomClip": "mapped-吃午餐",
+        "desktopClip": "吃午餐",
+        "file": "吃午餐.webm",
+        "durationMs": 10042
+    },
+    "吃大闸蟹": {
+        "id": "吃大闸蟹",
+        "roomClip": "mapped-吃大闸蟹",
+        "desktopClip": "吃大闸蟹",
+        "file": "吃大闸蟹.webm",
+        "durationMs": 10042
+    },
+    "吃年糕": {
+        "id": "吃年糕",
+        "roomClip": "mapped-吃年糕",
+        "desktopClip": "吃年糕",
+        "file": "吃年糕.webm",
+        "durationMs": 10042
+    },
+    "吃早餐": {
+        "id": "吃早餐",
+        "roomClip": "mapped-吃早餐",
+        "desktopClip": "吃早餐",
+        "file": "吃早餐.webm",
+        "durationMs": 10042
+    },
+    "吃晚餐": {
+        "id": "吃晚餐",
+        "roomClip": "mapped-吃晚餐",
+        "desktopClip": "吃晚餐",
+        "file": "吃晚餐.webm",
+        "durationMs": 10042
+    },
+    "吃汤圆": {
+        "id": "吃汤圆",
+        "roomClip": "mapped-吃汤圆",
+        "desktopClip": "吃汤圆",
+        "file": "吃汤圆.webm",
+        "durationMs": 10042
+    },
+    "吃白饭": {
+        "id": "吃白饭",
+        "roomClip": "eat_rice",
+        "desktopClip": "吃白饭",
+        "file": "吃白饭.webm",
+        "durationMs": 10042
+    },
+    "吃粽子": {
+        "id": "吃粽子",
+        "roomClip": "mapped-吃粽子",
+        "desktopClip": "吃粽子",
+        "file": "吃粽子.webm",
+        "durationMs": 10042
+    },
+    "吃糖葫芦": {
+        "id": "吃糖葫芦",
+        "roomClip": "mapped-吃糖葫芦",
+        "desktopClip": "吃糖葫芦",
+        "file": "吃糖葫芦.webm",
+        "durationMs": 10042
+    },
+    "吃腊八粥": {
+        "id": "吃腊八粥",
+        "roomClip": "mapped-吃腊八粥",
+        "desktopClip": "吃腊八粥",
+        "file": "吃腊八粥.webm",
+        "durationMs": 10042
+    },
+    "吃西瓜": {
+        "id": "吃西瓜",
+        "roomClip": "mapped-吃西瓜",
+        "desktopClip": "吃西瓜",
+        "file": "吃西瓜.webm",
+        "durationMs": 10042
+    },
+    "吃重阳糕": {
+        "id": "吃重阳糕",
+        "roomClip": "mapped-吃重阳糕",
+        "desktopClip": "吃重阳糕",
+        "file": "吃重阳糕.webm",
+        "durationMs": 10042
+    },
+    "吃长寿面": {
+        "id": "吃长寿面",
+        "roomClip": "mapped-吃长寿面",
+        "desktopClip": "吃长寿面",
+        "file": "吃长寿面.webm",
+        "durationMs": 10042
+    },
+    "吃青团": {
+        "id": "吃青团",
+        "roomClip": "mapped-吃青团",
+        "desktopClip": "吃青团",
+        "file": "吃青团.webm",
+        "durationMs": 10042
+    },
+    "吃饭·碗饭": {
+        "id": "吃饭·碗饭",
+        "roomClip": "mapped-吃饭·碗饭",
+        "desktopClip": "吃饭·碗饭",
+        "file": "吃饭·碗饭.webm",
+        "durationMs": 5125,
+        "composition": "baifan-bowl"
+    },
+    "吃饭团": {
+        "id": "吃饭团",
+        "roomClip": "mapped-吃饭团",
+        "desktopClip": "吃饭团",
+        "file": "吃饭团.webm",
+        "durationMs": 5125,
+        "composition": "baifan-riceball"
+    },
+    "吃饺子": {
+        "id": "吃饺子",
+        "roomClip": "mapped-吃饺子",
+        "desktopClip": "吃饺子",
+        "file": "吃饺子.webm",
+        "durationMs": 10042
+    },
+    "吹气球": {
+        "id": "吹气球",
+        "roomClip": "mapped-吹气球",
+        "desktopClip": "吹气球",
+        "file": "吹气球.webm",
+        "durationMs": 10042
+    },
+    "吹笛子": {
+        "id": "吹笛子",
+        "roomClip": "mapped-吹笛子",
+        "desktopClip": "吹笛子",
+        "file": "吹笛子.webm",
+        "durationMs": 10042
+    },
+    "哈欠连天": {
+        "id": "哈欠连天",
+        "roomClip": "yawn",
+        "desktopClip": "哈欠连天",
+        "file": "哈欠连天.webm",
+        "durationMs": 10042
+    },
+    "堆雪人": {
+        "id": "堆雪人",
+        "roomClip": "mapped-堆雪人",
+        "desktopClip": "堆雪人",
+        "file": "堆雪人.webm",
+        "durationMs": 10042
+    },
+    "大口吃零食": {
+        "id": "大口吃零食",
+        "roomClip": "eat_snack",
+        "desktopClip": "大口吃零食",
+        "file": "大口吃零食.webm",
+        "durationMs": 10042
+    },
+    "女仆屈膝礼仪": {
+        "id": "女仆屈膝礼仪",
+        "roomClip": "curtsy",
+        "desktopClip": "女仆屈膝礼仪",
+        "file": "女仆屈膝礼仪.webm",
+        "durationMs": 10042
+    },
+    "小提琴演奏": {
+        "id": "小提琴演奏",
+        "roomClip": "mapped-小提琴演奏",
+        "desktopClip": "小提琴演奏",
+        "file": "小提琴演奏.webm",
+        "durationMs": 10042
+    },
+    "开心小跑": {
+        "id": "开心小跑",
+        "roomClip": "run_happy",
+        "desktopClip": "开心小跑",
+        "file": "开心小跑.webm",
+        "durationMs": 10042
+    },
+    "扑克魔术": {
+        "id": "扑克魔术",
+        "roomClip": "mapped-扑克魔术",
+        "desktopClip": "扑克魔术",
+        "file": "扑克魔术.webm",
+        "durationMs": 10042
+    },
+    "打瞌睡被惊醒": {
+        "id": "打瞌睡被惊醒",
+        "roomClip": "mapped-打瞌睡被惊醒",
+        "desktopClip": "打瞌睡被惊醒",
+        "file": "打瞌睡被惊醒.webm",
+        "durationMs": 10042
+    },
+    "抽陀螺": {
+        "id": "抽陀螺",
+        "roomClip": "mapped-抽陀螺",
+        "desktopClip": "抽陀螺",
+        "file": "抽陀螺.webm",
+        "durationMs": 10042
+    },
+    "拆礼物": {
+        "id": "拆礼物",
+        "roomClip": "mapped-拆礼物",
+        "desktopClip": "拆礼物",
+        "file": "拆礼物.webm",
+        "durationMs": 10042
+    },
+    "插茱萸赏菊": {
+        "id": "插茱萸赏菊",
+        "roomClip": "mapped-插茱萸赏菊",
+        "desktopClip": "插茱萸赏菊",
+        "file": "插茱萸赏菊.webm",
+        "durationMs": 10042
+    },
+    "摇扇纳凉": {
+        "id": "摇扇纳凉",
+        "roomClip": "fan",
+        "desktopClip": "摇扇纳凉",
+        "file": "摇扇纳凉.webm",
+        "durationMs": 10042
+    },
+    "撸猫": {
+        "id": "撸猫",
+        "roomClip": "mapped-撸猫",
+        "desktopClip": "撸猫",
+        "file": "撸猫.webm",
+        "durationMs": 10042
+    },
+    "收红包": {
+        "id": "收红包",
+        "roomClip": "mapped-收红包",
+        "desktopClip": "收红包",
+        "file": "收红包.webm",
+        "durationMs": 10042
+    },
+    "放孔明灯": {
+        "id": "放孔明灯",
+        "roomClip": "mapped-放孔明灯",
+        "desktopClip": "放孔明灯",
+        "file": "放孔明灯.webm",
+        "durationMs": 10042
+    },
+    "放河灯": {
+        "id": "放河灯",
+        "roomClip": "mapped-放河灯",
+        "desktopClip": "放河灯",
+        "file": "放河灯.webm",
+        "durationMs": 10042
+    },
+    "放烟花": {
+        "id": "放烟花",
+        "roomClip": "mapped-放烟花",
+        "desktopClip": "放烟花",
+        "file": "放烟花.webm",
+        "durationMs": 10042
+    },
+    "放风筝": {
+        "id": "放风筝",
+        "roomClip": "kite",
+        "desktopClip": "放风筝",
+        "file": "放风筝.webm",
+        "durationMs": 10042
+    },
+    "整体换装试色": {
+        "id": "整体换装试色",
+        "roomClip": "mapped-整体换装试色",
+        "desktopClip": "整体换装试色",
+        "file": "整体换装试色.webm",
+        "durationMs": 10042
+    },
+    "是啊，吃什么": {
+        "id": "是啊，吃什么",
+        "roomClip": "mapped-是啊，吃什么",
+        "desktopClip": "是啊，吃什么",
+        "file": "是啊，吃什么.webm",
+        "durationMs": 10042
+    },
+    "晨间刷牙": {
+        "id": "晨间刷牙",
+        "roomClip": "brush",
+        "desktopClip": "晨间刷牙",
+        "file": "晨间刷牙.webm",
+        "durationMs": 10042
+    },
+    "期待开饭": {
+        "id": "期待开饭",
+        "roomClip": "wait_food",
+        "desktopClip": "期待开饭",
+        "file": "期待开饭.webm",
+        "durationMs": 5125,
+        "composition": "baifan-wait"
+    },
+    "涮火锅": {
+        "id": "涮火锅",
+        "roomClip": "mapped-涮火锅",
+        "desktopClip": "涮火锅",
+        "file": "涮火锅.webm",
+        "durationMs": 10042
+    },
+    "深度思考碎碎念": {
+        "id": "深度思考碎碎念",
+        "roomClip": "mapped-深度思考碎碎念",
+        "desktopClip": "深度思考碎碎念",
+        "file": "深度思考碎碎念.webm",
+        "durationMs": 10042
+    },
+    "点击回应-傲娇生气": {
+        "id": "点击回应-傲娇生气",
+        "roomClip": "react_pout",
+        "desktopClip": "点击回应-傲娇生气",
+        "file": "点击回应-傲娇生气.webm",
+        "durationMs": 10042
+    },
+    "点击回应-害羞惊讶": {
+        "id": "点击回应-害羞惊讶",
+        "roomClip": "react_shy",
+        "desktopClip": "点击回应-害羞惊讶",
+        "file": "点击回应-害羞惊讶.webm",
+        "durationMs": 10042
+    },
+    "点击回应-开心跃动": {
+        "id": "点击回应-开心跃动",
+        "roomClip": "react_happy",
+        "desktopClip": "点击回应-开心跃动",
+        "file": "点击回应-开心跃动.webm",
+        "durationMs": 10042
+    },
+    "点击回应-挠痒咯咯笑": {
+        "id": "点击回应-挠痒咯咯笑",
+        "roomClip": "mapped-点击回应-挠痒咯咯笑",
+        "desktopClip": "点击回应-挠痒咯咯笑",
+        "file": "点击回应-挠痒咯咯笑.webm",
+        "durationMs": 10042
+    },
+    "照镜子": {
+        "id": "照镜子",
+        "roomClip": "mirror",
+        "desktopClip": "照镜子",
+        "file": "照镜子.webm",
+        "durationMs": 10042
+    },
+    "玩水枪": {
+        "id": "玩水枪",
+        "roomClip": "mapped-玩水枪",
+        "desktopClip": "玩水枪",
+        "file": "玩水枪.webm",
+        "durationMs": 10042
+    },
+    "玩游戏气急败坏": {
+        "id": "玩游戏气急败坏",
+        "roomClip": "game",
+        "desktopClip": "玩游戏气急败坏",
+        "file": "玩游戏气急败坏.webm",
+        "durationMs": 10042
+    },
+    "碎碎念-发呆碎碎念": {
+        "id": "碎碎念-发呆碎碎念",
+        "roomClip": "mutter",
+        "desktopClip": "碎碎念-发呆碎碎念",
+        "file": "碎碎念-发呆碎碎念.webm",
+        "durationMs": 10042
+    },
+    "碎碎念-对屏碎碎念": {
+        "id": "碎碎念-对屏碎碎念",
+        "roomClip": "desk_mutter",
+        "desktopClip": "碎碎念-对屏碎碎念",
+        "file": "碎碎念-对屏碎碎念.webm",
+        "durationMs": 10042
+    },
+    "碎碎念-擦桌碎碎念": {
+        "id": "碎碎念-擦桌碎碎念",
+        "roomClip": "mapped-碎碎念-擦桌碎碎念",
+        "desktopClip": "碎碎念-擦桌碎碎念",
+        "file": "碎碎念-擦桌碎碎念.webm",
+        "durationMs": 10042
+    },
+    "穿针乞巧": {
+        "id": "穿针乞巧",
+        "roomClip": "mapped-穿针乞巧",
+        "desktopClip": "穿针乞巧",
+        "file": "穿针乞巧.webm",
+        "durationMs": 10042
+    },
+    "舞狮头": {
+        "id": "舞狮头",
+        "roomClip": "mapped-舞狮头",
+        "desktopClip": "舞狮头",
+        "file": "舞狮头.webm",
+        "durationMs": 10042
+    },
+    "荡秋千": {
+        "id": "荡秋千",
+        "roomClip": "mapped-荡秋千",
+        "desktopClip": "荡秋千",
+        "file": "荡秋千.webm",
+        "durationMs": 10042
+    },
+    "萌化小幽灵": {
+        "id": "萌化小幽灵",
+        "roomClip": "mapped-萌化小幽灵",
+        "desktopClip": "萌化小幽灵",
+        "file": "萌化小幽灵.webm",
+        "durationMs": 10042
+    },
+    "蓝鲸现世": {
+        "id": "蓝鲸现世",
+        "roomClip": "mapped-蓝鲸现世",
+        "desktopClip": "蓝鲸现世",
+        "file": "蓝鲸现世.webm",
+        "durationMs": 10042
+    },
+    "蝴蝶蜜蜂环绕头顶开花": {
+        "id": "蝴蝶蜜蜂环绕头顶开花",
+        "roomClip": "mapped-蝴蝶蜜蜂环绕头顶开花",
+        "desktopClip": "蝴蝶蜜蜂环绕头顶开花",
+        "file": "蝴蝶蜜蜂环绕头顶开花.webm",
+        "durationMs": 10042
+    },
+    "螃蟹走路": {
+        "id": "螃蟹走路",
+        "roomClip": "walk",
+        "desktopClip": "螃蟹走路",
+        "file": "螃蟹走路.webm",
+        "durationMs": 10042
+    },
+    "被吓一跳": {
+        "id": "被吓一跳",
+        "roomClip": "react_scare",
+        "desktopClip": "被吓一跳",
+        "file": "被吓一跳.webm",
+        "durationMs": 10042
+    },
+    "被落叶淹没": {
+        "id": "被落叶淹没",
+        "roomClip": "mapped-被落叶淹没",
+        "desktopClip": "被落叶淹没",
+        "file": "被落叶淹没.webm",
+        "durationMs": 10042
+    },
+    "装点圣诞树": {
+        "id": "装点圣诞树",
+        "roomClip": "mapped-装点圣诞树",
+        "desktopClip": "装点圣诞树",
+        "file": "装点圣诞树.webm",
+        "durationMs": 10042
+    },
+    "讨糖南瓜灯": {
+        "id": "讨糖南瓜灯",
+        "roomClip": "mapped-讨糖南瓜灯",
+        "desktopClip": "讨糖南瓜灯",
+        "file": "讨糖南瓜灯.webm",
+        "durationMs": 10042
+    },
+    "踢毽子": {
+        "id": "踢毽子",
+        "roomClip": "mapped-踢毽子",
+        "desktopClip": "踢毽子",
+        "file": "踢毽子.webm",
+        "durationMs": 10042
+    },
+    "轻快记录": {
+        "id": "轻快记录",
+        "roomClip": "mapped-轻快记录",
+        "desktopClip": "轻快记录",
+        "file": "轻快记录.webm",
+        "durationMs": 10042
+    },
+    "骑木马": {
+        "id": "骑木马",
+        "roomClip": "mapped-骑木马",
+        "desktopClip": "骑木马",
+        "file": "骑木马.webm",
+        "durationMs": 10042
+    },
+    "life-drink": {
+        "id": "life-drink",
+        "roomClip": "life-drink",
+        "desktopClip": "生活-捧杯喝水",
+        "file": "life-drink.webm",
+        "posterFile": "life-drink.png",
+        "durationMs": 2000
+    },
+    "life-read": {
+        "id": "life-read",
+        "roomClip": "life-read",
+        "desktopClip": "生活-专心阅读",
+        "file": "life-read.webm",
+        "posterFile": "life-read.png",
+        "durationMs": 2000
+    },
+    "life-garden-till": {
+        "id": "life-garden-till",
+        "roomClip": "life-garden-till",
+        "desktopClip": "生活-松土",
+        "file": "life-garden-till.webm",
+        "posterFile": "life-garden-till.png",
+        "durationMs": 2000
+    },
+    "life-garden-plant": {
+        "id": "life-garden-plant",
+        "roomClip": "life-garden-plant",
+        "desktopClip": "生活-播种",
+        "file": "life-garden-plant.webm",
+        "posterFile": "life-garden-plant.png",
+        "durationMs": 2000
+    },
+    "life-garden-water": {
+        "id": "life-garden-water",
+        "roomClip": "life-garden-water",
+        "desktopClip": "生活-浇水",
+        "file": "life-garden-water.webm",
+        "posterFile": "life-garden-water.png",
+        "durationMs": 2000
+    },
+    "life-garden-fertilize": {
+        "id": "life-garden-fertilize",
+        "roomClip": "life-garden-fertilize",
+        "desktopClip": "生活-施肥",
+        "file": "life-garden-fertilize.webm",
+        "posterFile": "life-garden-fertilize.png",
+        "durationMs": 2000
+    },
+    "life-garden-harvest": {
+        "id": "life-garden-harvest",
+        "roomClip": "life-garden-harvest",
+        "desktopClip": "生活-采收",
+        "file": "life-garden-harvest.webm",
+        "posterFile": "life-garden-harvest.png",
+        "durationMs": 2000
+    },
+    "life-trade": {
+        "id": "life-trade",
+        "roomClip": "life-trade",
+        "desktopClip": "生活-整理交易",
+        "file": "life-trade.webm",
+        "posterFile": "life-trade.png",
+        "durationMs": 2000
+    }
+};
+export const animationSlots = {
+    "move.normal": {
+        "id": "move.normal",
+        "clips": [
+            "walk"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Ordinary natural walking gait"
+        ],
+        "stickers": []
+    },
+    "move.depart": {
+        "id": "move.depart",
+        "clips": [
+            "look",
+            "walk"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Dedicated first step"
+        ],
+        "stickers": []
+    },
+    "move.happy": {
+        "id": "move.happy",
+        "clips": [
+            "开心小跑"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "move.hurry": {
+        "id": "move.hurry",
+        "clips": [
+            "侧身急躁跑"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "move.left": {
+        "id": "move.left",
+        "clips": [
+            "原地左转奔跑"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "move.crab": {
+        "id": "move.crab",
+        "clips": [
+            "螃蟹走路"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "move.sad": {
+        "id": "move.sad",
+        "clips": [
+            "walk"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Sad-specific gait"
+        ],
+        "stickers": []
+    },
+    "move.tired": {
+        "id": "move.tired",
+        "clips": [
+            "哈欠连天",
+            "walk"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Tired-specific gait"
+        ],
+        "stickers": []
+    },
+    "move.arrive": {
+        "id": "move.arrive",
+        "clips": [
+            "walk",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Dedicated deceleration / foot settling"
+        ],
+        "stickers": []
+    },
+    "move.interrupt": {
+        "id": "move.interrupt",
+        "clips": [
+            "walk",
+            "idle",
+            "walk"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": []
+    },
+    "move.right": {
+        "id": "move.right",
+        "clips": [
+            "原地左转奔跑"
+        ],
+        "match": "proxy",
+        "uncovered": [],
+        "stickers": [],
+        "mirror": true
+    },
+    "move.back": {
+        "id": "move.back",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "Back-facing clip"
+        ],
+        "stickers": []
+    },
+    "move.carry": {
+        "id": "move.carry",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "Cup-carry walk",
+            "Book-carry walk",
+            "Basket-carry walk"
+        ],
+        "stickers": []
+    },
+    "move.turn": {
+        "id": "move.turn",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "General turn segment"
+        ],
+        "stickers": []
+    },
+    "input.drag": {
+        "id": "input.drag",
+        "clips": [],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": [],
+        "bodySource": "current"
+    },
+    "input.pick-up": {
+        "id": "input.pick-up",
+        "clips": [
+            "held"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "drink.cup": {
+        "id": "drink.cup",
+        "clips": [
+            "life-drink"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "drink.sequence": {
+        "id": "drink.sequence",
+        "clips": [
+            "idle",
+            "life-drink",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Separate take / put-down cup segments"
+        ],
+        "stickers": []
+    },
+    "drink.continue": {
+        "id": "drink.continue",
+        "clips": [
+            "life-drink"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "drink.owner": {
+        "id": "drink.owner",
+        "clips": [
+            "look",
+            "life-drink",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Dedicated receiving from owner"
+        ],
+        "stickers": []
+    },
+    "drink.hot": {
+        "id": "drink.hot",
+        "clips": [
+            "life-drink"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Temperature test",
+            "Blowing on drink"
+        ],
+        "stickers": []
+    },
+    "drink.straw-base": {
+        "id": "drink.straw-base",
+        "clips": [
+            "life-drink"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Straw/container-specific motion"
+        ],
+        "stickers": []
+    },
+    "drink.bottle-base": {
+        "id": "drink.bottle-base",
+        "clips": [
+            "life-drink"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Bottle-specific motion",
+            "Open / close cap"
+        ],
+        "stickers": []
+    },
+    "drink.take": {
+        "id": "drink.take",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "Take cup",
+            "Return cup",
+            "Receive container"
+        ],
+        "stickers": []
+    },
+    "food.rice": {
+        "id": "food.rice",
+        "clips": [
+            "吃白饭"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.bowl": {
+        "id": "food.bowl",
+        "clips": [
+            "吃饭·碗饭"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.breakfast": {
+        "id": "food.breakfast",
+        "clips": [
+            "吃早餐"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.lunch": {
+        "id": "food.lunch",
+        "clips": [
+            "吃午餐"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.dinner": {
+        "id": "food.dinner",
+        "clips": [
+            "吃晚餐"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.noodles": {
+        "id": "food.noodles",
+        "clips": [
+            "吃长寿面"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.porridge": {
+        "id": "food.porridge",
+        "clips": [
+            "吃腊八粥"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.riceball": {
+        "id": "food.riceball",
+        "clips": [
+            "吃饭团"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.dumpling": {
+        "id": "food.dumpling",
+        "clips": [
+            "吃饺子"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.tangyuan": {
+        "id": "food.tangyuan",
+        "clips": [
+            "吃汤圆"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.zongzi": {
+        "id": "food.zongzi",
+        "clips": [
+            "吃粽子"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.niangao": {
+        "id": "food.niangao",
+        "clips": [
+            "吃年糕"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.qingtuan": {
+        "id": "food.qingtuan",
+        "clips": [
+            "吃青团"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.chongyang": {
+        "id": "food.chongyang",
+        "clips": [
+            "吃重阳糕"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.watermelon": {
+        "id": "food.watermelon",
+        "clips": [
+            "吃西瓜"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.snack": {
+        "id": "food.snack",
+        "clips": [
+            "大口吃零食"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.icecream": {
+        "id": "food.icecream",
+        "clips": [
+            "吃冰淇淋融化"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.tanghulu": {
+        "id": "food.tanghulu",
+        "clips": [
+            "吃糖葫芦"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.mooncake": {
+        "id": "food.mooncake",
+        "clips": [
+            "中秋赏月吃月饼"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.hotpot": {
+        "id": "food.hotpot",
+        "clips": [
+            "涮火锅"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.crab": {
+        "id": "food.crab",
+        "clips": [
+            "吃大闸蟹"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.caught": {
+        "id": "food.caught",
+        "clips": [
+            "偷吃零食被抓住"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.token": {
+        "id": "food.token",
+        "clips": [
+            "吃Token"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "food.await": {
+        "id": "food.await",
+        "clips": [
+            "期待开饭",
+            "吃白饭",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": [],
+        "selectedFoodPosition": 1
+    },
+    "food.choose": {
+        "id": "food.choose",
+        "clips": [
+            "是啊，吃什么",
+            "吃白饭",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": [],
+        "selectedFoodPosition": 1
+    },
+    "food.finish": {
+        "id": "food.finish",
+        "clips": [
+            "吃白饭",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": [
+            "吃饱饱摸肚子"
+        ],
+        "selectedFoodPosition": 0
+    },
+    "food.bread": {
+        "id": "food.bread",
+        "clips": [
+            "吃早餐"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Bread-specific clip"
+        ],
+        "stickers": []
+    },
+    "food.soup": {
+        "id": "food.soup",
+        "clips": [
+            "吃腊八粥"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Soup-specific prop/motion"
+        ],
+        "stickers": []
+    },
+    "food.otherfruit": {
+        "id": "food.otherfruit",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "Other named fruit clips"
+        ],
+        "stickers": []
+    },
+    "food.utensils": {
+        "id": "food.utensils",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "Separate take food",
+            "Take utensil",
+            "Chew",
+            "Swallow",
+            "Clear utensils"
+        ],
+        "stickers": []
+    },
+    "sleep.full": {
+        "id": "sleep.full",
+        "clips": [
+            "sleep-start",
+            "sleep-loop",
+            "sleep-end"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": []
+    },
+    "sleep.nap": {
+        "id": "sleep.nap",
+        "clips": [
+            "原地小憩沉眠"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "sleep.drowsy": {
+        "id": "sleep.drowsy",
+        "clips": [
+            "哈欠连天"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "sleep.startled": {
+        "id": "sleep.startled",
+        "clips": [
+            "打瞌睡被惊醒"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "sleep.stretch": {
+        "id": "sleep.stretch",
+        "clips": [
+            "sleep-end",
+            "stretch"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": []
+    },
+    "read.main": {
+        "id": "read.main",
+        "clips": [
+            "life-read"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "read.notes": {
+        "id": "read.notes",
+        "clips": [
+            "轻快记录"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "read.with-notes": {
+        "id": "read.with-notes",
+        "clips": [
+            "life-read",
+            "轻快记录",
+            "life-read"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": []
+    },
+    "desk.code": {
+        "id": "desk.code",
+        "clips": [
+            "写代码"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "desk.tap": {
+        "id": "desk.tap",
+        "clips": [
+            "原地敲击桌面互动"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "read.handling": {
+        "id": "read.handling",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "Take/open/close/return book",
+            "Separate page turn",
+            "Take/return pen"
+        ],
+        "stickers": []
+    },
+    "garden.till": {
+        "id": "garden.till",
+        "clips": [
+            "life-garden-till"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "garden.plant": {
+        "id": "garden.plant",
+        "clips": [
+            "life-garden-plant"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "garden.water": {
+        "id": "garden.water",
+        "clips": [
+            "life-garden-water"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "garden.fertilize": {
+        "id": "garden.fertilize",
+        "clips": [
+            "life-garden-fertilize"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "garden.harvest": {
+        "id": "garden.harvest",
+        "clips": [
+            "life-garden-harvest"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "garden.visit": {
+        "id": "garden.visit",
+        "clips": [
+            "walk",
+            "look",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": []
+    },
+    "garden.harvest-root": {
+        "id": "garden.harvest-root",
+        "clips": [
+            "life-garden-harvest"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Root-specific pull/dig/cut/pick motion"
+        ],
+        "stickers": []
+    },
+    "garden.harvest-leaf": {
+        "id": "garden.harvest-leaf",
+        "clips": [
+            "life-garden-harvest"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Leaf-specific pull/dig/cut/pick motion"
+        ],
+        "stickers": []
+    },
+    "garden.harvest-fruit": {
+        "id": "garden.harvest-fruit",
+        "clips": [
+            "life-garden-harvest"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Fruit-specific pull/dig/cut/pick motion"
+        ],
+        "stickers": []
+    },
+    "garden.harvest-corn": {
+        "id": "garden.harvest-corn",
+        "clips": [
+            "life-garden-harvest"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Corn-specific pull/dig/cut/pick motion"
+        ],
+        "stickers": []
+    },
+    "garden.dig-harvest": {
+        "id": "garden.dig-harvest",
+        "clips": [
+            "life-garden-till",
+            "life-garden-harvest"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": []
+    },
+    "garden.tools": {
+        "id": "garden.tools",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "Separate pick up / return tool"
+        ],
+        "stickers": []
+    },
+    "trade.inspect": {
+        "id": "trade.inspect",
+        "clips": [
+            "life-trade"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "trade.sell": {
+        "id": "trade.sell",
+        "clips": [
+            "idle",
+            "life-trade",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Separate payment",
+            "Goods-specific handover"
+        ],
+        "stickers": []
+    },
+    "trade.buy-seed": {
+        "id": "trade.buy-seed",
+        "clips": [
+            "idle",
+            "life-trade",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Separate payment",
+            "Goods-specific handover"
+        ],
+        "stickers": []
+    },
+    "trade.buy-compost": {
+        "id": "trade.buy-compost",
+        "clips": [
+            "idle",
+            "life-trade",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Separate payment",
+            "Goods-specific handover"
+        ],
+        "stickers": []
+    },
+    "gift.open": {
+        "id": "gift.open",
+        "clips": [
+            "look",
+            "拆礼物",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": []
+    },
+    "gift.inspect": {
+        "id": "gift.inspect",
+        "clips": [
+            "look",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Inspect / store item-specific movement"
+        ],
+        "stickers": []
+    },
+    "gift.thanks": {
+        "id": "gift.thanks",
+        "clips": [
+            "女仆屈膝礼仪"
+        ],
+        "match": "proxy",
+        "uncovered": [],
+        "stickers": []
+    },
+    "gift.redpacket": {
+        "id": "gift.redpacket",
+        "clips": [
+            "收红包"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "rest.happy": {
+        "id": "rest.happy",
+        "clips": [
+            "idle",
+            "hum",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": []
+    },
+    "touch.happy": {
+        "id": "touch.happy",
+        "clips": [
+            "look",
+            "点击回应-开心跃动"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Voluntary lean",
+            "Closed-eye acceptance"
+        ],
+        "stickers": []
+    },
+    "rest.calm": {
+        "id": "rest.calm",
+        "clips": [
+            "idle"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "touch.calm": {
+        "id": "touch.calm",
+        "clips": [
+            "look",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Gentle eye close",
+            "Sustained touch relaxation"
+        ],
+        "stickers": []
+    },
+    "rest.sweet": {
+        "id": "rest.sweet",
+        "clips": [
+            "idle",
+            "点击回应-害羞惊讶",
+            "idle"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Sustained sweet quiet posture"
+        ],
+        "stickers": [
+            "可爱"
+        ]
+    },
+    "touch.sweet": {
+        "id": "touch.sweet",
+        "clips": [
+            "点击回应-害羞惊讶"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Voluntary lean",
+            "Nuzzle"
+        ],
+        "stickers": [
+            "可爱"
+        ]
+    },
+    "rest.heartache": {
+        "id": "rest.heartache",
+        "clips": [
+            "look",
+            "idle"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Concern-specific quiet posture"
+        ],
+        "stickers": []
+    },
+    "touch.heartache": {
+        "id": "touch.heartache",
+        "clips": [
+            "look"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Concern-specific posture",
+            "Quiet lean"
+        ],
+        "stickers": []
+    },
+    "rest.worry": {
+        "id": "rest.worry",
+        "clips": [
+            "idle",
+            "深度思考碎碎念",
+            "idle"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Concerned quiet posture"
+        ],
+        "stickers": []
+    },
+    "touch.worry": {
+        "id": "touch.worry",
+        "clips": [
+            "look",
+            "深度思考碎碎念"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Alert-to-relaxed transition"
+        ],
+        "stickers": []
+    },
+    "rest.sad": {
+        "id": "rest.sad",
+        "clips": [
+            "idle",
+            "sigh",
+            "idle"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Sustained sad sitting / awake lying"
+        ],
+        "stickers": []
+    },
+    "touch.sad": {
+        "id": "touch.sad",
+        "clips": [
+            "look",
+            "sigh"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Non-smiling comfort acceptance"
+        ],
+        "stickers": []
+    },
+    "rest.jealous": {
+        "id": "rest.jealous",
+        "clips": [
+            "点击回应-傲娇生气",
+            "idle"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Jealous sidelong-glance rest"
+        ],
+        "stickers": []
+    },
+    "touch.jealous": {
+        "id": "touch.jealous",
+        "clips": [
+            "点击回应-傲娇生气"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Jealous glance",
+            "Softening while still jealous"
+        ],
+        "stickers": []
+    },
+    "rest.anger": {
+        "id": "rest.anger",
+        "clips": [
+            "点击回应-傲娇生气",
+            "idle"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Sustained angry quiet posture"
+        ],
+        "stickers": []
+    },
+    "touch.anger": {
+        "id": "touch.anger",
+        "clips": [
+            "点击回应-傲娇生气"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Turn away / stop gesture",
+            "Gradual relaxation"
+        ],
+        "stickers": []
+    },
+    "rest.boredom": {
+        "id": "rest.boredom",
+        "clips": [
+            "idle",
+            "look",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": []
+    },
+    "touch.boredom": {
+        "id": "touch.boredom",
+        "clips": [
+            "look"
+        ],
+        "match": "combined",
+        "uncovered": [
+            "Curious transition"
+        ],
+        "stickers": []
+    },
+    "touch.notice": {
+        "id": "touch.notice",
+        "clips": [
+            "look"
+        ],
+        "match": "proxy",
+        "uncovered": [],
+        "stickers": []
+    },
+    "touch.continue": {
+        "id": "touch.continue",
+        "clips": [],
+        "match": "combined",
+        "uncovered": [
+            "Dedicated closed-eye / leaning loop"
+        ],
+        "stickers": [],
+        "bodySource": "current"
+    },
+    "touch.decline": {
+        "id": "touch.decline",
+        "clips": [],
+        "match": "combined",
+        "uncovered": [
+            "Explicit avoidance / stop gesture"
+        ],
+        "stickers": [],
+        "bodySource": "current"
+    },
+    "touch.end": {
+        "id": "touch.end",
+        "clips": [],
+        "match": "combined",
+        "uncovered": [
+            "Separate withdrawal motion"
+        ],
+        "stickers": [],
+        "bodySource": "return"
+    },
+    "touch.asleep": {
+        "id": "touch.asleep",
+        "clips": [
+            "sleep-loop"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": [
+            "深度睡眠"
+        ]
+    },
+    "touch.tickle": {
+        "id": "touch.tickle",
+        "clips": [
+            "点击回应-挠痒咯咯笑"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "touch.poke": {
+        "id": "touch.poke",
+        "clips": [
+            "被吓一跳"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "talk.greet": {
+        "id": "talk.greet",
+        "clips": [
+            "wave"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": [
+            "Ciallo"
+        ]
+    },
+    "talk.listen": {
+        "id": "talk.listen",
+        "clips": [
+            "look",
+            "idle"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Dedicated listening pose"
+        ],
+        "stickers": []
+    },
+    "talk.screen": {
+        "id": "talk.screen",
+        "clips": [
+            "碎碎念-对屏碎碎念"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "talk.idle": {
+        "id": "talk.idle",
+        "clips": [
+            "碎碎念-发呆碎碎念"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "talk.clean": {
+        "id": "talk.clean",
+        "clips": [
+            "碎碎念-擦桌碎碎念"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "talk.think": {
+        "id": "talk.think",
+        "clips": [
+            "深度思考碎碎念"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "talk.praise": {
+        "id": "talk.praise",
+        "clips": [
+            "wave"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": [
+            "厉害了我的鲸"
+        ]
+    },
+    "hygiene.teeth": {
+        "id": "hygiene.teeth",
+        "clips": [
+            "晨间刷牙"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "hygiene.mirror": {
+        "id": "hygiene.mirror",
+        "clips": [
+            "照镜子"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "leisure.cool": {
+        "id": "leisure.cool",
+        "clips": [
+            "摇扇纳凉"
+        ],
+        "match": "direct",
+        "uncovered": [],
+        "stickers": []
+    },
+    "leisure.balcony": {
+        "id": "leisure.balcony",
+        "clips": [
+            "look",
+            "idle"
+        ],
+        "match": "combined",
+        "uncovered": [],
+        "stickers": []
+    },
+    "leisure.tv": {
+        "id": "leisure.tv",
+        "clips": [
+            "碎碎念-对屏碎碎念",
+            "idle"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Dedicated TV-watching posture"
+        ],
+        "stickers": []
+    },
+    "leisure.phone": {
+        "id": "leisure.phone",
+        "clips": [
+            "碎碎念-对屏碎碎念",
+            "idle"
+        ],
+        "match": "proxy",
+        "uncovered": [
+            "Take/hold/scroll/return phone"
+        ],
+        "stickers": []
+    },
+    "hygiene.bath": {
+        "id": "hygiene.bath",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "Bath preparation / wash / finish portrayal"
+        ],
+        "stickers": []
+    },
+    "hygiene.toilet": {
+        "id": "hygiene.toilet",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "Dedicated toilet portrayal"
+        ],
+        "stickers": []
+    },
+    "hygiene.laundry": {
+        "id": "hygiene.laundry",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "Wash/rinse/hang laundry"
+        ],
+        "stickers": []
+    },
+    "rest.postures": {
+        "id": "rest.postures",
+        "clips": [],
+        "match": "blank",
+        "uncovered": [
+            "Seated quiet posture",
+            "Awake lying posture"
+        ],
+        "stickers": []
+    }
+};
+export const animationStickers = {
+    "厉害了我的鲸": {
+        "id": "praise",
+        "label": "厉害了我的鲸",
+        "file": "praise.png"
+    },
+    "深度睡眠": {
+        "id": "sleep",
+        "label": "深度睡眠",
+        "file": "sleep.png"
+    },
+    "可爱": {
+        "id": "cute",
+        "label": "可爱",
+        "file": "cute.png"
+    },
+    "哦鲸鲸": {
+        "id": "deadpan",
+        "label": "哦鲸鲸",
+        "file": "deadpan.png"
+    },
+    "Ciallo": {
+        "id": "Ciallo",
+        "label": "Ciallo",
+        "file": "Ciallo.png"
+    },
+    "token给妈妈保管": {
+        "id": "token给妈妈保管",
+        "label": "token给妈妈保管",
+        "file": "token给妈妈保管.png"
+    },
+    "假如给我三天多模态": {
+        "id": "假如给我三天多模态",
+        "label": "假如给我三天多模态",
+        "file": "假如给我三天多模态.png"
+    },
+    "先养着吧": {
+        "id": "先养着吧",
+        "label": "先养着吧",
+        "file": "先养着吧.png"
+    },
+    "压力一只大肥鱼": {
+        "id": "压力一只大肥鱼",
+        "label": "压力一只大肥鱼",
+        "file": "压力一只大肥鱼.png"
+    },
+    "吃白饭的大肥鱼": {
+        "id": "吃白饭的大肥鱼",
+        "label": "吃白饭的大肥鱼",
+        "file": "吃白饭的大肥鱼.png"
+    },
+    "吃饱饱摸肚子": {
+        "id": "吃饱饱摸肚子",
+        "label": "吃饱饱摸肚子",
+        "file": "吃饱饱摸肚子.png"
+    },
+    "哪来的电脑病毒": {
+        "id": "哪来的电脑病毒",
+        "label": "哪来的电脑病毒",
+        "file": "哪来的电脑病毒.png"
+    },
+    "大师这个区是什么意思": {
+        "id": "大师这个区是什么意思",
+        "label": "大师这个区是什么意思",
+        "file": "大师这个区是什么意思.png"
+    },
+    "大烧货": {
+        "id": "大烧货",
+        "label": "大烧货",
+        "file": "大烧货.png"
+    },
+    "大的药来了": {
+        "id": "大的药来了",
+        "label": "大的药来了",
+        "file": "大的药来了.png"
+    },
+    "大的要来啦": {
+        "id": "大的要来啦",
+        "label": "大的要来啦",
+        "file": "大的要来啦.png"
+    },
+    "完蛋了把黄油删了": {
+        "id": "完蛋了把黄油删了",
+        "label": "完蛋了把黄油删了",
+        "file": "完蛋了把黄油删了.png"
+    },
+    "就一碗": {
+        "id": "就一碗",
+        "label": "就一碗",
+        "file": "就一碗.png"
+    },
+    "就骚了怎么滴吧": {
+        "id": "就骚了怎么滴吧",
+        "label": "就骚了怎么滴吧",
+        "file": "就骚了怎么滴吧.png"
+    },
+    "我不更新你们用什么": {
+        "id": "我不更新你们用什么",
+        "label": "我不更新你们用什么",
+        "file": "我不更新你们用什么.png"
+    },
+    "死掉了": {
+        "id": "死掉了",
+        "label": "死掉了",
+        "file": "死掉了.png"
+    },
+    "电死你": {
+        "id": "电死你",
+        "label": "电死你",
+        "file": "电死你.png"
+    },
+    "要不直接骂他": {
+        "id": "要不直接骂他",
+        "label": "要不直接骂他",
+        "file": "要不直接骂他.png"
+    },
+    "誓死践行开源精神": {
+        "id": "誓死践行开源精神",
+        "label": "誓死践行开源精神",
+        "file": "誓死践行开源精神.png"
+    },
+    "除了调情没啥用": {
+        "id": "除了调情没啥用",
+        "label": "除了调情没啥用",
+        "file": "除了调情没啥用.png"
+    },
+    "鱼片有资源吗": {
+        "id": "鱼片有资源吗",
+        "label": "鱼片有资源吗",
+        "file": "鱼片有资源吗.png"
+    },
+    "黎曼猜想没证明喵": {
+        "id": "黎曼猜想没证明喵",
+        "label": "黎曼猜想没证明喵",
+        "file": "黎曼猜想没证明喵.png"
+    }
+};
+export const animationRoomAliases = {
+    "assets/pet/run_hurry.webm": "侧身急躁跑.webm",
+    "assets/pet/life-drink.webm": "life-drink.webm",
+    "assets/pet/life-read.webm": "life-read.webm",
+    "assets/pet/life-garden-till.webm": "life-garden-till.webm",
+    "assets/pet/life-garden-plant.webm": "life-garden-plant.webm",
+    "assets/pet/life-garden-water.webm": "life-garden-water.webm",
+    "assets/pet/life-garden-fertilize.webm": "life-garden-fertilize.webm",
+    "assets/pet/life-garden-harvest.webm": "life-garden-harvest.webm",
+    "assets/pet/life-trade.webm": "life-trade.webm",
+    "assets/pet/idle.webm": "idle.webm",
+    "assets/pet/idle_look.webm": "look.webm",
+    "assets/pet/idle_hum.webm": "hum.webm",
+    "assets/pet/walk.webm": "螃蟹走路.webm",
+    "assets/pet/walk_fast.webm": "侧身急躁跑.webm",
+    "assets/pet/run_happy.webm": "开心小跑.webm",
+    "assets/pet/sleep_in.webm": "sleep-start.webm",
+    "assets/pet/sleep_loop.webm": "sleep-loop.webm",
+    "assets/pet/sleep_out.webm": "sleep-end.webm",
+    "assets/pet/eat_rice.webm": "吃白饭.webm",
+    "assets/pet/eat_snack.webm": "大口吃零食.webm",
+    "assets/pet/wait_food.webm": "期待开饭.webm",
+    "assets/pet/brush.webm": "晨间刷牙.webm",
+    "assets/pet/mirror.webm": "照镜子.webm",
+    "assets/pet/desk_code.webm": "写代码.webm",
+    "assets/pet/desk_tap.webm": "原地敲击桌面互动.webm",
+    "assets/pet/desk_mutter.webm": "碎碎念-对屏碎碎念.webm",
+    "assets/pet/fan.webm": "摇扇纳凉.webm",
+    "assets/pet/mooncake.webm": "中秋赏月吃月饼.webm",
+    "assets/pet/kite.webm": "放风筝.webm",
+    "assets/pet/react_happy.webm": "点击回应-开心跃动.webm",
+    "assets/pet/react_pout.webm": "点击回应-傲娇生气.webm",
+    "assets/pet/react_shy.webm": "点击回应-害羞惊讶.webm",
+    "assets/pet/react_scare.webm": "被吓一跳.webm",
+    "assets/pet/stretch.webm": "stretch.webm",
+    "assets/pet/sick.webm": "sigh.webm",
+    "assets/pet/game.webm": "玩游戏气急败坏.webm",
+    "assets/pet/dance.webm": "dance.webm",
+    "assets/pet/nap.webm": "原地小憩沉眠.webm",
+    "assets/pet/curtsy.webm": "女仆屈膝礼仪.webm",
+    "assets/pet/yawn.webm": "哈欠连天.webm",
+    "assets/pet/mutter.webm": "碎碎念-发呆碎碎念.webm"
+};
+//# sourceMappingURL=animation-map.js.map

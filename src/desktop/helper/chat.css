@@ -1,0 +1,126 @@
+:root {
+  font-family: system-ui,"PingFang SC",sans-serif;
+  color: #1c343e;
+  font-size: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f8f9;
+}
+
+header,form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+header {
+  border-bottom: 1px solid #dce5e6;
+}
+
+header strong {
+  letter-spacing: .05em;
+  font-size: 16px;
+}
+
+header span {
+  font-size: 11px;
+  flex: 1;
+  color: #49656d;
+}
+
+button {
+  cursor: pointer;
+  background: #eef3f4;
+  color: inherit;
+  border: 0;
+  border-radius: 7px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 12px;
+}
+
+button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+main {
+  overflow: auto;
+  flex: 1;
+  padding: 10px 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+p {
+  margin: 0;
+  padding: 7px 10px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  max-width: 93%;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.user {
+  align-self: flex-end;
+  background: #d7f0ed;
+}
+
+.sticker {
+  width: 96px;
+  max-height: 96px;
+  object-fit: contain;
+}
+
+form {
+  border-top: 1px solid #dce5e6;
+}
+
+textarea {
+  font: inherit;
+  resize: none;
+  flex: 1;
+  border: 0;
+  background: #f3f6f6;
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 0;
+}
+
+#send,#stop {
+  background: #126971;
+  color: white;
+  padding: 8px 12px;
+}
+
+#notice {
+  font-size: 12px;
+  color: #873f36;
+  padding: 4px 12px;
+}
+
+button:focus-visible,textarea:focus-visible {
+  outline: 2px solid #17858d;
+  outline-offset: 1px;
+}
+
+#attachment { padding: 4px 12px; }
+#attachment[hidden] {display:none;}
+#image-preview {max-width:90px;max-height:70px;vertical-align:middle;}
+#composer {gap:4px;}
+#composer button {padding:5px;}

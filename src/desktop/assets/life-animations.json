@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "provenance": "AI-generated with built-in image_gen; existing Xiaoxi cute.png identity reference; original attribution retained.",
+  "animations": [
+    {
+      "id": "life-drink",
+      "label": "生活-捧杯喝水",
+      "file": "life-drink.webm",
+      "poster": {
+        "file": "life-drink.png",
+        "sha256": "6eb77f34c99e46d47cc6cc6a15040377cc6a9fd7bb9c8ae8f97798afbf6c4884",
+        "bytes": 159934
+      },
+      "description": "捧杯、小口喝水",
+      "width": 640,
+      "height": 360,
+      "fps": 4,
+      "frames": 8,
+      "durationMs": 2000,
+      "alpha": true,
+      "sha256": "3ee6f37a15d7c09596a3cdde513ba8d5eaa761bac1033a853015cb240def0638",
+      "bytes": 297906,
+      "sourceSha256": "da124762c7d12e17d60d6f32efb7fdf04a2bc102d81f4c127a734c7c80ffa0d8"
+    },
+    {
+      "id": "life-read",
+      "label": "生活-专心阅读",
+      "file": "life-read.webm",
+      "poster": {
+        "file": "life-read.png",
+        "sha256": "775703dc7dbc0e9847737ef9a0a2854154e7b8a51994ef53bafc987e94781451",
+        "bytes": 160599
+      },
+      "description": "查看已提供正文，轻轻翻页",
+      "width": 640,
+      "height": 360,
+      "fps": 4,
+      "frames": 8,
+      "durationMs": 2000,
+      "alpha": true,
+      "sha256": "2ca6b77bea0cde68da05c786eddda45935f1d34ffa9778dd78685ef995a9494f",
+      "bytes": 323829,
+      "sourceSha256": "a6261262ff28384048758aa6a620627ecd06b32f6a5aec92a6cb984366396f61"
+    },
+    {
+      "id": "life-garden-till",
+      "label": "生活-松土",
+      "file": "life-garden-till.webm",
+      "poster": {
+        "file": "life-garden-till.png",
+        "sha256": "2e4a09217f5fb6015241299963dd061c4bde34d0e3dd9d52212807cc1a4a702a",
+        "bytes": 161680
+      },
+      "description": "用小锄松土",
+      "width": 640,
+      "height": 360,
+      "fps": 4,
+      "frames": 8,
+      "durationMs": 2000,
+      "alpha": true,
+      "sha256": "66fa7fb16520090780ea8807edda21b0b8aadc47006eadf5d731613e91d7e8f5",
+      "bytes": 338600,
+      "sourceSha256": "f6e4a347cccb549621edca3241717338df2fcbc4e5dd7f0bbcc17403341bc912"
+    },
+    {
+      "id": "life-garden-plant",
+      "label": "生活-播种",
+      "file": "life-garden-plant.webm",
+      "poster": {
+        "file": "life-garden-plant.png",
+        "sha256": "1814921a7bb1676086f2649122390734cfc4d2f1c1182474b0c65678994be3b2",
+        "bytes": 169053
+      },
+      "description": "把种子放入土中",
+      "width": 640,
+      "height": 360,
+      "fps": 4,
+      "frames": 8,
+      "durationMs": 2000,
+      "alpha": true,
+      "sha256": "231eb1232ba45d024f8e204c9ca051dc3f06e5e644e384e4b2236271e23e7b69",
+      "bytes": 344069,
+      "sourceSha256": "49b557817ad940db85d252589d0c3a9a1d008d415f775d06d831aee807a9c750"
+    },
+    {
+      "id": "life-garden-water",
+      "label": "生活-浇水",
+      "file": "life-garden-water.webm",
+      "poster": {
+        "file": "life-garden-water.png",
+        "sha256": "7260b2543d54d6c3ba87cc04b433e03ae8f7ce3177fef887b814e308695396c8",
+        "bytes": 166077
+      },
+      "description": "用水壶浇灌幼苗",
+      "width": 640,
+      "height": 360,
+      "fps": 4,
+      "frames": 8,
+      "durationMs": 2000,
+      "alpha": true,
+      "sha256": "35b680d79cd4ad728cac1a07e642bfbcee307e03371ab748bcbee4f594128b05",
+      "bytes": 327416,
+      "sourceSha256": "22a160014cf3fb672f1907f25a4b9cc5dba56e6818f73497fc9ca0dfd98c01c5"
+    },
+    {
+      "id": "life-garden-fertilize",
+      "label": "生活-施肥",
+      "file": "life-garden-fertilize.webm",
+      "poster": {
+        "file": "life-garden-fertilize.png",
+        "sha256": "3d69a48b16e71252dbf49908a43e4cf8f364584e77da665a064c4417881d9a77",
+        "bytes": 163653
+      },
+      "description": "用小勺向土壤添加堆肥",
+      "width": 640,
+      "height": 360,
+      "fps": 4,
+      "frames": 8,
+      "durationMs": 2000,
+      "alpha": true,
+      "sha256": "3ffb6ac646c37bc3ea3d95cc45e6008a52c521ccbf570a2cdc09d37b22250b7d",
+      "bytes": 303669,
+      "sourceSha256": "dcfea47e11da6c584e8c74296313af0b6b6b1a522f2632f325a70810eee78d9f"
+    },
+    {
+      "id": "life-garden-harvest",
+      "label": "生活-采收",
+      "file": "life-garden-harvest.webm",
+      "poster": {
+        "file": "life-garden-harvest.png",
+        "sha256": "0c378dda378452d9bcca7e8867bdb7f8a610b7a204b942fa9ba5038966dcddbf",
+        "bytes": 167494
+      },
+      "description": "把成熟蔬菜放入篮中",
+      "width": 640,
+      "height": 360,
+      "fps": 4,
+      "frames": 8,
+      "durationMs": 2000,
+      "alpha": true,
+      "sha256": "129bc9ae4144e527a90e61c04f44f31e44d3db2966693875a3260e5216754274",
+      "bytes": 374350,
+      "sourceSha256": "8da216d48d7e6bf1e8745db1df0dd0e99e17c82b401d42c28380513c742c3575"
+    },
+    {
+      "id": "life-trade",
+      "label": "生活-整理交易",
+      "file": "life-trade.webm",
+      "poster": {
+        "file": "life-trade.png",
+        "sha256": "b9a99280dd8fba8694187c0660ad8ca857b4b5d158399c3ac9a3daa5580a2626",
+        "bytes": 157970
+      },
+      "description": "查看篮中物品与交易钱袋",
+      "width": 640,
+      "height": 360,
+      "fps": 4,
+      "frames": 8,
+      "durationMs": 2000,
+      "alpha": true,
+      "sha256": "0170953f38d362b2e3f99afba8dbdf18deb95df336940a72283e3ec76402b53b",
+      "bytes": 318345,
+      "sourceSha256": "e3b2ec52a8cad9d24799f6bdf572033863f14db746830fa66ab64127d7081b62"
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+import { lstatSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { createRequire } from 'node:module';
+import { digest } from '../core/storage.js';
+const upstream = (part) => import('../desktop/upstream/host/' + part + '.js');
+const requireUpstream = createRequire(import.meta.url);
+export class CompanionVoice {
+    host;
+    directory;
+    recognizer;
+    lifetime = new AbortController();
+    scope;
+    constructor(host, directory, recognizer) {
+        this.host = host;
+        this.directory = directory;
+        this.recognizer = recognizer;
+    }
+    canTranscribe() {
+        // Use the same original Pet registry as hear(): external providers take
+        // precedence even when no host speech-to-text service has been enabled.
+        const registry = requireUpstream('../desktop/upstream/host/voice/speech-registry.js');
+        if (registry.activeSpeechProvider())
+            return true;
+        const service = this.recognizer();
+        return typeof service?.transcribe === 'function' && typeof service.resolve === 'function'
+            && typeof service.listProviders === 'function' && service.listProviders().length > 0;
+    }
+    binding() {
+        const state = this.host.workspace.status();
+        return state.state === 'ready' && state.target ? { workspaceId: state.target.id, id: this.host.workspace.storageId() } : undefined;
+    }
+    refresh() {
+        const target = this.binding();
+        if (this.scope && (this.scope.id !== target?.id || this.scope.workspaceId !== target?.workspaceId))
+            this.release();
+    }
+    release() { this.lifetime.abort(); this.lifetime = new AbortController(); this.scope = undefined; }
+    async handle(input) {
+        this.refresh();
+        const bound = this.binding();
+        if (!bound?.id || !this.directory)
+            throw Error('语音需要已绑定的工作区');
+        if (!['voice/hear', 'voice/speak', 'voice/voices'].includes(input.rest))
+            throw Error('语音操作无效');
+        if (input.body && Buffer.byteLength(input.body) > 1_048_576)
+            throw Error('音频过长');
+        if (!this.scope) {
+            const root = join(this.directory, digest(bound.id));
+            for (const path of [this.directory, root, join(root, 'voice-cache')]) {
+                mkdirSync(path, { recursive: true, mode: 0o700 });
+                if (!lstatSync(path).isDirectory())
+                    throw Error('语音缓存目录无效');
+            }
+            const tools = Promise.all([upstream('voice/speak'), upstream('voice/hear')])
+                .then(([out, mic]) => ({ voice: out.createVoiceService({ userRoot: root }), speech: mic.createHearService({ speechToText: this.recognizer }) }));
+            this.scope = { id: bound.id, workspaceId: bound.workspaceId, tools };
+        }
+        const signal = input.signal ? AbortSignal.any([this.lifetime.signal, input.signal]) : this.lifetime.signal;
+        const tools = await this.scope.tools;
+        const { handleVoiceRoutes } = await upstream('routes/voice');
+        signal.throwIfAborted();
+        const result = await handleVoiceRoutes(tools, { ...input, signal });
+        this.refresh();
+        signal.throwIfAborted();
+        return result;
+    }
+}
+export const name = '70-Voice';
+export const inject = ['petCore', 'profileContext'];
+export function apply(ctx, config = {}) {
+    const services = ctx;
+    const voice = new CompanionVoice(ctx.petCore, config.deviceDirectory ?? join(services.profileContext.dir, 'chatpet-voice'), () => services.get('speechToText'));
+    ctx.provide('petVoice', voice);
+    ctx.on('pet/core.changed', () => voice.refresh());
+    ctx.effect(() => () => voice.release());
+}
+//# sourceMappingURL=plugin.js.map
