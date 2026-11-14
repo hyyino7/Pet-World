@@ -1,8 +1,9 @@
 # Her World release notes
 
-This prerelease restores the complete TypeScript sources, tests, build scripts,
-lockfile and provenance records alongside the compiled Git-installable runtime.
-The product and package are now named **Her World** / `her-world`.
+This prerelease uses the plain GitHub repository address for both installation
+and replacement updates in DSH. No custom plugin index is needed. The release
+workflow promotes the checked source and compiled runtime to the default branch.
+Full TypeScript sources, tests, lockfile and provenance remain included.
 
 The old `dsh-Chatpet` package requires the one-time transition described in
 [the update guide](https://github.com/hyyino7/her-world/blob/main/docs/github-updates.md). Existing companion data formats and

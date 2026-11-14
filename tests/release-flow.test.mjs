@@ -5,7 +5,6 @@ import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {parse,stringify} from 'yaml';
-import {parseMarketIndex,marketInstallTarget} from '@deepseek-ai/dsh-plugin-market-index';
 
 test('old embedded binding becomes a private native override without modifying the profile or data',t=>{
   const root=mkdtempSync(join(tmpdir(),'her-world-switch-'));
@@ -32,17 +31,4 @@ test('old embedded binding becomes a private native override without modifying t
   const saved=readFileSync(output,'utf8');
   assert.notEqual(run().status,0,'A repeated export must not overwrite the reviewed override');
   assert.equal(readFileSync(output,'utf8'),saved);
-});
-
-test('published DSH contract accepts the renamed package and pins the installer to the exact release commit',()=>{
-  const index=JSON.parse(readFileSync('docs/release/index.template.json','utf8'));
-  const manifest=JSON.parse(readFileSync('package.json','utf8'));
-  const commit='1'.repeat(40);
-  index.plugins[0].versions=[{version:manifest.version,publishTimestamp:1794636933,
-    source:{type:'git',url:'https://github.com/hyyino7/her-world',commit},engines:{dsh:manifest.engines.dsh}}];
-  const parsed=parseMarketIndex(index,'https://raw.githubusercontent.com/hyyino7/her-world/market/index.json');
-  const target=marketInstallTarget(parsed.plugins[0].name,parsed.plugins[0].versions[0]);
-  assert.equal(target.spec,'git+https://github.com/hyyino7/her-world.git#'+commit);
-  index.plugins[0].name='dsh-Chatpet';
-  assert.throws(()=>parseMarketIndex(index,'https://example.com/index.json'),/package name/);
 });

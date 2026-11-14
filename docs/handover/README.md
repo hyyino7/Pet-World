@@ -2,7 +2,42 @@
 
 Updated 2026-11-14, Asia/Ho_Chi_Minh.
 
-## Current task: Her World source and self-service updates
+## Current delivery: direct GitHub installation and replacement updates
+
+The owner explicitly replaced the custom-index approach with the ordinary DSH
+GitHub path: **Add plugin → `https://github.com/hyyino7/her-world`** for both
+installation and later replacement updates. No custom index is required.
+The release workflow removes index generation/publication and promotes the
+verified compiled release to the default branch using a normal fast-forward.
+The market validator dependency and template are removed; historical release
+and index evidence below is not the current update procedure.
+
+The [installation/update guide](../github-updates.md) owns the supported steps;
+the [direct-Git verification](../validation/direct-github-updates-2026-11-14.md)
+owns the current release and evidence. The installed DSH Git path is reused;
+no custom updater, business logic, identity schema or data store is added.
+The native registry version-check button is not promised for GitHub sources.
+The already-prepared device binding remains unchanged. The owner alone installs,
+enables and updates DSH packages; the open caretaker P2 remains unrepaired.
+
+## Current device checkpoint: first-switch binding prepared
+
+The owner authorized preparing the first-switch binding while retaining all
+installation/update actions personally. The existing identity, Core directory,
+workspace preferences and Memory/device-runtime paths are preserved through one
+native profile override targeting `her-world/00-Core`. The actual DSH composer
+verified all existing effective entries unchanged and the future Her World Core
+configuration matching the existing binding. DSH's native cross-process lock
+and atomic writer were used; existing profile entries/comments were retained.
+The configured Core database, Memory Bank and device Python were verified present.
+
+Device-local evidence: `.cache/her-world-store-switch/live-20261114/result.json`.
+The private export/configuration is not uploaded. No package installation,
+update, bundle switch, app restart or companion-data write was performed.
+The owner can now disable the old bundle and install/enable Her World in DSH;
+do not enable both together. Actual switched startup remains owner-run.
+
+## Previous publication: index-based rc.2 (superseded update procedure)
 
 The owner authorized uploading the complete sources and configuring GitHub
 releases and DSH market updates, explicitly without agent-run installation.

@@ -77,12 +77,20 @@ jobs:
             git diff --exit-code -- src vendor dist/src
           fi
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "timestamp=$(git show -s --format=%ct HEAD)" >> "$GITHUB_OUTPUT"
           mkdir -p .cache/release
           COPYFILE_DISABLE=1 pnpm pack --pack-destination .cache/release
           pnpm run check:package .cache/release/her-world-*.tgz
           cd .cache/release
           shasum -a 256 her-world-*.tgz > SHA256SUMS
+      - name: Promote verified runtime to the default GitHub install branch
+        env:
+          RELEASE_COMMIT: ${{ steps.frozen.outputs.commit }}
+        shell: bash
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$RELEASE_COMMIT" origin/main; then
+            git push origin "$RELEASE_COMMIT:refs/heads/main"
+          fi
       - name: Publish release and checked archive
         env:
           GH_TOKEN: ${{ github.token }}
@@ -94,30 +102,4 @@ jobs:
             gh release upload "v$RELEASE_VERSION" .cache/release/*.tgz .cache/release/SHA256SUMS --clobber
           else
             gh release create "v$RELEASE_VERSION" .cache/release/*.tgz .cache/release/SHA256SUMS --verify-tag --title "Her World $RELEASE_VERSION" --notes-file docs/release/notes.md "${prerelease[@]}"
-          fi
-      - uses: actions/checkout@v4
-        with:
-          ref: market
-          path: .cache/market-publish
-      - name: Publish DSH index only after release checks pass
-        env:
-          RELEASE_COMMIT: ${{ steps.frozen.outputs.commit }}
-          RELEASE_TIMESTAMP: ${{ steps.frozen.outputs.timestamp }}
-        shell: bash
-        run: |
-          source ./scripts/env.sh
-          index=.cache/market-publish/index.json
-          if [ ! -f "$index" ]; then cp docs/release/index.template.json "$index"; fi
-          jq --arg version "$RELEASE_VERSION" --arg commit "$RELEASE_COMMIT" --argjson time "$RELEASE_TIMESTAMP" --arg engine "$(node -p "JSON.parse(require('fs').readFileSync('package.json')).engines.dsh")" \
-            '.plugins[0].versions |= (map(select(.version != $version)) + [{version:$version,publishTimestamp:$time,source:{type:"git",url:"https://github.com/hyyino7/her-world",commit:$commit},engines:{dsh:$engine}}])' \
-            "$index" > .cache/index.next.json
-          pnpm run check:release --index .cache/index.next.json
-          cp .cache/index.next.json "$index"
-          cd .cache/market-publish
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add index.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Publish Her World $RELEASE_VERSION in DSH index"
-            git push origin HEAD:market
           fi
