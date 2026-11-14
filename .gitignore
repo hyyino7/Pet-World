@@ -1,8 +1,8 @@
 node_modules/
 dist/
 .local/
-.tools/
-.venv/
+.tools
+.venv
 .cache/
 .pnpm-store/
 .DS_Store
