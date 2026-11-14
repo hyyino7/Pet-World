@@ -6,14 +6,18 @@ runs:
     - uses: actions/setup-node@v4
       with:
         node-version-file: .node-version
-    - uses: actions/setup-python@v5
+    - uses: astral-sh/setup-uv@v6
       with:
-        python-version-file: .python-version
+        version: '0.12.5'
     - shell: bash
       run: |
         mkdir -p .tools
         ln -s "$(dirname "$(dirname "$(command -v node)")")" .tools/node
         npm install --prefix .tools/pnpm --ignore-scripts --no-audit --no-fund pnpm@11.25.0
-        python -m venv .venv
+        export UV_PYTHON_INSTALL_DIR="$PWD/.tools/python"
+        export UV_PYTHON_BIN_DIR="$PWD/.tools/python-bin"
+        export UV_CACHE_DIR="$PWD/.cache/uv"
+        uv python install "$(cat .python-version)" --no-bin
+        uv venv --python "$(cat .python-version)" --managed-python .venv
         source ./scripts/env.sh
         pnpm install --frozen-lockfile --ignore-scripts

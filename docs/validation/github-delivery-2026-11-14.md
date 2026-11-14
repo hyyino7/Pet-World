@@ -43,6 +43,9 @@ This single-package index uses the documented JSON format and official validator
   identity, strips only the verified old package-local default shim, and refuses
   overwrite; the official DSH validator accepts `her-world` and produces the
   exact commit-pinned install spec while rejecting the old uppercase package.
+- The extended `test:life-integration` command passes both sequential suites;
+  its final suite has 911 passing cases. These overlap other suite counts and
+  must not be added together as independent coverage.
 - All workflow/composite YAML parses and embedded shell scripts pass `bash -n`.
 - An independent delivery checkout installs the frozen lockfile offline from
   the existing package cache; environment/types/release tests pass without
@@ -66,9 +69,16 @@ warnings in tests/vendor documentation; new edits pass scoped whitespace checks.
 
 ## Publication and acceptance
 
-Prepared version: `0.1.0-rc.1`. Publication completion and run links will be
-recorded after remote readback. Local Git authentication was absent during the
-first push probe; no credential was printed or included in a commit.
+The full source/history merge was uploaded as `e894a4e`. The initial `rc.1`
+tag's cloud run stopped at Python setup: `actions/setup-python` has no macOS
+ARM Python 3.12.14 distribution. No Release or market version was published.
+The workflow now reuses the existing project bootstrap's `uv` managed-Python
+path, with uv 0.12.5 pinned. The `rc.1` tag is retained unchanged.
+
+Prepared replacement version: `0.1.0-rc.2`. Publication completion and run links
+will be recorded after remote readback. Local Git authentication was absent
+during the first push probe; the owner completed GitHub's device authorization.
+No credential was printed or included in a commit.
 
 The known unfinished caretaker pause/resume replay P2 remains open. Stable
 publication is blocked by `docs/release/status.json`. No live installation,
