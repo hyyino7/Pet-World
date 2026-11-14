@@ -1,4 +1,4 @@
-import { registerWorldPrompt } from '../core/world-prompt.js';
+import { registerWorldPrompt } from '../core/native/prompt.js';
 import { COMPANION_FEELINGS, decideExpression, expressionStream, readRoomMood } from './index.js';
 import { RecentLedger } from './recent.js';
 import { EmotionFile, readEmotionState } from './state.js';

@@ -18,7 +18,7 @@ To rebuild with a separately prepared compatible FFmpeg encoder:
 
 ```sh
 source ./scripts/env.sh
-CHATPET_FFMPEG=/absolute/path/to/ffmpeg node scripts/build-life-media.mjs
+CHATPET_FFMPEG=/absolute/path/to/ffmpeg node scripts/build/build-life-media.mjs
 ```
 
 Ordinary builds only call the built-in output verifier. They do not download or

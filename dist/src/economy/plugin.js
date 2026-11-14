@@ -3,7 +3,7 @@ import { lstatSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { bytesDigest, canonical, check, digest, integer } from '../core/storage.js';
-import { registerWorldPrompt } from '../core/world-prompt.js';
+import { registerWorldPrompt } from '../core/native/prompt.js';
 import { EconomyStore } from './store.js';
 import { installEconomyAccessGuard } from './access.js';
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];

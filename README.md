@@ -1,27 +1,44 @@
 # Her World
 
-A modular DSH-backed companion, sharing identity, memory and life across native
-chat, Room and Desktop.
+A modular DSH-backed companion sharing identity, memory and life across native
+chat, Room and Desktop. This checkout contains the current implementation only.
 
-This repository contains TypeScript sources, tests, build tools, provenance and
-the compiled runtime needed for direct Git installation. Published archives
-contain only runtime files.
+## Install or update in DSH
 
-Install in DSH with **Plugins → Add plugin**, using:
+Open **Plugins → Add plugin**, enter the same repository address for installation
+or a replacement update, then enable Her World:
 
 ```text
 https://github.com/hyyino7/her-world
 ```
 
-For updates, submit the same address through **Add plugin** again. No custom
-plugin index is required. First-time users of the old `dsh-Chatpet` package
-should preserve the binding and disable that bundle before enabling Her World.
+No custom plugin index is required. Disable the old `dsh-Chatpet` bundle before
+first enabling Her World. The owner reported a successful installation on
+2026-11-14; broader functional acceptance is separate. The known caretaker
+pause/resume replay P2 remains unresolved, so releases remain prereleases.
 
-- [DSH updates, first-time transition and publishing](https://github.com/hyyino7/her-world/blob/main/docs/github-updates.md)
-- [Releases](https://github.com/hyyino7/her-world/releases)
-- [Current handover and known limitations](https://github.com/hyyino7/her-world/blob/main/docs/handover/README.md)
-- [Product plan](https://github.com/hyyino7/her-world/blob/main/docs/planning/autonomous-life-game.md)
+## Source layout
+
+| Path | Purpose |
+| --- | --- |
+| `src/` | Current TypeScript/runtime code and built-in media, grouped by module |
+| `src/core/native/` | Native DSH chat, Memory, transcript and prompt adapters |
+| `tests/` | Domain tests, current regression cases and explicit manual fixtures |
+| `scripts/build/` | Deterministic build/media generation |
+| `scripts/checks/` | Release/package checks and explicit native/manual checks |
+| `scripts/lib/` | Shared setup, storage and lifecycle helpers |
+| `vendor/` | Required bundled upstream code and license/origin records |
+| `art/` | Source artwork used to regenerate the current life media |
+| `dist/src/` | Current prebuilt runtime required by direct GitHub installation |
+| `references/manifest.json` | Origin/commit/license provenance, without reference clones |
+| `docs/` | Current development, settings, portability and release instructions |
+
+- [Development and verification](docs/development.md)
+- [GitHub installation and release workflow](docs/github-updates.md)
+- [Settings](docs/settings.md)
+- [Portable storage](docs/portability.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-Current releases are prereleases with a known caretaker replay P2. Code checks,
-publication, installation and owner acceptance are separate states.
+Historical plans, handoffs, audit reports, local packages, temporary workspaces
+and research checkouts are not retained in this working tree. Companion data
+and device configuration belong outside this repository.

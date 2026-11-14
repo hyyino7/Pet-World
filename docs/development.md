@@ -1,40 +1,50 @@
-# Development Guide
+# Development
 
-大肥鱼: a modular, DSH-backed companion for the selected Mac.
-The product covers desktop presence, ordinary QQ conversation, memory,
-autonomous life/Bilibili and shared Voice; settings use existing DSH surfaces,
-with a custom workbench only for a demonstrated need.
-Plugin/package name: `dsh-Chatpet`; first component: `00-Core`. See the
-[naming convention](planning/modular-design.md#naming-convention) for identifier roles.
+Use the current source and README as the working entry point. This repository
+keeps no historical handoff or implementation-report archive.
 
-## Start Here
+## Bootstrap
 
-Read [the current handover](handover/README.md) for the active task,
-installation snapshot, constraints and next action. It owns execution status;
-existing code, passing checks and design proposals do not establish acceptance.
-Use [AGENTS.md](../AGENTS.md) for collaboration rules.
-
-## Task Navigation
-
-| Task | Read |
-| --- | --- |
-| Change existing Core behavior | [Runtime and code entries](core-runtime.md); [flow/reuse/evidence](core-conversation.md) when relevant |
-| Change product scope, architecture or interfaces | Relevant records in the [planning index](planning/README.md); [contract types](../src/contracts/index.ts) |
-| Find reusable implementations | [Current reuse review](planning/reuse-review.md), then [reference index](../references/INDEX.md), then only relevant source files; [manifest](../references/manifest.json) and [notices](../THIRD_PARTY_NOTICES.md) retain provenance |
-| Restore tools/dependencies or inspect setup | [Setup](setup.md); [reference handling](../references/README.md) |
-
-## Local Commands
+On Apple Silicon macOS, install the pinned local runtimes with
+`python3 scripts/setup-runtime.py` (requires `uv`), then:
 
 ```sh
 source ./scripts/env.sh
+pnpm install --frozen-lockfile --ignore-scripts
+uv pip install --python .venv/bin/python -r vendor/mnemosyne/requirements-test.lock
 ```
 
-Choose checks for the change: `pnpm run check:types` for TypeScript contracts,
-`pnpm test` for affected Core behavior, and `pnpm run test:native` for native DSH
-integration changes. Detailed coverage and live-model commands belong to the
-[runtime record](core-runtime.md#verify). `pnpm run check:env` diagnoses
-setup/reference problems; it is not required before every edit.
-Documentation-only edits need affected local-link checks and `git diff --check`.
+Tools and dependencies are disposable and ignored. Do not replace global
+runtimes or the installed DSH application. Required upstream code is already
+in `vendor/`; origin/commit/license metadata is retained without cloned
+reference projects.
 
-Ignored tools, dependencies, reference checkouts and caches are local assets;
-see setup before removing or recreating them.
+## Verification
+
+```sh
+pnpm run check:types
+pnpm test
+pnpm run test:life-integration
+pnpm run test:release
+pnpm run build
+pnpm run check:release
+```
+
+`pnpm test` retains its previous scope: compiled TypeScript tests plus World
+JavaScript tests. `test:life-integration` retains the explicit existing regression
+suites. Moving tests does not remove their assertions or broaden them into live
+account/model checks. Python provider tests are under `tests/memory/`.
+Native/window checks in `scripts/checks/` and fixtures in `tests/manual/` require
+explicit isolated environments; they must not run against personal companion data.
+
+Current runtime exports and bundle IDs are stable. Core's native adapters live
+in `src/core/native/`; each business module retains its existing data authority.
+`src/behavior/animation-allocation.json` is the current allocation input used by
+`scripts/build/build-animation-map.mjs`. Artwork in `art/` is used by the optional
+life-media regeneration script; ordinary builds only verify those media.
+
+`dist/src` is generated but retained for direct GitHub installation. Build before
+publication and include the new generated runtime files; GitHub's release
+workflow performs this automatically. `dist/tests`, source maps, caches,
+virtual environments and local dependency directories are not source deliverables.
+Do not commit credentials, private profiles, companion data or cache directories.

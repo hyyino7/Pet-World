@@ -40,7 +40,7 @@ Life plan, Core and database sidecars together while stopped; partial wallet-onl
 recovery can conflict with already applied effects. Offline backup checks
 `economy.lock` as well as Core/Memory writers. Missing initialized economic data
 is an unavailable state, never permission to create a replacement blank wallet.
-The full source-only economic ownership contract is `docs/planning/economy.md`
+The current economic ownership implementation is `src/economy/`
 in the source checkout; the installed recovery procedure is described below.
 
 ## Move to another device

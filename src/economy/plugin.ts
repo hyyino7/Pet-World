@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { PetCoreHost, WorkspaceTarget } from '../core/index.js';
 import { bytesDigest, canonical, check, digest, integer } from '../core/storage.js';
-import { registerWorldPrompt } from '../core/world-prompt.js';
+import { registerWorldPrompt } from '../core/native/prompt.js';
 import type { RoomEconomyPort, RoomFoodReservation } from '../behavior/room.js';
 import { EconomyStore } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';

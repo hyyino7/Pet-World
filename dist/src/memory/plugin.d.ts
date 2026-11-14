@@ -1,5 +1,5 @@
 import type { Context } from '@deepseek-ai/cordis';
-import type { NativeMemory } from '../core/native-memory.js';
+import type { NativeMemory } from '../core/native/memory.js';
 export declare const name = "10-Memory";
 export declare const inject: string[];
 declare module '@deepseek-ai/cordis' {

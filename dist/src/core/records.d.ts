@@ -1,5 +1,5 @@
 import type { CoreWorkspace } from './workspace.js';
-import type { CoreNative } from './native.js';
+import type { CoreNative } from './native/conversation.js';
 import { companionRecordPaths } from './record-paths.js';
 /** The original diary reader and album store, owned by Core rather than a scheduler. */
 export declare class CompanionRecordLibrary {

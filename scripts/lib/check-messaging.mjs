@@ -8,7 +8,7 @@ import {WebSocketServer} from 'ws';
 import {conversationKey} from '#dsh-world/ecosystem/shared/identity';
 import {createMessaging} from '../../dist/src/channels/messaging.js';
 import {digest} from '../../dist/src/core/storage.js';
-import {call,say} from '../native-conversation-scenarios.mjs';
+import {call,say} from '../checks/lib/native-conversation-scenarios.mjs';
 
 async function until(check, description) {
   for(let i=0;i<240;i++){const result=await check();if(result)return result;await new Promise(resolve=>setTimeout(resolve,35));}

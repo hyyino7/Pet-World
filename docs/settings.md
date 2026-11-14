@@ -1,17 +1,14 @@
-# Chatpet Settings
+# Her World Settings
 
-Open **DSH Settings → 大肥鱼** for the bound Dafeiyu companion.
+Open **DSH Settings → Her World** for the bound Dafeiyu companion.
 **工作区 → 资料与会话 → 实际存储位置** shows the active Core/Memory paths
 and device interpreter. Document readiness alone is not storage completion;
 an external bootstrap or incomplete device runtime is shown separately.
-This guide describes the package's implemented interfaces. Development checks,
-source plans and historical installation receipts live in the source checkout's
-`docs/handover/README.md` and `docs/mvp-runtime.md`; those source-only records are
-not shipped or required at runtime. Their earlier installation results do not
-constitute owner acceptance of a new package.
+This guide describes the currently implemented interfaces. Build and source
+navigation belong to `README.md` and `docs/development.md`. Code checks and
+package checks are separate from functional owner acceptance.
 
-The owner subsequently authorized implementing the confirmed life design.
-Desktop now projects the same actual activity/phase/progress, without independent
+Desktop projects the same actual activity/phase/progress, without independent
 random, reply-expression or work clips. Drinking, real-content reading, gardening
 and trade use eight supplementary clips shared with Room 2D. Reading stays in a
 waiting pose until actual content is offered. Unknown/custom-pack media gaps
@@ -223,7 +220,7 @@ Emotion does not write a second Room mood file.
 
 ## Entry And Ownership
 
-Open **DSH Settings → 大肥鱼**. The client uses native settings section/icon
+Open **DSH Settings → Her World**. The client uses native settings section/icon
 slots, theme, React and Connection transport. It owns only form drafts. The owning
 services validate and save durable state. Closing the page retains acknowledged writes.
 

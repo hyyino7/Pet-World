@@ -5,7 +5,7 @@ import { createLifeStore } from '#dsh-world/life/lifeStore';
 import { Faults } from '#dsh-world/faults';
 import { renderTemplate } from '#dsh-world/worldPrompt';
 import { check } from './storage.js';
-import { registerWorldPrompt } from './world-prompt.js';
+import { registerWorldPrompt } from './native/prompt.js';
 import { readSelfPrompt, trackCompanionWriting } from './companion-writing.js';
 import { companionRecordPaths } from './record-paths.js';
 import { acknowledgePromptFacts } from './interaction-context.js';

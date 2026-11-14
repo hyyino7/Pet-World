@@ -5,7 +5,7 @@ import { createPhotoStore, type PhotoStore } from '#dsh-world/life/photos';
 import { createLifeStore } from '#dsh-world/life/lifeStore';
 import { durableWrite } from '#dsh-world/life/lifeStore';
 import type { CoreWorkspace } from './workspace.js';
-import type { CoreNative } from './native.js';
+import type { CoreNative } from './native/conversation.js';
 import { companionRecordPaths, prepareRecordDirectory } from './record-paths.js';
 import { readCompanionWriting, companionWritingFile, type CompanionWritingScope } from './companion-writing.js';
 import { bytesDigest, check } from './storage.js';

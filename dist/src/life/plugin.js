@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createLifeRuntime } from '#dsh-world/life/runtime';
 import { createLifeStore, durableWrite } from '#dsh-world/life/lifeStore';
-import { registerWorldPrompt } from '../core/world-prompt.js';
+import { registerWorldPrompt } from '../core/native/prompt.js';
 import { resolveCompanionHome } from '../core/companion-foundation.js';
 import { defaultLifePreferences, parseLifePreferences } from './library.js';
 import { companionRecordPaths } from '../core/record-paths.js';

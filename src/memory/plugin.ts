@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type {} from '../core/plugin.js';
-import type { NativeMemory } from '../core/native-memory.js';
+import type { NativeMemory } from '../core/native/memory.js';
 
 export const name = '10-Memory';
 export const inject = ['petCore'];

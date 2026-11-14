@@ -279,7 +279,7 @@
       "distribution_cleanup": {
         "date": "2026-11-13",
         "treatment": "Exclude pinned build inputs and test/preview material from the installable package; generated helper omits upstream screenshot-and-exit smoke branch. Source origins, licenses, supported runtime assets and the original files remain retained in the repository.",
-        "generator": "scripts/build-pet-platform.mjs",
+        "generator": "scripts/build/build-pet-platform.mjs",
         "origin": "vendor/dsh-pet/platform/origin.json"
       }
     },
@@ -609,7 +609,7 @@
         "license": "vendor/dsh-world/LICENSE",
         "entry": "src/world/index.ts",
         "adaptations": [
-          "src/core/world-prompt.ts",
+          "src/core/native/prompt.ts",
           "src/emotion/plugin.ts"
         ]
       },

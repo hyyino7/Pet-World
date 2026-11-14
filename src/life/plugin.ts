@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import {createHash} from 'node:crypto';
 import { createLifeRuntime } from '#dsh-world/life/runtime';
 import { createLifeStore, durableWrite } from '#dsh-world/life/lifeStore';
-import { registerWorldPrompt } from '../core/world-prompt.js';
+import { registerWorldPrompt } from '../core/native/prompt.js';
 import type { PetCoreHost } from '../core/index.js';
 import { resolveCompanionHome } from '../core/companion-foundation.js';
 import { defaultLifePreferences, parseLifePreferences, type LifePreferences } from './library.js';

@@ -4,7 +4,7 @@ import {roomRequest} from './native-room.js';
 
 const shared=window.PetShared, form=document.getElementById('chatForm'), input=document.getElementById('chatInput');
 if (shared && form && input) {
-  const base=new URL('.',import.meta.url), originalFetch=window.fetch;
+  const base=new URL('./',import.meta.url), originalFetch=window.fetch;
   const room=document.getElementById('roomChat'), mediaDevices=navigator.mediaDevices, originalGetUserMedia=mediaDevices?.getUserMedia;
   let current, destroyed=false, reading=0;
   const visible=()=>!destroyed&&!room?.hidden&&!document.hidden;

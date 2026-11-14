@@ -1,8 +1,8 @@
-import { installNativeTranscripts } from './native-transcripts.js';
+import { installNativeTranscripts } from './native/transcripts.js';
 import { createWorldService } from '../world/service.js';
 import { CONTRACT_VERSION } from '../contracts/version.js';
 import { createCore } from './index.js';
-import { apply as installNativeAdapter } from './agent.js';
+import { apply as installNativeAdapter } from './native/agent.js';
 import { registerAlbumTools } from '../life/album-tools.js';
 export const name = '00-Core';
 export const inject = ['agents', 'agentLoop', 'sessions', 'sessionPersistence', 'systemPrompt', 'tools'];

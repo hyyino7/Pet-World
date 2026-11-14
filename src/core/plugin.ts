@@ -1,9 +1,9 @@
-import { installNativeTranscripts } from './native-transcripts.js';
+import { installNativeTranscripts } from './native/transcripts.js';
 import { createWorldService, type PetWorld } from '../world/service.js';
 import { CONTRACT_VERSION } from '../contracts/version.js';
 import type { Context } from '@deepseek-ai/cordis';
 import { createCore, type CoreConfig, type PetCoreHost } from './index.js';
-import { apply as installNativeAdapter } from './agent.js';
+import { apply as installNativeAdapter } from './native/agent.js';
 import { registerAlbumTools } from '../life/album-tools.js';
 
 export const name = '00-Core';

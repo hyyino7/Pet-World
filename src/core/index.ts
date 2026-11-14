@@ -1,5 +1,5 @@
-import {CoreNative} from './native.js';
-import {NativeMemory} from './native-memory.js';
+import {CoreNative} from './native/conversation.js';
+import {NativeMemory} from './native/memory.js';
 import {CoreWorkspace} from './workspace.js';
 import {createPreferences} from './preferences.js';
 import {CoreRuntime, type CoreConfig} from './runtime.js';
@@ -47,7 +47,7 @@ export function createCore(config:CoreConfig) {
 }
 export type PetCoreHost=ReturnType<typeof createCore>;
 export type {CoreConfig} from './runtime.js';
-export type {NativeRunResult} from './native-result.js';
+export type {NativeRunResult} from './native/result.js';
 export type {ConversationOptions} from './options.js';
 export type {CorePreferences,PreferencesService,WorkspaceTarget} from './preferences.js';
 export type {WorkspaceStatus,WorkspaceService} from './workspace.js';

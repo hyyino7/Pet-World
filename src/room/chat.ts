@@ -2,7 +2,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import { createUserMessage, type UserMessage } from '@deepseek-ai/dsh-llm';
 import type { SessionEvent } from '@deepseek-ai/dsh-session';
-import { nativeResult } from '../core/native-result.js';
+import { nativeResult } from '../core/native/result.js';
 import { finalReply } from '../core/upstream/messages.js';
 import { digest } from '../core/storage.js';
 import { DesktopImages } from '../desktop/images.js';

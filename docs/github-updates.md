@@ -27,12 +27,11 @@ confirm installation over the existing Her World package. The native package
 manager resolves the current default branch and replaces the program files.
 Existing profile overrides and bound companion data stay outside that package.
 
-DSH's registry version-list/update button is currently limited to npm sources;
-it is not the GitHub update path. A GitHub tag such as
+This flow uses the native installer again rather than relying on a registry
+version list or a configured index. A GitHub tag such as
 `https://github.com/hyyino7/her-world#v0.1.0-rc.2` deliberately stays at that
 version. Use the plain address above when you want the current default branch.
-No custom index is required. The old index branch is historical and is no longer
-updated by releases. GitHub itself must be reachable; changing an npm mirror
+No custom index is required. GitHub itself must be reachable; changing an npm mirror
 only changes where dependencies are fetched, not the repository download.
 
 ## One-time transition from dsh-Chatpet
@@ -119,15 +118,12 @@ pnpm test
 pnpm run check:release
 ```
 
-`check:env` verifies the development runtime and SDK imports. The separate
-`check:references` additionally checks the optional, ignored upstream reference
-checkouts. Those reference checkouts are not build dependencies; bundled vendor
-code, notices and `references/manifest.json` preserve required provenance.
-The default tests include isolated Memory-provider cases, so their Python
-fixture dependencies are installed from `vendor/mnemosyne/requirements-test.lock`;
-native/window checks require an
-explicit isolated DSH fixture. They are not installed acceptance tests.
+`check:env` verifies the local development runtime and SDK imports. Bundled
+vendor code, license notices and `references/manifest.json` retain provenance;
+external reference checkouts are not required. The default tests include
+isolated Memory-provider cases and use the pinned Python requirements above.
+Native/window checks under `scripts/checks/` require explicit isolated fixtures
+and do not establish installed owner acceptance.
 
-GitHub CI uses macOS with the same pinned Node/pnpm/Python versions. The
-composite action links the downloaded Node into `.tools` and creates `.venv`;
-it does not replace a developer's global runtime.
+GitHub CI uses the pinned Node/pnpm/uv/Python versions, creates local tools and
+virtual environments, and does not replace a developer's global runtime.

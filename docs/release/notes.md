@@ -12,7 +12,7 @@ module entry IDs are unchanged. Never enable both packages together.
 Known P2: replaying an old unfinished caretaker pause/resume after explicit Life
 resume and a restart can interrupt the restored hold again without changing the
 garden job's effective state. This publication does not repair that issue.
-See [validation](https://github.com/hyyino7/her-world/blob/main/docs/validation/mapped-playback-2026-11-14.md).
+Stable publication remains blocked by `docs/release/status.json`.
 
 CI and archive checks do not establish installed visual, resource, device,
 provider or owner acceptance. No installation or personal-data migration is

@@ -9,7 +9,7 @@ import { renderTemplate } from '#dsh-world/worldPrompt';
 import type { PetCoreHost } from './index.js';
 import type { PetWorld } from '../world/service.js';
 import { check } from './storage.js';
-import { registerWorldPrompt } from './world-prompt.js';
+import { registerWorldPrompt } from './native/prompt.js';
 import { readSelfPrompt, trackCompanionWriting, type CompanionWritingScope } from './companion-writing.js';
 import { companionRecordPaths } from './record-paths.js';
 import type { CompanionFact, CompanionFactSource } from '../contracts/interaction.js';

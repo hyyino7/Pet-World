@@ -1,4 +1,4 @@
-import { CoreNative } from './native.js';
+import { CoreNative } from './native/conversation.js';
 import { CoreWorkspace } from './workspace.js';
 import { type CoreConfig } from './runtime.js';
 import { CoreRecords } from './records.js';
@@ -20,7 +20,7 @@ export declare function createCore(config: CoreConfig): {
 };
 export type PetCoreHost = ReturnType<typeof createCore>;
 export type { CoreConfig } from './runtime.js';
-export type { NativeRunResult } from './native-result.js';
+export type { NativeRunResult } from './native/result.js';
 export type { ConversationOptions } from './options.js';
 export type { CorePreferences, PreferencesService, WorkspaceTarget } from './preferences.js';
 export type { WorkspaceStatus, WorkspaceService } from './workspace.js';

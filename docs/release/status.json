@@ -1,5 +1,4 @@
 {
   "stableReady": false,
-  "reason": "Known P2: replaying unfinished caretaker pause/resume after Life resume and restart can interrupt the restored hold again.",
-  "evidence": "docs/validation/mapped-playback-2026-11-14.md"
+  "reason": "Known P2: replaying unfinished caretaker pause/resume after Life resume and restart can interrupt the restored hold again."
 }

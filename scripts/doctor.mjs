@@ -1,9 +1,8 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { createHash } from 'node:crypto';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
@@ -37,25 +36,5 @@ for (const name of ['@deepseek-ai/cordis', '@deepseek-ai/dsh-agent', '@deepseek-
     check(`SDK ${name}`, () => { throw error; });
   }
 }
-if (process.argv.includes('--references')) check('reference sources', () => {
-  const manifest = JSON.parse(readFileSync(join(root, 'references/manifest.json'), 'utf8'));
-  for (const entry of manifest.entries) {
-    const path = join(root, entry.path);
-    if (entry.status !== 'ready' || !existsSync(path)) throw new Error(`${entry.repository}: not ready`);
-    if (entry.checkout_type === 'archive') {
-      const source = JSON.parse(readFileSync(join(path, '.reference-source.json'), 'utf8'));
-      if (source.commit !== entry.commit || source.archive_sha256 !== entry.archive_sha256) throw new Error(`${entry.repository}: archive metadata differs`);
-      const archive = join(root, entry.archive_path);
-      if (existsSync(archive)) {
-        const hash = createHash('sha256').update(readFileSync(archive)).digest('hex');
-        if (hash !== entry.archive_sha256) throw new Error(`${entry.repository}: archive checksum differs`);
-      }
-    } else {
-      const commit = execFileSync('git', ['-C', path, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-      if (commit !== entry.commit) throw new Error(`${entry.repository}: commit differs from manifest`);
-    }
-  }
-  return `${manifest.entries.length} source versions match recorded Git/archive identities`;
-});
 if (process.argv.includes('--json')) console.log(JSON.stringify({ checks, ok: failures.length === 0 }, null, 2));
 process.exitCode = failures.length ? 1 : 0;

@@ -35,7 +35,7 @@ The canonical Python service and REST client/process host are retained under
 are excluded. Local changes address process termination, dependency revision
 coverage, durable partial-withdrawal settlement, scoped retrieval/consolidation
 and an import cycle. Pet scope
-and native integration live in `src/memory/` and `src/core/native-memory.ts`.
+and native integration live in `src/memory/` and `src/core/native/memory.ts`.
 
 Apache-2.0 applies to this component. Its [LICENSE](vendor/mnemosyne/LICENSE),
 [NOTICE](vendor/mnemosyne/NOTICE), [third-party notices](vendor/mnemosyne/THIRD_PARTY_NOTICES.md)
@@ -155,7 +155,7 @@ The pinned, unmodified PetSprite shell, input, playback, motion, window-fit,
 geometry, pointer-target and shared modules are copied under `vendor/dsh-pet/`
 from PC2005-cloud/dsh-pet commit
 `c7ea8b28e2a8b04a495a3b472a871dff6969ccca` (MIT). `origin.json` records their
-hashes. `scripts/build-desktop-animation.mjs` verifies them, copies the runtime
+hashes. `scripts/build/build-desktop-animation.mjs` verifies them, copies the runtime
 modules to `src/desktop/helper/upstream/` and compiles the shared TypeScript into
 its classic-script `shared-core.js`. Strict build-time adaptations add compact-chat
 voice lifecycle cancellation and the existing manual-speech stop seam; original

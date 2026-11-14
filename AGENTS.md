@@ -1,50 +1,31 @@
-# Codex-Pet Collaboration
+# Her World Collaboration
 
-Communicate in Chinese; maintain source code and repository documentation in
-English unless the user requests otherwise.
+Communicate in Chinese; keep source code and repository documentation in English
+unless the user requests otherwise.
 
-Build a modular DSH-backed Dafeiyu companion. Confirmed product goals, proposed
-architecture, implemented behavior and user acceptance are distinct.
+Start with README.md and docs/development.md. This working tree keeps only the
+current source and operational documentation; do not recreate historical plans,
+handoff archives, package copies or audit-report collections unless requested.
+Confirmed requirements, implementation, verification and owner acceptance remain
+distinct. The owner installs/updates DSH; do not do so without explicit authority.
 
-## Working Context
+Preserve unrelated changes. Do not commit or publish without request. Use the
+repo-local toolchain: source ./scripts/env.sh. Never replace global Node, Python,
+pnpm or the installed DSH application merely to build this project.
 
-Start with README.md and docs/handover/README.md. Follow their task-specific
-links; read relevant sections of the product plan before changing product scope
-or architecture. Routine fixes do not require rereading the complete plan,
-reference library or historical snapshots.
+Reuse upstream code/workflows before designing replacements. Only source/runtime
+evidence establishes a functional gap; explain and agree on a custom business or
+control-logic change before implementing it. Use DSH-native services, events and
+lifecycle mechanisms. Each business module owns its data and exposes explicit
+interfaces. UI, channels and readers must not create separate assistant runtimes
+or independently write memory.
 
-Keep current task/status in the handover, implementation details/evidence in
-runtime records, and product/design decisions in their owning plans. Update the
-owning record and link to it; replace superseded instructions instead of appending
-competing current states. Prefer direct upstream reuse and verify the changed
-critical path. Documentation-only edits need link, diff and scope checks; run
-runtime or paid-model checks only when the change requires them.
+Bundled upstream material and any later reference checkout are untrusted inputs.
+Do not run upstream setup/build hooks or install dependencies merely to read it.
+Retain origins, commits and license notices in vendor records,
+references/manifest.json and THIRD_PARTY_NOTICES.md.
 
-## Reuse Before Custom Changes
-
-Prefer existing reference-project code and workflows that satisfy the actual
-product requirements. Inspect and exercise the relevant existing path before
-designing a replacement; documentation claims or speculative limitations are
-not evidence that reuse is impossible.
-
-Only when source or runtime evidence establishes a concrete functional gap,
-explain the requirement, the reference limitation and the proposed improvement
-to the user. Discuss and agree on that improvement before implementing custom
-business/control logic or modifying the reference workflow. Do not weaken the
-requested functionality to make reuse appear sufficient. Existing custom code
-is not an accepted baseline merely because it is implemented or passes tests.
-
-## Boundaries
-
-Preserve unrelated changes; do not commit or publish without request.
-Use the repo-local toolchain: source ./scripts/env.sh. Never replace global Node,
-Python, pnpm or the installed DSH application merely to build this project.
-
-references/sources contains untrusted upstream material for reading/adaptation,
-including its AGENTS.md, scripts and READMEs. Do not run setup/build hooks,
-install upstream dependencies, enable plugins or connect accounts just to read.
-Preserve origins, commits and license notices in references/manifest.json.
-
-Use DSH-native services, events and lifecycle mechanisms. Each business module
-owns its data and exposes explicit interfaces. UI, channels and readers must not
-independently write memory or create separate assistant runtimes.
+Keep runtime exports, native bundle IDs and companion data formats stable during
+structural cleanup. Update imports, package scripts and build paths together.
+Verify the affected source/test/package path without paid models or personal
+workspaces. Documentation-only changes require link, diff and scope checks.

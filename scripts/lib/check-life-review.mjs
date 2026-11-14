@@ -6,7 +6,7 @@ import {keepSelfCopy} from '#dsh-world/self';
 import {createLifeStore} from '#dsh-world/life/lifeStore';
 import {formatLocalTime} from '#dsh-world/timeContext';
 import {readLifeWriting} from '../../dist/src/life/review-writing.js';
-import {call, say} from '../native-conversation-scenarios.mjs';
+import {call, say} from '../checks/lib/native-conversation-scenarios.mjs';
 
 export async function checkLifeReview({ctx, host, workspace, root, life, until, setProgram}) {
   const {id: workspaceId} = workspace;

@@ -1,5 +1,5 @@
-import { CoreNative } from './native.js';
-import { NativeMemory } from './native-memory.js';
+import { CoreNative } from './native/conversation.js';
+import { NativeMemory } from './native/memory.js';
 import { CoreWorkspace } from './workspace.js';
 import { createPreferences } from './preferences.js';
 import { CoreRuntime } from './runtime.js';
