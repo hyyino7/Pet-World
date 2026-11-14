@@ -1,0 +1,19 @@
+name: Project runtime
+description: Prepare local tools without replacing system runtimes
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .node-version
+    - uses: actions/setup-python@v5
+      with:
+        python-version-file: .python-version
+    - shell: bash
+      run: |
+        mkdir -p .tools
+        ln -s "$(dirname "$(dirname "$(command -v node)")")" .tools/node
+        npm install --prefix .tools/pnpm --ignore-scripts --no-audit --no-fund pnpm@11.25.0
+        python -m venv .venv
+        source ./scripts/env.sh
+        pnpm install --frozen-lockfile --ignore-scripts

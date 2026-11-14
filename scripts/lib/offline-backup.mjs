@@ -106,7 +106,7 @@ export function backupPlan({ repo, workspaceId, profileDir, dshHome, config, sto
     attachmentsDirectory: absolute(directories.attachments ?? join(dshHome, 'attachments')),
     companionId: config.companionId, scopeId: config.scopeId, ownerActorId: config.ownerActorId,
     coreDirectory: absolute(config.dataDir), configuredMemoryDirectory, memoryDirectory,
-    installedPackage: join(profileDir, 'node_modules', 'dsh-Chatpet') };
+    installedPackage: join(profileDir, 'node_modules', 'her-world') };
   const workspaces = scopedWorkspaces(plan), roots = [{ id: 'companion', path: managed, mode: 'replace' }, {id:'workspace-instructions',path:join(dirname(managed),'AGENTS.md'),mode:'replace'}];
   for (const [id, path] of [['core', plan.coreDirectory], ['memory', memoryDirectory]]) {
     if (path && !inside(managed, absolute(path))) roots.push({ id, path: absolute(path), mode: 'replace' });

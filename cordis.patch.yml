@@ -1,26 +1,26 @@
 - insert:
     - id: 00-Core
-      name: dsh-Chatpet/00-Core
+      name: her-world/00-Core
     - id: 10-Memory
-      name: dsh-Chatpet/10-Memory
+      name: her-world/10-Memory
     - id: 20-Emotion
-      name: dsh-Chatpet/20-Emotion
+      name: her-world/20-Emotion
     - id: 22-Economy
-      name: dsh-Chatpet/22-Economy
+      name: her-world/22-Economy
     - id: 25-Behavior
-      name: dsh-Chatpet/25-Behavior
+      name: her-world/25-Behavior
     - id: 30-Desktop
-      name: dsh-Chatpet/30-Desktop
+      name: her-world/30-Desktop
     - id: 35-PetPlatform
-      name: dsh-Chatpet/35-PetPlatform
+      name: her-world/35-PetPlatform
     - id: 40-Life
-      name: dsh-Chatpet/40-Life
+      name: her-world/40-Life
     - id: 50-Room
-      name: dsh-Chatpet/50-Room
+      name: her-world/50-Room
     - id: 60-Channels
-      name: dsh-Chatpet/60-Channels
+      name: her-world/60-Channels
     - id: 70-Voice
-      name: dsh-Chatpet/70-Voice
+      name: her-world/70-Voice
     - id: chatpet-channel-preset
       name: '@deepseek-ai/dsh-agent-preset'
       config:
@@ -28,6 +28,6 @@
         name: 外部聊天
         plugins:
           - id: audience
-            name: dsh-Chatpet/channel-guest
+            name: her-world/channel-guest
     - id: chatpet-settings
-      name: dsh-Chatpet
+      name: her-world

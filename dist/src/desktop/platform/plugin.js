@@ -9,7 +9,7 @@ import { activityPresentation, eatingClips, physicalClips, sleepingClips, projec
 import { migratePresentation, resolvePresentationMigration } from './migration.js';
 import { companionFeelings } from '../../behavior/presentation.js';
 const load = createRequire(import.meta.url);
-const root = dirname(load.resolve('dsh-Chatpet/package.json'));
+const root = dirname(load.resolve('her-world/package.json'));
 const vendor = join(root, 'vendor', 'dsh-pet', 'platform');
 const assets = join(root, 'src', 'desktop', 'assets');
 const catalog = JSON.parse(readFileSync(join(assets, 'catalog.json'), 'utf8'));

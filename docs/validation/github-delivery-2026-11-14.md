@@ -1,0 +1,75 @@
+# Her World GitHub delivery — 2026-11-14
+
+## Authorized scope
+
+The owner requested complete source upload, version publication and DSH market
+updates, with no agent-run installation. The owner selected `Her World`, package
+`her-world`, and remote <https://github.com/hyyino7/her-world>.
+Business-logic repairs and the incomplete caretaker RCA remain paused.
+
+## Source and release design
+
+An isolated delivery checkout merges the online import history (head
+`3f390e2130d8cac08ea1ad191b5bd27f0a6e6a80`) with the complete local history
+(`2962d0f4441e4d79d67371e7d144cc9215d9dec7`) and preserves the pre-existing
+handoff-only edits. No remote history is replaced. Full TypeScript sources,
+tests, scripts, configuration, lockfile, vendor source inputs, asset sources and
+provenance are restored. `.cache`, development environments, private companion
+data and reference checkouts are excluded. Compiled `dist/src` is committed
+without source maps so native Git installs need no consumer-side build hook.
+
+The package rename updates self-imports, bundle names, release metadata and
+product branding. Module entry IDs and data schemas stay unchanged. Native
+profile overrides retain device configuration outside updateable package files;
+the owner performs the [one-time switch](../github-updates.md).
+
+GitHub Actions verifies source changes. The release workflow checks/builds/tests
+a selected version, creates an immutable Git tag, publishes an archive plus
+SHA256SUMS, then publishes a commit-pinned `market/index.json`. It uses the
+published DSH index validator, not a new runtime or updater. The upstream
+reference generator was inspected: it is private/unpublished, while its official
+validator is available as `@deepseek-ai/dsh-plugin-market-index@0.2.1-alpha.4`.
+This single-package index uses the documented JSON format and official validator.
+
+## Local evidence
+
+- Project environment, SDK imports and TypeScript checks pass.
+- `pnpm test`: 359 pass, zero failures/skips. The previously failing World
+  provenance test compared all files only with original upstream hashes;
+  existing `origin.json` already records the `hostContract.d.ts` adaptation.
+  The test now follows the same original/adapted hash selection as the existing
+  runtime-package check. No upstream bytes or recorded hashes were changed.
+- Two release tests pass: private binding export preserves original files and
+  identity, strips only the verified old package-local default shim, and refuses
+  overwrite; the official DSH validator accepts `her-world` and produces the
+  exact commit-pinned install spec while rejecting the old uppercase package.
+- All workflow/composite YAML parses and embedded shell scripts pass `bash -n`.
+- An independent delivery checkout installs the frozen lockfile offline from
+  the existing package cache; environment/types/release tests pass without
+  `references/sources`. Local Node and Python links are verification scaffolding,
+  excluded from the published tree.
+- The installed DSH application's actual `composeEntries` library retained
+  synthetic Core identity, storage and Memory configuration across portable
+  bundle replacement. This was a library fixture under Electron's Node mode;
+  the DSH application/profile was not started or changed.
+- Isolated archive verification passes: 911 members, 256 build files, 42 helpers,
+  236 vendor hashes, 39 source-only origin entries, 554 local runtime references,
+  12 Markdown references and 43 declared external imports. Relocated Core,
+  native edit scopes, Memory, Body/plan and wallet effect-once probes pass.
+  Local archive SHA256:
+  `0221dabf617a409845031aff8cde90eedcef5c83120f38b96401e2cf097b0846`.
+  A CI-built release has its own published checksum.
+
+Local logs/probes: `.cache/her-world-*`. Raw caches are not part of a clone.
+The source import includes three unchanged historical end-of-file whitespace
+warnings in tests/vendor documentation; new edits pass scoped whitespace checks.
+
+## Publication and acceptance
+
+Prepared version: `0.1.0-rc.1`. Publication completion and run links will be
+recorded after remote readback. Local Git authentication was absent during the
+first push probe; no credential was printed or included in a commit.
+
+The known unfinished caretaker pause/resume replay P2 remains open. Stable
+publication is blocked by `docs/release/status.json`. No live installation,
+personal-profile migration, model/account request or owner acceptance is claimed.

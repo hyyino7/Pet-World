@@ -8,7 +8,7 @@ const DIRECTORIES = ['data', 'data/core', 'data/core/native-sessions', 'data/mem
     'data/pet-platform', 'data/desktop', 'data/desktop/images', 'data/behavior', 'data/channels',
     'data/life', 'data/life/activity', 'data/life/life'];
 const load = createRequire(import.meta.url);
-const petConfig = load(join(dirname(load.resolve('dsh-Chatpet/package.json')), 'vendor/dsh-pet/platform/runtime.mjs'));
+const petConfig = load(join(dirname(load.resolve('her-world/package.json')), 'vendor/dsh-pet/platform/runtime.mjs'));
 /** Technical containers only. Optional services are neither opened nor enabled. */
 function containers(root) {
     check(realpathSync(root) === root, 'Workspace root changed');

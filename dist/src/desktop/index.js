@@ -232,7 +232,7 @@ export class Desktop {
         const bin = process.env.DSH_CHATBOT_ELECTRON_PATH || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'electron/Electron.app/Contents/MacOS/Electron');
         if (!existsSync(bin))
             throw Error('找不到桌宠 Electron，请检查已安装的桌面运行环境');
-        const root = dirname(createRequire(import.meta.url).resolve('dsh-Chatpet/package.json'));
+        const root = dirname(createRequire(import.meta.url).resolve('her-world/package.json'));
         const env = { ...process.env, CHATPET_CHAT_ONLY: '1' };
         delete env.ELECTRON_RUN_AS_NODE;
         const child = spawn(bin, [join(root, 'src/desktop/helper/main.cjs')], { env, stdio: ['pipe', 'pipe', 'pipe'] });

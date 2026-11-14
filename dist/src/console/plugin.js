@@ -1,5 +1,5 @@
 import { settingsHandler } from './settings.js';
-export const name = 'dsh-Chatpet';
+export const name = 'her-world';
 export const inject = ['connection'];
 /** Native owner-only exact routes; no separate server or replacement API dispatcher. */
 export function apply(ctx) {

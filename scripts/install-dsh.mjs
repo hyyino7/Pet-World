@@ -28,7 +28,7 @@ assert.ok(/^[\w-]+$/.test(profile), 'Invalid profile name');
 const profileDir = join(home, 'profiles', profile), configPath = join(profileDir, 'cordis.patch.yml');
 const patch = readFileSync(configPath, 'utf8');
 const dir = resolve(arg('--output-dir', join(profileDir, 'chatpet-installation')));
-const archive = resolve(arg('--archive', join(dir, 'dsh-Chatpet-0.0.0.tgz')));
+const archive = resolve(arg('--archive', join(dir, 'her-world-0.0.0.tgz')));
 assert.ok(existsSync(archive), 'Provide an existing plugin archive with --archive');
 mkdirSync(dir, { recursive: true, mode: 0o700 });
 chmodSync(dir, 0o700);
@@ -50,12 +50,12 @@ assert.ok(isAbsolute(config.dataDir), 'data-dir must be absolute');
 // Loader !!js expressions. Only bind the Core entry to this machine.
 const bundleYaml = require('js-yaml');
 const { entryListSchema } = await import(require.resolve('@deepseek-ai/cordis-plugin-include'));
-const installedBundle = join(profileDir, 'node_modules/dsh-Chatpet/cordis.patch.yml');
+const installedBundle = join(profileDir, 'node_modules/her-world/cordis.patch.yml');
 let installedConfig;
 if (existsSync(installedBundle)) {
   const installed = bundleYaml.load(readFileSync(installedBundle, 'utf8'), { schema: entryListSchema });
   const installedCore = installed.flatMap(operation => operation.insert ?? []).find(entry => entry.id === '00-Core');
-  assert.ok(installedCore?.name === 'dsh-Chatpet/00-Core', 'Inspect the installed Core declaration before replacing it');
+  assert.ok(installedCore?.name === 'her-world/00-Core', 'Inspect the installed Core declaration before replacing it');
   // A newly added portable Bundle has no machine binding yet. Existing
   // configured identity is authoritative; an unconfigured entry is a fresh setup.
   if (installedCore.config !== undefined && installedCore.config !== null
@@ -139,7 +139,7 @@ if(config.memory) {
       const regular=file=>{const stat=lstatSync(file,{throwIfNoEntry:false});return stat?.isFile() && !stat.isSymbolicLink() && stat.nlink===1;};
       const metadata=join(root,'package.json'),files=['src/memory/main.py','src/memory/provider.py'];
       if(resolve(inherited)===join(root,'src/memory/main.py') && regular(metadata)
-        && JSON.parse(readFileSync(metadata,'utf8')).name==='dsh-Chatpet'
+        && JSON.parse(readFileSync(metadata,'utf8')).name==='her-world'
         && files.every(file=>regular(join(root,file)) && regular(join(packageRoot,file))
           && createHash('sha256').update(readFileSync(join(root,file))).digest('hex')===createHash('sha256').update(readFileSync(join(packageRoot,file))).digest('hex')))
         managedEntries.push(resolve(inherited));
@@ -164,11 +164,11 @@ if (deviceRuntimePlan) {
 const bundlePath = join(stage, 'package/cordis.patch.yml');
 const bundle = bundleYaml.load(readFileSync(bundlePath, 'utf8'), { schema: entryListSchema });
 const coreEntry = bundle.flatMap(operation => operation.insert ?? []).find(entry => entry.id === '00-Core');
-assert.ok(coreEntry?.name === 'dsh-Chatpet/00-Core', 'Portable Bundle must declare Core');
+assert.ok(coreEntry?.name === 'her-world/00-Core', 'Portable Bundle must declare Core');
 assert.ok(!bundle.flatMap(operation => operation.insert ?? []).some(entry => entry.id === 'preset-chatpet'), 'Workspace binding must not require a separate Chatpet preset');
 coreEntry.config = config;
 writeFileSync(bundlePath, bundleYaml.dump(bundle, { schema: entryListSchema, noRefs: true, lineWidth: -1 }));
-const packed = join(dir, 'dsh-Chatpet-local.tgz');
+const packed = join(dir, 'her-world-local.tgz');
 run('/usr/bin/tar', ['--no-xattrs', ...metadataExcludes, '-czf', packed, '-C', stage, 'package']);
 const inventory = spawnSync('/usr/bin/tar', ['-tzf', packed], {
   env: { ...process.env, COPYFILE_DISABLE: '1' }, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024,
@@ -177,7 +177,7 @@ if (inventory.error) throw inventory.error;
 assert.equal(inventory.status, 0, 'Prepared archive inventory could not be read');
 assert.ok(!inventory.stdout.split(/\r?\n/).some(name => name.split('/').some(part => part.startsWith('._') || part === '__MACOSX' || part === '.DS_Store')),
   'Prepared archive contains macOS metadata; do not install it');
-const prepared = join(dir, `dsh-Chatpet-local-${createHash('sha256').update(readFileSync(packed)).digest('hex').slice(0, 12)}.tgz`);
+const prepared = join(dir, `her-world-local-${createHash('sha256').update(readFileSync(packed)).digest('hex').slice(0, 12)}.tgz`);
 copyFileSync(packed, prepared);
 const paths = value => ({coreDataDir: value.dataDir,
   memoryDataDir: value.memory?.dataDir ?? null, memoryPython: value.memory?.python ?? null});
@@ -257,11 +257,11 @@ if (previousProfile.dependencies?.['codex-pet']) {
 run(join(app, 'Contents/Resources/runtime/cli/bin/dsh'), ['plugin', '--profile', profile, 'add', prepared, '--ignore-scripts', ...(process.argv.includes('--offline') ? ['--offline'] : [])], {env:profileEnv});
 assert.equal(hash(readFileSync(configPath, 'utf8')), originalPatch, 'Existing user patch changed unexpectedly');
 const installed = JSON.parse(readFileSync(join(profileDir, 'package.json'), 'utf8'));
-assert.ok(installed.dependencies?.['dsh-Chatpet']);
-const enabled = installed.dsh?.profile?.bundles?.includes('dsh-Chatpet') ?? false;
+assert.ok(installed.dependencies?.['her-world']);
+const enabled = installed.dsh?.profile?.bundles?.includes('her-world') ?? false;
 // DSH preserves an existing bundle's on/off setting when updating its package.
-const expectedEnabled = previousProfile.dependencies?.['dsh-Chatpet']
-  ? (previousProfile.dsh?.profile?.bundles?.includes('dsh-Chatpet') ?? false) : true;
+const expectedEnabled = previousProfile.dependencies?.['her-world']
+  ? (previousProfile.dsh?.profile?.bundles?.includes('her-world') ?? false) : true;
 assert.equal(enabled, expectedEnabled, 'Unexpected change to Chatpet bundle activation');
 installation.packageInstalled = true;
 installation.enabled = enabled;
@@ -288,7 +288,7 @@ if (binding.state === 'ready' && relocation?.root === binding.root) {
     // DSH supplies SDK peers through its application loader, not the profile's
     // node_modules. Resolve only those declared peers from the trusted app;
     // never borrow a development checkout or install another SDK copy.
-    const installedRoot = join(profileDir, 'node_modules/dsh-Chatpet');
+    const installedRoot = join(profileDir, 'node_modules/her-world');
     const peers = Object.keys(JSON.parse(readFileSync(join(installedRoot, 'package.json'), 'utf8')).peerDependencies ?? {})
       .filter(name => name.startsWith('@deepseek-ai/'));
     // Resolve before registering the hook so require.resolve cannot recurse

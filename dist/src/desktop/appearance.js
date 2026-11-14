@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { check } from '../core/storage.js';
 import { CORNER_SET } from './upstream/host/config/constants.js';
 import { topFieldValid } from './upstream/host/config/validate.js';
-const assets = join(dirname(createRequire(import.meta.url).resolve('dsh-Chatpet/package.json')), 'src', 'desktop', 'assets');
+const assets = join(dirname(createRequire(import.meta.url).resolve('her-world/package.json')), 'src', 'desktop', 'assets');
 const defaults = JSON.parse(readFileSync(join(assets, 'interaction.json'), 'utf8'));
 const catalog = JSON.parse(readFileSync(join(assets, 'catalog.json'), 'utf8'));
 const mediaIds = new Map(catalog.actions.flatMap(({ id, label }) => [[id, id], [label, id]]));

@@ -1,0 +1,30 @@
+name: Source and runtime checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/project-runtime
+      - name: Check, build and test without DSH or model calls
+        shell: bash
+        run: |
+          source ./scripts/env.sh
+          pnpm run check:env
+          pnpm run check:types
+          pnpm test
+          pnpm run check:release
+          pnpm run test:release
+          mkdir -p .cache/release
+          COPYFILE_DISABLE=1 pnpm pack --pack-destination .cache/release
+          pnpm run check:package .cache/release/her-world-*.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checked-runtime
+          path: .cache/release/*.tgz

@@ -17022,7 +17022,7 @@ function registerCompanion(info) {
 // Native DSH settings registration follows the pinned DSH settings slot contract.
 // Browser factory/entry structure follows dsh-dafeiyu-dot (MIT; see notices).
 registerCompanion({
-  id: 'dsh-Chatpet',
+  id: 'her-world',
   factory(require) {
     'use strict';
     const React = require('react');
@@ -18195,8 +18195,8 @@ registerCompanion({
         if (target === null) return; event.preventDefault(); selectTab(sections[target][0]); tabs.current[target]?.focus();
       }
       return h('div', { className: 'chatpet-settings' }, h('style', null, css),
-        h('header',{className:'cp-heading'},h('div',null,h('small',null,'DAFEIYU · COMPANION'),h('h2',null,(snapshot?.identity.displayName||'未命名伙伴')+'的世界'),h('div',{className:'cp-state'},h('i',{className:'cp-dot'}),snapshot?snapshot.workspace.state==='ready'&&snapshot.storage&&!snapshot.storage.complete?'存储待迁入工作区':workspaceLabels[snapshot.workspace.state]:'正在连接',snapshot?.preferences.workspace?' · '+snapshot.preferences.workspace.title:'')),dirty&&badge('有未保存修改')),
-        h('div', { role: 'tablist', 'aria-label': '大肥鱼设置分类', className: 'cp-tabs' }, ...sections.map(([id,title],index) => h('button', {
+        h('header',{className:'cp-heading'},h('div',null,h('small',null,'HER WORLD · COMPANION'),h('h2',null,(snapshot?.identity.displayName||'未命名伙伴')+'的世界'),h('div',{className:'cp-state'},h('i',{className:'cp-dot'}),snapshot?snapshot.workspace.state==='ready'&&snapshot.storage&&!snapshot.storage.complete?'存储待迁入工作区':workspaceLabels[snapshot.workspace.state]:'正在连接',snapshot?.preferences.workspace?' · '+snapshot.preferences.workspace.title:'')),dirty&&badge('有未保存修改')),
+        h('div', { role: 'tablist', 'aria-label': 'Her World 设置分类', className: 'cp-tabs' }, ...sections.map(([id,title],index) => h('button', {
           key: id, id: `${prefix}-${id}-tab`, type: 'button', role: 'tab', className: 'cp-tab', 'aria-selected': active === id,
           'aria-controls': `${prefix}-${id}-panel`, tabIndex: active === id ? 0 : -1, ref: element => { tabs.current[index] = element; },
           onClick: () => selectTab(id), onKeyDown: event => keyDown(event,index), disabled: Boolean(busy) }, title))),
@@ -18235,10 +18235,10 @@ registerCompanion({
           } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
         };
         ctx.slots.inject('settings.section', () => ctx.slots.register({
-          name: 'settings.section', id: 'dsh-Chatpet', order: 40, label: '大肥鱼', inject: () => ({ request, getAppearanceEditor:()=>ctx.get?.('chatpetAppearanceEditor') }),
+          name: 'settings.section', id: 'her-world', order: 40, label: 'Her World', inject: () => ({ request, getAppearanceEditor:()=>ctx.get?.('chatpetAppearanceEditor') }),
         }, SettingsPage));
         ctx.slots.inject('settings.section.icon', () => ctx.slots.register({
-          name: 'settings.section.icon', id: 'dsh-Chatpet',
+          name: 'settings.section.icon', id: 'her-world',
         }, SettingsIcon));
       },
     };

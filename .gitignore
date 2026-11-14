@@ -1,4 +1,16 @@
+node_modules/
+dist/
+.local/
+.tools/
+.venv/
+.cache/
+.pnpm-store/
 .DS_Store
+*.tsbuildinfo
+references/sources/
+references/manifest.json.tmp
 .env
 .env.*
 !.env.example
+__pycache__/
+*.py[cod]

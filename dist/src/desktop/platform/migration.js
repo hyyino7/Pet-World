@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { isDeepStrictEqual as equal } from 'node:util';
 import { DEFAULT_COMPANION_SETTINGS } from '../../core/companion-settings.js';
-const require = createRequire(import.meta.url), root = dirname(require.resolve('dsh-Chatpet/package.json'));
+const require = createRequire(import.meta.url), root = dirname(require.resolve('her-world/package.json'));
 const upstream = require(join(root, 'vendor/dsh-pet/platform/runtime.mjs'));
 const object = (value) => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 const digest = (value) => createHash('sha256').update(value).digest('hex');
