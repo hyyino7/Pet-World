@@ -19,5 +19,6 @@ runs:
         export UV_CACHE_DIR="$PWD/.cache/uv"
         uv python install "$(cat .python-version)" --no-bin
         uv venv --python "$(cat .python-version)" --managed-python .venv
+        uv pip install --python .venv/bin/python -r vendor/mnemosyne/requirements-test.lock
         source ./scripts/env.sh
         pnpm install --frozen-lockfile --ignore-scripts

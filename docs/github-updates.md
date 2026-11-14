@@ -96,6 +96,7 @@ On Apple Silicon macOS, bootstrap the pinned local runtimes with
 ```sh
 source ./scripts/env.sh
 pnpm install --frozen-lockfile --ignore-scripts
+uv pip install --python .venv/bin/python -r vendor/mnemosyne/requirements-test.lock
 pnpm run check:env
 pnpm run check:types
 pnpm test
@@ -106,8 +107,9 @@ pnpm run check:release
 `check:references` additionally checks the optional, ignored upstream reference
 checkouts. Those reference checkouts are not build dependencies; bundled vendor
 code, notices and `references/manifest.json` preserve required provenance.
-Memory-provider Python tests have separate pinned fixture dependencies in
-`vendor/mnemosyne/requirements-test.lock`; native/window checks require an
+The default tests include isolated Memory-provider cases, so their Python
+fixture dependencies are installed from `vendor/mnemosyne/requirements-test.lock`;
+native/window checks require an
 explicit isolated DSH fixture. They are not installed acceptance tests.
 
 GitHub CI uses macOS with the same pinned Node/pnpm/Python versions. The

@@ -75,6 +75,14 @@ ARM Python 3.12.14 distribution. No Release or market version was published.
 The workflow now reuses the existing project bootstrap's `uv` managed-Python
 path, with uv 0.12.5 pinned. The `rc.1` tag is retained unchanged.
 
+Cloud verification also caught a local `.venv` verification symlink accidentally
+staged because the old `.venv/` rule did not match a symlink. Commit `c1f5357`
+removes it and fixes the ignore rules; no environment contents were uploaded.
+The next clean run reached the tests and exposed missing Python fixture
+dependencies. CI and fresh-clone instructions now install the existing exact
+`vendor/mnemosyne/requirements-test.lock` before default tests. These failures
+occurred before an `rc.2` tag, Release or market version was created.
+
 Prepared replacement version: `0.1.0-rc.2`. Publication completion and run links
 will be recorded after remote readback. Local Git authentication was absent
 during the first push probe; the owner completed GitHub's device authorization.
