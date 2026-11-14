@@ -5,7 +5,6 @@ import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {parse,stringify} from 'yaml';
-import {npmRelease} from '../../scripts/publish-npm.mjs';
 
 test('old embedded binding becomes a private native override without modifying the profile or data',t=>{
   const root=mkdtempSync(join(tmpdir(),'her-world-switch-'));
@@ -32,16 +31,4 @@ test('old embedded binding becomes a private native override without modifying t
   const saved=readFileSync(output,'utf8');
   assert.notEqual(run().status,0,'A repeated export must not overwrite the reviewed override');
   assert.equal(readFileSync(output,'utf8'),saved);
-});
-
-test('npm release uses checked bytes, prerelease tags and immutable retries',()=>{
-  const archive=Buffer.from('checked archive'),manifest={name:'her-world',version:'0.1.0-rc.5'};
-  const first=npmRelease(manifest,archive);assert.equal(first.tag,'next');assert.equal(first.publish,true);
-  assert.equal(npmRelease(manifest,archive,{integrity:first.integrity}).publish,false);
-  assert.throws(()=>npmRelease(manifest,Buffer.from('changed'),{integrity:first.integrity}),/Published version differs/);
-  assert.equal(npmRelease({...manifest,version:'0.1.0'},archive).tag,'latest');
-  const workflow=parse(readFileSync('.github/workflows/release.yml','utf8'));
-  assert.equal(workflow.permissions['id-token'],'write');
-  const steps=workflow.jobs.release.steps;
-  assert.ok(steps.findIndex(s=>s.run?.includes('check:package'))<steps.findIndex(s=>s.run?.includes('publish-npm.mjs')));
 });

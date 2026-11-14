@@ -45,6 +45,7 @@ jobs:
           if [ "$EVENT_NAME" = workflow_dispatch ]; then
             if git ls-remote --exit-code --tags origin "refs/tags/v$RELEASE_VERSION"; then
               git fetch origin "refs/tags/v$RELEASE_VERSION:refs/tags/v$RELEASE_VERSION"
+              git restore --worktree package.json
               git checkout --detach "v$RELEASE_VERSION"
               node --input-type=module -e 'import {readFileSync} from "node:fs"; import assert from "node:assert/strict"; const frozen=JSON.parse(readFileSync("release.json")); assert.equal(frozen.sourceCommit,process.env.GITHUB_SHA,"Version belongs to a different source commit; choose a new version");'
               echo 'REUSE_TAG=1' >> "$GITHUB_ENV"
@@ -88,7 +89,29 @@ jobs:
         shell: bash
         run: |
           source ./scripts/env.sh
-          node scripts/publish-npm.mjs .cache/release/her-world-$RELEASE_VERSION.tgz
+          archive=".cache/release/her-world-$RELEASE_VERSION.tgz"
+          expected="$(node -e 'const fs=require("fs"),c=require("crypto");console.log("sha512-"+c.createHash("sha512").update(fs.readFileSync(process.argv[1])).digest("base64"))' "$archive")"
+          read_integrity() {
+            npm view "her-world@$RELEASE_VERSION" dist.integrity --json --prefer-online --registry=https://registry.npmjs.org/ > .cache/release/npm-version.json 2> .cache/release/npm-view.log
+          }
+          matches_archive() {
+            node -e 'require("assert/strict").equal(JSON.parse(require("fs").readFileSync(".cache/release/npm-version.json")),process.argv[1])' "$expected"
+          }
+          if read_integrity; then
+            matches_archive
+          else
+            node -e 'require("assert/strict").equal(JSON.parse(require("fs").readFileSync(".cache/release/npm-version.json")).error.code,"E404")'
+            tag=latest
+            if [[ "$RELEASE_VERSION" == *-* ]]; then tag=next; fi
+            npm publish "$archive" --ignore-scripts --access=public --registry=https://registry.npmjs.org/ --tag="$tag"
+          fi
+          # npm may process an accepted archive asynchronously before it becomes public.
+          verified=0
+          for attempt in {1..180}; do
+            if read_integrity; then matches_archive; verified=1; break; fi
+            sleep 5
+          done
+          test "$verified" = 1
       - name: Promote verified runtime to the default GitHub install branch
         env:
           RELEASE_COMMIT: ${{ steps.frozen.outputs.commit }}
