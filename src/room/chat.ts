@@ -2,7 +2,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import { createUserMessage, type UserMessage } from '@deepseek-ai/dsh-llm';
 import type { SessionEvent } from '@deepseek-ai/dsh-session';
-import { nativeResult } from '../core/dsh-driver.js';
+import { nativeResult } from '../core/native-result.js';
 import { finalReply } from '../core/upstream/messages.js';
 import { digest } from '../core/storage.js';
 import { DesktopImages } from '../desktop/images.js';
@@ -51,6 +51,7 @@ export class RoomChat {
   private readonly admission = new Map<string, string>();
   private active?: {workspaceId: string; sessionId: string; agent: Agent; messageId: string};
   private busy = false;
+  private titles = new Map<string,string>();
   private readonly stopping = new AbortController();
   constructor(private ctx: Context) {
     const native = ctx as unknown as {get(name: 'attachments'): ConstructorParameters<typeof DesktopImages>[1] extends () => infer A ? A : never};
@@ -91,9 +92,12 @@ export class RoomChat {
       const next = Math.max(0, ...used.map(id => Number(id.slice(prefix.length))).filter(Number.isSafeInteger)) + 1;
       id = (await this.native.sessionController.create({workspaceId, sessionId: prefix + next})).sessionId;
       if (this.existing(workspaceId) !== id) throw Error('房间会话归属已变化');
-      if (this.ctx.get('sessionTitle' as never)) await this.native.sessionController.rename({sessionId: id, title: '大肥鱼 · 房间私聊'});
     }
     if (!id) return;
+    const title=(this.ctx.petCore.workspace.runtime.identity().displayName || '伙伴') + ' · 房间私聊';
+    if(this.ctx.get('sessionTitle' as never) && this.titles.get(id)!==title) {
+      await this.native.sessionController.rename({sessionId:id,title});this.titles.set(id,title);
+    }
     const {agent, error} = await this.native.sessionController.resolveAgent(id);
     if (error || !agent || this.existing(workspaceId) !== id || this.ctx.petWorld.sessionStatus(agent.session)?.state !== 'ready')
       throw Error(error?.message ?? '房间会话不属于当前工作区');

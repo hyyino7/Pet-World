@@ -22,6 +22,10 @@ declare module '@deepseek-ai/dsh-llm' {
         };
         'dsh-world-life': {
             kind: 'dsh-world-life';
+            /** Original domain facts, transported as system observations, never owner speech. */
+            facts?: readonly unknown[];
+            purpose?: 'first' | 'return' | 'review';
+            reviewDay?: string;
         };
         /** 她在 mood.md 里写的心情值：快照，不是谁说的话，不进归档。 */
         'dsh-world-mood': {

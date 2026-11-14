@@ -23,6 +23,14 @@ export interface Spend {
     yuan: number;
     reminded?: true;
 }
+/** References only: domain stores retain the committed facts and their results. */
+export interface FactRef { domain: 'body' | 'economy'; id: string }
+export interface FactBatch {
+    at: string;
+    messageId: string;
+    refs: FactRef[];
+    sourceDigest?: string;
+}
 /**
  * A word steered into her home whose turn has not been seen to start a step yet. It is written before the steer,
  * so a turn that never runs (a hang, a crash, a closed app) is found again and sent again instead of counted.
@@ -41,7 +49,39 @@ export interface PendingWake {
         review: Review;
     } | {
         greeting: Greeting;
+    } | {
+        facts: FactBatch;
     };
+    /** Intent baseline; opt-in decision tracking records zero even before the first plan. */
+    planRevision?: number;
+    /** A saved plan/keep/control decision, distinct from editing only its clock. */
+    decisionRevision?: number;
+    /** Only the exact alarm projected by this failed decision inherits its correction budget. */
+    recoveryMessageId?: string;
+    recoveryAttempts?: number;
+}
+export interface PlanningWake {
+    sessionId: string;
+    turn: number | undefined;
+    planRevision: number;
+    decisionRevision?: number;
+    ownerInterrupted: boolean;
+    messageId: string;
+    messageSeq: number;
+    recoveryMessageId?: string;
+    recoveryAttempts?: number;
+}
+/** A durable fault/technical correction chain, independent of any life activity duration. */
+export interface PlanningRecovery {
+    revision: number;
+    /** Missing-decision corrections already scheduled, not network retries. */
+    attempts: number;
+    status: 'retrying' | 'waiting';
+    reason: string;
+    message: string;
+    messageId: string;
+    /** The exact native alarm eligible to inherit this chain. */
+    retryAt?: string;
 }
 export interface LifeState {
     version: 1;
@@ -51,12 +91,26 @@ export interface LifeState {
     review?: Review;
     spend?: Spend;
     delivering?: PendingWake;
+    /** Life owns the versioned plan schema; the scheduler preserves it verbatim. */
+    currentPlan?: unknown;
+    /** Persists across cancellation so a stale planner cannot recreate a plan. */
+    planRevision?: number;
+    /** Last intent revision actually saved by a plan decision/control tool. */
+    planDecisionRevision?: number;
+    /** An admitted model turn, retained until its actual native completion. */
+    planningWake?: PlanningWake;
+    /** Persists exhausted/stopped decisions across app restarts. */
+    planningRecovery?: PlanningRecovery;
+    factBatch?: FactBatch;
+    /** Native step admitted these references; domain acknowledgement may retry. */
+    factAcknowledgement?: FactBatch;
+    lastFactAdmission?: { messageId: string; sessionId: string; sourceDigest: string };
 }
 /** `first` is a new home's first wake, `return` the word when her world starts again, `review` the daily look back. */
 export interface WakeRecord {
     scheduledAt: string;
     deliveredAt: string;
-    source: AlarmSource | 'first' | 'return' | 'review';
+    source: AlarmSource | 'first' | 'return' | 'review' | 'facts';
     lateMs: number;
 }
 export interface ActivityRecord {

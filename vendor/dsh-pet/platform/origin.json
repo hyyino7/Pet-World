@@ -76,7 +76,8 @@
     },
     "runtime/electron-helper/main/bridge.js": {
       "source": "runtime/electron-helper/main/bridge.js",
-      "sha256": "5e3bc10120e6351f93cef3b30bf22d0a91a153b0d5f7c47ea4dca52abaa57147"
+      "sha256": "8fc9e8c1d952ab9ca70e684cd41a0b958e0c5555d21d52030385cb2bd4ba08a4",
+      "upstream_sha256": "5e3bc10120e6351f93cef3b30bf22d0a91a153b0d5f7c47ea4dca52abaa57147"
     },
     "runtime/electron-helper/main/displays.js": {
       "source": "runtime/electron-helper/main/displays.js",
@@ -104,7 +105,8 @@
     },
     "runtime/electron-helper/main/windows.js": {
       "source": "runtime/electron-helper/main/windows.js",
-      "sha256": "5b60c629e0105e6ae92dadc718b8149649bd1dd6f6be054aa016d7c9550e1fb3"
+      "sha256": "29d438b54bd2e9eb2e99ca5f6283e18505a56e9b9447c9bf9760154c023be2f5",
+      "upstream_sha256": "5b60c629e0105e6ae92dadc718b8149649bd1dd6f6be054aa016d7c9550e1fb3"
     },
     "runtime/electron-helper/package.json": {
       "source": "runtime/electron-helper/package.json",
@@ -116,7 +118,8 @@
     },
     "runtime/electron-helper/preload.js": {
       "source": "runtime/electron-helper/preload.js",
-      "sha256": "102dad829ea4e2107c6bd051f4363e0d025c42ece8098ff7b7a410c85cf37ce4"
+      "sha256": "b1ac6b08a3eaf5e12d3530331a0e2ee959868b9418d2be129cb93f4b79252551",
+      "upstream_sha256": "102dad829ea4e2107c6bd051f4363e0d025c42ece8098ff7b7a410c85cf37ce4"
     },
     "runtime/electron-helper/range.js": {
       "source": "runtime/electron-helper/range.js",
@@ -125,10 +128,6 @@
     "runtime/electron-helper/renderer.js": {
       "source": "runtime/electron-helper/renderer.js",
       "sha256": "48a06cfca8a9751c183d37af4a3a430364749c9a58e8bd16b906fbf31273b082"
-    },
-    "runtime/electron-helper/shared-core.js": {
-      "source": "runtime/electron-helper/shared-core.js",
-      "sha256": "3ea957c0cf65e321ca3af02b7e951cd7063177baa2104fefed4986b5573cd539"
     },
     "runtime/electron-helper/sprite/bubble.js": {
       "source": "runtime/electron-helper/sprite/bubble.js",
@@ -197,9 +196,44 @@
     "upstream/helper-events.js": {
       "source": "runtime/electron-helper/events.js",
       "sha256": "3fa99a880c8fee2f182c03f947461f9bd5469b778cee63b1b2eb54d1b187882c"
+    },
+    "upstream/helper-shared-core.js": {
+      "source": "runtime/electron-helper/shared-core.js",
+      "sha256": "3ea957c0cf65e321ca3af02b7e951cd7063177baa2104fefed4986b5573cd539"
     }
   },
   "adaptations": {
-    "runtime/electron-helper/events.js": "Generated from upstream/helper-events.js: refresh renderer-only shared activity configuration in place on the existing config invalidation; preserve windows, motion and playback receipts."
+    "runtime/electron-helper/events.js": {
+      "note": "Generated from pinned helper-events.js; shared sampled playback with explicit horizontal mirroring, native visibility/fresh-state/lock reconciliation and original loaders. No second resolver, world state or assistant runtime.",
+      "sha256": "e530fbc1f6fa6749cfdf12814afd048a6e54b9ac79ccd2ab64e4ffc1a2a43416"
+    },
+    "runtime/electron-helper/main/windows.js": {
+      "note": "Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run.",
+      "sha256": "29d438b54bd2e9eb2e99ca5f6283e18505a56e9b9447c9bf9760154c023be2f5"
+    },
+    "runtime/electron-helper/main/bridge.js": {
+      "note": "Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run.",
+      "sha256": "8fc9e8c1d952ab9ca70e684cd41a0b958e0c5555d21d52030385cb2bd4ba08a4"
+    },
+    "runtime/electron-helper/preload.js": {
+      "note": "Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run.",
+      "sha256": "b1ac6b08a3eaf5e12d3530331a0e2ee959868b9418d2be129cb93f4b79252551"
+    },
+    "runtime/electron-helper/main.js": {
+      "note": "Generated from the pinned upstream helper-main.js for the shared presentation lifecycle; omit the upstream screenshot-and-exit smoke-test import and branch from the released runtime. The upstream input and test module remain in the repository for provenance, outside the installable package.",
+      "sha256": "07716033cedbc5d93ddd3d29efa6238fd39064b650a5b387fb85f4d05706a52b"
+    },
+    "runtime/electron-helper/shared-core.js": {
+      "note": "Generated from pinned upstream/helper-shared-core.js with the same recorder-disposal and absolute say-expiry adapters as the web carrier. Ordinary say/clear retains original behavior; finite expiresAt rejects expired delivery and caps its existing duration. No new bubble clock or assistant runtime.",
+      "sha256": "57951e69fa6fd6f9c5738eb13a5f9da2b28bc8b182db3dc1bbd1e8e5363b5c57"
+    },
+    "runtime/electron-helper/sprite/playback.js": {
+      "sha256": "183211e71ebe2a1c5028e7482fe16d89a29a4823970e9d98822d476ae71bc783",
+      "note": "Preserve loader generation, cancel managed bindings, and route original load timeout to the shared renderer failure handler without new timers."
+    },
+    "runtime/electron-helper/sprite/input.js": {
+      "sha256": "e0cdeceff7a3a8f269c7bd1f7a85284e16ecf4699e013c9ea911a792fa3b458a",
+      "note": "Generated from existing pinned src/desktop/helper/upstream/sprite/input.js after checking original digest. Preserve input/shortcut/drag/score and sleep guards; shared ordinary taps use the existing authenticated native-feature Body pet care route without a legacy movie or pending squash. No independent physical or Memory state."
+    }
   }
 }

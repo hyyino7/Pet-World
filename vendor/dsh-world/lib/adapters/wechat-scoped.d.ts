@@ -3,6 +3,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent';
 import type { SpeakerIdentity } from '../ecosystem/shared/identity.js';
 import type { createWechatModule as original } from '../ecosystem/wechat/index.js';
 export declare function createWechatModule(deps: Parameters<typeof original>[0] & {
+    dataDirectory?: string;
     toolAllowed(agent: Agent, name: string, args?: unknown): boolean;
     acceptBody(body: Record<string,unknown> | undefined): Record<string,unknown>;
     reachAllowed(accountId:string,chatId:string):boolean;

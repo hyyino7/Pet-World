@@ -47,7 +47,7 @@ try{
     async *stream(options){calls.push(options);if(program)yield* program(options);else yield* say('Fixture reply');}
   }
   ctx.llm.registerAdapter(['services-fixture'],new Fixture());
-  await ctx.plugin(await import('../dist/src/core/plugin.js'),{dataDir:join(root,'core'),cwd:repo,companionId:'fish',scopeId:'owner',ownerActorId:'owner',
+  await ctx.plugin(await import('../dist/src/core/plugin.js'),{dataDir:join(repo,'.chatpet/data/core'),cwd:repo,companionId:'fish',scopeId:'owner',ownerActorId:'owner',
     displayName:'Fixture fish',character:'TURN_PERSONA_ORIGINAL',memory:{dataDir:join(repo,'.chatpet/data/memory'),python:fileURLToPath(new URL('../.venv/bin/python',import.meta.url))}});
   const host=ctx.petCore;
   await ctx.plugin(await import('../dist/src/memory/plugin.js'));
@@ -75,11 +75,12 @@ try{
   assert.equal(host.workspace.runtime.store.all('activity').length,0);assert.equal(host.workspace.runtime.store.all('execution').length,0);
   host.native.memory.prepare=initialPrepare;host.native.lifeAdmission=undefined;await cold.dispose();
   const a=await open(),b=await open();let beginCalls=0;const originalBegin=host.native.begin.bind(host.native);host.native.begin=(...args)=>{beginCalls++;return originalBegin(...args);};
+  writeFileSync(join(repo,'ordinary-native-read.txt'),'A read-only native tool fixture.');
   let step=0;program=async function*(options){
     assert.ok(system(options).includes('TURN_PERSONA_ORIGINAL'));
     assert.ok(!system(options).includes('TURN_PERSONA_NEXT'));
     if(step===0){writeFileSync(join(repo,'.chatpet/SOUL.md'),'# Fixture fish\n\nTURN_PERSONA_NEXT');await new Promise(resolve=>setTimeout(resolve,1200));}
-    if(step++<21)yield* tool('pet_matter_list',{limit:1});else yield* say('Completed twenty-one native tool calls.');
+    if(step++<21)yield* tool('read',{file_path:join(repo,'ordinary-native-read.txt')});else yield* say('Completed twenty-one native tool calls.');
   };
   await send(a,'Run a long ordinary native task.');
   assert.equal(step,22);assert.equal(beginCalls,0);assert.equal(host.workspace.runtime.store.all('activity').length,0);assert.equal(host.workspace.runtime.store.all('execution').length,0);
@@ -88,7 +89,7 @@ try{
   program=async function*(options){assert.ok(all(options).includes('CROSS_SURFACE_HANOI'),'A second native session immediately recalls the completed turn');yield* say('Hanoi.');};
   await send(b,'Where do I travel next Wednesday?');
   const ownerHome=a.agent;
-  homes=createChannelHomes(ctx,host,{deviceDirectory:join(root,'channels'),ownerHome:async()=>ownerHome,identityAllowed:()=>true,ownerIdentity:identity=>identity.speakerId==='qq:owner',active:()=>true});
+  homes=createChannelHomes(ctx,host,{dataDirectory:join(repo,'.chatpet/data/channels'),ownerHome:async()=>ownerHome,identityAllowed:()=>true,ownerIdentity:identity=>identity.speakerId==='qq:owner',active:()=>true});
   const identity={channel:'qq',accountId:'fixture',conversationId:'group-fixture',conversationType:'group',speakerId:'qq:friend',speakerName:'Guest speaker',platformMessageId:randomUUID()};
   const guest=await homes.open(identity);
   program=async function*(options){

@@ -1,11 +1,1109 @@
 # Dafeiyu MVP runtime evidence
 
+## Mapped animation playback (2026-11-14)
+
+The owner approved connecting the name-based allocation to the existing players,
+with reuse, explicit gaps and no new media. The [mapped-playback delivery record](validation/mapped-playback-2026-11-14.md)
+owns source/regression evidence, isolated verification, the current uninstalled
+candidate and independent package-only review. Original Body/Life/Economy and
+Memory authority remain unchanged; conditional presentation metadata is not a
+new activity executor. Installation and personal-workspace changes are excluded.
+
+## Previous common playback and detailed action design (2026-11-14)
+
+The owner authorized common playback logic before individual asset review, then
+requested finer action distinctions. The [playback record](validation/playback-logic-2026-11-14.md)
+owns that checkpoint's implementation, repair/review evidence and uninstalled candidate
+**69c0a1527985**. Types/build and 696 code cases pass; 93 relevant cases pass again
+against frozen package implementations, with all 941 runtime hashes unchanged.
+A new no-history package-only review found no confirmed P0–P2 in its inspected
+scope. These are code/probe results, not installed visual or resource acceptance.
+The [action vocabulary](planning/companion-action-design.md) is a proposal;
+individual food/emotion/touch variants and artwork remain to be reviewed.
+No assets were generated/replaced/deleted, no second runtime/Bank was introduced,
+and no installation or personal-workspace changes occurred in this batch.
+
+## Previous supplementary life media and confirmed defaults (2026-11-14)
+
+The owner selected supplementary Desktop assets and confirmed adjustable 70%
+need ceilings / 35% energy floor alongside the four-hour initial offline cap.
+The [media record](validation/life-media-2026-11-14.md) owns that checkpoint's evidence.
+Eight new clips share one immutable file set with Room 2D; real content receipts
+gate reading. Final uninstalled candidate `134cc52f47af` passes 590 code cases,
+18 generated Economy-carrier cases, full isolated Core/Memory/Room/channel
+scripts and package/relocation checks. All 939 archive files remain unchanged
+after testing. A same-name user-file shadowing P2 found in package review is
+fixed and independently rechecked. No original personal files were overwritten.
+Image generation is separate from the functional tests' local scripted models.
+Actual installed visuals, optional 3D/custom packs and device power remain owner
+acceptance; no installation or personal-workspace changes were made.
+
+## Previous life design implementation and R7 checkpoint (2026-11-14)
+
+The owner authorized the two remaining P2 repairs, channel-registration/TV-test
+compatibility corrections, implementation of the confirmed life design and
+isolated verification. The [owning record](validation/life-design-implementation-2026-11-14.md)
+records behavior, regression matrix and actual evidence. Final uninstalled
+candidate `ca07b0e1d631` passes 551 code cases, 18 generated Economy-carrier cases,
+complete isolated Core/Memory/Room/channel-messaging scripts and archive checks.
+The final package-only microphone recheck passes 28 cases; installed acceptance
+and full activity-media coverage remain incomplete. Historical archives and
+records below remain unchanged. Source and code/service tests are separate from
+visual completeness and installed owner acceptance; missing activity media is
+still a delivery gap. No formal installation or personal workspace was updated.
+
+## Previous documentation-only confirmation checkpoint
+
+The owner approved the [latest life design](planning/autonomous-life-game.md#owner-confirmed-design-update):
+Room-led Desktop activity mirroring; no starter money/resources/system gifts;
+a configurable offline negative-body allowance initially four hours with a
+gentle severity ceiling; non-customizable income targets/crop returns and
+customizable shop goods sold to the companion. Free basic care remains.
+The [economy](planning/economy.md) and [initialization](planning/initialization-and-companion-identity.md)
+plans own their details. This is documentation only. No code/tests/configuration,
+build, package or installation changed, and no runtime or model checks were run.
+The frozen candidate and all verification below predate these design changes;
+they do not prove the new goals are implemented. Future owner acceptance is
+listed as [E01–E04](handover/autonomous-life-owner-trial.md#newly-confirmed-design-acceptance-pending-implementation),
+pending implementation and installation authorized in a later task.
+
+Documentation-only verification: the 12 changed Markdown files have 235 valid
+local file/heading links; patch whitespace checks pass. All 1,628 protected
+source/test/configuration/build/resource and frozen-package file hashes match
+the pre-edit baseline, with no new files in the protected code roots. A second
+reader found no remaining scope or design-consistency issue. Check receipt and
+the task baseline are in `.cache/design-confirmation/`. These are static document
+and scope checks, not code tests or installed acceptance.
+
+## R6 audit repairs (2026-11-13)
+
+The owner authorized R6-01–R6-05 repair (four P2, one P3), documentation,
+code regressions, repackaging and another independent package-only review,
+without installation. The [repair record](validation/package-audit-r6-repairs-2026-11-13.md)
+owns each trigger/repair/test and owner D01–D05. The pre-task 840-text-file
+baseline, dirty status/patches/revision and evidence are under
+`.cache/audit-r6-repair-20261113/`. Previous raw reports/archives remain unchanged.
+
+`pnpm run check:types` and clean build pass. `test:life-integration` passes
+**465 code tests** (111 plus 354), zero failures/skips, including **73 new cases**
+(14 editor scope, 19 Memory scope, eight Emotion, 23 garden, nine channel drafts).
+Thirteen scope/draft cases also pass against functions extracted from the actual
+generated Desktop `./client`; its settings factory is embedded exactly once.
+Six old fixture files explicitly forward new scope or use actual NativeMemory
+with a fake provider; original assertions remain. Logs: `types-final.log`,
+`integration-final.log`, `generated-client-tests.log` and per-finding red/green
+logs. Use repo-local tools and `pnpm_config_verify_deps_before_run=false`; no
+dependencies or global toolchain were installed/replaced.
+
+Final archive check passes: **922 members**, **252 build files**, **42 directly
+shipped first-party/helper files**, **261 vendor hashes**, six source-only origin
+entries, **543 local runtime/resource references**, **11 Markdown targets** and
+**43 declared external-import occurrences**. Relocated actual Core refuses old
+A profile/identity saves into B and accepts a current B save; bootstrap/Core
+absence guards, no-Memory resume, Room routes, Body effects, retained plan,
+wallet idempotency and actual socket-blocked Python MemoryPort fixtures pass.
+Retired Core/draft contract outputs, duplicate Life archive, tests and build-only
+voice adapter remain excluded. Adapted garden hashes are current; original
+pins/license texts remain. No second runtime, Bank, world or clock was added.
+
+Candidate, **not installed**:
+`.cache/audit-r6-repair-20261113/package/dsh-Chatpet-candidate-4474a5bc6533.tgz`,
+126,033,632 bytes; SHA256
+`4474a5bc65337416e24dbdedaf0ff759aaecc9089be7c38689f3a4736fea293d`.
+It supersedes uninstalled `49745acd50d2`. A fresh `fork_turns=none` r7 agent
+receives only a neutral archive in
+`/private/tmp/companion-package-independent-review-20261113-r7/`, without prior
+findings, repair history or tests; no repository, personal files, apps, network
+or package hooks. Static checks and isolated local fixtures are allowed. This
+is instruction isolation, not an OS-enforced sandbox.
+
+Final r7 review confirmed **two new P2; audit not passed**. Unchanged report,
+inventory, fixtures and parent delivery receipt are under
+`.cache/audit-r6-repair-20261113/independent-review/`. R7-01 is late recorder
+startup after ordinary desktop/web Pet chat disposal; R7-02 is the QQ private/V1
+reply-nudge source rejected by Core/guest admission. Real microphone behavior
+and a possible ten-minute queue wait under specific DSH event ordering were not
+run. These two findings remain open; R6-01–R6-05 are repaired. Coverage: 138 full,
+18 partial, 351 syntax, 186 index and 229 unread media; all 500 parsing checks
+passed. Parent rehashed the tgz and all 922 archive/extracted members; unchanged.
+No production/package changes follow the verdict, only source-only status docs.
+Passing code regressions, failed independent audit and owner acceptance are
+separate results.
+
+All checks use temporary data and fake SDK/process/provider/DOM/media boundaries.
+No actual installer, app/window, model/account, personal workspace/profile,
+commit or publication was used. U01–U16, I01–I10, R01–R04, A01–A08, B01–B24 and
+D01–D05 remain **not run**. Real host scheduling, cross-device continuation,
+permissions, media, provider cancellation/billing, long-term scale and actual
+CPU/GPU/memory/wakeups remain owner acceptance.
+
+## Second-audit repairs (2026-11-13)
+
+The owner authorized R2-1–R2-6 plus guide corrections, code tests, repackaging and
+another clean package-only review, without installation. Fresh r3/r4 reviews
+of intermediate `ff5d8145f06a`/`0e3ee288c64e` found three/seven additional P2
+faults and one P3 each. The r5 review of `e16e6d9e8a70` added one P1 and two P2,
+now repaired through actual Bank/retained-owner checks, paused garden admission
+and distinct planned/completed setup receipts. All raw reports, inventories,
+independent fixtures and parent rehash receipts remain under
+`.cache/audit-r2-repair-20261113/independent-review-r3/`, `independent-review-r4/`
+and `independent-review-r5/`. The r5 assertion that the source model was unused
+was corrected against the actual high-quality selector; both required GLBs
+remain. The
+[repair record](validation/package-audit-round2-repairs-2026-11-13.md) owns each
+repair, 183 new regressions and owner B01–B24. The unused `LifeLibrary` class and
+fixed-schedule validator are removed; its regression now checks the actual Core
+archive. No new product runtime or old Core executor is introduced. Domain
+receipts remain intact; no history-expiry policy hides large-history failures.
+
+Final types and clean build pass. `pnpm run test:life-integration` passes **392
+code tests** (111 plus 281), zero failures/skips, with **183 new regressions**
+this turn (49 R2, 27 R3, 64 R4, 43 R5). Frozen logs are `integration-final-r5.log`,
+`types-final-r5.log`, `package-check-release.log`; source/test hashes are
+in `source-test-receipt-release.json`. Temporary/fake process/media/model/channel
+boundaries only; the packaged Python provider runs with sockets blocked. No
+real provider, window, account or personal profile/workspace was used.
+`pnpm_config_verify_deps_before_run=false` prevents pnpm's automatic installation
+before code checks. Early metadata-only attempts were interrupted with zero
+packages downloaded/added. Explicit lockfile-only/ignore-scripts resolved optional
+dependencies with zero packages downloaded/added and no hooks; no module,
+Electron, DSH/plugin or global toolchain was installed/replaced.
+
+Final package check passes: **922 members**, **252 build files**, **42 directly
+shipped first-party/helper files**, **261 vendor digests**, six deliberately
+source-only origin entries, **542 local runtime/resource references**, **11 local
+Markdown targets** and **43 declared external-import occurrences**. Relocated
+Core/bootstrap/no-Memory resume/missing-data guards, actual Room routes,
+Body/plan/Economy and actual Python MemoryPort fixtures pass. Retired Core/draft
+contract outputs, unused Life archive exports, build-only voice adapters and
+tests remain excluded.
+
+Frozen final candidate:
+`.cache/audit-r2-repair-20261113/release-package/dsh-Chatpet-candidate-49745acd50d2.tgz`,
+126,029,974 bytes; SHA256
+`49745acd50d2828f16aa10ccf3128acaacdf00d5885f9fc3b0e773a6ccf026d7`.
+It supersedes uninstalled `e16e6d9e8a70`, `0e3ee288c64e`, `ff5d8145f06a` and
+`49427e59f5c3`; **not installed**. Intermediates are retained as historical evidence. The code
+and package checks above apply to this final revised archive.
+
+A fresh `fork_turns=none` r6 agent received only a neutral archive in
+`/private/tmp/companion-package-independent-review-20261113-r6/`, without old
+findings/development/test results. It may inspect the archive and use its own
+static scripts or isolated local fixtures, without package hooks, apps, source
+repo, prior audits, personal data or network. It must separate semantic/syntax
+coverage and compare all hashes before/after. This is instruction isolation,
+not an OS-enforced sandbox.
+
+The review completed with **four new P2 and one P3; audit not passed**. Raw
+report, inventory, independent fixtures and parent delivery receipt are under
+`.cache/audit-r2-repair-20261113/independent-review-r6/`. Coverage: 133 full,
+18 partial, 350 syntax, 272 index and 149 unread; 482 syntax checks passed.
+Parent rehashed all 922 archive and extracted members against the unchanged
+archive SHA256 above. The repair record tracks open R6-01–R6-05: profile/identity
+workspace scope, chat recall Bank scope/ABA, Emotion final write-size bound,
+natural garden refresh and channel section drafts. They remain unrepaired in
+this candidate. No code/package changes follow this verdict; only source-only
+status documentation is updated. Passing 392 regressions is distinct from this
+failed independent verdict and from owner acceptance.
+
+Evidence is under `.cache/audit-r2-repair-20261113/`. Actual permissions,
+provider cancellation/billing, first binary download, host compatibility,
+long-term history storage/serialization, power and installed portability remain
+owner acceptance: U01–U16, I01–I10, R01–R04, A01–A08 and B01–B24 are all **not run**.
+No actual installer, commit or publication was executed.
+
+## Package audit repairs (2026-11-13)
+
+The owner authorized repairing the first independent archive audit's eight
+findings, code-only regression tests, repackaging and another clean read-only
+package review, explicitly without installation. The
+[repair matrix](validation/package-audit-repairs-2026-11-13.md) records each
+verified issue, its minimal retained-path repair, tests and owner acceptance.
+
+Final source checks: `pnpm run check:types` passed; clean build and
+`pnpm run test:life-integration` passed **208 tests** (111 plus 97), zero
+failures/skips; the separate actual Desktop work-chain code test passed 1/1.
+42 new cases cover the eight findings. All host/model/channel boundaries use
+fakes and disposable temporary data; no real model, installed app/window,
+personal workspace/profile, actual installer, commit or publication was used.
+The default-installer configuration prefix is exercised only with mocked host
+effects, followed by actual public Core initialization/SQLite migration code.
+
+`pnpm run check:package ARCHIVE` passed for the frozen candidate: **922 members**,
+**252 current build files**, **261 shipped vendor digests**, six deliberately
+source-only origin entries and **542 local references**. It rejects retired Core
+and contract output and source-only/development artifacts. Relocated packaged
+Core, external-bootstrap initialization/missing-Core guard, actual Room routes,
+Body/plan/Economy and Python MemoryPort fixtures passed without importing the
+development implementation. The first new archive fixture required canonical
+macOS temporary paths; its test harness was corrected, then the unchanged
+archive passed. No product constraint was relaxed.
+
+Candidate:
+`.cache/audit-repair-20261113/final-package/dsh-Chatpet-audit-repaired-49427e59f5c3.tgz`,
+126,019,853 bytes; SHA256
+`49427e59f5c37869daa746fed6da92940bc84f9353791f72a409d9eb04f34da2`.
+It supersedes uninstalled `f328cb559036`; **not installed**.
+
+A new `fork_turns=none` agent receives only a neutral archive at
+`/private/tmp/companion-package-independent-review-20261113-r2/candidate.tgz`,
+with no development history, old findings or test results. Its permitted inputs
+are the archive and extracted contents; no repository, personal files, network,
+installed app or package code execution. It must separate semantic reading from
+syntax/index coverage, write a report/inventory and compare input/extracted
+hashes before/after. This is instruction-isolated independent blind review,
+not an OS-enforced sandbox or formal double-blind experiment.
+
+The review completed: **six new P2 findings and one P3 documentation group**,
+so **final audit did not pass**. These are numbered R2-1–R2-6 in the repair
+record to distinguish them from the original eight. The raw report/inventory
+are unchanged under `.cache/audit-repair-20261113/independent-review/`.
+Coverage: 163 full semantic reads, nine partial reads and 482 syntax checks.
+All 922 members and the archive retained their original hashes; the parent
+independently rechecked the extracted files. Large dependency algorithms,
+visual/media quality and real-host behavior remain unaccepted.
+
+The parent additionally used isolated code fixtures to confirm stale Memory
+client reuse after observed exit and Life append following a final-file symlink.
+Every target was disposable; no actual process, model, personal data or installed
+app was involved. Concurrent self-save, voice teardown, quiet-mode late output
+and conditional Electron dependency gaps retain static evidence, not a claim of
+real-environment reproduction. That archive was not changed after its independent verdict. Its six findings
+are repaired in the newer candidate documented under Second-audit repairs above.
+
+Evidence: `.cache/audit-repair-20261113/` baseline, red/final test logs, final
+package check/receipt; the previous blind report remains unchanged under
+`.cache/blind-package-audit-20261113/`. Installation, native-host/provider
+behavior, long-term continuity and actual CPU/GPU/memory/wakeups remain owner
+acceptance, including U01–U16, I01–I10, R01–R04 and A01–A08: all not run.
+
+## Thin Core and package cleanup (2026-11-13)
+
+The owner explicitly requested removal of the old Core activity/receipt,
+whole-chat eligibility and dependency executor. The
+[native-service amendment](planning/native-service-refactor.md#core-retirement-amendment-2026-11-13)
+owns scope; the [review](validation/package-code-review-2026-11-13.md) records
+findings, retained responsibilities, source/package measurements and owner cases.
+
+Deleted nine old Core modules (112,619 baseline bytes / 1,415 lines), their
+tools/RPCs/capability advertisements, 11 unimplemented draft contract files and
+obsolete scheduler tests/scripts. Added a 100-line configuration runtime and a
+37-line pure native-log reader. Full Core is 25 TS files / 2,962 lines, including
+workspace, records, original transcript copies and actual native/Memory hooks;
+it is not a 1,500-line claim. No cosmetic relocation was used to lower this count.
+The installer no longer discovers/requires a default model for Core or writes
+retired Core model/cwd settings. DSH still owns model routes and native execution.
+
+Owner configuration guards, stable Memory observations and Bank validity,
+Body/Economy domain receipts and offline recovery remain. Actual old database
+rows/meta were left untouched and inert, not migrated, resumed or deleted.
+The existing dirty source scene was retained outside this authorized cleanup.
+
+Executed with the repo-local toolchain:
+
+- `pnpm run check:types` passed.
+- `pnpm run test:life-integration` passed build and **166 code tests**
+  (111 retained autonomous-life plus 55 current configuration/composition tests),
+  zero failures/skips. A final clean rebuild and targeted seven Core tests also
+  passed after extending old execution/dependency/quiescence/history-meta cases.
+- `pnpm run check:package ARCHIVE` passed: **920 archive members**, **250 build
+  files** matched, **261 shipped vendor digests**, six explicitly source-only
+  origin entries and **538 local executable/resource references** checked.
+  It rejects retired compiled Core/contract modules and source-only artifacts.
+- Extracted thin Core, Body/plan/Economy and actual packaged Python MemoryPort
+  code fixtures passed. Declared DSH SDK peers use the existing local SDK test
+  dependencies; development implementation imports are forbidden. Eight actual
+  Room routes use in-memory requests. No app/model/installer was started.
+
+Previous candidate (superseded by the audit-repair candidate above):
+`.cache/package-code-review-20261113/final-package/dsh-Chatpet-reviewed-f328cb559036.tgz`,
+126,013,158 bytes; SHA256
+`f328cb559036fb269b726955adf326966c18df0ccefb95624995557b0507b75f`.
+It supersedes uninstalled 205e94730368 and the preliminary 2e73c29f673b package.
+It is **not installed**. This task did not replace the current installation or
+access personal workspace/profile data, and made no commit/publication.
+
+Evidence is under `.cache/package-code-review-20261113/`: baseline hashes/Git
+patches/status; final build/type/full-code/core-regression logs; final archive
+check/receipt; source checks and before/after archive lists. The owner performs
+U01–U16, I01–I10 and R01–R04 after installation; all are not run. Real semantic
+quality, native platform behavior, complete installed portability and power
+measurements remain outside these code checks.
+
+## Autonomous-life integration verification (2026-11-13)
+
+Owner-requested cross-module code verification, without installation or personal
+acceptance. The [verification report](validation/autonomous-life-integration-2026-11-13.md)
+records the inspected boundaries, C01–C20 and owner-only I01–I10. Core identity,
+native conversations, the existing Memory Bank and Body/Economy authorities remain
+the composition; the [integration plan](planning/autonomous-life-game.md) retains
+product scope.
+
+Two reproduced defects were repaired: Core now queues the system Life-envelope
+source as well as its fact ancestors so the actual MemoryPort can admit derived
+replies/summaries; Desktop now respects saved enabled Life intent when the native
+runner is unavailable, rather than starting the older automatic whisper/dream
+inference. Original actor/role distinctions and optional feature policies remain.
+
+Executed checks:
+
+- `source ./scripts/env.sh`, then `pnpm run check:types`: passed.
+- `pnpm run test:life-integration`: build passed; existing autonomous-life list
+  **111/111**, composition plus adjacent Core/Workspace/Memory-batch/Emotion
+  **50/50**. Total **161 passed, zero failed/skipped**, including 20 new cases.
+- Actual disposable Core/Body/Economy stores and Python MemoryPort were exercised.
+  The Memory probe blocks socket connections and does not start its background
+  runner or listening service. Native model/display/persistence boundaries are
+  simulated. No real model requests, DSH/Electron windows or personal data tests.
+- Adjacent legacy fixtures initially lacked current workspace/initialization
+  prerequisites and included obsolete layout assumptions; they were updated to
+  public portable contracts while preserving protection assertions. Two waiting
+  Core tests now fail within a bounded timeout instead of hanging on refused
+  admission. Product binding and permission guards were retained.
+- Extracted archive: all packaged build files match this verified build, vendor
+  provenance matches, and relocated Body/plan/Economy code passes the retained
+  idempotency fixture with development implementation imports forbidden. This is
+  a code/package check, not installed-native or Python environment preparation.
+- Final source checks: 14 existing files changed and five added within this
+  task's scope, with zero unrelated changes against the 805-file task baseline;
+  149 local documentation links/anchors and 267 vendor digests pass. The archive
+  contains 1,093 members and all 412 packaged build files match the verified build.
+
+Current candidate, superseding uninstalled `198ecd7c0c9b`:
+`.cache/autonomous-life-integration-20261113/package/dsh-Chatpet-life-integration-205e94730368.tgz`
+(126,608,842 bytes), SHA256
+`205e947303682c436528db69f6a16a8bc2f0796ccf1f54169e22c02faa4bf64a`.
+It is **not installed**. This task does not change installed `b6da9f10be64`, the
+owner's binding/data or model configuration; no commit/publication was made.
+
+Evidence is under `.cache/autonomous-life-integration-20261113/`:
+`baseline-hashes.json`, original Git status/patches, `code-tests.log`, `types.log`,
+`pack.log`, `package-check.json`, `source-checks.json` and `candidate.json`.
+All U01–U16 and I01–I10 remain not run. Real native lifecycle/permissions,
+semantic recall, natural behavior, complete installed chat portability and
+device CPU/memory/GPU/wakeups remain owner acceptance.
+
+## Autonomous-life code delivery (2026-11-13)
+
+The owner authorized the discussed execution plan and implementation through the
+code/package delivery. The [owning integration plan](planning/autonomous-life-game.md)
+retains existing DSH/Life/Behavior/Economy/Memory and the Three.js Room. The
+[owner trial](handover/autonomous-life-owner-trial.md) is **not run**.
+
+Implemented source behavior:
+
+- Body facts share the effect checkpoint and request fingerprint; Economy facts
+  share its SQLite request/ledger transaction. Stable read-by-ID retains original
+  actor/channel/session and supports acknowledgement races across conversations.
+- Native Life reuses pending/steer/step/log reconciliation. Facts do not inherit
+  plan supersession or mandatory plan-save recovery. Native persistence is checked
+  before domain acknowledgement, including archived-home recovery. Owner prompts
+  use the effective native system surface and acknowledge only after a completed,
+  durably flushed turn. Facts remain system observations, never owner messages.
+- Incidental care retains accepted routes/dwells; temporary meals return to the
+  original operation only while valid. Rejected replacements, nested meal attempts
+  and cancellation cannot lose or revive old intent. Body checkpoint failures
+  reload the retained file rather than publishing uncommitted state.
+- Native autonomous tool schemas are scoped to life capabilities, with bounded
+  plan previews. Review keeps needed original file tools behind native path/scope
+  checks; other module stores are denied. Owner takeover restores normal native
+  tool access without weakening in-flight background permissions.
+- Body/Life/Desktop maintenance use existing events and actual deadlines rather
+  than per-second polling. Delayed accepted phases use their original boundaries;
+  Body conditions use authoritative unrounded metrics. Observation notifications
+  cannot self-trigger Life. Overdue events survive queue delays; persistent write
+  failures stop automatic hot retries until recovery.
+- Saved Life clock intent is independent of native/model readiness. A persisted
+  enabled restart retains deterministic offline sleep/hold time; explicit
+  disable/re-enable does not backfill paused needs. Accepted plan receipts resume
+  and advance before native runner startup. Real Body/Life code fixtures cover
+  both transitions and one-time completion after a delayed restart.
+- Room/Desktop visibility gates drawing, visual reads and media. Native changes
+  drive Room/Garden refresh, old generations cannot resume displays, and fresh
+  Desktop snapshots reconstruct locks without replaying hidden messages. Closing
+  Room still exits its presentation process. Hidden TV capture stops; showing it
+  does not silently reacquire permission.
+
+Verification actually executed, using only repository tools and disposable code
+fixtures; no DSH/Electron app, real account/model or personal workspace tests:
+
+| Check | Result and scope |
+| --- | --- |
+| `source ./scripts/env.sh` then `pnpm run check:types` | Passed |
+| `pnpm run test:autonomous-life` | Build passed; 111 code tests passed, zero failures/skips |
+| Cross-reviews and targeted regressions | Delivery/ack/attribution, review paths, temporary return, deadline precision/queue/failure and hidden-media races repaired and rechecked |
+| Changed JS/CJS/MJS parsing | 20 source/fixture files passed |
+| Vendor provenance | 267 recorded files matched their pinned or explicitly adapted digests; original origins/licenses retained |
+| Documentation links / source diff | 138 local links and their referenced anchors checked; `git diff --check` passed |
+| Extracted archive code fixture | 1,093 archive members; 267 vendor files matched; relocated Body, plan and Economy code retained one plan and applied body/wallet effects once; development implementation imports forbidden |
+
+The extracted fixture uses Node and temporary data only. It establishes package
+resource resolution for the exercised domain code, not DSH installation, Python
+environment preparation, full native chat portability, semantic model quality or
+hardware performance. The 111-test entry point is an explicit code-only list;
+`test:live`, installed-native/window scripts and broad unscreened tests were not run.
+
+Candidate: `.cache/autonomous-life-game/package/dsh-Chatpet-autonomous-life-198ecd7c0c9b.tgz`
+(126,608,638 bytes). SHA256:
+`198ecd7c0c9bfa1934f3982fcfff534cce06c4bed39bef4f71cb03c457948de0`.
+The archive is clean of AppleDouble/DS_Store metadata. It is **not installed**;
+installed `b6da9f10be64`, identity, binding and personal data remain untouched by
+this task. No commit/publication, real model call or new personal-data backup.
+
+Task evidence: `.cache/autonomous-life-game/{baseline/,types.log,code-tests.log,source-checks.json,package-check.json,candidate.json,pack.log}`.
+The existing dirty scene is retained. Functional U01–U16, CPU/GPU/memory/wakeup
+budgets and actual natural behavior remain owner acceptance after installation.
+
+## Virtual economy installation (2026-11-13)
+
+The owner authorized installation after the source delivery. Build
+`b6da9f10be64` is installed/enabled via the existing offline native installer;
+initialization is ready and bound storage completion is true. The installation
+receipt is `/Users/hy-yin/.dsh/profiles/desktop/chatpet-installation/installation.json`.
+DSH was gracefully closed before replacement and reopened afterward.
+
+The repo-local build and packaging passed. A clean read-only archive review
+matched 403 runtime/assets/helper files and verified Economy exports, bundle
+entries and Life/Behavior/Console wiring. Packing additionally strips extended
+attributes with the existing tar workflow. The installed archive and tree have
+zero xattr members and zero AppleDouble/metadata sidecars; all 403 critical
+installed files match source/build. The initial stopped prepare attempt needed
+normal filesystem access to open SQLite and was retried successfully before any
+package replacement; it did not reset or recover data.
+
+Identity, binding and the profile patch were preserved. Before normal startup,
+116 of 118 recorded existing files remained byte-identical. Core SQLite changed
+through the installer's explicit initialization; Memory's `memory.db-shm`
+coordination file changed through SQLite access, while its Bank and WAL bytes
+were retained. No files were missing and there were no other changes. Existing
+no-backup preference was retained; no extra personal-data backup was created.
+
+After reopening, read-only startup inspection confirms the new economic SQLite
+database, storage marker and live lease, the original companion/storage IDs,
+schema 1/config revision 1, and one retained legacy-garden import ledger entry.
+The balance is still zero. The DSH native conversation window was observed open;
+no economic button, allowance, trade, chat message or test model call was issued.
+The settings economic panel and detailed functional behavior remain owner-run
+acceptance; normal autonomous application behavior may continue after startup.
+
+Evidence: `.cache/economy-release/{build,pack,prepare,install}.log`,
+`archive-review.json`, `preserved-hashes.json`, `verification.json` and
+`startup-readback.json`. The prepared review archive and final installed archive
+have different tar identifiers because setup repacks its machine-bound bundle;
+their critical installed code/resources match the same delivered source/build.
+
+## Virtual economy source delivery (2026-11-13)
+
+Owner-authorized source implementation, without installation or functional
+testing. The [owning economic plan](planning/economy.md) records decisions,
+ownership, adjustable defaults, recovery and owner acceptance scenarios.
+
+Delivered: `22-Economy`, bound SQLite wallet/inventory/Garden/ledger and durable
+requests; configurable catalog/prices/growth/effects; owner settings operations;
+existing caretaker storage adapter; Life economic and real-reading steps; food
+reservation → matching Body effect checkpoint → inventory settlement; versioned
+reading offers/confirmation/bookmarks; package, initialization and offline
+backup integration. Legacy files and all unrelated working changes are retained.
+Actual source adoption is deferred until a later activated/installed delivery.
+
+Two clean-context static reviews found and prompted fixes for catalog-downlist
+bypasses, first-adoption authority markers, missing free-body completion during
+economy outage, manual garden retry IDs, optional blank grant notes, ledger
+projection, definite food refusal vs unknown effect, real-reading wakeup and
+Core initialization rollback/retry. Later review also removed routine dependence
+on the retained legacy JSON and a hot-path complete-library snapshot. The
+pre-open Body authority check prevents a newly created SQLite file from being
+mistaken for evidence that a missing old wallet survived.
+
+Checks completed:
+
+- Repo-local `pnpm run build` passed; log `.cache/economy-build.log`.
+- Changed console/vendor/helper JavaScript syntax parsing passed.
+- Source diff whitespace checks, changed-vendor provenance digests and owning
+  plan links passed. These are compilation/static checks, not functional tests.
+
+No stores were instantiated against personal data; no personal files were read
+or changed, no test suites/model calls were run, and no installation occurred.
+The prior installed build remains `56cb3d649757`; source readiness is distinct
+from installed behavior and owner acceptance. Income is a static resource-rule
+calibration, not an observed playthrough result. The known native permission
+limit is documented in the plan: path tools have an accidental-edit guard,
+while general commands/other plugins remain capable of accessing workspace
+files under the same account. No false OS isolation claim is made.
+
+## Plan write and Room state repair installation (2026-11-13)
+
+The owner explicitly authorized installing the plan-write/receipt repair after
+source inspection connected the same failing Room-state response to missing
+identity and character positioning. Build `56cb3d649757` was installed offline
+and enabled using the existing no-backup policy. The receipt is
+`/Users/hy-yin/.dsh/profiles/desktop/chatpet-installation/installation.json`;
+the installed archive is the adjacent `dsh-Chatpet-local-56cb3d649757.tgz`.
+It reports `installed`, initialization `ready` and storage `complete: true`,
+with the retained Deepseek-World binding and device-owned Python runtime.
+
+The repo-local build and packaging completed. An independent read-only archive
+inspection matched the five selected compiled Behavior/Life/Room entry files
+to the current build and found no duplicate paths or macOS metadata. The first
+restricted prepare-only attempt stopped at a Core SQLite read-only query with
+`unable to open database file`, before any installation. The authorized installer
+subsequently completed successfully with the required filesystem access.
+
+Companion/scope/owner IDs, workspace binding and the profile patch were retained.
+All 11 selected existing personality, portable settings, Life/Body/Garden and
+Memory files were byte-identical after installation and before normal startup.
+Sixteen critical installed files matched the current source/build; the installed
+metadata sidecar count was zero. No personal plan was manually edited or replayed.
+
+DSH was reopened and its native conversation/settings window loaded. The Mac
+locked before the final 大肥鱼 settings readback, so plugin-page readiness and
+Room character/name recovery were not visually verified. No message, Life switch
+or activity control was submitted; no functional tests or test model requests
+were run. The owner subsequently reported that Room character/name display had
+recovered on 2026-11-13. Plan behavior and remaining acceptance stay owner-run.
+
+Local evidence: `.cache/plan-write-fix-release/build.log`, `pack.log`,
+`prepare.log` (the initial failed preparation), `install.log`,
+`preserved-hashes.json` and `verification.json`.
+
+## Plan write and execution receipt source repair (2026-11-13)
+
+The owner reported plan-writing failure and then authorized repair. Read-only
+inspection of the installed native tool trace and scoped Life/Body records
+established two concrete issues:
+
+- Several initial submissions omitted a body action or an explicit garden
+  operation. The tool schema described these fields as optional/unstructured,
+  while the plan parser required them. A later valid submission did save.
+- That saved plan's first `water` operation had a persisted completed receipt
+  and effect timestamp, while Life remained waiting with no acknowledgement
+  and `Error: Expected plain JSON`. `CompanionRoom` assigned `undefined` to
+  optional receipt fields. The existing file serializer omitted those fields
+  on disk but retained the same nested objects in memory. Behavior's strict
+  raw-state digest failed after the effect/receipt commit, masking the result.
+  Reading the receipt for replacement/cancellation hit the same publication
+  exception. Installed critical files matched the source/build inspected.
+
+Source changes:
+
+- `src/behavior/room.ts`: undefined patch values delete optional execution
+  fields; dispatch deletes its transient resume flag. No global Core validation
+  is relaxed and no file format or data ownership changes.
+- `src/behavior/plugin.ts`: publication fingerprints an internal JSON projection
+  consistent with the existing save. Only projection/notification failures are
+  isolated, logged and exposed through the existing snapshot fault. Execution
+  and checkpoints stay outside that catch; committed receipts still reach Life
+  even if an observer fails. Subsequent publication can retry naturally.
+- `src/life/plan.ts`: a waiting operation without a current acknowledgement can
+  inspect its original stable receipt. Running/completed results recover actual
+  progress without dispatching again; missing receipts remain waiting and
+  failed/paused results keep their existing handling. Real next-consideration
+  times are retained. Receipt persistence/reconciliation failures propagate
+  instead of being hidden by an older replan reason.
+- `src/life/plan-tools.ts`: explicit SDK-supported `oneOf` schemas require each
+  activity's executable fields and describe supported garden targets and
+  transactions. The plan parser admits the caretaker's existing `visit` path;
+  program-owned inventory/balance validation and settlement remain authoritative.
+
+Verification: `pnpm run build` passed, followed by a successful
+`pnpm exec tsc -p tsconfig.build.json` after the review fix. Logs:
+`.cache/plan-write-fix-build.log` and `.cache/plan-write-fix-types.log`.
+Diff/changed-source whitespace and record-link checks passed. A clean read-only
+review found the old catch could hide a real reconciliation/save failure; that
+was repaired and rechecked with no remaining evidenced P1/P2 findings. These
+are compilation/static checks, not functional acceptance. No functional
+test, model call, installation or personal-data edit was performed. In
+particular, the stuck personal plan was not patched or replayed manually. The
+owner can verify after installation that a water/feed step advances once, plan
+replacement/cancellation works, the previous waiting plan reconciles its saved
+completion without repeating the effect, and valid garden parameters are used.
+The defective installed build `138fdb0fc394` was subsequently replaced by
+`56cb3d649757` after separate owner authorization; see the
+[installation record](#plan-write-and-room-state-repair-installation-2026-11-13).
+Behavioral and visual acceptance remain outstanding.
+
+## Autonomous plan continuation installation (2026-11-12)
+
+The owner explicitly authorized installing this follow-up. The repo-local build
+and package preparation completed, then the existing DSH installer applied build
+`138fdb0fc394` offline and retained the existing no-backup policy. Its device-owned
+receipt is `/Users/hy-yin/.dsh/profiles/desktop/chatpet-installation/installation.json`;
+the installed archive is the adjacent `dsh-Chatpet-local-138fdb0fc394.tgz`.
+The receipt reports `installed`, enabled, initialization `ready` and workspace
+storage `complete: true`, with no relocation required.
+
+Companion/scope/owner IDs, Deepseek-World binding and the user profile patch were
+unchanged. Core, Memory and cwd remain in the bound workspace; Python remains
+in the device-owned runtime. All 11 selected existing personality, portable
+settings, Life/Body/Garden and Memory files were byte-identical after installation
+and before normal app startup. Thirteen installed critical files matched the
+current source/build; installed macOS metadata sidecar count was zero. An
+independent read-only package inspection also confirmed the new hooks, keep tool,
+decision revision and optional correction setting in both generic/prepared
+archives, with zero metadata sidecars.
+
+DSH was reopened. Read-only Settings → 大肥鱼 startup verification observed
+**小汐的世界 · 已就绪 · Deepseek-World**. No chat, Life switch or activity action
+was submitted. No functional tests or test model calls were run; autonomous
+behavior and acceptance remain owner-run. This is installation/startup evidence.
+Local evidence is in `.cache/autonomous-continuation-release/`: `build.log`,
+`pack.log`, `prepare.log`, `install.log`, `preserved-hashes.json` and
+`verification.json`.
+
+## Autonomous plan continuation source follow-up (2026-11-12)
+
+The owner authorized continuing repairs after reviewing the autonomous-start
+gaps, while retaining owner testing and the existing installation. Source work
+reuses native greetings, alarms, the pending/planning-wake records, Life's owner
+queue and native retry backoff. No other assistant runtime, Memory bank, physical
+goal generator or periodic planner is introduced.
+
+- Enabled Life without a current plan or pending planning work receives one
+  bootstrap consideration even when optional morning/review times are blank.
+  Saved empty plans and indefinite activities remain quiet.
+- The final actual operation completion persists one consideration event if
+  no next time is already chosen. Body progress does not increase the intent
+  revision and animation endings never create these events.
+- `life_plan_keep` saves a considered continuation/wait without changing plan
+  IDs, body operations or progress. Failed/unfinished waiting work cannot be
+  falsely certified as continuing. Plan tools recheck caller admission and
+  cancellation inside the owner queue and around awaited body controls.
+- Native autonomous wake receipt tracking covers greetings and review as well
+  as plan alarms, including no-plan bootstrap. Real message admission and the
+  matching turn end establish the opportunity; prose is not a save receipt.
+  `planDecisionRevision` records explicit plan updates/keeps/controls separately
+  from clock changes, so alarm-only changes are detected while their newer
+  timing/cancellation intent is preserved.
+- Missing-decision correction count, status and retry projection persist in
+  the same Life record. Exhaustion remains visible after restart; accepted
+  physical work is retained. The optional portable `planningRepairAttempts`
+  uses one correction when blank, accepts zero to disable, and does not select
+  activity durations or planning frequency. Existing four-field settings are
+  read compatibly; their existing parser assertion was updated, not executed.
+- Pending planning blocks a second autonomous delivery without polling a due
+  timer in a loop. Owner interruptions/new intent and obsolete wake callbacks
+  are fenced in the existing queue; native session callbacks never await it.
+
+Verification: `pnpm run build` passed; changed runtime/settings JavaScript
+`node --check`, `git diff --check` and all three changed-vendor adaptation
+SHA-256 checks passed. Build log: `.cache/autonomous-continuation-build.log`.
+A clean read-only review found that alarm revisions could impersonate saved
+decisions and no-plan cancellation could be revived by an old wake. Both were
+repaired and rechecked using the separate decision receipt and owner-queued
+no-plan clock/cancellation projection. Final source review reported no remaining
+evidenced P1/P2 findings. This is static evidence, not behavioral acceptance.
+
+Status: source delivery compiled and statically reviewed, then separately
+[installed](#autonomous-plan-continuation-installation-2026-11-12) as
+`138fdb0fc394`. Owner acceptance remains pending. Functional/model tests and
+personal-data migration were not performed.
+
+## Persistent life plan installation (2026-11-12)
+
+The owner explicitly authorized installing the persistent-Life delivery and
+clean-review follow-up repairs. Build `ffbe4a2b5249` was installed offline and
+enabled, then DSH was reopened. The installer reports `installed`, initialization
+`ready` and workspace storage `complete: true`. The device-owned receipt is
+`/Users/hy-yin/.dsh/profiles/desktop/chatpet-installation/installation.json`;
+the installed archive is the adjacent `dsh-Chatpet-local-ffbe4a2b5249.tgz`.
+
+The existing companion ID, scope, owner and Deepseek-World workspace binding
+were retained. Core/Memory and working-directory paths still resolve inside
+the bound workspace; Python remains in the device-owned runtime. No data
+migration was required. Installation used the retained no-backup policy and
+did not reset or import companion records; the profile patch was unchanged.
+All nine existing files in the selected preservation set were byte-identical
+between clean shutdown and installation completion, before normal startup
+writes. Installed critical Life, Core, Behavior, native runtime, Garden and
+settings files matched the delivered source/build; installed AppleDouble
+sidecar count was zero.
+
+Read-only UI startup verification opened Settings → 大肥鱼 and observed
+**小汐的世界 · 已就绪 · Deepseek-World**. No chat message or functional action
+was submitted. This verifies installation and startup, not the Life behavior
+or owner acceptance. Functional tests and model calls were not run; acceptance
+remains with the owner. Logs and preservation hashes are under
+`.cache/life-reviewed-release/` (`pack.log`, `prepare.log`, `install.log`,
+`preserved-hashes.json`).
+
+## Clean-review follow-up source fixes (2026-11-12)
+
+The owner authorized fixing both confirmed review findings and preserving
+later-care requests. Source changes:
+
+- Native alarm scheduling/cancellation and failed-planning retries join the
+  CompanionLife intent queue already used by plan changes/body controls. A
+  version-conflicting request is rejected before changing a body operation;
+  native event persistence does not wait on that queue. Queued work rechecks
+  binding/runtime and tool cancellation/scope before mutation. Retry work also
+  rechecks the actual wake receipt and plan revision before clearing anything.
+- `careNow` inspects actual care state before interruption. Running Garden work
+  is reused; paused/queued work has matching status instead of false success.
+  Explicit force can continue one garden operation without claiming the entire
+  Life plan resumed.
+- Explicit and timeout defer retain the same concrete job/request in existing
+  Garden state, with durable wait-for-operation/idle fields. Normalization keeps
+  these fields; the original operation can resume without being blocked by a
+  job that is waiting for it. Deferred work starts after the prerequisite ends,
+  without enabling the old automatic goal generator or adding a timed cooldown. A later
+  force request with a new tool-call ID reprioritizes that same job and clears
+  its wait dependency. New defer requests do not depend on a stale interrupted
+  plan pointer; conflict dialogs retain their initially verified prerequisite.
+
+Verification: `pnpm run build`, changed JavaScript `node --check`,
+`git diff --check` and targeted vendor-origin SHA-256 checks passed. No test,
+model or personal-data operation was performed during the source repair;
+owner acceptance remains outstanding. Logs: `.cache/life-review-fixes-build.log`
+and `.cache/life-review-fixes-types.log`. The fixes were subsequently installed
+as recorded [above](#persistent-life-plan-installation-2026-11-12).
+
+## Persistent life plan source delivery (2026-11-12)
+
+Status: source implementation compiled and subsequently
+[installed](#persistent-life-plan-installation-2026-11-12); owner acceptance pending.
+This entry records source evidence, not functional acceptance.
+The [approved plan](planning/persistent-life-plan.md) owns scope and the
+[handover](handover/README.md) owns current status.
+
+Authorized work: a persistent current-life plan in the existing workspace
+`life.json`, one Room/Garden execution schedule, native Life alarms and
+cross-conversation continuation using stable Body operation receipts. Shared
+owner-context projections must preserve channel/guest permissions and avoid
+creating another assistant or memory writer. Economy extensions are deferred.
+
+Source evidence:
+
+- `src/life/plan.ts` owns revision-fenced intent in existing `life.json`;
+  `plan-tools.ts` admits only scoped owner conversations. Empty/rest plans are
+  valid. Relative duration and absolute end times come from the plan, not a
+  prescribed daily rhythm. Intent revisions do not churn on physical progress.
+- Life reuses native home/alarm delivery. Merge-safe LifeStore writes preserve
+  newly changed fields; plan clocks, pending delivery and native planning-wake
+  receipts reconcile across restart. A replaced plan cannot revive its old wake.
+- Behavior retains a single serialized body writer and receipt-bearing explicit
+  garden execution. Old indoor/garden goal generators are disabled in planned
+  mode. Accepted owner work is preserved and conflicts are reported. Stable
+  body-operation receipts cover hold/room/garden and existing bodily actions.
+- Pause/resume preserves physical position and remaining relative duration;
+  an explicit absolute deadline is not extended. Effects and their body receipt
+  share the home save. Existing garden transactions remain program-owned.
+- Core supplies the common environment/body/plan context without requiring Life
+  to run. The source settings page presents the current plan and actual progress.
+- `pnpm run build` passed. `node --check` passed for the changed standalone
+  console and vendored JavaScript. `git diff --check` and targeted vendor-origin
+  SHA-256 verification passed. Log: `.cache/life-plan-build.log`.
+
+These are compilation/static delivery checks, not runtime acceptance. Native
+retry backoff remains the existing implementation: the pending retry time is
+persistent, while the backoff attempt tier restarts after a process restart.
+The economy catalog, prices, income and grants are unchanged and deferred.
+
+No runtime test, model call or personal-data migration was performed for this
+change. Installation was subsequently authorized and recorded above. Owner
+testing and acceptance are outstanding.
+
+## Workspace storage and device-runtime completion (2026-11-12)
+
+The owner identified lingering bootstrap/source paths and authorized completing
+initialization, then explicitly confirmed the installed-code / companion-Repo /
+device-local boundary. Core's ready binding already selected Deepseek-World, but
+the actual Core database remained external and the Python launcher linked into
+the development checkout. The installer now inspects the retained Core identity,
+scope and initialized binding, selects the existing effective Bank, fixes cwd
+and prepares canonical Repo storage without inventing another identity.
+
+Offline application copied Core with conflict checks, preserved destination
+photos/transcript containers, and kept the original source bytes. The existing
+trusted CPython 3.12 environment was copied to device storage with venv/base,
+launcher, symlink and path rebinding. No packages were downloaded and no global
+Python or DSH executable was replaced. Setup ships in the plugin package and
+does not read a developer-cache identity on a new device.
+
+An initial native install attempt inherited the developer pnpm store because
+the run helper remerged a deliberately removed environment variable. A second
+attempt installed code but its offline Core import lacked DSH peer resolution.
+Both paths were repaired: complete supplied CLI environments are respected,
+and a temporary resolver maps only declared SDK peers through the DSH app.
+Failed initialization cannot be recorded as a ready installation.
+
+Final native installation and explicit offline initialization completed with
+no Driver/model turn. The device-owned receipt reports `installed`, `ready` and
+`storage.complete: true`, including the managed device runtime. Actual paths:
+
+- Core: `/Users/hy-yin/Developer/Deepseek Repo/Deepseek-World/.chatpet/data/core`.
+- Memory: `/Users/hy-yin/Developer/Deepseek Repo/Deepseek-World/.chatpet/data/memory`.
+- cwd: `/Users/hy-yin/Developer/Deepseek Repo/Deepseek-World`.
+- Python: `/Users/hy-yin/.dsh/profiles/desktop/chatpet-runtime/venv/bin/python`,
+  resolving inside the same device runtime's Python distribution.
+
+The current identity UUID is unchanged. Installed critical files match the
+build and AppleDouble count is zero. Core's live lock is at the Repo location.
+The prior bootstrap directory remains an inactive original, not a runtime input.
+Source inspection also moved channel policies/records and guest conversation
+containers into the Repo; Core now preserves their full native transcripts.
+Connection credentials stay device-owned. Current legacy channel record inventory
+was empty. Journal recovery protects both the new Repo and old device paths.
+
+Compilation, syntax parsing, artifact/path/identity readback completed. No unit,
+integration, paid-model, real-account delivery or second-device acceptance tests
+were run; the owner retained testing. No new personal backup was created. Receipt:
+`/Users/hy-yin/.dsh/profiles/desktop/chatpet-installation/installation.json`.
+
+## AppleDouble package metadata repair (2026-11-12)
+
+The owner reported DSH rejecting `locale/._en.json`. The manually created
+machine-bound archive contained 1,161 AppleDouble entries, and the same count
+was present in the installed package. The portable pnpm archive had none. The
+manual tar repack omitted `COPYFILE_DISABLE`, creating filesystem metadata
+sidecars that DSH treated as locale definitions.
+
+The existing `scripts/install-dsh.mjs` prepare-only path was reused; its tar
+environment already disables sidecar creation. Explicit metadata exclusions on
+extraction and creation, plus an output-inventory guard, now also cover sidecars
+already present in an input/stage. No apply-mode backups were invoked. The
+prepared clean archive was installed offline through the native CLI and DSH was
+reopened. Installed/archived AppleDouble counts are zero; installed locale bytes
+match the archive. The prior candidate link was updated to the clean bytes.
+No functional test, model call or personal-store change was made. Receipt:
+`.cache/world-arrival-empty-start-clean/receipt.json`.
+
+## World first arrival and empty Body/Garden source (2026-11-12)
+
+The owner authorized the World arrival flow and removal of Body/Garden template
+presets, retaining testing and acceptance. Inspection identified the original
+arrival gap: Core created the native home first but saved only its session ID;
+World then reused that session, skipped its move-in callback and could produce a
+return greeting instead. The existing World's state transition is now extracted
+as `markHomeArrival` and shared by Core and Life. It records the same existing
+`homeSessionId` / pending `greeting: arrival`, without another first-run ledger.
+The single-flight foreground opener remains. World still owns actual greeting
+delivery, acknowledgement and retry after Life is enabled. Reusing a saved home
+does not replay arrival; initialization/settings do not send a model request.
+
+New Body files use the upstream empty structure and valid geometry with neutral
+unconsumed needs, idle state and no scripted activity/history. New gardens use
+the original canonical state factory with empty plots, zero resources and no
+starter story or backdated planting. Automatic care defaults off; an unplanned,
+inactive empty garden does not produce a care narrative or future plan merely
+from reading/ticking. Existing saved data is retained. The original economy is
+unchanged, so purchase/planting requires actual replenishment; no free-resource
+or income rule was added.
+
+Compilation, changed JavaScript syntax parsing, packaging and document checks
+completed. No functional tests, model calls, installation or personal-data edits
+were performed. The prepared package preserves the current installed Core
+configuration and is available at
+`.cache/world-arrival-empty-start/dsh-Chatpet-world-arrival-empty-start.tgz`.
+Receipt: `.cache/world-arrival-empty-start/receipt.json`. The settings-fix package
+below remains the installed version; owner acceptance is pending.
+
+The owner subsequently requested installation. The exact prepared candidate was
+installed through the offline native plugin command with scripts disabled, and
+DSH was reopened. Changed installed files match the prepared archive and the
+bundle remains enabled. No personal stores were reset, no new personal backup
+was created and no test/model call was run. This supersedes the settings-fix
+installed package; detailed testing/acceptance remains with the owner.
+Installation receipt: `.cache/world-arrival-empty-start/install/receipt.json`.
+
+## Settings recovery with absent companion files (2026-11-12)
+
+The owner reported the generic settings failure immediately on opening the
+page. Read-only inspection found that Deepseek-World remained registered and
+present, but `.chatpet/` was absent. Settings snapshot read identity/policy via
+Core's document synchronization; its missing-file exception prevented the whole
+control plane from loading.
+
+The repair separates control-plane reads/rebinding from document readiness.
+An absent managed directory reports pending initialization; native context still
+requires ready documents. Pre-initialization role edits can save to the host
+store only when the whole managed directory is genuinely absent, not when
+existing documents are damaged. Startup now inspects without recreating files.
+
+Compilation/packaging completed and the prepared settings-fix archive was
+installed offline with the same Core configuration. Installed critical files
+match. The actual settings page was observed rendering its normal controls with
+“待初始化 · Deepseek-World”; the missing directory remained absent. No initialize
+action, data restoration, model call or test suite was run. Receipt:
+`.cache/initialization-identity-settings-fix/receipt.json`.
+
+## Initialization and shared identity source delivery (2026-11-12)
+
+Owner authorized implementation and retained testing/acceptance. The source now
+implements the [initialization/identity plan](planning/initialization-and-companion-identity.md):
+schema-3 inventory, valid empty settings and module stores, Core-owned self/diary
+and shared album access, and a common identity projection for Room/Pet/Life/native
+windows. Existing record groups keep their single legacy location. Behavior is
+uninstantiated until first use, using its existing state normalizer; existing
+Life-directory body state stays canonical, new bodies use data/behavior.
+
+The existing Pet editor needed a bounded empty-list adaptation: its Add action
+used the first existing body as a template and did nothing when the list was
+empty. It now reuses upstream template metadata only after an explicit Add;
+initialization still creates no pet. A derived display name/persona is not saved
+as another identity. Room identity uses escaped HTML only at HTML sinks.
+
+Compilation, JavaScript syntax parsing and packaging completed. No unit,
+integration, model or owner-acceptance tests were run. No installed package,
+binding, personal records or account configuration was changed. The candidate
+archive preserves the installed Core configuration and is prepared at
+`.cache/initialization-identity-release/dsh-Chatpet-initialization-identity.tgz`;
+the generic source archive is alongside it. The prior installed no-presets
+package remains active. No new personal-data backup was created.
+
+The offline Core relocation helper now supports a destination that already holds
+initialized attachments/transcripts: identical bytes are preserved and missing
+files are installed exclusively, while conflicting databases/files are refused.
+This helper was not executed. The current external bootstrap Core and existing
+record directories were not moved by this source delivery.
+
+The owner subsequently requested “安装”. The exact prepared candidate was
+installed through the offline native DSH plugin command with scripts disabled,
+then DSH was reopened. Installed critical-file hashes match the prepared files.
+Startup completed schema-3 initialization in Deepseek-World without a pending
+marker: blank COMPANION/self documents, diary/history containers and the Memory,
+recent-experience and Emotion stores are present. Existing bundle selection is
+retained, including dsh-chatbot. This is installation/startup readback, not a
+functional test or owner acceptance. Core remains at its configured external
+bootstrap path. Receipt: `.cache/initialization-identity-install/receipt.json`.
+
+## Room garden JSON repair (2026-11-12)
+
+The owner reported a repeated `chatpet-room:request` / `Expected plain JSON`
+banner and authorized its repair in a side chat. The installed package reproduced
+the error without opening personal databases: non-plot `buySeed`, `sell`,
+`buyCompost` and `visit` jobs created `route.target.gardenPlotId: undefined`.
+Behavior's strict canonical digest rejected that in-memory state during publish,
+which made the Room request fail. The plot-based water control passed.
+
+The local source now uses `null` for an absent garden plot ID at task creation
+and in the working-task projection. The latter also handles older saved tasks
+where that field was omitted. Valid plot IDs, including zero, retain their value;
+the strict JSON validator, planner, action effects and receipt semantics are
+unchanged. No personal data migration or manual save editing is needed.
+
+Seven new regressions exercise the real `Room.request` → Behavior path for those
+four non-plot jobs and a water control through walking, working and one committed
+completion, plus legacy projection and strict-validator rejection. Before the
+repair, the four non-plot requests and legacy projection failed; after it all
+seven passed. The seven existing body/movement cases also passed (14 focused
+cases total). TypeScript compilation and source/provenance checks passed.
+
+This is a source repair, not an installed delivery: the running `a66f40cea4cf`
+package was not replaced, and DSH was not restarted. Testing used disposable
+local directories with no model calls or live accounts. Existing worktree changes
+were preserved; no commit, publication or message to the parent chat was made.
+
+## Autonomous Room movement repair (2026-11-12)
+
+The owner reported frequent position jumps and clarified that they happen during
+autonomous movement. Two relevant causes were reproduced in the existing path:
+
+- The scene reset its prediction to each received snapshot's old position and
+  receipt time. At 1.05 m/s, a one-second-old packet pulled the displayed actor
+  back 1.05 m. The renderer now preserves the monotonic clock of an unchanged
+  route, compensates the first packet's age using the native Room/host shared
+  device clock, and uses the existing ETA to locate ordered path progress.
+  This also removes nearest-segment ambiguity on overlapping/returning legs.
+  Both overview and eyes cameras retain continuous display coordinates.
+- `CompanionRoom.act()` called the paused-autonomy cancellation helper even
+  while autonomy was enabled. Room's automatic `visit` could therefore cancel
+  a trip and expose its already-assigned destination, including a rejected
+  cooldown visit. Cancellation now runs only under the paused policy; ordinary
+  care reuses the original upstream route behavior.
+
+The server's regular autonomous movement was continuous in disposable long-run
+simulations. No new movement planner, business policy or actor distance-snap
+threshold was introduced. Upstream origin/license metadata was retained and the
+adapted scene hashes were updated. Separate route-cancellation position defects
+when explicitly pausing, waking on the way to bed or forcing garden care remain
+follow-up scope; this delivery does not claim to fix every possible relocation.
+
+Build **`a66f40cea4cf`** is installed and enabled, with archive SHA-256
+`a66f40cea4cf78177d0342c153a442ef3b962c02bb3102ec1a325dc0282313cd`.
+Seven focused regressions cover delayed/duplicate snapshots, ordered turns,
+overlapping legs, initial packet delay through arrival, repeated route geometry,
+ordinary care and automatic/cooldown visits, plus existing paused-body behavior.
+Build, JavaScript syntax and reference checks passed. The isolated native Room
+window retained its 7 ms recorded event refresh and stale-revision/boot filtering,
+with zero model calls. Final review also covered the initial-delay arrival case.
+
+Before replacement, a fresh verified offline backup was made. All 1,030 installed
+files matched the prepared package, and 27 protected roots / 119 files plus 19
+selected native-session registrations matched before reopening. Binding, profile
+patch and activation were preserved. DSH restarted and its personal settings
+loaded **小汐的世界 · 已就绪 · Deepseek-Test**. The Room-open control was invoked;
+the helper's personal scene visibility was not independently confirmed through
+the native app inspection. Detailed autonomous movement acceptance remains open.
+No personal model message or account-delivery test was sent.
+
+Receipts, logs, archive and private backup are under
+`.cache/room-motion-20261112/`. Existing compatibility work and its uncommitted
+changes were preserved; no commit or publication was performed.
+
+## DSH update compatibility (2026-11-12)
+
+The owner requested a compatibility repair after updating DSH, with less rigid
+version requirements. The installed host and its SDK packages are `0.2.2-rc.2`;
+Cordis remains `4.1.0`. The plugin manager visibly rejected the previous package
+because its exact `engines.dsh: 0.2.2-rc.1` requirement did not match. This was a
+manifest admission failure, not evidence of a broken native API.
+
+### Compatibility policy and implementation
+
+- `engines.dsh` and DSH peer declarations now use
+  `>=0.2.2-rc.1 <0.3.0-0`, admitting later prerelease and stable updates in the
+  same `0.2` series. Cordis peers use `^4.1.0`. This follows the host's existing
+  compatibility evaluator, including its prerelease support; no local version
+  switch or exemption bypass was added.
+- Development SDKs remain pinned for reproducible builds. Those development
+  pins do not restrict the running DSH version. Existing permission, workspace,
+  data-contract and matching-code recovery checks remain intact.
+- The actual installed host's evaluator rejects the old manifest and accepts
+  the repaired one. The recorded matrix accepts `rc.1`, `rc.2`, `0.2.2`, and
+  subsequent `0.2.3` prerelease/stable examples, while retaining the minimum API
+  baseline and excluding an unverified `0.3` boundary. This matrix verifies
+  admission semantics; it does not prove every future release's behavior.
+- TypeScript and the native-services fixture passed against the actual `rc.2`
+  host: 22 ordinary native steps without Core execution gates, persona pinning,
+  cross-session/guest recall, Memory CRUD/toggle/outage behavior and rebinding.
+  The first restricted run could not use the local Memory service and failed
+  recall; the rerun allowing its loopback service passed. All models were local
+  fixtures, with zero paid inference calls.
+
+### Installed delivery
+
+Build **`6ad37ba9b972`**, later superseded by the Room repair above, was installed
+offline through the native installer after
+closing DSH and verifying a fresh offline backup. Its archive SHA-256 is
+`6ad37ba9b9729676e8d0389e4477e26c5c8c986a11fc0b0a1685aefa399907bd`.
+All 1,030 installed files matched the prepared archive. Before startup, all
+26 protected roots / 116 files and 18 selected native-session registrations
+matched the fresh backup; Core bindings and the user's profile patch were
+preserved.
+
+The previously disabled Chatpet bundle was enabled through DSH's plugin manager.
+Other bundles were left as found. The compatibility error disappeared, and
+**Settings → 大肥鱼** loaded **小汐的世界 · 已就绪 · Deepseek-Test** with all eight
+tabs. SOUL/USER and the 18 retained native transcripts / 979 original events
+remained intact; startup appended one native event and updated normal runtime
+state. No personal model message, real-account delivery or microphone test was
+sent. Detailed owner acceptance remains open.
+
+Receipts and logs: `.cache/dsh-compatibility-20261112/verification.json`,
+`startup.json`, `install/installation.json`, `types.log`, and
+`native-services-unrestricted.log`. The private full backup is in
+`pre-install-backup/`; the native installer also retained its profile/Core/Memory
+rollback copy under the profile's `backups/codex-pet/` directory. Documentation
+status was refreshed after installation; archived guides retain their packaging
+snapshot. No commit or publication was performed.
+
 ## Native-service refactor (2026-11-12)
 
 The owner approved the [amended direction](planning/native-service-refactor.md)
 after review of Claude's proposal: “可以，按这个方向推进吧”. Source integration
-and the owner-approved installation are complete. Build `c18f11e04c85` is installed
-and enabled; `99a9fb2a2fd9` remains available for rollback. No account delivery,
+and the initial owner-approved installation are complete. Initial build
+`c18f11e04c85` was superseded by the compatibility repair above;
+`99a9fb2a2fd9` remains preserved. No account delivery,
 commit or detailed owner acceptance is recorded by these checks.
 
 ### Implemented critical paths
@@ -748,6 +1846,17 @@ The native checks use the installed DSH libraries and disposable data.
 The Electron window check needs a desktop session. The Memory process checks
 start a temporary local service. See [settings](settings.md) for saved defaults.
 
+## Blank Pet/Life configuration (2026-11-12)
+
+Owner requested removal of Pet/Life presets. New Pet configurations contain
+`pets: []`; migration and the adapted upstream loader preserve that explicit
+empty list. Life wake/review times remain blank until saved, and activation
+validates them before writing the enabled control state. The build passed and
+the local offline no-presets archive was installed. Installed source readback
+confirmed blank Life times and empty-list handling; Deepseek-World readback
+confirmed `pets: []` and no Life control file. No broad regression run or model
+call was performed for this change.
+
 ## Installation receipt
 
 The installer used an offline local archive and preserved the profile patch.
@@ -764,3 +1873,21 @@ Room plugin; DSH leaves that plugin inactive.
 The current Memory runtime uses the bundled Mnemosyne engine and its workspace
 adapter for source validation, archive joins and owner operations. The upstream
 global capture plugin is inactive. Native session logs remain owned by DSH.
+
+## 2026-11-12 live Core persistence repair
+
+Open-file inspection located the active SQLite database in a moved `.chatpet`
+under Trash, while the configured Repo path lacked both database and lease.
+Native profile hot loading mounted a temporary maintenance entry without
+restarting Core. SQLite online backup preserved the actual active connection,
+with integrity/content checks before reopening the same store on the canonical
+Repo path. Recovery retained 5 metadata rows, 9 domain records and 10 request
+receipts and the existing companion UUID. The temporary profile entry was
+removed; no old bootstrap was restored. Device-owned metadata receipt:
+`~/.dsh/profiles/desktop/chatpet-installation/live-core-repair.json`.
+
+Permanent readiness checks use file identity and the owning lease in addition
+to the mandatory Core database inventory. Explicit initialization recovers only
+the current live connection; it does not discover or import cached companions.
+A known initialized database missing at restart is reported instead of replaced
+with empty state. No test suite or model calls were run.

@@ -5,6 +5,8 @@
       name: dsh-Chatpet/10-Memory
     - id: 20-Emotion
       name: dsh-Chatpet/20-Emotion
+    - id: 22-Economy
+      name: dsh-Chatpet/22-Economy
     - id: 25-Behavior
       name: dsh-Chatpet/25-Behavior
     - id: 30-Desktop

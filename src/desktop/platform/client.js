@@ -1951,12 +1951,15 @@ function readSay(leaf$1) {
 	const d = leaf$1.data;
 	if (d.clear === true) return { kind: "clear" };
 	if (typeof d.text !== "string" || !d.text) return null;
+	const remaining = typeof d.expiresAt === "number" && Number.isFinite(d.expiresAt) ? d.expiresAt - Date.now() : void 0;
+	if (remaining !== void 0 && remaining <= 0) return null;
+	const duration = typeof d.duration === "number" && Number.isFinite(d.duration) && d.duration >= 0 ? d.duration : void 0;
 	return {
 		kind: "say",
 		text: d.text,
 		image: typeof d.image === "string" ? d.image : void 0,
 		url: typeof d.url === "string" ? d.url : void 0,
-		duration: typeof d.duration === "number" && Number.isFinite(d.duration) && d.duration >= 0 ? d.duration : void 0,
+		duration: remaining === void 0 ? duration : Math.min(duration ?? remaining, remaining),
 		anim: typeof d.anim === "boolean" ? d.anim : void 0,
 		voiceTo: d.voiceTo === "web" || d.voiceTo === "desktop" ? d.voiceTo : void 0
 	};
@@ -3952,6 +3955,7 @@ function readConfigEntries(merged) {
 		out.push({
 			key,
 			kind: key === "main" ? "main" : "pack",
+			bodyTemplate: conf?.bodyTemplate,
 			...typeof conf?.whisperPrompt === "string" ? { entryPrompt: conf.whisperPrompt } : {},
 			pets: pets.map((pet) => ({
 				...pet,
@@ -5522,14 +5526,7 @@ function makePetIdentityFields(rt) {
 	const cells = (props) => {
 		const { pet, busy, onChange } = props;
 		return [
-			field(t("nameLabel"), h("input", {
-				type: "text",
-				className: INPUT_CLASS,
-				value: String(pet.name ?? ""),
-				disabled: busy,
-				maxLength: 50,
-				onChange: (e) => onChange({ name: e.target.value })
-			}), t("nameHint")),
+			null,
 			field(t("sizeLabel"), sizeInput(pet.size, busy, (v) => onChange({ size: v })), t("sizeHint")),
 			field(t("sizePercentLabel"), percentInput(pet.sizePercent ?? SIZE_PERCENT_DEFAULT, busy, (v) => onChange({ sizePercent: v })), t("sizePercentHint")),
 			field(t("displayLabel"), h(Select, {
@@ -6397,7 +6394,7 @@ function nextPetId(list, kind = "main") {
 function draftPet(template, id) {
 	return {
 		id,
-		name: id,
+		name: template.name || "伙伴",
 		size: template.size,
 		sizePercent: template.sizePercent ?? SIZE_PERCENT_DEFAULT,
 		balanceEnabled: template.balanceEnabled,
@@ -6454,7 +6451,7 @@ function usePetList(rt, requestDialog) {
 	}));
 	const add = () => {
 		const group = pets.filter((pet) => (pet.assetRoot ?? "main") === kind);
-		const template = group[0];
+		const template = group[0] ?? loadedRef.current.find(entry => entry.key === kind)?.bodyTemplate;
 		if (!template) return;
 		const id = nextPetId(pets, kind);
 		const draft = {
@@ -9073,13 +9070,14 @@ function createAnimationFlow(rt) {
 		const machineRef = useRef(null);
 		const sleep$1 = () => machineRef.current ?? (machineRef.current = createSleepMachine(hub, pickNext, log$2));
 		/** 此刻是否在睡（含两段过渡）。 */
-		const sleeping = () => sleep$1().sleeping();
+		const sleeping = () => hub.cfg().companionPlayback ? hub.cfg().companionPlayback.kind === "sleep" : sleep$1().sleeping();
 		/** 当前睡觉阶段；醒着为 null。 */
-		const sleepPhase = () => sleep$1().phase();
+		const sleepPhase = () => hub.cfg().companionPlayback ? (hub.cfg().companionPlayback.kind === "sleep" ? "loop" : null) : sleep$1().phase();
 		/** 应用宿主写的睡觉状态（转发给状态机）。 */
-		const applySleep = (state) => sleep$1().apply(state);
+		const applySleep = (state) => {if (!hub.cfg().companionPlayback) sleep$1().apply(state);};
 		/** 非终态工作状态回到档位循环；冻结、空闲与终态都返回 false。 */
 		const resumeWorkStatusAnim = () => {
+			if (hub.cfg().companionPlayback) return false;
 			const card = hub.card;
 			if (hub.ownAnim.isFrozen()) return false;
 			if (sleeping()) return false;
@@ -9098,6 +9096,7 @@ function createAnimationFlow(rt) {
 		};
 		/** 按权重掷骰选择下一段自播动画。 */
 		const pickNext = () => {
+			if (hub.cfg().companionPlayback) return false;
 			const card = hub.card;
 			if (hub.ownAnim.isFrozen()) return;
 			if (sleeping()) return;
@@ -9118,6 +9117,7 @@ function createAnimationFlow(rt) {
 		};
 		/** 按播完判定改状态。 */
 		const applyEndedCue = (cue) => {
+			if (hub.cfg().companionPlayback) return false;
 			const card = hub.card;
 			if (sleep$1().consumeEnded()) return;
 			if (cue.kind === "ignore") return;
@@ -9796,6 +9796,203 @@ const REASON_FROZEN = "frozen";
 const ASSET_FETCH_TIMEOUT_MS = 1e4;
 /** 日志时间戳：与其余宠物日志同一格式，便于对照同一次事件。 */
 const stamp$2 = (petId) => new Date().toTimeString().slice(0, 8) + " pet=" + petId;
+function sampleActivityPlayback(playback, now = Date.now()) {
+    if (!playback || playback.version !== 1 || !Array.isArray(playback.segments) || !playback.segments.length)
+        return;
+    const pausedMs = typeof playback.pausedMs === 'number' && Number.isSafeInteger(playback.pausedMs) && playback.pausedMs > 0 ? playback.pausedMs : 0;
+    let index = 0, elapsed = playback.startedAt > 0 ? Math.max(0, now - playback.startedAt - pausedMs) : Math.max(0, now);
+    if (!playback.startedAt)
+        index = playback.segments.length - 1;
+    while (index < playback.segments.length - 1 && elapsed >= playback.segments[index].durationMs) {
+        elapsed -= playback.segments[index].durationMs;
+        index++;
+    }
+    const part = playback.segments[index], duration = Math.max(1, part.durationMs);
+    const complete = part.mode !== 'loop' && (!playback.startedAt || elapsed >= duration);
+    const offsetMs = part.mode === 'static' ? 0 : part.mode === 'loop' ? elapsed % duration : complete ? Math.max(0, duration - 1) : elapsed;
+    return { ...part, key: playback.key + ':' + index, offsetMs, complete, ...(index < playback.segments.length - 1 ? { nextInMs: Math.max(1, duration - elapsed) } : {}) };
+}
+
+function createActivityPlaybackController({ sample, play, visible = () => !document.hidden, now = () => Date.now(), set = (fn, ms) => setTimeout(fn, ms), clear = id => clearTimeout(id), failure = () => { }, invalidate = () => { }, present = () => { } }) {
+    let descriptor, current, video, timer, endedBinding, endedKey, endedVideo, disposed = false, suspended = false, generation = 0;
+    const stopTimer = () => { if (timer !== undefined) {
+        clear(timer);
+        timer = undefined;
+    } };
+    const pause = () => { try {
+        video?.pause();
+    }
+    catch { } };
+    const detach = () => {
+        if (endedBinding && endedBinding.video.onended === endedBinding.listener)
+            endedBinding.video.onended = null;
+        if (endedBinding?.error)
+            endedBinding.video.removeEventListener('error', endedBinding.error);
+        endedBinding = undefined;
+    };
+    function schedule(part) {
+        stopTimer();
+        const wait = part.nextInMs ?? (part.mode === 'once' && !part.complete ? part.durationMs - part.offsetMs : undefined);
+        if (!disposed && wait !== undefined && Number.isFinite(wait) && wait > 0 && visible() && !suspended)
+            timer = set(() => { timer = undefined; update(descriptor, true); }, Math.max(1, wait));
+    }
+    function update(next, force = false) {
+        if (disposed)
+            return;
+        descriptor = next;
+        const part = descriptor && sample(descriptor, now());
+        if (!part) {
+            endedKey = undefined;
+            endedVideo = undefined;
+            if (current || video) {
+                stopTimer();
+                pause();
+                detach();
+                current = undefined;
+                video = undefined;
+                generation++;
+                invalidate();
+            }
+            return;
+        }
+        if (endedKey !== part.key) {
+            endedKey = undefined;
+            endedVideo = undefined;
+        }
+        if (!visible()) {
+            suspend();
+            return;
+        }
+        suspended = false;
+        if (!force && current?.key === part.key && current.complete === part.complete)
+            return;
+        const same = current?.key === part.key;
+        current = part;
+        generation++;
+        const ticket = generation;
+        if (same && video && video.readyState >= 2)
+            ready(video, part.key);
+        else {
+            pause();
+            video = undefined;
+            endedVideo = undefined;
+            play(part, generation);
+        }
+        if (ticket === generation)
+            schedule(part);
+    }
+    function isCurrent(key, ticket) {
+        return !disposed && !suspended && visible() && descriptor && current?.key === key
+            && (ticket === undefined || ticket === generation) && sample(descriptor, now())?.key === key;
+    }
+    function ready(element, key, ticket) {
+        if (!isCurrent(key, ticket)) {
+            try {
+                element.pause();
+            }
+            catch { }
+            return false;
+        }
+        const part = sample(descriptor, now());
+        if (!part)
+            return false;
+        detach();
+        video = element;
+        current = part;
+        element.loop = part.mode === 'loop';
+        const duration = Number.isFinite(element.duration) && element.duration > 0 ? element.duration : part.durationMs / 1000;
+        const at = Math.max(0, Math.min(part.offsetMs / 1000, Math.max(0, duration - .001)));
+        const playbackGeneration = generation;
+        const held = endedKey === key && part.mode === 'once';
+        if (!held || endedVideo !== element) {
+            try {
+                element.currentTime = held ? Math.max(0, duration - .001) : at;
+            }
+            catch {
+                fail(key, playbackGeneration);
+                return false;
+            }
+            if (held)
+                endedVideo = element;
+        }
+        element.onended = () => {
+            if (video !== element || !isCurrent(key, playbackGeneration))
+                return;
+            if (part.mode === 'once') {
+                if (endedKey !== key) {
+                    endedKey = key;
+                    endedVideo = element;
+                    element.pause();
+                    // A decoder may finish before the shared segment boundary. Hold the
+                    // real last frame, without playing a tail repeatedly until that wake.
+                    const endedDuration = Number(element.duration);
+                    if (Number.isFinite(endedDuration) && endedDuration > 0 && element.currentTime < endedDuration - .001)
+                        try {
+                            element.currentTime = Math.max(0, endedDuration - .001);
+                        }
+                        catch {
+                            fail(key, playbackGeneration);
+                        }
+                }
+                return;
+            }
+            update(descriptor, true);
+        };
+        const error = () => fail(key, playbackGeneration);
+        element.addEventListener('error', error);
+        endedBinding = { video: element, listener: element.onended, error };
+        if (held || part.mode === 'static' || part.complete)
+            element.pause();
+        else {
+            try {
+                void element.play()?.catch?.(() => fail(key, playbackGeneration));
+            }
+            catch {
+                fail(key, playbackGeneration);
+                return false;
+            }
+        }
+        if (isCurrent(key, playbackGeneration))
+            present(element, part);
+        schedule(part);
+        return true;
+    }
+    function suspend() {
+        if (disposed)
+            return;
+        suspended = true;
+        generation++;
+        stopTimer();
+        pause();
+        detach();
+        invalidate();
+    }
+    function fail(key, ticket) {
+        if (!isCurrent(key, ticket))
+            return;
+        const part = sample(descriptor, now());
+        endedKey = undefined;
+        endedVideo = undefined;
+        generation++;
+        stopTimer();
+        pause();
+        detach();
+        failure(descriptor, current);
+        // A failed movie does not cancel the next accepted visual stage. Keep only
+        // that real boundary, never a retry timer for a failed final loop/one-shot.
+        if (part?.nextInMs !== undefined)
+            schedule(part);
+    }
+    return {
+        update, ready, isCurrent, suspend,
+        active: () => Boolean(descriptor && !disposed),
+        sample: () => descriptor && sample(descriptor, now()),
+        fail,
+        dispose() { if (disposed)
+            return; suspend(); detach(); disposed = true; descriptor = undefined; current = undefined; video = undefined; endedKey = undefined; endedVideo = undefined; },
+    };
+}
+
 // Included by the presentation build in both native renderers. This observer
 // never chooses or starts an animation; callers invoke it after actual playback.
 function createCompanionPlaybackObserver(send, allowedNames, createId = () => crypto.randomUUID()) {
@@ -9860,13 +10057,28 @@ function createOwnAnimation(deps) {
 		if (playing === playbackId) playing = null;
 		deps.report(playbackId, status, reason);
 	};
-	const switchTo = (next, nextOnce, cuePlaybackId) => {
+	let companionSample = null, companionTicket, waitingFresh = false, companionReady, companionReleasePending = false;
+  const clearCompanionReady=()=>{
+    if(companionReady){companionReady.video.removeEventListener("loadeddata",companionReady.listener);companionReady=undefined;}
+  };
+  const companion = createActivityPlaybackController({sample:sampleActivityPlayback,
+    visible:()=>mounted && !document.hidden && !waitingFresh && !frozen,
+    present:(element,part)=>{element.style.visibility="";element.style.transform=part.mirror === true ? "scaleX(-1)" : "";},
+    invalidate:()=>{clearCompanionReady();loader.abortAll();gen++;pending=null;},
+    play:(part,ticket)=>{companionSample=part;companionTicket=ticket;switchUnmanaged(part.desktopClip,part.mode!=='loop',null);},
+    failure:()=>{for(const element of [deps.videoA(),deps.videoB()])if(element){element.pause();element.style.visibility='hidden';}}
+  });
+  const switchUnmanaged = (next, nextOnce, cuePlaybackId) => {
+    const managedSample=companionSample, managedTicket=companionTicket;
+    companionSample=null;
+    clearCompanionReady();
+    if(managedSample && pending!==null)loader.abortAll();
 		if (cuePlaybackId !== null) deps.clearCuePlayback();
 		const cfg = deps.cfg();
 		const url = cueUrl;
 		cueUrl = null;
 		if (next === "") return;
-		if (pending !== null && pending.anim === next && pending.once === nextOnce) {
+		if (pending !== null && pending.anim === next && pending.once === nextOnce && pending.companionKey === managedSample?.key && pending.companionTicket === managedTicket) {
 			if (cuePlaybackId !== null) {
 				playing = cuePlaybackId;
 				deps.report(cuePlaybackId, "playing");
@@ -9878,23 +10090,23 @@ function createOwnAnimation(deps) {
 		pending = {
 			anim: next,
 			once: nextOnce,
-			gen: swapGen
+			gen: swapGen, companionKey:managedSample?.key, companionTicket:managedTicket
 		};
 		const targetIndex = front === 0 ? 1 : 0;
 		const el$1 = elementOf(targetIndex);
 		if (el$1 === null) return;
 		el$1.loop = !nextOnce;
 		el$1.muted = true;
-		el$1.autoplay = true;
+		el$1.autoplay = !managedSample;
 		el$1.playsInline = true;
 		el$1.onended = nextOnce ? (event) => deps.onEnded(handleEnded(event)) : null;
-		el$1.onerror = cuePlaybackId === null ? null : () => reportOnce(cuePlaybackId, "failed", REASON_DECODE);
+		el$1.onerror = managedSample ? () => companion.fail(managedSample.key,managedTicket) : cuePlaybackId === null ? null : () => reportOnce(cuePlaybackId, "failed", REASON_DECODE);
 		const assetUrl = animationAssetUrl({
 			cueUrl: url,
 			assetRoot: cfg.assetRoot ?? "",
 			id: cfg.id,
 			anim: next,
-			ext: thumbExt()
+			ext: managedSample ? ANIMATION_EXT : thumbExt()
 		});
 		loader.load(assetUrl, {
 			onObjectUrl: (objectUrl) => {
@@ -9917,13 +10129,16 @@ function createOwnAnimation(deps) {
 				if (!mounted) return;
 				if (pending?.gen !== swapGen) return;
 				pending = null;
+				if(managedSample)companion.fail(managedSample.key,managedTicket);
 				if (cuePlaybackId !== null) reportOnce(cuePlaybackId, "failed", REASON_ASSET_LOAD);
 				console.warn("[dsh-pet] 素材加载失败 pet=" + cfg.id + " anim=" + next + "：" + (error instanceof Error ? error.message : String(error)) + "（已释放本次切换）");
 			}
 		});
 		const onReady = () => {
 			el$1.removeEventListener("loadeddata", onReady);
+			if(companionReady?.listener===onReady)companionReady=undefined;
 			if (pending?.gen !== swapGen) return;
+			if(managedSample && !companion.isCurrent(managedSample.key,managedTicket)){el$1.pause();return;}
 			const outgoing = elementOf(front);
 			el$1.classList.add("is-front");
 			if (outgoing !== null && outgoing !== el$1) {
@@ -9937,17 +10152,33 @@ function createOwnAnimation(deps) {
 			pending = null;
 			playing = cuePlaybackId;
 			el$1.style.transform = deps.facing() === "right" ? "scaleX(-1)" : "";
+			if(managedSample){el$1.onerror=null;companion.ready(el$1,managedSample.key,managedTicket);deps.onFrontReady(el$1);return;}
+			el$1.style.visibility="";
 			el$1.play().then(() => {
-				if (cuePlaybackId === null && mounted && gen === swapGen && frontVideo() === el$1) observeCompanionRandomPlayback(el$1, next, cfg.id);
+				if (!cfg.companionPlayback && cuePlaybackId === null && mounted && gen === swapGen && frontVideo() === el$1) observeCompanionRandomPlayback(el$1, next, cfg.id);
 				if (cuePlaybackId !== null) deps.report(cuePlaybackId, "playing");
 			}).catch(() => {
 				if (cuePlaybackId !== null) reportOnce(cuePlaybackId, "failed", REASON_PLAY_REJECTED);
 			});
 			deps.onFrontReady(el$1);
 		};
+		if(managedSample)companionReady={video:el$1,listener:onReady};
 		el$1.addEventListener("loadeddata", onReady);
 	};
-	const handleEnded = (event) => {
+  const switchTo = (next,nextOnce,cuePlaybackId) => {
+    const descriptor=deps.cfg().companionPlayback;
+    if(descriptor){
+      deps.clearPendingSquash?.();
+      if(cuePlaybackId!==null)deps.report(cuePlaybackId,"cancelled","body-activity");
+      companion.update(descriptor);return;
+    }
+    if(companion.active() || companionReleasePending)deps.clearPendingSquash?.();
+    companion.update(undefined);
+    if(companionReleasePending && (document.hidden || waitingFresh || frozen))return;
+    companionReleasePending=false;switchUnmanaged(next,nextOnce,cuePlaybackId);
+  };
+  const handleEnded = (event) => {
+    if(deps.cfg().companionPlayback){companion.update(deps.cfg().companionPlayback,true);return {kind:"ignore"};}
 		const endedOn = event === void 0 ? null : event.currentTarget;
 		if (endedOn !== null && !endedOn.classList.contains("is-front")) return { kind: "ignore" };
 		const done = playing;
@@ -9971,7 +10202,21 @@ function createOwnAnimation(deps) {
 	return {
 		switchTo,
 		handleEnded,
-		stopLoopingFront: () => {
+    refreshCompanion: () => {
+      const force=waitingFresh;waitingFresh=false;
+      const cfg=deps.cfg();
+      if(cfg.companionPlayback || companion.active() || companionReleasePending)deps.clearPendingSquash?.();
+      if(cfg.companionPlayback)companionReleasePending=false;
+      else if(companion.active())companionReleasePending=true;
+      companion.update(cfg.companionPlayback,force);
+      if(companionReleasePending && !frozen && !document.hidden){
+        companionReleasePending=false;
+        if(cfg.animations.idle?.length)switchUnmanaged(cfg.animations.idle[0],false,null);
+      }
+    },
+    suspendCompanion: () => {waitingFresh=true;companion.suspend();},
+    stopLoopingFront: () => {
+      if(deps.cfg().companionPlayback)return;
 			const el$1 = frontVideo();
 			if (el$1 === null) return;
 			el$1.loop = false;
@@ -9983,6 +10228,7 @@ function createOwnAnimation(deps) {
 		setFrozen: (next) => {
 			if (frozen === next) return null;
 			frozen = next;
+			if(deps.cfg().companionPlayback){if(next)companion.suspend();else companion.update(deps.cfg().companionPlayback,true);}
 			if (next) {
 				frontVideo()?.pause();
 				if (playing !== null) reportOnce(playing, "cancelled", REASON_FROZEN);
@@ -9995,6 +10241,8 @@ function createOwnAnimation(deps) {
 		playingPlayback: () => playing,
 		dispose: () => {
 			mounted = false;
+			companion.dispose();
+			clearCompanionReady();
 			loader.abortAll();
 			if (blobUrl.a !== null) loader.release(blobUrl.a);
 			if (blobUrl.b !== null) loader.release(blobUrl.b);
@@ -10052,6 +10300,7 @@ function createCardAnimation(rt) {
 			facing: () => card.facingRef.current,
 			report: input.report,
 			clearCuePlayback: () => input.setCuePlayback(null),
+			clearPendingSquash: () => {pendingSquash.current = false;},
 			onFrontReady: (el$1) => {
 				if (pendingSquash.current) {
 					pendingSquash.current = false;
@@ -10065,7 +10314,13 @@ function createCardAnimation(rt) {
 		}));
 		const ownAnim = ownAnimRef.current;
 		live.current.ownAnim = ownAnim;
-		const { anim, cuePlayback, once, seq } = card.state;
+    useEffect(()=>{ownAnim.refreshCompanion();},[cfgRef.current]);
+    useEffect(()=>{
+      const changed=()=>{ownAnim.suspendCompanion();};
+      document.addEventListener("visibilitychange",changed);
+      return ()=>document.removeEventListener("visibilitychange",changed);
+    },[]);
+    const { anim, cuePlayback, once, seq } = card.state;
 		useEffect(() => {
 			ownAnim.switchTo(anim, once, cuePlayback);
 		}, [
@@ -10106,7 +10361,7 @@ function createCardAnimation(rt) {
 			const unregisterProgress = registerProgress(petId, () => {
 				const el$1 = ownAnim.frontVideo();
 				const playbackId = ownAnim.playingPlayback();
-				const anim$1 = card.animRef.current;
+				const anim$1 = cfgRef.current.companionPlayback ? sampleActivityPlayback(cfgRef.current.companionPlayback)?.desktopClip ?? card.animRef.current : card.animRef.current;
 				if (el$1 === null) return {
 					playbackId,
 					anim: anim$1,
@@ -10714,7 +10969,7 @@ function createDrag(card) {
 			hit: e.currentTarget
 		});
 	};
-	const onClick = () => {
+	const onClick = (event) => {
 		const c = card();
 		if (press.active || press.dragging || performance.now() < justDraggedUntil) return;
 		if (pressScoreFired) {
@@ -10726,6 +10981,7 @@ function createDrag(card) {
 		c.stopFlight();
 		c.stopAutonomy();
 		c.playClickSound();
+		if(c.companionTap?.(event))return;
 		c.setOnce(true);
 		if (!c.clickAnims.length) return;
 		const name = pick(c.clickAnims);
@@ -10763,6 +11019,16 @@ function createCardDrag(rt) {
 				physics: cfgRef.current.physics,
 				dragAnims: live.current.flow?.sleeping() ?? false ? [] : cfgRef.current.animations.drag,
 				clickAnims: cfgRef.current.animations.clicks,
+        companionTap: event => {
+          const cfg=cfgRef.current;
+          if(!cfg.companionPlayback)return false;
+          pendingSquash.current=false;
+          if(live.current.ownAnim.isFrozen() || event?.ctrlKey || event?.metaKey || event?.altKey)return true;
+          const body=JSON.stringify({requestId:crypto.randomUUID()});
+          const path=cfg.companionPlayback.kind==='sleep'?'/wake':'/pet';
+          void postAction(ROUTE_PATH + '/native-feature?pet=' + encodeURIComponent(cfg.id),{path,method:'POST',body});
+          return true;
+        },
 				idleAnims: live.current.flow?.sleeping() ?? false ? [] : cfgRef.current.animations.idle,
 				currentAnim: card.animRef.current,
 				setOnce: (on) => setOnce(on),
@@ -10918,15 +11184,30 @@ async function hearAudio(url, audio, signal) {
 		};
 	}
 }
-async function startRecording() {
+async function startRecording(signal) {
+	signal?.throwIfAborted();
 	const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } });
-	const ctx = new AudioContext({ sampleRate: HEAR_SAMPLE_RATE });
-	const source = ctx.createMediaStreamSource(stream);
-	const processor = ctx.createScriptProcessor(BLOCK_SAMPLES, 1, 1);
+	let ctx, source, processor;
 	const chunks = [];
 	const maxSamples = Math.floor(MAX_RECORD_MS / 1e3 * HEAR_SAMPLE_RATE);
 	let frames = 0;
 	let closed = false;
+	const teardown = () => {
+		if (closed) return;
+		closed = true;
+		signal?.removeEventListener('abort', teardown);
+		if (processor) processor.onaudioprocess = null;
+		try { source?.disconnect(); } catch {}
+		try { processor?.disconnect(); } catch {}
+		for (const track of stream.getTracks()) { try { track.stop(); } catch {} }
+		try { void Promise.resolve(ctx?.close()).catch(() => {}); } catch {}
+	};
+	signal?.addEventListener('abort', teardown, {once:true});
+	try {
+		signal?.throwIfAborted();
+		ctx = new AudioContext({ sampleRate: HEAR_SAMPLE_RATE });
+		source = ctx.createMediaStreamSource(stream);
+		processor = ctx.createScriptProcessor(BLOCK_SAMPLES, 1, 1);
 	processor.onaudioprocess = (event) => {
 		if (frames >= maxSamples) return;
 		const samples = event.inputBuffer.getChannelData(0);
@@ -10938,17 +11219,12 @@ async function startRecording() {
 	source.connect(processor);
 	processor.connect(ctx.destination);
 	await ctx.resume();
-	const teardown = () => {
-		if (closed) return;
-		closed = true;
-		processor.onaudioprocess = null;
-		try {
-			source.disconnect();
-			processor.disconnect();
-		} catch {}
-		for (const track of stream.getTracks()) track.stop();
-		ctx.close();
-	};
+		signal?.throwIfAborted();
+	} catch (error) {
+		teardown();
+		throw error;
+	}
+
 	return {
 		elapsedMs: () => frames / HEAR_SAMPLE_RATE * 1e3,
 		async stop() {
@@ -10976,6 +11252,10 @@ async function startRecording() {
 function createHearControl(opts) {
 	const { micBtn, input, hint, resizeInput, hearUrl } = opts;
 	let hearState = "idle";
+	let disposed = false;
+	let generation = 0;
+	let controller;
+	const live = owner => !disposed && owner === generation && input.isConnected;
 	let recorder = null;
 	let hearTimer = 0;
 	/** 还没拿到麦克风就松手了：等 startRecording 一返回立刻收尾，避免麦克风一直开着。 */
@@ -11011,6 +11291,8 @@ function createHearControl(opts) {
 	};
 	/** 收尾：停采集 → 判误触 → 判静音 → 送宿主 → 文字落进输入框。失败只提示，不动已输入的文字。 */
 	const stop = async () => {
+		const owner = generation, signal = controller?.signal;
+		if (!live(owner)) return;
 		const current$1 = recorder;
 		if (!current$1) return;
 		recorder = null;
@@ -11027,6 +11309,7 @@ function createHearControl(opts) {
 		hint.show("识别中…");
 		try {
 			const clip = await current$1.stop();
+			if (!live(owner)) return;
 			if (clip === null) {
 				hint.flash("没录到声音");
 				return;
@@ -11035,9 +11318,9 @@ function createHearControl(opts) {
 				hint.flash("没听到声音，检查一下麦克风");
 				return;
 			}
-			if (!input.isConnected) return;
-			const outcome = await hearAudio(hearUrl, toBase64(clip.wave));
-			if (!input.isConnected) return;
+			if (!live(owner)) return;
+			const outcome = await hearAudio(hearUrl, toBase64(clip.wave), signal);
+			if (!live(owner)) return;
 			if (!outcome.ok) {
 				hint.flash(describeFailure(outcome));
 				return;
@@ -11050,28 +11333,32 @@ function createHearControl(opts) {
 			hint.hide();
 			insertText(text);
 		} catch (e) {
-			hint.flash("录音出错：" + (e instanceof Error ? e.message : String(e)));
+			if (live(owner)) hint.flash("录音出错：" + (e instanceof Error ? e.message : String(e)));
 		} finally {
-			hearState = "idle";
-			paint();
+			if (live(owner)) { hearState = "idle"; paint(); }
 		}
 	};
 	/** 开录：先要麦克风，拿到了才开始计时。 */
 	const start = async () => {
+		if (disposed || !input.isConnected) return;
 		const blocked = blockedReason();
 		if (blocked !== "") {
 			hint.flash(blocked);
 			return;
 		}
 		if (hearState !== "idle") return;
+		const owner = ++generation, abort = controller = new AbortController();
 		if (document.activeElement === input) input.blur();
 		hearState = "starting";
 		wasReleasedEarly = false;
 		paint();
 		hint.show("正在打开麦克风…");
 		try {
-			recorder = await startRecording();
+			const next = await startRecording(abort.signal);
+			if (!live(owner)) { next.cancel(); return; }
+			recorder = next;
 		} catch (e) {
+			if (!live(owner)) return;
 			hearState = "idle";
 			paint();
 			hint.flash("打不开麦克风：" + (e instanceof Error ? e.message : String(e)));
@@ -11117,6 +11404,10 @@ function createHearControl(opts) {
 		stop: () => void stop(),
 		isHearing: () => hearState === "recording",
 		dispose: () => {
+			disposed = true;
+			generation++;
+			controller?.abort();
+			controller = undefined;
 			window.clearInterval(hearTimer);
 			if (recorder) {
 				recorder.cancel();
@@ -13419,8 +13710,9 @@ function createCardRuntime(rt) {
 			marginX: margin.x,
 			marginY: margin.y,
 			name: cfg.name,
-			onClick: () => {
+			onClick: event => {
 				if (drag.justDragged() || drag.isActive()) return;
+				if (cfgRef.current.companionPlayback) { drag.onClick(event); return; }
 				const phase = liveRef.current.flow?.sleepPhase() ?? null;
 				if (phase !== null && phase !== "start") {
 					const front = ownAnim.frontVideo();
@@ -13430,7 +13722,7 @@ function createCardRuntime(rt) {
 					return;
 				}
 				if (phase === "start") postAction(ROUTE_PATH + "/wake?pet=" + encodeURIComponent(cfg.id));
-				drag.onClick();
+				drag.onClick(event);
 			},
 			onContextMenu: entry.handleContextMenu,
 			onPointerDown: drag.onPointerDown,
@@ -13608,38 +13900,48 @@ function createPetMulti(rt, Card) {
 				setPets(flattened);
 			};
 			/** 拉取成品聚合：host readAllConfig 的输出，客户端零校验零兜底。 */
-			const loadMerged = async () => {
-				const r = await fetch(ROUTE_PATH + "/config-live", { cache: "no-store" });
+			const loadMerged = async (signal) => {
+				const r = await fetch(ROUTE_PATH + "/config-live", { cache: "no-store", signal });
 				if (!r.ok) throw new Error("config HTTP " + r.status);
 				const body = await r.json();
 				if (body.ok === false) throw new Error("config: " + String(body.reason ?? "failed"));
 				return body;
 			};
-			(async () => {
-				try {
-					const merged = await loadMerged();
-					if (!alive) return;
-					applyMerged(merged);
-					setReady(true);
-				} catch (e) {
-					console.error("[dsh-pet] 配置加载失败", e);
-				}
-			})();
-			petBridge.reload = (merged) => {
-				(async () => {
-					try {
-						const next = await loadMerged();
-						if (!alive) return;
-						applyMerged(next);
-					} catch (e) {
-						console.error("[dsh-pet] 配置重载失败，保留当前渲染列表", e);
-					}
-				})();
-			};
-			return () => {
-				alive = false;
-				petBridge.reload = () => {};
-			};
+      let configGeneration=0,configPending=false,configInFlight=false,configAbort,retryTimer,retryDelay=1000;
+      const clearRetry=()=>{if(retryTimer!==undefined){window.clearTimeout(retryTimer);retryTimer=undefined;}};
+      const canReload=()=>alive && !document.hidden;
+      const drainCompanionConfig=async()=>{
+        if(!canReload() || configInFlight || !configPending)return;
+        configPending=false;configInFlight=true;
+        const generation=configGeneration,request=new AbortController();configAbort=request;let failed=false;
+        try {
+          const next=await loadMerged(request.signal);
+          if(!canReload() || generation!==configGeneration)return;
+          applyMerged(next);setReady(true);retryDelay=1000;
+        } catch(error) {
+          if(canReload() && generation===configGeneration){failed=true;console.error("[dsh-pet] 配置加载失败，稍后重新读取",error);}
+        } finally {
+          if(configAbort===request)configAbort=undefined;
+          configInFlight=false;
+          if(canReload() && configPending)void drainCompanionConfig();
+          else if(canReload() && failed){
+            const wait=retryDelay;retryDelay=Math.min(30000,retryDelay*2);
+            retryTimer=window.setTimeout(()=>{retryTimer=undefined;configPending=true;void drainCompanionConfig();},wait);
+          }
+        }
+      };
+      const requestCompanionConfig=()=>{configGeneration++;configPending=true;clearRetry();void drainCompanionConfig();};
+      const configVisibility=()=>{
+        configGeneration++;configPending=true;clearRetry();
+        if(document.hidden)configAbort?.abort();else void drainCompanionConfig();
+      };
+      petBridge.reload=requestCompanionConfig;
+      document.addEventListener("visibilitychange",configVisibility);
+      requestCompanionConfig();
+      return ()=>{
+        alive=false;configGeneration++;configPending=false;clearRetry();configAbort?.abort();
+        document.removeEventListener("visibilitychange",configVisibility);petBridge.reload=()=>{};
+      };
 		}, []);
 		const visiblePets = pets.filter((p) => isWebVisible(p.display));
 		const [sayTick, setSayTick] = useState(0);
@@ -13771,10 +14073,15 @@ function createPetMulti(rt, Card) {
 					menuItemsRef.current = readMenuItems(s.sections.menu?.data, "web");
 					setMenuItems(menuItemsRef.current);
 					for (const [petId, entry] of Object.entries(s.pets)) {
+						const locked=entry?.lock?.data == null ? null : readLock(entry.lock);
+						if(locked)lockRef.current[petId]=locked;
 						const hit = entry?.sleep?.data == null ? null : readSleep(entry.sleep);
 						if (hit) sleepRef.current[petId] = hit;
 					}
+					setLockTick((t) => t + 1);
 					setSleepTick((t) => t + 1);
+					// Close the config-snapshot / first-state race once, through the existing guarded reload.
+					petBridge.reload();
 					return;
 				}
 				for (const { path, leaf: leaf$1 } of takeChanged(s, baseline)) {
@@ -13837,1321 +14144,6 @@ function makePetUI(rt) {
 	const PetCard = createPetCard(rt);
 	const PetMulti = createPetMulti(rt, PetCard);
 	return PetMulti;
-}
-
-//#endregion
-//#region src/client/baifan/constants.ts
-const ROUTE = presentationPath;
-const OWNER = "dsh-pet-baifan";
-const LABEL = "吃白饭";
-const ACTIVITY = "baifan";
-const PIC = {
-	bowlFull: ROUTE + "/pic/baifan/bowl-full.png",
-	bowlEmpty: ROUTE + "/pic/baifan/bowl-empty.png",
-	riceBall: ROUTE + "/pic/baifan/rice-ball.png"
-};
-const CFG = {
-	groundOffset: 26,
-	prepMs: 2100,
-	travelMs: 5e3,
-	runSpeed: 290,
-	patrolSpeedRatio: .72,
-	spawnMs: 4200,
-	bowlRatio: .38,
-	maxRice: 2,
-	eatPx: 40,
-	arrivePx: 12,
-	tripMaxMs: 4500,
-	sideWatchMs: 400,
-	idleMs: 140,
-	animLeadMs: 300,
-	backTurnPenalty: 1.8,
-	pollLatencyMs: 1e3,
-	preRollSec: .35,
-	lockTtl: 3e4,
-	lockWaitMs: 25e3,
-	renewMs: 6e3,
-	flyFallbackMs: 5200,
-	waitBudgetMs: 3e4,
-	httpTimeoutMs: 2e4,
-	bubbleMs: 2400,
-	footRatio: .894,
-	mouthRatio: .63,
-	mouthDx: -.03,
-	refWidth: 498
-};
-const LINES = {
-	start: [
-		"开饭了——",
-		"白饭时间到！",
-		"饿了饿了饿了"
-	],
-	down: [
-		"等我下去……",
-		"下面有饭香",
-		"让一让，我下去了"
-	],
-	expect: [
-		"饭呢？饭呢？",
-		"快点快点",
-		"……还没好吗"
-	],
-	drop: [
-		"掉下来了！",
-		"接住！",
-		"来了来了"
-	],
-	bowl: [
-		"碗饭最香",
-		"这个碗我要了",
-		"再来一碗"
-	],
-	ball: [
-		"饭团饭团",
-		"一口一个",
-		"捏得刚好"
-	],
-	full: [
-		"嗝——还能吃！",
-		"这点不够塞牙缝",
-		"再来十份"
-	]
-};
-const STYLE_TAG$1 = "dsh-pet-baifan/baifan.css";
-const ROOT_ID = "dsh-pet-baifan-root";
-/** 覆盖层压在桌宠之上（桌宠 `.dsh-pet-root` 是 z-index:40）；只保证这一层关系。 */
-const Z_INDEX = 50;
-const CSS = [
-	"#dsh-pet-baifan-root{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:" + Z_INDEX + "}",
-	".bf-rice{position:absolute;transform-origin:50% 100%;will-change:transform,opacity;",
-	"user-select:none;-webkit-user-drag:none;pointer-events:none}",
-	".bf-score{position:absolute;display:flex;align-items:center;gap:6px;",
-	"padding:5px 13px 5px 7px;border-radius:999px;white-space:nowrap;",
-	"background:linear-gradient(180deg,#fff 0%,#e9f1fa 100%);",
-	"border:1px solid rgba(23,64,107,.16);",
-	"box-shadow:0 8px 22px rgba(23,64,107,.2),inset 0 1px 0 #fff;",
-	"pointer-events:none;transform-origin:50% 100%}",
-	".bf-score img{width:26px;height:26px;object-fit:contain;display:block}",
-	".bf-score img.bowl{width:32px;height:22px}",
-	".bf-score .num{font-size:22px;font-weight:800;color:#17406b;line-height:1}",
-	".bf-score .plus{position:absolute;right:-6px;top:-10px;font-size:13px;font-weight:800;",
-	"color:#e8825a;text-shadow:0 1px 0 #fff}",
-	".bf-toast{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);",
-	"padding:8px 16px;border-radius:999px;font:13px/1.5 \"Segoe UI\",\"Microsoft YaHei\",system-ui,sans-serif;",
-	"background:rgba(34,52,74,.88);color:#fff;opacity:0;transition:opacity .25s ease;pointer-events:none}",
-	".bf-toast.show{opacity:1}"
-].join("");
-
-//#endregion
-//#region src/client/baifan/assets.ts
-function activityAssets(names) {
-	return {
-		descend: names[0] ?? "",
-		chase: names[1] ?? "",
-		expect: names[2] ?? "",
-		eatBowl: names[3] ?? "",
-		eatBall: names[4] ?? ""
-	};
-}
-
-//#endregion
-//#region src/client/baifan/menu.ts
-function createMenu(deps) {
-	/** 上次尝试注册的时刻（`performance.now()`）；与 `retryMs` 比较决定要不要补。 */
-	let registeredAt = 0;
-	let disposed = false;
-	/** 读一次页面内点击；服务缺失（老版本 dsh-pet）或 owner 还没进快照都返回 null。 */
-	function readMarks() {
-		const api = deps.get("chatpetPresentation");
-		const read = api?.menuEvents;
-		if (typeof read !== "function") return null;
-		const result = read.call(api, OWNER);
-		return result.ok === true && result.events ? result.events : null;
-	}
-	/** 只有 main 条目配置了 animations.baifan 才注册，否则这只宠物没有这个玩法。 */
-	async function ensureMenu() {
-		const cfg = await deps.transport.call("GET", "/config", void 0, deps.signal);
-		const main = cfg.main;
-		if (!main || typeof main !== "object") return;
-		const animations = main.animations;
-		if (!animations || typeof animations !== "object") return;
-		if (animations[ACTIVITY] === void 0) return;
-		const r = await deps.transport.call("POST", "/menu/item", {
-			owner: OWNER,
-			labels: [LABEL],
-			target: "web"
-		}, deps.signal);
-		if (r.ok === true) registeredAt = performance.now();
-	}
-	/** 一拍：读点击；owner 还不在快照里就按间隔补注册。 */
-	function tick() {
-		if (disposed) return;
-		const marks$1 = readMarks();
-		if (marks$1 === null) {
-			if (performance.now() - registeredAt > deps.retryMs) {
-				registeredAt = performance.now();
-				ensureMenu().catch(() => {});
-			}
-			return;
-		}
-		const pet = marks$1[LABEL];
-		if (typeof pet === "string") launch(pet);
-	}
-	/**
-	* 按被点宠物所属条目取五段动画名并开演；找不到配置就不演。
-	*
-	* 5 个动画名来自该条目的 animations.baifan——不同宠物可以用不同的动作，这是配置项存在的意义；
-	* 素材地址由各端渲染器按宠物的素材根拼，客户端这里只传名字。
-	*/
-	async function launch(petId) {
-		try {
-			const cfg = await deps.transport.call("GET", "/config", void 0, deps.signal);
-			for (const raw of Object.values(cfg)) {
-				if (!raw || typeof raw !== "object") continue;
-				const conf = raw;
-				const pets = conf.pets;
-				if (!Array.isArray(pets)) continue;
-				const owns = pets.some((item) => item !== null && typeof item === "object" && item.id === petId);
-				if (!owns) continue;
-				const animations = conf.animations;
-				const names = animations && typeof animations === "object" ? animations[ACTIVITY] : void 0;
-				if (!Array.isArray(names)) return;
-				const slots = names.filter((name) => typeof name === "string");
-				deps.show.start(petId, activityAssets(slots));
-				return;
-			}
-		} catch (error) {
-			console.warn("[dsh-pet] 吃白饭启动失败 " + String(error));
-		}
-	}
-	return {
-		tick,
-		ensureMenu,
-		dispose: () => {
-			disposed = true;
-		}
-	};
-}
-
-//#endregion
-//#region src/client/baifan/geometry.ts
-const clamp01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
-function spriteBox(cx, cy, last) {
-	let best = null;
-	let bestDistance = Infinity;
-	for (const video of document.querySelectorAll("video")) {
-		const rect = video.getBoundingClientRect();
-		if (rect.width < 60 || rect.height < 30) continue;
-		const distance = Math.hypot(rect.left + rect.width / 2 - cx, rect.top + rect.height / 2 - cy);
-		if (distance < bestDistance) {
-			bestDistance = distance;
-			best = rect;
-		}
-	}
-	if (best !== null && bestDistance < 90) return {
-		w: best.width,
-		h: best.height
-	};
-	if (last.w > 0) return last;
-	return {
-		w: CFG.refWidth,
-		h: CFG.refWidth * 9 / 16
-	};
-}
-function geometry(pose, box) {
-	const cx = pose.x * window.innerWidth;
-	const cy = pose.y * window.innerHeight;
-	const contentH = Math.min(box.h, box.w * 9 / 16);
-	const padTop = (box.h - contentH) / 2;
-	const top = cy - box.h / 2 + padTop;
-	return {
-		cx,
-		cy,
-		w: box.w,
-		h: contentH,
-		top,
-		feet: top + contentH * CFG.footRatio,
-		mouthY: top + contentH * CFG.mouthRatio,
-		scale: box.w / CFG.refWidth
-	};
-}
-const groundLine = () => window.innerHeight - CFG.groundOffset;
-function bottomNormY(geom) {
-	return clamp01((groundLine() - (geom.feet - geom.cy)) / window.innerHeight);
-}
-
-//#endregion
-//#region src/client/baifan/scene.ts
-/** 建一个元素。 */
-function el(tag) {
-	return document.createElement(tag);
-}
-function createScene(layer, toastEl) {
-	/** 场上的饭。 */
-	let items = [];
-	/** 落体循环的 rAF 句柄；0 = 没在跑。 */
-	let frame = 0;
-	/** 上一帧时间戳（秒）。 */
-	let lastMs = 0;
-	/** 提示条的淡出定时器。 */
-	let toastTimer = 0;
-	/**
-	* 底部居中提示条，1.8 秒后自己淡掉。
-	*
-	* @param text - 文案。
-	*/
-	function toast$1(text) {
-		toastEl.textContent = text;
-		toastEl.classList.add("show");
-		window.clearTimeout(toastTimer);
-		toastTimer = window.setTimeout(() => toastEl.classList.remove("show"), 1800);
-	}
-	/** 按当前坐标写样式。 */
-	function layout(item) {
-		item.el.style.left = item.x - item.w / 2 + "px";
-		item.el.style.top = item.y - item.h + "px";
-		item.el.style.transform = "rotate(" + item.rot + "deg)";
-	}
-	/**
-	* 从天上掉一份饭。位置在视口里随机（左右各留 70px），尺寸按精灵缩放。
-	*
-	* @param scale - 精灵相对基准宽的缩放。
-	* @returns 新的一份；场上已满时返回 null。
-	*/
-	function spawn(scale) {
-		if (items.length >= CFG.maxRice) return null;
-		const isBowl = Math.random() < CFG.bowlRatio;
-		const w = (isBowl ? 124 : 110) * scale;
-		const img = el("img");
-		img.className = "bf-rice";
-		img.src = isBowl ? PIC.bowlFull : PIC.riceBall;
-		img.alt = "";
-		img.draggable = false;
-		img.style.width = w + "px";
-		img.style.height = w + "px";
-		const item = {
-			el: img,
-			x: 70 + Math.random() * Math.max(10, window.innerWidth - 140),
-			y: -w - 20,
-			w,
-			h: w,
-			type: isBowl ? "bowl" : "ball",
-			vy: 170 + Math.random() * 60,
-			rot: 0,
-			spin: isBowl ? 0 : (Math.random() < .5 ? -1 : 1) * 90,
-			state: "falling"
-		};
-		layer.appendChild(img);
-		items.push(item);
-		layout(item);
-		return item;
-	}
-	/**
-	* 落体循环：只在还有东西在天上时才跑 rAF，落地后自然停下来。
-	*
-	* @param ts - rAF 时间戳（毫秒）。
-	*/
-	function fallTick(ts) {
-		frame = 0;
-		if (!lastMs) lastMs = ts;
-		const dt = Math.min((ts - lastMs) / 1e3, .05);
-		lastMs = ts;
-		let falling = false;
-		const line = groundLine();
-		for (const item of items) {
-			if (item.state !== "falling") {
-				if (item.rot !== 0) {
-					item.rot = 0;
-					layout(item);
-				}
-				continue;
-			}
-			falling = true;
-			item.y += item.vy * dt;
-			item.rot += item.spin * dt;
-			if (item.y >= line) {
-				item.y = line;
-				item.state = "ground";
-				item.el.animate([
-					{ transform: "scaleY(1)" },
-					{ transform: "scaleY(.92)" },
-					{ transform: "scaleY(1)" }
-				], {
-					duration: 160,
-					easing: "ease-out"
-				});
-			}
-			layout(item);
-		}
-		if (falling && frame === 0) frame = window.requestAnimationFrame(fallTick);
-	}
-	/** 按需拉起落体循环。 */
-	function kick() {
-		if (frame === 0) frame = window.requestAnimationFrame(fallTick);
-	}
-	/**
-	* 场上离得最近的、已经落地的饭。
-	*
-	* 「最近」带一点朝向偏好：身后那份要打折才算数——换朝向就要重开一段跑步动画（新视频要解码），
-	* 那一下必然有空档，能不换就不换。
-	*
-	* @param petPx - 宠物中心 x。
-	* @param facing - 当前朝向。
-	* @returns 挑中的那份；场上没有已落地的饭时返回 null。
-	*/
-	function nearest(petPx, facing) {
-		let best = null;
-		let bestScore = Infinity;
-		for (const item of items) {
-			if (item.state !== "ground") continue;
-			const distance = Math.abs(item.x - petPx);
-			const ahead = facing === "right" ? item.x > petPx : item.x < petPx;
-			const score = ahead ? distance : distance * CFG.backTurnPenalty;
-			if (score < bestScore) {
-				bestScore = score;
-				best = item;
-			}
-		}
-		return best;
-	}
-	/** 把一份饭从场上摘掉（元素交给调用方决定什么时候删）。 */
-	function detach$1(item) {
-		const index = items.indexOf(item);
-		if (index >= 0) items.splice(index, 1);
-	}
-	/**
-	* 吃掉一份：飞到嘴边，随咀嚼缩小，到点自己删元素。
-	*
-	* @param item - 被吃的那份（调用方应已 detach）。
-	* @param mouthX - 嘴部视口 x。
-	* @param mouthY - 嘴部视口 y。
-	* @param durationMs - 飞行时长（用真实片长，才与咀嚼同步）。
-	*/
-	function flyToMouth(item, mouthX, mouthY, durationMs) {
-		const dx = mouthX - item.x;
-		const dy = mouthY - (item.y - item.h / 2);
-		item.el.style.zIndex = "5";
-		item.el.animate([
-			{
-				transform: "translate(0,0) scale(1)",
-				opacity: 1,
-				offset: 0
-			},
-			{
-				transform: "translate(" + dx + "px," + dy + "px) scale(.72)",
-				opacity: 1,
-				offset: .16
-			},
-			{
-				transform: "translate(" + dx + "px," + dy + "px) scale(.68)",
-				opacity: 1,
-				offset: .55
-			},
-			{
-				transform: "translate(" + dx + "px," + dy + "px) scale(.12)",
-				opacity: 0,
-				offset: 1
-			}
-		], {
-			duration: durationMs,
-			easing: "ease-in-out",
-			fill: "forwards"
-		});
-		window.setTimeout(() => item.el.remove(), durationMs + 80);
-	}
-	/**
-	* 空碗：从嘴边掉到地上，弹两下，然后淡出。
-	*
-	* @param x - 嘴部视口 x。
-	* @param fromY - 嘴部视口 y（碗底先放这儿）。
-	* @param scale - 精灵缩放。
-	*/
-	function dropEmptyBowl(x, fromY, scale) {
-		const w = 124 * scale;
-		const img = el("img");
-		img.className = "bf-rice";
-		img.src = PIC.bowlEmpty;
-		img.alt = "";
-		img.draggable = false;
-		img.style.width = w + "px";
-		img.style.height = w + "px";
-		img.style.left = x - w / 2 + "px";
-		img.style.top = fromY - w + "px";
-		layer.appendChild(img);
-		const drop = Math.max(0, groundLine() - fromY);
-		img.animate([
-			{ transform: "translateY(0)" },
-			{
-				transform: "translateY(" + drop + "px)",
-				offset: .48,
-				easing: "ease-in"
-			},
-			{
-				transform: "translateY(" + (drop - 42 * scale) + "px)",
-				offset: .62,
-				easing: "ease-out"
-			},
-			{
-				transform: "translateY(" + drop + "px)",
-				offset: .74,
-				easing: "ease-in"
-			},
-			{
-				transform: "translateY(" + (drop - 14 * scale) + "px)",
-				offset: .82,
-				easing: "ease-out"
-			},
-			{
-				transform: "translateY(" + drop + "px)",
-				offset: .9
-			},
-			{
-				transform: "translateY(" + drop + "px)",
-				offset: 1
-			}
-		], {
-			duration: 820,
-			easing: "linear"
-		});
-		window.setTimeout(() => {
-			img.style.transition = "opacity .9s ease";
-			img.style.opacity = "0";
-			window.setTimeout(() => img.remove(), 950);
-		}, 900);
-	}
-	/**
-	* 头顶分数气泡：图标随刚吃下的那份饭变（碗饭 / 饭团）。
-	*
-	* @param value - 累计份数。
-	* @param type - 刚吃下的种类。
-	* @param geom - 当前几何量（决定气泡位置）。
-	*/
-	function popScore(value, type, geom) {
-		const isBowl = type === "bowl";
-		const node = el("div");
-		node.className = "bf-score";
-		node.innerHTML = "<img class=\"" + (isBowl ? "bowl" : "ball") + "\" src=\"" + (isBowl ? PIC.bowlFull : PIC.riceBall) + "\" alt=\"\"><span class=\"num\">" + value + "</span><span class=\"plus\">+1</span>";
-		node.style.left = geom.cx + "px";
-		node.style.top = geom.top + geom.h * .09 + "px";
-		layer.appendChild(node);
-		node.animate([
-			{
-				opacity: 0,
-				transform: "translate(-50%,-100%) scale(.55)"
-			},
-			{
-				opacity: 1,
-				transform: "translate(-50%,-100%) scale(1.16)",
-				offset: .26
-			},
-			{
-				opacity: 1,
-				transform: "translate(-50%,-100%) scale(1)",
-				offset: .5
-			},
-			{
-				opacity: 1,
-				transform: "translate(-50%,-100%) scale(1)",
-				offset: .78
-			},
-			{
-				opacity: 0,
-				transform: "translate(-50%,-132%) scale(1)",
-				offset: 1
-			}
-		], {
-			duration: 1300,
-			easing: "ease-out",
-			fill: "forwards"
-		});
-		const plus = node.querySelector(".plus");
-		if (plus !== null) plus.animate([
-			{
-				opacity: 0,
-				transform: "translateY(6px) scale(.8)"
-			},
-			{
-				opacity: 1,
-				transform: "translateY(-4px) scale(1)",
-				offset: .25
-			},
-			{
-				opacity: 1,
-				transform: "translateY(-10px) scale(1)",
-				offset: .7
-			},
-			{
-				opacity: 0,
-				transform: "translateY(-18px) scale(1)"
-			}
-		], {
-			duration: 1e3,
-			easing: "ease-out",
-			fill: "forwards"
-		});
-		window.setTimeout(() => node.remove(), 1350);
-	}
-	/** 收场时把场上的饭淡出清掉，并停掉落体循环。 */
-	function clear() {
-		if (frame !== 0) {
-			window.cancelAnimationFrame(frame);
-			frame = 0;
-		}
-		lastMs = 0;
-		for (const item of items) {
-			const node = item.el;
-			node.style.transition = "opacity .5s ease";
-			node.style.opacity = "0";
-			window.setTimeout(() => node.remove(), 520);
-		}
-		items = [];
-	}
-	return {
-		clear,
-		detach: detach$1,
-		dropEmptyBowl,
-		flyToMouth,
-		kick,
-		nearest,
-		popScore,
-		count: () => items.length,
-		scaleOf: (spriteW) => spriteW > 0 ? spriteW / CFG.refWidth : 1,
-		spawn,
-		toast: toast$1
-	};
-}
-
-//#endregion
-//#region src/client/baifan/lock.ts
-/** sessionStorage 里记锁号的键前缀（按宠物分开）。 */
-const LOCK_KEY = "dsh-pet-baifan/lock/";
-var Halted = class extends Error {};
-/** 读本标签页上次拿到的锁号。 */
-function readStored(petId) {
-	try {
-		return sessionStorage.getItem(LOCK_KEY + petId);
-	} catch {
-		return null;
-	}
-}
-/** 写入 / 清除本标签页的锁号；隐私模式或禁用存储都不影响演出。 */
-function writeStored(petId, lock) {
-	try {
-		if (lock === null) sessionStorage.removeItem(LOCK_KEY + petId);
-		else sessionStorage.setItem(LOCK_KEY + petId, lock);
-	} catch {}
-}
-function createLock(transport, petId, alive, toast$1) {
-	/** 当前锁号；null = 没锁。 */
-	let lockId = null;
-	/** 心跳发现锁没了。 */
-	let lost = false;
-	/** 心跳定时器。 */
-	let timer = 0;
-	/** 锁类失败统一在这里判一下，省得每个调用点各写一遍。 */
-	function noteFailure(reason) {
-		if (reason === "lock-lost" || reason === "lock-required") lost = true;
-	}
-	/** 取锁：先试刷新留下的旧锁，再新建，被占着就等它过期。 */
-	async function acquire() {
-		const path = "/lock?pet=" + encodeURIComponent(petId) + "&surface=web";
-		const stored = readStored(petId);
-		if (stored !== null) {
-			const renewed = await transport.call("POST", path, { lockId: stored });
-			if (renewed.ok === true) {
-				lockId = String(renewed.lockId);
-				lost = false;
-				return;
-			}
-			writeStored(petId, null);
-		}
-		const created = await transport.call("POST", path, { ttl: CFG.lockTtl });
-		if (created.ok === true) {
-			lockId = String(created.lockId);
-			lost = false;
-			writeStored(petId, lockId);
-			return;
-		}
-		const reason = created.reason;
-		if (reason === "pet-not-displayed") throw new Error("这只宠物没显示在网页里（display=" + String(created.display) + "）");
-		if (reason !== "locked") throw new Error("取锁失败：" + String(reason ?? "unknown"));
-		const expiresAt = typeof created.expiresAt === "number" ? created.expiresAt : 0;
-		const waitMs = Math.min(CFG.lockWaitMs, Math.max(0, expiresAt - Date.now()) + 2e3);
-		toast$1("上一场还没收干净，等它过期…");
-		const deadline = performance.now() + waitMs;
-		for (;;) {
-			if (!alive()) throw new Halted();
-			if (performance.now() > deadline) break;
-			await new Promise((resolve) => window.setTimeout(resolve, 1500));
-			if (!alive()) throw new Halted();
-			const retry = await transport.call("POST", path, { ttl: CFG.lockTtl });
-			if (retry.ok === true) {
-				lockId = String(retry.lockId);
-				lost = false;
-				writeStored(petId, lockId);
-				return;
-			}
-			if (retry.reason !== "locked") throw new Error("取锁失败：" + String(retry.reason ?? "unknown"));
-		}
-		throw new Error("宠物被别人占着，等会儿再试");
-	}
-	/** 心跳：续期顺带探活；丢了置 lost，追击循环下一拍自然收场。 */
-	function startRenew() {
-		stopRenew();
-		timer = window.setInterval(() => {
-			(async () => {
-				if (!alive() || lockId === null || lost) return;
-				try {
-					const r = await transport.call("POST", "/lock?pet=" + encodeURIComponent(petId) + "&surface=web", { lockId });
-					if (r.ok !== true) {
-						noteFailure(r.reason);
-						lost = true;
-					}
-				} catch {}
-			})();
-		}, CFG.renewMs);
-	}
-	/** 停心跳。 */
-	function stopRenew() {
-		if (timer !== 0) window.clearInterval(timer);
-		timer = 0;
-	}
-	/** 放锁（收场用）；放不掉也没关系，TTL 到点自己失效。 */
-	async function release() {
-		const lease = lockId;
-		lockId = null;
-		if (lease === null) return;
-		try {
-			await transport.call("POST", "/lock/release?pet=" + encodeURIComponent(petId), { lockId: lease });
-		} catch {}
-		writeStored(petId, null);
-	}
-	/**
-	* 页面要走了（刷新 / 关标签页）时尽最大努力放锁。
-	*
-	* fetch 在这个时机大概率会被掐断，所以用 sendBeacon：它由浏览器接管发送，页面死了也会发完。
-	* 放不掉还有 TTL 与下次开演的「接管旧锁」兜底。
-	*/
-	function releaseOnPageHide() {
-		const lease = lockId;
-		if (lease === null) return;
-		lockId = null;
-		writeStored(petId, null);
-		try {
-			if (navigator.sendBeacon !== void 0) {
-				const body = JSON.stringify({ lockId: lease });
-				void fetch(presentationPath + "/lock/release?pet=" + encodeURIComponent(petId), {method:"POST",body,keepalive:true}).catch(()=>{});
-				return;
-			}
-		} catch {}
-	}
-	return {
-		acquire,
-		id: () => lockId,
-		isLost: () => lost,
-		noteFailure,
-		release,
-		releaseOnPageHide,
-		startRenew,
-		stopRenew
-	};
-}
-
-//#endregion
-//#region src/client/baifan/show.ts
-function createShow(deps) {
-	const { transport, scene } = deps;
-	/** 当前指挥的宠物 id（由菜单点击带回来，不猜）。 */
-	let petId = "";
-	/** 相位。 */
-	let phase = "idle";
-	/** 本场是否在跑。 */
-	let running = false;
-	/** 插件是否已卸载。 */
-	let disposed = false;
-	/** 占用锁；null = 没锁。 */
-	let lock = null;
-	/** 已经吃了几份。 */
-	let eaten = 0;
-	/** 当前朝向。 */
-	let facing = "left";
-	/** 最近一次量到的精灵尺寸。 */
-	let sprite = {
-		w: 0,
-		h: 0
-	};
-	/** 地面上跑的目标垂直坐标（归一化，宠物中心）。 */
-	let groundNormY = .86;
-	/** 没饭可追时的溜达目标（像素）；null = 该重新抽一个。 */
-	let patrolX = null;
-	/** 侧身跑接力。 */
-	const side = {
-		token: 0,
-		active: false
-	};
-	/** 吃满多少份吹一次牛。 */
-	const FULL_EVERY = 5;
-	/** 本场代次：每次开演 +1，旧场收尾时不能动新的一场。 */
-	let showGen = 0;
-	/** 这一场用的五段动画地址（按被点宠物所属条目的配置算出来）。 */
-	let current$1 = {
-		chase: "",
-		descend: "",
-		eatBall: "",
-		eatBowl: "",
-		expect: ""
-	};
-	/** 掉饭定时器。 */
-	let spawnTimer = 0;
-	/** 跑动动画看门狗。 */
-	let sideWatch = 0;
-	/** 行为是否还该继续。 */
-	const alive = () => running && !disposed && lock !== null && !lock.isLost();
-	const enc = (s) => encodeURIComponent(s);
-	const sleep$1 = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
-	const pickLine = (pool) => pool[Math.floor(Math.random() * pool.length)] ?? "";
-	/** 让桌宠说一句：`anim: false` 必须给，否则渲染端会联动 whisper 动画把正在播的顶掉。 */
-	function say(text, ms) {
-		const lease = lock?.id() ?? null;
-		if (!alive() || lease === null) return;
-		transport.call("POST", "/broadcast?pet=" + enc(petId) + "&surface=web&lock=" + enc(lease), {
-			text,
-			duration: ms !== void 0 ? ms : CFG.bubbleMs,
-			anim: false
-		}).catch(() => {});
-	}
-	/** 读一次实况；读不到返回 null。 */
-	function pose() {
-		return transport.pose(petId);
-	}
-	/** 读实况并换算几何量；读不到返回 null。 */
-	function currentGeometry() {
-		const p = pose();
-		if (p === null) return null;
-		const box = measure(p);
-		return geometry(p, box);
-	}
-	/** 量精灵盒子（量到就更新缓存）。 */
-	function measure(p) {
-		sprite = spriteBox(p.x * window.innerWidth, p.y * window.innerHeight, sprite);
-		return sprite;
-	}
-	/** 点播一段玩法动画（按名字）；返回点播编号。 */
-	async function playAnim(name, dir) {
-		const lease = lock?.id() ?? null;
-		if (lease === null) throw new Halted();
-		const body = { name };
-		if (dir !== void 0) body.facing = dir;
-		const r = await transport.call("POST", "/anim?pet=" + enc(petId) + "&surface=web&lock=" + enc(lease), body);
-		if (r.ok !== true) {
-			lock?.noteFailure(r.reason);
-			throw new Error("点播失败：" + String(r.reason ?? "unknown"));
-		}
-		return typeof r.playbackId === "string" ? r.playbackId : null;
-	}
-	/** 读这次点播的真实片长（毫秒）；读不到用兜底。 */
-	async function clipMs(id) {
-		if (id !== null) for (let attempt = 0; attempt < 20; attempt += 1) {
-			const p = transport.progress(petId);
-			if (p !== null && p.playbackId === id && p.duration > .2) return p.duration * 1e3;
-			await sleep$1(60);
-		}
-		return CFG.flyFallbackMs;
-	}
-	/**
-	* 守着一段正在播的素材，等它快到尾巴时返回 true。
-	*
-	* 回执只说「结束了没有」，而 progress 有 currentTime / duration，能在还剩一点尾巴时就点下一段——
-	* 锁占用期间宠物自己是静止的，一段播完到下一段开始之间的空档就是「在滑但没有跑步动画」。
-	*
-	* @param id - 要守的那一次的 playbackId。
-	* @returns true = 该接下一段了；false = 这段已经不属于我们。
-	*/
-	async function keepWarm(id) {
-		if (id === null) return false;
-		const start$1 = performance.now();
-		const deadline = start$1 + CFG.waitBudgetMs;
-		let seen = false;
-		for (;;) {
-			const p = transport.progress(petId);
-			if (p !== null && p.playbackId === id) {
-				seen = true;
-				if (p.paused) return true;
-				if (p.duration > .3 && p.currentTime >= p.duration - CFG.preRollSec) return true;
-			} else if (seen) return false;
-			else if (performance.now() - start$1 > CFG.pollLatencyMs + 800) return true;
-			if (performance.now() > deadline) return false;
-			await sleep$1(90);
-		}
-	}
-	/** 下发一次位置。 */
-	async function movePet(xNorm, yNorm, mode, durationMs) {
-		const lease = lock?.id() ?? null;
-		if (lease === null) return;
-		const body = {
-			x: clamp(xNorm),
-			y: clamp(yNorm),
-			mode
-		};
-		if (mode === "line") body.duration = Math.max(0, durationMs ?? 0);
-		const r = await transport.call("POST", "/position?pet=" + enc(petId) + "&surface=web&lock=" + enc(lease), body);
-		if (r.ok !== true) lock?.noteFailure(r.reason);
-	}
-	/** 等宠物走到某个位置；渲染端对 /state 是每秒轮询，所以只负责「等到它到」。 */
-	async function waitArrive(goalX, goalY, budgetMs) {
-		const deadline = performance.now() + budgetMs;
-		for (;;) {
-			const p = transport.pose(petId);
-			if (p === null) return;
-			const okX = goalX === null || Math.abs(p.x * window.innerWidth - goalX) <= CFG.arrivePx;
-			const okY = goalY === null || Math.abs(p.y - goalY) <= .02;
-			if (okX && okY) return;
-			if (!alive() || performance.now() > deadline) return;
-			await sleep$1(100);
-		}
-	}
-	/**
-	* 把一段直线位移拆成几段依次下发。
-	*
-	* 目的不是画质，是抗单条指令失效：渲染端若把某一条 line 当成直接落位，拆开后那一下只丢 1/n 的距离。
-	*/
-	async function glideTo(xNorm, yNorm, ms, steps) {
-		const start$1 = transport.pose(petId);
-		if (start$1 === null) return;
-		const n = Math.max(1, Math.min(8, steps));
-		const part = ms / n;
-		for (let step = 1; step <= n; step += 1) {
-			const t = step / n;
-			await movePet(start$1.x + (xNorm - start$1.x) * t, start$1.y + (yNorm - start$1.y) * t, "line", part);
-			if (!alive()) return;
-			await sleep$1(part + 60);
-		}
-	}
-	/**
-	* 原地挪 2 像素，把渲染端的「起点」喂给它。
-	*
-	* 进入页面后的第一条位置指令不做插值——那一刻还没有「上一个位置」，于是直接落到目标点，
-	* 表现就是第一次点「吃白饭」时宠物瞬移到底部。先来一条几乎为零的位移把起点建立起来。
-	*/
-	async function warmPosition() {
-		const p = transport.pose(petId);
-		if (p === null) return;
-		await movePet(p.x, clamp(p.y - .003), "line", 140);
-		await sleep$1(220);
-	}
-	/** 让侧身跑接力下去；返回第一遍的 playbackId（永远会 settle）。 */
-	function runSide(dir) {
-		facing = dir;
-		side.token += 1;
-		const token = side.token;
-		side.active = true;
-		const started = playAnim(current$1.chase, dir).catch(() => null);
-		(async () => {
-			let id = await started;
-			for (;;) {
-				if (token !== side.token || !alive()) return;
-				if (id === null) {
-					await sleep$1(400);
-					if (token !== side.token) return;
-					id = await playAnim(current$1.chase, dir).catch(() => null);
-					continue;
-				}
-				if (!await keepWarm(id)) {
-					if (token === side.token) side.active = false;
-					return;
-				}
-				if (token !== side.token || !alive()) return;
-				id = await playAnim(current$1.chase, dir).catch(() => null);
-			}
-		})();
-		return started;
-	}
-	/** 保证「往 dir 跑」这段动画在接力中；换朝向或接力断了都要重开。 */
-	function ensureSide(dir) {
-		if (dir === facing && side.active) return null;
-		return runSide(dir);
-	}
-	/** 等这段动画真的开始播；位移一定要等它，否则就是「人先滑出去，动画才跟上」。 */
-	async function waitPlayStarted(pending, budgetMs) {
-		if (pending === null) return;
-		const id = await pending;
-		if (id === null) return;
-		const deadline = performance.now() + budgetMs;
-		for (;;) {
-			const p = transport.progress(petId);
-			if (p !== null && p.playbackId === id) return;
-			if (!alive() || performance.now() > deadline) return;
-			await sleep$1(40);
-		}
-	}
-	/** 前台现在播的是不是这一段侧身跑（兜底判据：位置写入会不会顶掉点播，文档没有保证）。 */
-	function sidePlaying() {
-		const p = transport.progress(petId);
-		return p !== null && typeof p.anim === "string" && p.anim === current$1.chase;
-	}
-	/** 追饭期间的看门狗：跑动动画掉了就补。 */
-	function startSideWatch() {
-		stopSideWatch();
-		sideWatch = window.setInterval(() => {
-			if (!alive() || phase !== "chase" || sidePlaying()) return;
-			side.active = false;
-			runSide(facing);
-		}, CFG.sideWatchMs);
-	}
-	function stopSideWatch() {
-		if (sideWatch !== 0) window.clearInterval(sideWatch);
-		sideWatch = 0;
-	}
-	/** 跑一段；返回是否真的发了一段位移（已在目标点时为 false）。 */
-	async function tripTo(goalPx, speed) {
-		const p = transport.pose(petId);
-		if (p === null) return false;
-		const petPx = p.x * window.innerWidth;
-		const distance = Math.abs(goalPx - petPx);
-		if (distance <= CFG.arrivePx) return false;
-		const dir = goalPx > petPx ? "right" : "left";
-		const durationMs = Math.min(CFG.tripMaxMs, Math.max(180, distance / speed * 1e3));
-		await waitPlayStarted(ensureSide(dir), CFG.animLeadMs);
-		await movePet(goalPx / window.innerWidth, groundNormY, "line", durationMs);
-		await waitArrive(goalPx, groundNormY, durationMs + CFG.pollLatencyMs + 600);
-		return true;
-	}
-	/** 一阶段：跑到底部。蓄力 → 直线跑到随机落点（每次都不一样，是第一眼观感）。 */
-	async function phaseWalk() {
-		phase = "walk";
-		const geom = currentGeometry();
-		if (geom === null) throw new Error("这一页找不到这只宠物");
-		groundNormY = bottomNormY(geom);
-		const margin = Math.max(60, geom.w / 2);
-		const targetPx = margin + Math.random() * Math.max(10, window.innerWidth - margin * 2);
-		facing = targetPx >= geom.cx ? "right" : "left";
-		say(pickLine(LINES.down), 2400);
-		await warmPosition();
-		await playAnim(current$1.descend, facing);
-		await sleep$1(CFG.prepMs);
-		if (!alive()) throw new Halted();
-		await glideTo(targetPx / window.innerWidth, groundNormY, CFG.travelMs, 3);
-		await waitArrive(targetPx, groundNormY, CFG.pollLatencyMs + 1500);
-		if (!alive()) throw new Halted();
-	}
-	/** 二阶段：期待开饭；尾巴上就开始接侧身跑，免得播完站在那儿等。 */
-	async function phaseExpect() {
-		phase = "expect";
-		say(pickLine(LINES.expect), 3e3);
-		await keepWarm(await playAnim(current$1.expect, facing));
-		if (!alive()) throw new Halted();
-	}
-	/** 吃掉一份：飞到嘴边 → 随咀嚼变小 → 空碗落地 → 弹分数。 */
-	async function eatOne(item, geom) {
-		phase = "eat";
-		side.token += 1;
-		side.active = false;
-		scene.detach(item);
-		const isBowl = item.type === "bowl";
-		const p = transport.pose(petId);
-		const [, playId] = await Promise.all([p === null ? null : movePet(p.x, groundNormY, "instant").catch(() => null), playAnim(isBowl ? current$1.eatBowl : current$1.eatBall, facing).catch(() => null)]);
-		const flyMs = await clipMs(playId);
-		const settled = transport.pose(petId);
-		const g = settled === null ? geom : geometry(settled, measure(settled));
-		const mouthX = g.cx + CFG.mouthDx * g.w * (facing === "right" ? -1 : 1);
-		const mouthY = g.mouthY;
-		scene.flyToMouth(item, mouthX, mouthY, flyMs);
-		if (isBowl) window.setTimeout(() => scene.dropEmptyBowl(mouthX, mouthY, g.scale), Math.max(0, flyMs - 120));
-		await transport.waitPlayback(playId);
-		if (!running || disposed) return;
-		eaten += 1;
-		scene.popScore(eaten, item.type, g);
-		say(pickLine(isBowl ? LINES.bowl : LINES.ball), 2400);
-		if (eaten % FULL_EVERY === 0) window.setTimeout(() => say(pickLine(LINES.full), 2600), 1200);
-		phase = "chase";
-	}
-	/** 开刷：先掉一份，之后按间隔继续；场上满了就自然停下。 */
-	function startSpawning() {
-		if (spawnTimer !== 0) return;
-		scene.spawn(scene.scaleOf(sprite.w));
-		scene.kick();
-		spawnTimer = window.setInterval(() => {
-			if (phase !== "chase" && phase !== "eat") return;
-			scene.spawn(scene.scaleOf(sprite.w));
-			scene.kick();
-		}, CFG.spawnMs);
-	}
-	/** 三阶段：追饭。一段一段地跑，跑到了才做下一个决定。 */
-	async function phaseChase(gen) {
-		phase = "chase";
-		startSpawning();
-		startSideWatch();
-		say(pickLine(LINES.drop), 2200);
-		while (alive() && gen === showGen) {
-			const geom = currentGeometry();
-			if (geom === null) throw new Error("这一页找不到这只宠物");
-			groundNormY = bottomNormY(geom);
-			const target = scene.nearest(geom.cx, facing);
-			const eatPx = CFG.eatPx * (geom.w / CFG.refWidth);
-			if (target !== null && Math.abs(target.x - geom.cx) <= eatPx) {
-				await eatOne(target, geom);
-				continue;
-			}
-			const goalPx = target !== null ? target.x : patrolGoal(geom);
-			const speed = target !== null ? CFG.runSpeed : CFG.runSpeed * CFG.patrolSpeedRatio;
-			if (!await tripTo(goalPx, speed)) await sleep$1(CFG.idleMs);
-		}
-		throw new Halted();
-	}
-	/** 没饭可追时随便挑个地方跑过去，到了下一拍再挑。 */
-	function patrolGoal(geom) {
-		const margin = Math.max(80, geom.w * .4);
-		const petPx = geom.cx;
-		if (patrolX === null || Math.abs(patrolX - petPx) <= CFG.arrivePx) patrolX = margin + Math.random() * Math.max(10, window.innerWidth - margin * 2);
-		return patrolX;
-	}
-	/** 跑完整场演出。 */
-	async function runShow() {
-		running = true;
-		eaten = 0;
-		side.token += 1;
-		side.active = false;
-		patrolX = null;
-		phase = "idle";
-		try {
-			await lock?.acquire();
-			lock?.startRenew();
-			say(pickLine(LINES.start), 2200);
-			await phaseWalk();
-			await phaseExpect();
-			await phaseChase(showGen);
-		} catch (error) {
-			if (error instanceof Halted) {} else if (lock?.isLost() === true) scene.toast("锁丢了，表演结束");
-			else {
-				scene.toast(error instanceof Error ? error.message : String(error));
-				console.warn("[dsh-pet] 吃白饭异常", error);
-			}
-		} finally {
-			await halt(lock?.isLost() === true ? "用户接管，已收场" : "");
-		}
-	}
-	/** 收场：停一切、清干净、放锁；幂等，丢锁与卸载都会走到这儿。 */
-	async function halt(reason) {
-		const wasRunning = running;
-		running = false;
-		phase = "idle";
-		transport.attach(null);
-		if (spawnTimer !== 0) {
-			window.clearInterval(spawnTimer);
-			spawnTimer = 0;
-		}
-		stopSideWatch();
-		side.token += 1;
-		side.active = false;
-		scene.clear();
-		patrolX = null;
-		const lease = lock?.id() ?? null;
-		await lock?.release();
-		if (reason !== void 0 && reason !== "" && (wasRunning || lease !== null)) scene.toast(reason);
-	}
-	/** 开一场；先彻底收掉上一场（含放锁），再起新的。 */
-	function start(nextPetId$1, assets) {
-		if (running || lock?.id() != null) {
-			halt("重新开始").then(() => begin(nextPetId$1, assets));
-			return;
-		}
-		begin(nextPetId$1, assets);
-	}
-	/** 真正开演：重建这一场的锁、取消信号与素材地址。 */
-	function begin(nextPetId$1, assets) {
-		petId = nextPetId$1;
-		current$1 = assets;
-		showGen += 1;
-		disposed = false;
-		lock?.stopRenew();
-		lock = createLock(transport, petId, alive, scene.toast);
-		transport.attach(new AbortController());
-		scene.toast("吃白饭 —— 开饭了");
-		runShow();
-	}
-	return {
-		halt,
-		isRunning: () => running,
-		start
-	};
-}
-/** 归一化坐标夹到 0–1。 */
-const clamp = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
-
-//#endregion
-//#region src/client/baifan/transport.ts
-function createTransport(ctx) {
-	/** 本场演出的取消信号；收场时由 attach(null) 换成 null 并 abort 旧的。 */
-	let scene = null;
-	/** 页面内只读服务；老版本 dsh-pet 没有它，调用点按「这一页没有宠物」处理。 */
-	function api() {
-		return ctx.get("chatpetPresentation");
-	}
-	/**
-	* 调一次接口。
-	*
-	* @param method - HTTP 方法。
-	* @param path - 含查询串的路径。
-	* @param body - 有则按 JSON 发。
-	* @param signal - 覆盖演出信号的取消信号（一般不用）。
-	* @returns 解析后的响应体；解析失败时 `ok: false`。
-	*/
-	async function call(method, path, body, signal) {
-		const init = { method };
-		if (body !== void 0) {
-			init.headers = { "content-type": "application/json" };
-			init.body = JSON.stringify(body);
-		}
-		const controller = new AbortController();
-		const forward = () => controller.abort();
-		const effective = signal ?? scene?.signal;
-		if (effective !== void 0) if (effective.aborted) controller.abort();
-		else effective.addEventListener("abort", forward, { once: true });
-		const timer = window.setTimeout(() => controller.abort(), CFG.httpTimeoutMs);
-		init.signal = controller.signal;
-		try {
-			const res = await fetch(ROUTE + path, init);
-			try {
-				return await res.json();
-			} catch {
-				return {
-					ok: false,
-					reason: "bad-response"
-				};
-			}
-		} finally {
-			window.clearTimeout(timer);
-			if (effective !== void 0) effective.removeEventListener("abort", forward);
-		}
-	}
-	/** 读实况（同页零请求）；拿不到服务或没这样宠物时返回 null。 */
-	function pose(petId) {
-		const read = api()?.pose;
-		if (typeof read !== "function") return null;
-		try {
-			return read.call(api(), petId);
-		} catch {
-			return null;
-		}
-	}
-	/** 读当前播放进度；页面内服务缺失时返回 null。 */
-	function progress(petId) {
-		const read = api()?.progress;
-		if (typeof read !== "function") return null;
-		try {
-			return read.call(api(), petId);
-		} catch {
-			return null;
-		}
-	}
-	/**
-	* 等一次点播走到终态。
-	*
-	* `POST /anim` 的 ok 只代表受理：素材没拿到、解码失败、被新点播顶掉、被锁冻住，都可能让它
-	* 根本没播完。真正的结束只有渲染端上报的回执知道，所以挂 GET /playback/{id} 等三个终态；
-	* 单次 timeout 上限 10 秒，套一层循环把总预算拉长。
-	*
-	* @param id - 点播编号；null 表示这次点播根本没受理。
-	* @returns 终态。
-	*/
-	async function waitPlayback(id) {
-		if (id === null) return { status: "gone" };
-		const deadline = performance.now() + CFG.waitBudgetMs;
-		for (;;) {
-			const left = deadline - performance.now();
-			if (left <= 0) return { status: "timeout" };
-			let r;
-			try {
-				r = await call("GET", "/playback/" + encodeURIComponent(id) + "?wait=ended,failed,cancelled&timeout=" + Math.min(1e4, Math.round(left)));
-			} catch {
-				return { status: "gone" };
-			}
-			if (r.error !== void 0) return { status: "gone" };
-			if (r.status === "ended" || r.status === "failed" || r.status === "cancelled") return {
-				status: r.status,
-				reason: typeof r.reason === "string" ? r.reason : void 0
-			};
-		}
-	}
-	return {
-		attach: (next) => {
-			scene?.abort();
-			scene = next;
-		},
-		call,
-		pose,
-		progress,
-		waitPlayback
-	};
-}
-
-//#endregion
-//#region src/client/baifan.ts
-/** 点击轮询间隔（毫秒）：读的是内存 Map，间隔只决定点击到响应的最大延迟。 */
-const POLL_MS = 150;
-/** 菜单注册失败后的重试间隔（毫秒）：DSH 重启会清掉宿主那份注册表。 */
-const RETRY_MS = 5e3;
-/**
-* 注入样式表（只注入一次）。
-*
-* @returns 本次新插入的标签；已存在时返回 null（卸载时不删别人的）。
-*/
-function injectCss$1() {
-	if (document.querySelector("style[data-plugin-css=\"" + STYLE_TAG$1 + "\"]") !== null) return null;
-	const tag = document.createElement("style");
-	tag.dataset.plugin = OWNER;
-	tag.dataset.pluginCss = STYLE_TAG$1;
-	tag.textContent = CSS;
-	document.head.appendChild(tag);
-	return tag;
-}
-function mountBaifan(ctx, host) {
-	const abort = new AbortController();
-	const style = injectCss$1();
-	const layer = document.createElement("div");
-	layer.id = ROOT_ID;
-	const toastEl = document.createElement("div");
-	toastEl.className = "bf-toast";
-	layer.appendChild(toastEl);
-	host.appendChild(layer);
-	const scene = createScene(layer, toastEl);
-	const transport = createTransport(ctx);
-	const show = createShow({
-		transport,
-		scene
-	});
-	const menu = createMenu({
-		get: (name) => ctx.get(name),
-		transport,
-		show,
-		signal: abort.signal,
-		retryMs: RETRY_MS
-	});
-	menu.ensureMenu().catch((error) => console.warn("[dsh-pet] 吃白饭注册菜单失败 " + String(error)));
-	const timer = window.setInterval(menu.tick, POLL_MS);
-	return () => {
-		menu.dispose();
-		window.clearInterval(timer);
-		show.halt("");
-		fetch(ROUTE + "/menu/item?owner=" + encodeURIComponent(OWNER), { method: "DELETE" }).catch(() => {});
-		abort.abort();
-		layer.remove();
-		if (style !== null) style.remove();
-	};
-}
-
-//#endregion
-//#region src/client/baifan/layer.ts
-function makeBaifanLayer(rt, mount) {
-	return function BaifanLayer() {
-		const ref = rt.useRef(null);
-		rt.useEffect(() => {
-			const host = ref.current;
-			if (host === null) return void 0;
-			return mount(host);
-		}, []);
-		return rt.h("div", { ref });
-	};
 }
 
 //#endregion
@@ -17837,18 +16829,6 @@ function makeFactory() {
 				pose: readPose,
 				progress: readProgress
 			});
-			const BaifanLayer = makeBaifanLayer({
-				h,
-				useRef,
-				useEffect
-			}, (host) => mountBaifan(ctx, host));
-			ctx.slots.inject("shell.overlay", function* () {
-				yield ctx.slots.register({
-					name: "shell.overlay",
-					id: "chatpet-baifan",
-					order: 1100
-				}, BaifanLayer);
-			});
 			ctx.effect(() => initNotify({
 				openSession: (sessionId) => ctx.get?.("uiWorkspace")?.openSession?.(sessionId),
 				sessionTitle: (sessionId) => {
@@ -18015,7 +16995,15 @@ function registerCompanion(info) {
                 const headers=new Headers(input instanceof Request ? input.headers : undefined);
                 new Headers(init?.headers).forEach((value,key)=>headers.set(key,value));
                 headers.set('Authorization','Bearer '+token);
-                const response=await globalThis.fetch(input,{...init,headers,redirect:'error'});
+                const options={...init,headers,redirect:'error'};
+                if(String(init?.method || 'GET').toUpperCase()==='POST' && /\/(?:anim|sleep|wake)$/.test(url.pathname)) {
+                  try {
+                    const value=typeof init?.body==='string'?JSON.parse(init.body):{};
+                    if(value && typeof value==='object' && !Array.isArray(value) && !value.requestId)
+                      options.body=JSON.stringify({...value,requestId:crypto.randomUUID()});
+                  } catch { /* Preserve the original route's validation. */ }
+                }
+                const response=await globalThis.fetch(input,options);
                 if(response.status===401)schedule(25);
                 return response;
               };
@@ -18141,11 +17129,11 @@ registerCompanion({
       @container(max-width:560px) { .chatpet-settings .cp-grid {grid-template-columns:1fr;}  .chatpet-settings .cp-fields { grid-template-columns: 1fr; } .chatpet-settings .cp-card { padding: 14px; } .chatpet-settings .cp-tab { padding: 9px 8px; } .chatpet-settings .cp-footer { align-items: start; } .chatpet-settings .cp-overview-row { grid-template-columns:minmax(5em,auto) 1fr; } .chatpet-settings .cp-overview-row .cp-save { grid-column:2; justify-self:start; } }
     `;
     const badge = (text = '待接入') => h('span', { className: 'cp-badge' }, text);
-    function Field({ label, note, wide, multiline, value, onChange, type = 'text', min, max, maxLength, disabled }) {
+    function Field({ label, note, wide, multiline, value, onChange, type = 'text', min, max, step, maxLength, disabled }) {
       const id = useId();
       return h('div', { className: `cp-field${wide ? ' cp-wide' : ''}` },
         h('label', { htmlFor: id }, label),
-        h(multiline ? 'textarea' : 'input', { id, type: multiline ? undefined : type, value: value ?? '', min, max, maxLength, disabled,
+        h(multiline ? 'textarea' : 'input', { id, type: multiline ? undefined : type, value: value ?? '', min, max, step, maxLength, disabled,
           onChange: event => onChange(event.target.value), 'aria-describedby': note ? `${id}-note` : undefined }),
         note && h('small', { id: `${id}-note` }, note));
     }
@@ -18338,12 +17326,23 @@ registerCompanion({
     function ChannelsPage({workspaceId, request}) {
       const [saved, setSaved] = useState(null), [draft, setDraft] = useState(null), [busy,setBusy] = useState(false);
       const [fault,setFault] = useState(''), lifetime = useRef(null);
-      React.useEffect(() => { const c = new AbortController(); lifetime.current = c; return () => c.abort(); }, []);
+      React.useEffect(() => { const c = new AbortController(); lifetime.current = c; return () => c.abort(); }, [workspaceId,request]);
       async function change(operation, input) {
         setBusy(true); setFault('');
-        const signal = lifetime.current.signal;
+        const signal = lifetime.current.signal,submitted=draft;
         try { const result = await request(operation, {workspaceId,...input}, signal);
-          if (!signal.aborted) { setSaved(result); setDraft({bridge:result.bridge.preferences,...result.messaging.config}); }
+          if (!signal.aborted) {
+            setSaved(result);
+            setDraft(old=>{
+              const received={bridge:result.bridge.preferences,...result.messaging.config};
+              if(!old)return received;
+              const next={...old},groups=operation==='channelStatus'?Object.keys(received):operation==='bridgeSettings'?['bridge']:Object.keys(input.next??{});
+              // Acknowledge only submitted sections that have not been edited
+              // again while the save awaited its native owner.
+              for(const group of groups)if(equal(old[group],submitted?.[group]))next[group]=received[group];
+              return next;
+            });
+          }
         } catch (e) { if (!signal.aborted) setFault(e.message); }
         finally { if (!signal.aborted) setBusy(false); }
       }
@@ -18385,7 +17384,7 @@ registerCompanion({
       }
       const updateOutlet = (i,key,value) => set('bridge','outlets',draft.bridge.outlets.map((o,j)=>i===j ? {...o,[key]:value} : o));
       return h(Card, {title:'外部联络'}, fault && h('p',{role:'alert'},fault),
-        button(saved ? '重新读取渠道状态' : '管理渠道', ()=>change('channelStatus',{})),
+        button(saved ? '重新读取渠道状态（放弃未保存修改）' : '管理渠道', ()=>change('channelStatus',{})),
         draft && h(React.Fragment,null,platform('qq','QQ'),platform('wechat','微信'),
           saved.messaging.config.qq.accountId && h(Qzone,{key:saved.messaging.config.qq.accountId,workspaceId,request}),
           ...saved.messaging.config.qq.allowGroups.map(groupId=>h(QQGroup,{key:groupId,groupId,workspaceId,request})),
@@ -18400,7 +17399,7 @@ registerCompanion({
             button('添加接收端',()=>set('bridge','outlets',[...draft.bridge.outlets,{name:'',url:'',kinds:['reach','reply','busy']}])),
             button('保存桥接设置',()=>change('bridgeSettings',{expected:saved.bridge.preferences,next:draft.bridge}))))));
     }
-    function LifeArchive({workspaceId, request}) {
+    function CompanionArchive({workspaceId, request, companionName}) {
       const [dates, setDates] = useState(null), [entry, setEntry] = useState(null);
       const [album, setAlbum] = useState(null), [image, setImage] = useState(null);
       const [fault, setFault] = useState(''), [busy, setBusy] = useState(false);
@@ -18437,7 +17436,7 @@ registerCompanion({
         h('label', {className:'cp-field'}, '查找聊天原文和日记', h('input', {value:query, maxLength:256, onChange:e => setQuery(e.target.value)})),
         button('查找', search(0)),
         result && h('div', null, ...result.diaries.map(item => h('p', {key:item.date}, item.date + ' · ' + item.excerpt)),
-          ...result.lines.map(line => h('p', {key:line.id}, new Date(line.time).toLocaleString() + ' · ' + (line.role === 'user' ? '伙伴' : '大肥鱼') + ' · ' + line.text)),
+          ...result.lines.map(line => h('p', {key:line.id}, new Date(line.time).toLocaleString() + ' · ' + (line.role === 'user' ? '用户' : companionName || '伙伴') + ' · ' + line.text)),
           !result.diaries.length && !result.lines.length && h('p', null, '没有查到可读取的记录。'),
           result.next !== undefined && button('继续查看聊天原文', search(result.next))),
         button('翻日记和活动', async call => { const days = await call('lifeDates'); return () => setDates(days); }),
@@ -18446,7 +17445,7 @@ registerCompanion({
         entry && h('section', null, h('h4', null, entry.day), h('p', {style:{whiteSpace:'pre-wrap'}}, entry.diary || '当天没有可显示的日记。'),
           ...entry.activity.map((event, i) => h('p', {key:i}, new Date(event.time).toLocaleTimeString() + ' · ' + event.summary))),
         button('打开相册', page(0)),
-        album && h('section', null, album.total ? h('p', null, '已收藏 ' + album.total + ' 张') : h('p', null, '相册还没有照片。可以在生活会话中请大肥鱼收藏本轮收到的图片。'),
+        album && h('section', null, album.total ? h('p', null, '已收藏 ' + album.total + ' 张') : h('p', null, '相册还没有照片。可以在普通聊天中请伙伴收藏收到的图片。'),
           ...album.photos.map(photo => h('div', {key:photo.id}, button(photo.description || new Date(photo.savedAt).toLocaleString(), async call => {
             const result = await call('lifePhoto', {id:photo.id});
             return () => setImage({id:photo.id, title:photo.description, src:'data:' + result.mediaType + ';base64,' + result.data});
@@ -18459,6 +17458,147 @@ registerCompanion({
             return page(0)(call);
           })));
     }
+    function EconomyPanel({workspaceId, request}) {
+      const [view,setView] = useState(null), [busy,setBusy] = useState(false), [fault,setFault] = useState('');
+      const [feedback,setFeedback] = useState(''), [edit,setEdit] = useState(null), [pending,setPending] = useState(null);
+      const [amount,setAmount] = useState(''), [note,setNote] = useState('');
+      const [giftItem,setGiftItem] = useState(''), [giftQuantity,setGiftQuantity] = useState('1'), [giftNote,setGiftNote] = useState('');
+      const [feedItem,setFeedItem] = useState('');
+      const [imported,setImported] = useState(null), [title,setTitle] = useState('');
+      const [readingFormat,setReadingFormat] = useState('article');
+      const lifetime = useRef(null), locked = useRef(false), unresolved = useRef(null);
+      const storageKey = `chatpet:economy:pending:${workspaceId}`;
+      React.useEffect(() => {
+        const controller = new AbortController(); lifetime.current = controller;
+        setView(null); setEdit(null); setImported(null); setTitle(''); setAmount(''); setNote(''); setFault('');
+        try {
+          const saved = localStorage.getItem(storageKey), value = saved ? JSON.parse(saved) : null;
+          if (value && (typeof value.requestId !== 'string' || !['economyAction','economySettings'].includes(value.endpoint)
+            || value.input?.workspaceId !== workspaceId)) throw Error('待确认经济操作的本机记录无效，请先检查浏览器保存状态。');
+          unresolved.current = value; setPending(value);
+        } catch (error) { unresolved.current = {invalid:true}; setPending({invalid:true}); setFault(error.message); }
+        async function load() {
+          try { const next = await request('economyView',{workspaceId},controller.signal); if (!controller.signal.aborted) setView(next); }
+          catch(error) { if (!controller.signal.aborted) setFault(error.message); }
+        }
+        void load();
+        return () => controller.abort();
+      },[workspaceId,request,storageKey]);
+      const refresh = async () => {
+        const signal=lifetime.current.signal; setFault('');
+        try {const next=await request('economyView',{workspaceId},signal); if(!signal.aborted)setView(next);}
+        catch(error){if(!signal.aborted)setFault(error.message);}
+      };
+      async function send(operation) {
+        if (locked.current || unresolved.current?.invalid) return;
+        const signal=lifetime.current.signal; locked.current=true;setBusy(true);setFault('');setFeedback('');
+        try {
+          if (!unresolved.current) {
+            localStorage.setItem(storageKey,JSON.stringify(operation));
+            unresolved.current=operation;setPending(operation);
+          } else if (unresolved.current.requestId!==operation.requestId) throw Error('有一笔结果待确认的操作，请先重试或核对流水。');
+          const result=await request(operation.endpoint,operation.input,signal,operation.requestId);
+          if(result.execution && !['completed','failed','cancelled'].includes(result.execution.status)) {
+            if(!signal.aborted){setPending(operation);setFeedback('投喂仍在等待核对，请重试原操作或查看使用中的库存。');await refresh();}
+            return;
+          }
+          // Only an acknowledged receipt releases the durable request identity.
+          localStorage.removeItem(storageKey);unresolved.current=null;
+          if(signal.aborted)return;
+          setPending(null);setFeedback(result.execution?.status==='failed'?'投喂未完成，请查看原因与库存。':'已保存，可在流水中核对。');setEdit(null);
+          if(operation.input.action?.kind==='grant'){setAmount('');setNote('');}
+          if(operation.input.action?.kind==='importReading'){setImported(null);setTitle('');}
+          await refresh();
+          if(result.execution?.status==='failed'&&!signal.aborted)setFault(result.execution.reason||'本次投喂未完成。');
+        } catch(error){if(!signal.aborted){
+          // These domain refusals occur before any commit. A transport timeout,
+          // cancellation, binding change or unknown error keeps the original ID.
+          if(['INELIGIBLE','NOT_FOUND','STALE_REVISION'].includes(error.code)) {
+            localStorage.removeItem(storageKey);unresolved.current=null;setPending(null);
+          }
+          setFault(error.message);
+        }}
+        finally{locked.current=false;if(!signal.aborted)setBusy(false);}
+      }
+      const mutate=(endpoint,input)=>send({endpoint,input:{workspaceId,...input},requestId:crypto.randomUUID()});
+      const act=action=>mutate('economyAction',{action});
+      const button=(label,onClick,disabled=false)=>h('button',{type:'button',className:'cp-save',disabled:busy||disabled,onClick},label);
+      const changed=(key,value)=>setEdit(old=>{const {version:_schema,revision:_revision,dailyNetReference:_income,fertilizerYield:_yield,crops,itemPrices,catalogEnabled,...writable}=view.configuration;const saved={...writable,crops:Object.fromEntries(Object.entries(crops).map(([id,value])=>[id,{growMs:value.growMs,seedCost:value.seedCost}])),itemPrices:Object.fromEntries(Object.entries(itemPrices).filter(([id])=>!id.startsWith('harvest:'))),catalogEnabled:Object.fromEntries(Object.entries(catalogEnabled).filter(([id])=>!id.startsWith('harvest:')))};return {expectedVersion:old?.expectedVersion||String(view.configurationVersion),
+        next:{...(old?.next||saved),[key]:value}};});
+      const config=edit?.next||view?.configuration, catalog=view?.catalog||[], inventory=view?.inventory||[];
+      const names=new Map(catalog.map(item=>[item.id,item.name]));
+      const hasPending=Boolean(pending), available=inventory.filter(item=>item.available>0);
+      const foods=available.filter(item=>catalog.find(entry=>entry.id===item.itemId)?.kind==='food');
+      const itemChoice=(label,value,setValue,items)=>h('label',{className:'cp-field'},label,
+        h('select',{value,disabled:busy||hasPending,onChange:event=>setValue(event.target.value)},
+          h('option',{value:''},'请选择'),...items.map(item=>h('option',{key:item.id,value:item.id},item.name))));
+      const integerValue=value=>/^[1-9]\d*$/.test(value)&&Number.isSafeInteger(Number(value));
+      const numeric=(label,value,onChange,min=0,noteText,max)=>field(label,{type:'number',min,max,step:'any',value,onChange:value=>onChange(value===''?null:Number(value)),disabled:busy||hasPending,note:noteText});
+      const updateCrop=(crop,key,value)=>changed('crops',{...Object.fromEntries(Object.entries(config.crops).map(([id,row])=>[id,{growMs:row.growMs,seedCost:row.seedCost}])),[crop]:{growMs:config.crops[crop].growMs,seedCost:config.crops[crop].seedCost,[key]:value}});
+      const updatePrice=(item,key,value)=>{const saved=catalog.find(entry=>entry.id===item);changed('itemPrices',{...config.itemPrices,[item]:{purchasePrice:saved.purchasePrice,sellPrice:saved.sellPrice,...config.itemPrices?.[item],[key]:value}});};
+      const price=(item,key)=>config.itemPrices?.[item.id]&&Object.hasOwn(config.itemPrices[item.id],key)?config.itemPrices[item.id][key]:item[key];
+      const forgetPending=()=>{
+        try {localStorage.removeItem(storageKey);unresolved.current=null;setPending(null);setFault('');}
+        catch(error){setFault(error.message);}
+      };
+      async function chooseFile(event) {
+        const file=event.target.files?.[0];event.target.value='';if(!file)return;
+        const signal=lifetime.current.signal;setFault('');
+        try {
+          if(!/\.(txt|md)$/i.test(file.name)||file.size>2*1024*1024)throw Error('请选择不超过 2 MB 的 .txt 或 .md 文件。');
+          const content=await file.text();if(signal.aborted)return;
+          if(!content.trim())throw Error('所选文件没有可导入的正文。');
+          setImported({content,name:file.name});setTitle(file.name.replace(/\.(txt|md)$/i,''));
+        }catch(error){if(!signal.aborted)setFault(error.message);}
+      }
+      return h(Card,{title:'钱包与物品',status:view?`${view.balance} 虚拟币`:'读取中',note:'钱包和物品由同一份账本管理。收入来自实际生产与自愿交易，没有每日自动发薪。'},
+        fault&&h('p',{role:'alert'},fault),feedback&&h('p',{role:'status'},feedback),
+        button('刷新钱包',refresh,busy),
+        pending&&h('div',null,h('p',{role:'status'},'上次操作的结果尚未确认。重试会使用原请求编号，避免重复记账。'),
+          !pending.invalid&&button('重试原操作',()=>send(pending)),
+          h('p',{className:'cp-muted'},'请先刷新并核对流水；清除本机重试记录不会撤销已经提交的操作。'),
+          button('已核对，清除重试记录',forgetPending)),
+        view&&h(React.Fragment,null,
+          facts([['余额',`${view.balance} 虚拟币`],['账本修订',view.revision],['当前经济配置',`${view.configuration.revision} · ${String(view.configurationVersion).slice(-12)}`]]),
+          details('给零花钱',fields(field('金额',{type:'number',min:1,value:amount,onChange:setAmount,disabled:busy||hasPending}),
+            field('备注',{value:note,onChange:setNote,maxLength:500,disabled:busy||hasPending,note:'金额默认留空，由你填写本次想给的数量。'})),
+            button('给零花钱',()=>act({kind:'grant',amount:Number(amount),note}),hasPending||!integerValue(amount))),
+          details('赠送物品',fields(itemChoice('物品',giftItem,setGiftItem,catalog),field('数量',{type:'number',min:1,value:giftQuantity,onChange:setGiftQuantity,disabled:busy||hasPending}),
+            field('赠送备注',{value:giftNote,onChange:setGiftNote,maxLength:500,disabled:busy||hasPending})),
+            button('赠送',()=>act({kind:'gift',itemId:giftItem,quantity:Number(giftQuantity),note:giftNote}),hasPending||!giftItem||!integerValue(giftQuantity))),
+          details('立即投喂',h('p',{className:'cp-muted'},'从现有库存中扣除所选食物，并执行真实身体动作。'),
+            itemChoice('库存食物',feedItem,setFeedItem,foods.map(item=>({id:item.itemId,name:`${names.get(item.itemId)||item.itemId}（可用 ${item.available}）` }))),
+            button('立即投喂 1 份',()=>act({kind:'feed',itemId:feedItem,quantity:1}),hasPending||!feedItem)),
+          details('商店',h('p',{className:'cp-muted'},'购买会扣除虚拟币，当前实际价格如下。'),
+            ...catalog.map(item=>h('div',{key:item.id},h('h4',null,item.name),h('p',null,item.description),
+              h('p',{className:'cp-muted'},`${item.enabled===false?'已下架 · ':''}购入 ${item.purchasePrice===null?'不可购买':item.purchasePrice+' 币'} · 售出 ${item.sellPrice===null?'不可售卖':item.sellPrice+' 币'}`),
+              item.source&&h('p',{className:'cp-muted'},`来源：${item.source.kind==='owner-import'?'主人导入':'内置原创'} · ${item.source.name}`),
+              button('购买 1 件',()=>act({kind:'buy',itemId:item.id,quantity:1}),hasPending||item.enabled===false||item.purchasePrice===null)))),
+          details('库存',inventory.length?inventory.map(item=>h('div',{key:item.itemId},h('p',null,`${names.get(item.itemId)||item.itemId} · 共 ${item.quantity} · 可用 ${item.available} · 使用中 ${item.reserved}`),
+            button('售出 1 件',()=>act({kind:'sell',itemId:item.itemId,quantity:1}),hasPending||item.available<1||catalog.find(entry=>entry.id===item.itemId)?.sellPrice==null))):h('p',null,'库存还是空的。')),
+          details('导入阅读内容',h('p',{className:'cp-muted'},'选择本机 .txt 或 .md，导入后可在商店中按真实正文分段阅读。只导入你选择的文件。'),
+            h('label',{className:'cp-field'},'选择阅读文件',h('input',{type:'file',accept:'.txt,.md,text/plain,text/markdown',disabled:busy||hasPending,onChange:chooseFile})),
+            imported&&h(React.Fragment,null,field('标题',{value:title,onChange:setTitle,maxLength:200,disabled:busy||hasPending}),
+              h('label',{className:'cp-field'},'读物类型',h('select',{value:readingFormat,disabled:busy||hasPending,onChange:event=>setReadingFormat(event.target.value)},
+                h('option',{value:'article'},'文章'),h('option',{value:'book'},'书籍'))),
+              h('p',null,`来源：主人导入 · ${imported.name} · ${imported.content.length} 字符`),preview('正文预览',imported.content.slice(0,1200)),
+              button('导入阅读内容',()=>act({kind:'importReading',title:title.trim(),format:readingFormat,content:imported.content,source:{kind:'owner-import',name:imported.name}}),hasPending||!title.trim()))),
+          details('经济配置',h('p',{className:'cp-muted'},'可调整商城卖给她的商品和生活节奏。日收益目标、作物产量与回收价不提供自定义。已种批次保留种下时的生长与产量参数。'),
+            fields(...[['articlePrice','文章标准价格'],['bookPrice','书籍标准价格'],['improvedMealPrice','改善伙食价格'],
+              ['compostCost','堆肥费用'],['waterDurationFactor','浇水时长比例'],['fertilizerGrowth','施肥生长调整']].map(([key,label])=>numeric(label,config[key],value=>changed(key,value)))),
+            ...Object.entries(config.crops).map(([crop,value])=>h('div',{key:crop},h('h4',null,(names.get(`seed:${crop}`)||crop)+' · 新种批次'),fields(
+              numeric('生长时间（毫秒）',value.growMs,next=>updateCrop(crop,'growMs',next),1),numeric('种子价格',value.seedCost,next=>updateCrop(crop,'seedCost',next))))),
+            details('商品价格与上架',...catalog.filter(item=>item.kind!=='harvest').map(item=>h('div',{key:item.id},h('h4',null,item.name),fields(
+              numeric('购入价格（留空不可购买）',price(item,'purchasePrice'),value=>updatePrice(item.id,'purchasePrice',value))),
+              h('label',{className:'cp-switch'},h('input',{type:'checkbox',checked:config.catalogEnabled?.[item.id]!==false,disabled:busy||hasPending,
+                onChange:event=>changed('catalogEnabled',{...config.catalogEnabled,[item.id]:event.target.checked})}),'上架')))),
+            config.foodEffects&&details('食物身体效果',...Object.entries(config.foodEffects).map(([item,effects])=>h('div',{key:item},h('h4',null,names.get(item)||item),fields(
+              ...[['hunger','饥饿变化'],['thirst','口渴变化'],['energy','体力变化'],['bladder','如厕需求变化'],['pain','疼痛变化']].map(([effect,label])=>numeric(label,effects[effect]??0,next=>changed('foodEffects',{...config.foodEffects,[item]:{...effects,[effect]:next}}),-1,'范围 -1 至 1；负数降低，正数提高对应状态值。',1)))))),
+            button('保存经济配置',()=>mutate('economySettings',edit),hasPending||!edit||!view.configurationVersion),button('放弃配置修改',()=>setEdit(null),!edit)),
+          details('最近流水',view.ledger?.length?view.ledger.slice().reverse().map(entry=>h('div',{key:entry.id},h('p',null,`${new Date(entry.at).toLocaleString()} · ${entry.note||entry.kind}`),
+            h('p',{className:'cp-muted'},`${entry.moneyDelta>=0?'+':''}${entry.moneyDelta} 币 · 余额 ${entry.balance} · ${Object.entries(entry.itemDeltas).map(([item,quantity])=>`${names.get(item)||item} ${quantity>=0?'+':''}${quantity}`).join('，')||'物品无变化'}`))):h('p',null,'还没有经济流水。'))));
+    }
+
     function LifePage({ workspaceId, request }) {
       const [view, setView] = useState(null), [busy, setBusy] = useState(false);
       const [error, setError] = useState(''), [feedback, setFeedback] = useState('');
@@ -18495,36 +17635,46 @@ registerCompanion({
       }
       if (!workspaceId) return h('p', null, '请先绑定并初始化工作区。');
       const button = (label, click, disabled = false) => h('button', {type: 'button', className: 'cp-save', disabled: busy || disabled, onClick: click}, label);
-      const home = view?.home, life = view?.life;
+      const home = view?.home, life = view?.life, plan = life?.currentPlan;
       const prefs = edit?.next || view?.preferences;
       const updatePref = (key, value) => setEdit(old => ({expected:old?.expected || view.preferences,
         next:{...(old?.next || view.preferences), [key]:value}}));
       return h(React.Fragment, null,
-        h(Card, {title: '大肥鱼的日常', status: view ? view.running ? '生活中' : '已暂停' : '读取中',
+        h(Card, {title: '自主生活', status: view ? view.running ? '生活中' : '已暂停' : '读取中',
           note: '开启后，生活会话会使用当前模型安排活动和主动联络。'},
           error && h('p', {role: 'alert'}, error),
           feedback && h('p', {role: 'status'}, feedback),
           view && h('div', {className: 'cp-inline-actions'}, button(view.enabled ? '暂停生活' : '开启生活', () => change('lifeControl', {enabled: !view.enabled}))),
           home && facts([['现在', `${home.her.roomName} · ${home.her.spotLabel}，${home.her.activity}`],
             ['身体状态', Object.values(home.body.words).join('，')], ['生活时区', view.timeZone],
-            ['下次活动', life?.alarm ? `${new Date(life.alarm.at).toLocaleString()} · ${life.alarm.note || '日常唤醒'}` : '尚未安排'],
+            ['下次考虑', life?.alarm ? `${new Date(life.alarm.at).toLocaleString()} · ${life.alarm.note || '生活唤醒'}` : '等待消息或计划条件'],
             ['生活会话', life?.homeSessionId ? '已保存，可在 DSH 会话列表打开' : '开启后创建'],
             ['生活会话用量估算', life?.spend ? life.spend.day + ' · ¥' + Number(life.spend.yuan).toFixed(4) : '暂无记录']]),
           view?.fault && h('p', {role: 'alert'}, view.fault),
           ...(life?.faults || []).map((fault, index) => h('p', {key: index, role: 'alert'}, fault)),
           h('p', {className: 'cp-muted'}, '安静模式暂停主动气泡，生活继续记录。生活运行时，自动碎碎念暂停；手动碎碎念仍可使用。')),
-        prefs && h(Card, {title:'作息与预算'}, h('div', {className:'cp-fields'},
-          ...[['wake','默认起床'],['review','每日回顾']].map(([key,label]) => h('label', {className:'cp-field',key}, label,
+        h(Card, {title:'当前生活计划', note:'不同对话共用同一份计划。可以在对话中让它查看、调整、暂停或继续；没有下一项安排时也可以安心待着。',
+          status:plan ? ({active:'进行中',paused:'已暂停',waiting:'等待中',completed:'已完成',cancelled:'已取消'}[plan.status] || plan.status) : '尚未安排'},
+          plan ? facts([['想做什么',plan.goal],['原因',plan.reason],['当前活动',plan.steps?.[plan.cursor]?.activity || '本轮安排已结束'],
+            ['实际进度',plan.execution ? ({pending:'已接受，等待执行',moving:'正在移动',working:'正在进行',waiting:'等待继续',completed:'已结束'}[plan.execution.phase] || plan.execution.phase) : '尚未开始'],
+            ['未完成安排',(plan.steps || []).slice(plan.cursor+1).map(step=>step.activity).join(' → ') || '没有后续安排'],
+            ['暂停或等待原因',plan.pauseReason || plan.replanReason || '无'],
+            ['下次考虑',plan.nextConsiderAt ? new Date(plan.nextConsiderAt).toLocaleString() : '等待消息或计划条件']]) : h('p',null,'还没有生活计划。开启生活后可以由它决定，也可以先在对话里讨论。')),
+        prefs && h(Card, {title:'可选作息与预算'}, h('div', {className:'cp-fields'},
+          ...[['wake','起床时间'],['review','每日回顾']].map(([key,label]) => h('label', {className:'cp-field',key}, label,
             h('input', {type:'time', value:prefs[key], onChange:e => updatePref(key,e.target.value)}))),
           h('label', {className:'cp-field'}, '每日费用提醒（人民币，留空关闭）', h('input', {type:'number', min:'0.01', step:'any',
             value:prefs.dailyBudget ?? '', onChange:e => updatePref('dailyBudget',e.target.value === '' ? null : Number(e.target.value))})),
-          h('label', {className:'cp-switch'}, h('input', {type:'checkbox', checked:prefs.compactAfterReview,
-            onChange:e => updatePref('compactAfterReview',e.target.checked)}), '晚间回顾后整理生活会话')),
+          h('label', {className:'cp-field'}, '未保存生活决定时自动补救次数（留空一次，0为关闭）', h('input', {type:'number', min:'0', step:'1',
+            value:prefs.planningRepairAttempts ?? '', onChange:e => updatePref('planningRepairAttempts',e.target.value === '' ? null : Number(e.target.value))})),
+          h('label', {className:'cp-field'}, '晚间回顾后整理生活会话', h('select', {value:prefs.compactAfterReview == null ? '' : String(prefs.compactAfterReview),
+            onChange:e => updatePref('compactAfterReview',e.target.value === '' ? null : e.target.value === 'true')},
+            h('option',{value:''},'未配置'),h('option',{value:'true'},'开启'),h('option',{value:'false'},'关闭')))),
           button('保存作息和预算', () => change('lifePreferences', edit), !edit)),
+        h(EconomyPanel, {key:workspaceId, workspaceId, request}),
         view?.roomAvailable && h(RoomView, {workspaceId, request}),
-        view && h(LifeArchive, {key:workspaceId, workspaceId, request}),
         home && h(Card, {title: '陪它一会儿', note: '暂停自主生活时也能照顾它；这些操作不会调用模型。'},
-          h('div', {className: 'cp-inline-actions'}, ...[['feed', '喂小鱼干'], ['water', '倒杯水'], ['pet', '摸摸头'], ['play', '一起玩'], ['sleep', '去睡觉'], ['wake', '叫醒']].map(([action, label]) =>
+          h('div', {className: 'cp-inline-actions'}, ...[['feed', '免费基础餐食'], ['water', '倒杯水'], ['pet', '摸摸头'], ['play', '一起玩'], ['sleep', '去睡觉'], ['wake', '叫醒']].map(([action, label]) =>
             h(React.Fragment, {key: action}, button(label, () => change('lifeAction', {action})))))),
         home && h(Card, {title: '最近的生活', note: '原版保留最近 15 分钟的生活事件。会话工具活动另存于绑定 Repo。'},
           ...(home.events.length ? home.events.map((event, i) => h('p', {key: `${event.at}-${i}`}, `${new Date(event.at).toLocaleTimeString()} · ${event.text}`)) : [h('p', {key: 'empty', className: 'cp-muted'}, '这会儿还没有新活动。')]),
@@ -18600,30 +17750,31 @@ registerCompanion({
         error&&h('p',{role:'alert'},error),notice&&h('p',{role:'status'},notice));
     }
     // Drafts live in SettingsPage so changing tabs never discards new file edits.
-    function FoundationEditor({workspaceId, request, value, onChange}) {
+    function FoundationEditor({workspaceId, request, value, onChange, endpoint = 'foundation'}) {
+      const self = endpoint === 'self', title = self ? '我是谁' : '基础说明';
       const [error,setError]=useState(''),[busy,setBusy]=useState(false),[attempt,retry]=useState(0),[notice,setNotice]=useState('');
       const lifetime=useRef(null);
       React.useEffect(()=>{
         const controller=new AbortController();lifetime.current=controller;
-        if(workspaceId&&!value) request('foundation',{workspaceId},controller.signal).then(base=>{
+        if(workspaceId&&!value) request(endpoint,{workspaceId},controller.signal).then(base=>{
           if(!controller.signal.aborted)onChange({base,text:base.text});
         },e=>{if(!controller.signal.aborted)setError(e.message);});
         return()=>controller.abort();
-      },[workspaceId,request,attempt]);
+      },[workspaceId,request,attempt,endpoint]);
       async function save() {
         const signal=lifetime.current.signal;setBusy(true);setError('');setNotice('');
-        try {const base=await request('foundation',{workspaceId,expectedRevision:value.base.revision,text:value.text},signal);
-          if(!signal.aborted){onChange({base,text:base.text});setNotice('基础说明已保存，下一次对话使用新内容。');}
+        try {const base=await request(endpoint,{workspaceId,expectedRevision:value.base.revision,text:value.text},signal);
+          if(!signal.aborted){onChange({base,text:base.text});setNotice(title+'已保存，下一次对话使用新内容。');}
         } catch(e){if(!signal.aborted)setError(e.message);}
         finally {if(!signal.aborted)setBusy(false);}
       }
-      return h(Card,{title:'基础说明',note:'对话规则、关系和能力说明。关闭自主生活后仍会使用；当前未加载的能力不会提供给大肥鱼。',status:value?.base.source==='owner'?'已自定义':'随包默认'},
+      return h(Card,{title,note:self ? '伙伴逐渐形成的自我认识。与主人填写的人设分别保存，关闭自主生活或记忆后仍可使用。' : '对话规则、关系和能力说明。关闭自主生活后仍会使用。',status:value?.base.text?.trim()?'已填写':'未填写'},
         !workspaceId?h('p',null,'请先绑定并初始化工作区。'):value?h(React.Fragment,null,
-          h('label',{className:'cp-field'},'基础说明内容',h('textarea',{className:'cp-foundation',value:value.text,maxLength:64000,
+          h('label',{className:'cp-field'},title+'内容',h('textarea',{className:'cp-foundation',value:value.text,maxLength:64000,
             disabled:busy,onChange:e=>onChange({...value,text:e.target.value})})),
-          h('div',{className:'cp-inline-actions'},h('button',{type:'button',className:'cp-save cp-primary',disabled:busy||value.text===value.base.text,onClick:save},busy?'正在保存…':'保存基础说明')),
-          h('p',{className:'cp-muted'},'保存在 .chatpet/COMPANION.md。未编辑时直接使用随包说明，旧档案无需迁移。')):
-          h('p',{role:'status'},error?'未能读取基础说明。':'正在读取基础说明…'),
+          h('div',{className:'cp-inline-actions'},h('button',{type:'button',className:'cp-save cp-primary',disabled:busy||value.text===value.base.text,onClick:save},busy?'正在保存…':'保存'+title)),
+          h('p',{className:'cp-muted'},self ? '可以留空，也可以在普通聊天中逐渐更新。' : '保存在 .chatpet/COMPANION.md。可以留空，空白时不会加载另一套预设说明。')):
+          h('p',{role:'status'},error?'未能读取'+title+'。':'正在读取'+title+'…'),
         notice&&h('p',{role:'status'},notice),error&&h('p',{role:'alert'},error),error&&!value&&h('button',{type:'button',className:'cp-save',onClick:()=>{setError('');retry(n=>n+1);}},'重试读取'));
     }
     function EmotionEditor({workspaceId,request,value,onChange}) {
@@ -18661,7 +17812,7 @@ registerCompanion({
       const [active, setActive] = useState('overview');
       const [documents,setDocuments]=useState({});
       const [appearanceVisited,setAppearanceVisited]=useState(false);
-      const documentDirty=Object.values(documents).some(row=>row.foundation&&row.foundation.text!==row.foundation.base.text||row.emotion&&(row.emotion.mood!==(row.emotion.base.state?.mood||'')||row.emotion.reason!==(row.emotion.base.state?.reason||'')||row.emotion.feelings!==(row.emotion.base.state?.feelings||[]).join('、'))||row.timing&&!equal(row.timing.base,row.timing.next));
+      const documentDirty=Object.values(documents).some(row=>row.foundation&&row.foundation.text!==row.foundation.base.text||row.self&&row.self.text!==row.self.base.text||row.emotion&&(row.emotion.mood!==(row.emotion.base.state?.mood||'')||row.emotion.reason!==(row.emotion.base.state?.reason||'')||row.emotion.feelings!==(row.emotion.base.state?.feelings||[]).join('、'))||row.timing&&!equal(row.timing.base,row.timing.next));
       const [snapshot, setSnapshot] = useState(null);
       const [draft, setDraft] = useState(null);
       const [loading, setLoading] = useState(true);
@@ -18813,7 +17964,13 @@ registerCompanion({
           } else if (kind === 'profile') {
             setSnapshot(old => ({ ...old, profile: value })); setDraft(old => ({ ...old, profile: value.text }));
           } else {
-            setSnapshot(old => ({ ...old, preferences: value }));
+            setSnapshot(old => {
+              if(old?.preferences.revision!==input.expectedRevision
+                || old.preferences.workspace?.id!==value.workspace?.id
+                || old.preferences.workspace?.path!==value.workspace?.path)return old;
+              return {...old,preferences:value,editorScope:old.editorScope
+                ? {...old.editorScope,preferencesRevision:value.revision}:old.editorScope};
+            });
           }
           setNotice('设置已保存并生效。');
         } catch (failure) {
@@ -18872,12 +18029,14 @@ registerCompanion({
           return [...new Set(labels)].join(' / ') || '未报告';
         };
         const numberField = (key, label, max, min = 0) => field(label, { type: 'number', min, max,
-          value: draft.companion[key], onChange: value => setDraft(old => ({ ...old, companion: {
-            ...old.companion, [key]: value === '' ? '' : Number(value),
+          value: draft.companion[key] ?? '', placeholder:'未配置', onChange: value => setDraft(old => ({ ...old, companion: {
+            ...old.companion, [key]: value === '' ? null : Number(value),
           } })) });
-        const switchField = (key, label) => h('label', { key, className: 'cp-switch' },
-          h('input', { type: 'checkbox', checked: draft.companion[key],
-            onChange: event => setDraft(old => ({ ...old, companion: { ...old.companion, [key]: event.target.checked } })) }), label);
+        const switchField = (key, label) => h('label', { key, className: 'cp-field' }, label,
+          h('select', { value: draft.companion[key] == null ? '' : String(draft.companion[key]),
+            onChange: event => setDraft(old => ({ ...old, companion: { ...old.companion,
+              [key]: event.target.value === '' ? null : event.target.value === 'true' } })) },
+            h('option',{value:''},'未配置'),h('option',{value:'true'},'开启'),h('option',{value:'false'},'关闭')));
         const saveCompanion = (keys, label) => {
           const edited = keys.some(key => draft.companion[key] !== snapshot.companion[key]);
           const settings = { ...snapshot.companion, ...Object.fromEntries(keys.map(key => [key, draft.companion[key]])) };
@@ -18888,7 +18047,7 @@ registerCompanion({
         if (active === 'overview') {
           return h(React.Fragment,null,
             h('div',{className:'cp-grid'},
-              h(Card,{title:'陪伴',status:desktopState},h('div',{className:'cp-big'},snapshot.identity.displayName),
+              h(Card,{title:'陪伴',status:desktopState},h('div',{className:'cp-big'},snapshot.identity.displayName||'未命名伙伴'),
                 h('p',{className:'cp-muted'},repo?.title||'先为大肥鱼选一个工作区。'),
                 h('div',{className:'cp-inline-actions'},desktopButton(true),jump('编辑角色','role','identity'))),
               h(Card,{title:'对话与记忆',status:snapshot.nativeConversationReady?'已就绪':'待就绪'},
@@ -18899,7 +18058,12 @@ registerCompanion({
             h(Card,{title:'日常',note:'角色、记忆和心情持续保留。自主生活决定是否安排活动和主动联络。'},
               h('div',{className:'cp-inline-actions'},jump('看看心情','emotion'),jump('管理生活','life'),jump('连接聊天渠道','connections'))));
         }
-        if (active === 'life') return h(LifePage, {key: workspaceId || 'unbound', workspaceId, request});
+        if (active === 'life') return h(React.Fragment,null,
+          snapshot.companion&&h(Card,{title:'离线身体变化',note:'初始最多计入4小时新增消耗；关闭或隐藏房间不会暂停后台生活。上限不治疗离线前已有的不适，作物另按真实时间生长。'},
+            fields(numberField('offlineBodyHours','离线新增消耗上限（小时，0为不增加）',168),
+              numberField('offlineNeedCeilingPercent','离线需求温和上限（%）',100),numberField('offlineEnergyFloorPercent','离线精力温和下限（%）',100)),
+            saveCompanion(['offlineBodyHours','offlineNeedCeilingPercent','offlineEnergyFloorPercent'],'保存离线身体设置')),
+          h(LifePage, {key: workspaceId || 'unbound', workspaceId, request}));
         if (active === 'connections') return workspaceId?h(ChannelsPage,{key:workspaceId,workspaceId,request}):needsWorkspace('连接聊天渠道');
         if (active === 'emotion') return h(React.Fragment,null,
           h(EmotionEditor,{key:'emotion-'+(workspaceId||'unbound'),workspaceId,request,value:document.emotion,onChange:editDocument('emotion')}),
@@ -18919,9 +18083,9 @@ registerCompanion({
                 : !workspaceId ? '绑定并初始化工作区后可以检索。' : '此工作区尚未配置长期记忆服务。')),
             h(Card, { title: '近期历史与长期记忆' },
               world.has('history') && h('p', null, '近期历史选择和去重组件已加载。当前续聊沿用 DSH 原生历史，跨会话召回由 Mnemosyne 提供。'),
-              world.has('compaction') && snapshot.companion && h('p', null, '积累 ' + snapshot.companion.memorySummaryTurns + ' 轮或空闲 ' +
-                snapshot.companion.memorySummaryIdleMinutes + ' 分钟后整理，最短间隔 ' + snapshot.companion.memorySummaryMinimumMinutes + ' 分钟。'),
-              world.has('memory') && snapshot.companion && h('p', null, '每次最多召回 ' + snapshot.companion.memoryRecallCount +
+              world.has('compaction') && snapshot.companion?.memorySummaryTurns != null && snapshot.companion?.memorySummaryIdleMinutes != null && h('p', null, '积累 ' + snapshot.companion.memorySummaryTurns + ' 轮或空闲 ' +
+                snapshot.companion.memorySummaryIdleMinutes + ' 分钟后整理，最短间隔 ' + (snapshot.companion.memorySummaryMinimumMinutes ?? 0) + ' 分钟。'),
+              world.has('memory') && snapshot.companion?.memoryRecallCount != null && snapshot.companion?.memoryRecallBlockChars != null && h('p', null, '每次最多召回 ' + snapshot.companion.memoryRecallCount +
                 ' 块，每块最多 ' + snapshot.companion.memoryRecallBlockChars + ' 字符。'),
               !world.has('history') && !world.has('memory') && !world.has('compaction') && sourceAbsent(),
               snapshot.companion && h('p',{className:'cp-muted'},'记忆召回与整理参数见下方。')),
@@ -18935,18 +18099,20 @@ registerCompanion({
               : '角色先保存在本机，初始化工作区时会写入角色文件。' }, fields(
               field('角色名称', { value: draft.identity.displayName, onChange: editIdentity('displayName'), wide: true }),
               field('角色设定', { value: draft.identity.character, onChange: editIdentity('character'), multiline: true, wide: true })),
-              saveButton('identity', identityDirty, () => save('identity', { expectedRevision: snapshot.identity.revision,
+              saveButton('identity', identityDirty, () => save('identity', { expectedScope:snapshot.editorScope,expectedRevision: snapshot.identity.revision,
                 displayName: draft.identity.displayName, character: draft.identity.character }), '保存角色')),
             h(Card, { title: '用户资料', note: ready ? '填写希望大肥鱼了解的称呼、习惯或偏好。内容保存在 .chatpet/USER.md。' : '绑定工作区后可以填写希望大肥鱼了解的资料。' },
               field('用户资料内容', { value: draft.profile, multiline: true, wide: true, disabled: !ready,
                 onChange: value => setDraft(old => ({ ...old, profile: value })) }),
               saveButton('profile', profileDirty && ready, () => save('profile', {
-                expectedRevision: snapshot.profile.revision, text: draft.profile }), '保存用户资料')),
+                expectedScope:snapshot.editorScope,expectedRevision: snapshot.profile.revision, text: draft.profile }), '保存用户资料')),
             h(Card, { id: `${prefix}-prompt`, title: '角色提示预览', note: 'World 的人设提示机制把已保存的角色与用户资料放入当前工作区的对话。' },
               world.has('persona') ? worldView('profile', snapshot.identity.revision + '/' + snapshot.profile.revision, view =>
                 h(React.Fragment, null, preview('角色设定 · SOUL.md', view.profile.identity), preview('用户资料 · USER.md', view.profile.user),
                   h('p', { className: 'cp-muted' }, '人设与用户资料约 ' + view.profile.estimatedTokens + ' tokens。单轮总用量见 DSH 会话。'))) : sourceAbsent()),
-            h(FoundationEditor,{key:'foundation-'+(workspaceId||'unbound'),workspaceId,request,value:document.foundation,onChange:editDocument('foundation')}));
+            h(FoundationEditor,{key:'foundation-'+(workspaceId||'unbound'),workspaceId,request,value:document.foundation,onChange:editDocument('foundation')}),
+            h(FoundationEditor,{key:'self-'+(workspaceId||'unbound'),workspaceId,request,endpoint:'self',value:document.self,onChange:editDocument('self')}),
+            workspaceId && h(CompanionArchive,{key:'records-'+workspaceId,workspaceId,request,companionName:snapshot.identity.displayName}));
         }
         if (active === 'desktop') {
           return h(React.Fragment, null,
@@ -18958,13 +18124,13 @@ registerCompanion({
               h(Card,{title:'动作记录'},fields(numberField('recentActionCount','最近动作数量（次）',500),numberField('recentActionMinutes','动作保留时长（分钟）',10080))),
               saveCompanion(['desktopReplyBubble','desktopBubbleSeconds','stickerProbabilityPercent','recentActionCount','recentActionMinutes'],'保存桌宠互动设置'))
               : needsWorkspace('桌宠偏好'),
-            h(Card, { title: '主动联系', note: '安静模式会暂停自动碎碎念、待办提醒和定时余额查询。你仍然可以主动找蓝鱼聊天。' },
+            h(Card, { title: '主动联系', note: '安静模式会暂停自动碎碎念、待办提醒和定时余额查询。你仍然可以主动找伙伴聊天。' },
               h('label', { className: 'cp-switch' },
                 h('input', { type: 'checkbox', checked: draft.quiet,
                   onChange: event => setDraft(old => ({ ...old, quiet: event.target.checked })) }), '安静模式'),
               saveButton('quiet', quietDirty, () => save('quiet', { expectedRevision: snapshot.policy.revision, quiet: draft.quiet }), '保存安静模式')),
             boundId && snapshot.platformAvailable && h(StandaloneAccess,{key:boundId,workspaceId:boundId,request}),
-            details('桌宠快捷键', h('p', null, '鼠标悬停在蓝鱼上时，按 L 打开对话、S 截图、D 查看待办、Z 睡觉。')));
+            details('桌宠快捷键', h('p', null, '鼠标悬停在桌宠上时，按 L 打开对话、S 截图、D 查看待办、Z 睡觉。')));
         }
         const missing = draft.workspaceId && !snapshot.workspaces.some(row => row.id === draft.workspaceId);
         return h(React.Fragment, null,
@@ -18981,16 +18147,26 @@ registerCompanion({
             otherWorkspaceDrafts && h('p', { className: 'cp-muted' }, '请先保存其他设置草稿，或刷新以放弃修改，再切换工作区。'),
             saveButton('preferences', workspaceDirty && snapshot.workspaceAvailable && !otherWorkspaceDrafts,
               () => savePreferences('workspace'), draft.workspaceId ? '绑定并初始化' : '解除绑定')),
-          h(Card, { title: '资料与会话', status: workspaceLabels[snapshot.workspace.state] },
-            h('p', null, snapshot.workspace.error || (ready
+          h(Card, { title: '资料与会话', status: ready && snapshot.storage && !snapshot.storage.complete ? '存储待迁入工作区' : workspaceLabels[snapshot.workspace.state] },
+            h('p', null, snapshot.workspace.state === 'pending' ? '工作区资料待初始化。点击下方按钮建立缺失文件，不会覆盖已有内容。' : snapshot.workspace.error || (ready
               ? '角色、用户资料和设置已从 .chatpet/ 加载。完整会话随工作区保存，换设备绑定同一个工作区后可以恢复。'
               : '初始化会建立 .chatpet/ 资料目录。若目录已存在，会先校验再加载。')),
             h('p', { className: 'cp-muted' }, snapshot.nativeConversationReady ? 'DSH 原生会话已就绪。' : 'DSH 原生会话尚未就绪。'),
+            ready && snapshot.storage && h('p', {className:'cp-muted'}, snapshot.storage.complete
+              ? '伙伴资料已使用绑定工作区中的持久存储。'
+              : '资料文件已准备，但运行存储尚未全部迁入工作区，初始化尚未完成。'),
+            snapshot.storage && details('实际存储位置', facts([
+              ['Core 当前目录',snapshot.storage.core.current],
+              ['Core 工作区目录',snapshot.storage.core.expected || '尚未绑定'],
+              ['记忆当前目录',snapshot.storage.memory?.current || '未配置'],
+              ['记忆登记目录',snapshot.storage.memory?.configured || '未配置'],
+              ['设备运行环境',snapshot.storage.runtime?.python || '未配置'],
+            ])),
             saveButton('initialize', Boolean(repo) && !workspaceDirty && !otherWorkspaceDrafts,
               () => save('initialize', { expectedPreferencesRevision: snapshot.preferences.revision }), '检查并初始化资料目录')),
           details('高级执行限制', h('p', { className: 'cp-muted' }, '步数、工具次数和时长只限制自主生活、电视等自动轮次，不限制主人主动对话。模型和工具权限由 DSH 原生会话管理。'),
             fields(...[
-              ['maxHistoryMessages', '上下文消息数', 0, 200], ['maxContextChars', '上下文字符数', 2048, 128000],
+              ['maxContextChars', '记忆上下文字符预算', 2048, 128000],
               ['maxSteps', '单次执行步数', 1, 64], ['maxToolCalls', '工具调用次数', 0, 128], ['maxDurationMs', '单次执行时长（毫秒）', 1000, 600000],
             ].map(([key, label, min, max]) => field(label, { type: 'number', min, max, value: draft.conversation[key],
               onChange: value => setDraft(old => ({ ...old, conversation: { ...old.conversation, [key]: value === '' ? '' : Number(value) } })) }))),
@@ -19019,7 +18195,7 @@ registerCompanion({
         if (target === null) return; event.preventDefault(); selectTab(sections[target][0]); tabs.current[target]?.focus();
       }
       return h('div', { className: 'chatpet-settings' }, h('style', null, css),
-        h('header',{className:'cp-heading'},h('div',null,h('small',null,'DAFEIYU · COMPANION'),h('h2',null,(snapshot?.identity.displayName||'大肥鱼')+'的世界'),h('div',{className:'cp-state'},h('i',{className:'cp-dot'}),snapshot?workspaceLabels[snapshot.workspace.state]:'正在连接',snapshot?.preferences.workspace?' · '+snapshot.preferences.workspace.title:'')),dirty&&badge('有未保存修改')),
+        h('header',{className:'cp-heading'},h('div',null,h('small',null,'DAFEIYU · COMPANION'),h('h2',null,(snapshot?.identity.displayName||'未命名伙伴')+'的世界'),h('div',{className:'cp-state'},h('i',{className:'cp-dot'}),snapshot?snapshot.workspace.state==='ready'&&snapshot.storage&&!snapshot.storage.complete?'存储待迁入工作区':workspaceLabels[snapshot.workspace.state]:'正在连接',snapshot?.preferences.workspace?' · '+snapshot.preferences.workspace.title:'')),dirty&&badge('有未保存修改')),
         h('div', { role: 'tablist', 'aria-label': '大肥鱼设置分类', className: 'cp-tabs' }, ...sections.map(([id,title],index) => h('button', {
           key: id, id: `${prefix}-${id}-tab`, type: 'button', role: 'tab', className: 'cp-tab', 'aria-selected': active === id,
           'aria-controls': `${prefix}-${id}-panel`, tabIndex: active === id ? 0 : -1, ref: element => { tabs.current[index] = element; },
@@ -19041,7 +18217,7 @@ registerCompanion({
     return {
       inject: ['slots', 'connection'],
       apply(ctx) {
-        const request = async (endpoint, input, signal) => {
+        const request = async (endpoint, input, signal, requestId) => {
           const controller = new AbortController();
           const abort = () => controller.abort();
           signal?.addEventListener('abort', abort, { once: true });
@@ -19049,7 +18225,7 @@ registerCompanion({
           const timer = setTimeout(abort, ['roomChat','roomTelevision'].includes(endpoint) ? 300000 : 15000);
           try {
             const answer = await ctx.connection.rpc.call('/api', `chatpetSettings/${endpoint}`,
-              { requestId: crypto.randomUUID(), input }, controller.signal);
+              { requestId: requestId || crypto.randomUUID(), input }, controller.signal);
             if (!answer.ok) throw Object.assign(new Error(answer.error.message), { code: answer.error.code });
             return answer.value;
           } catch (failure) {

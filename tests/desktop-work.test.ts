@@ -18,7 +18,7 @@ test('the bound Desktop starts the work chain only after its saved threshold and
     async hide(){hides++;running=false;},
     bodyStatus:()=>({running}),
   };
-  const host = createCore({ dataDir: join(root, 'core'), companionId:'fish', scopeId:'test', ownerActorId:'owner',
+  const host = createCore({ dataDir: join(repo, '.chatpet/data/core'), companionId:'fish', scopeId:'test', ownerActorId:'owner',
     displayName:'Fish', character:'A test companion.' });
   const ok = <T>(r: Result<T>) => { if (!r.ok) assert.fail(r.error.message); return r.value; };
   const request = (id: string) => host.operator.request(id);
@@ -73,7 +73,7 @@ test('the bound Desktop starts the work chain only after its saved threshold and
     event('tool/result'); event('turn/end','aborted');
     assert.deepEqual(capture(), ['result', null]);
 
-    const previous = host.workspace.companionSettings();
+    const previous = host.workspace.companionConfiguration();
     ok(await host.services.workspace.saveCompanion(request('delay-ten'), {
       workspaceId:'bound',expectedSettings:previous,settings:{...previous,workAnimationDelaySeconds:10} }));
     event('turn/start'); t.mock.timers.tick(7000); event('turn/end','completed');

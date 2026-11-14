@@ -60,6 +60,9 @@ function createWindows({
   const petStates = new Map();
   /** 冒烟期间暂停兜底泵：它按真实光标翻转，会干扰冒烟对渲染端通道的断言 */
   let pointerFallbackPaused = false;
+  let presentationPaused = false, presentationRevision = 0;
+  const presentationUpdates = new Map();
+  const presentationVisible = win => !presentationPaused && !win.isDestroyed() && win.isVisible() && !win.isMinimized();
 
   /** 碰撞站场最多每 16ms 广播一次，位置仍由 IPC 逐帧立即提交。 */
   let petStateTimer = null;
@@ -161,7 +164,7 @@ function createWindows({
   /** 穿透兜底泵：正规翻转链路只有 forward 鼠标钩子，它在 Windows 上可能静默失效。 */
   function startPointerFallback(win) {
     const pointerTimer = setInterval(() => {
-      if (pointerFallbackPaused || win.isDestroyed()) return;
+      if (pointerFallbackPaused || !presentationVisible(win)) return;
       const bounds = win.getBounds();
       if (bounds.width < 8 || bounds.height < 8) return; // 尺寸还没落定（首帧上报前）
       const ignoring = windowIgnore.get(win.id) !== false;
@@ -179,6 +182,7 @@ function createWindows({
 
   /** 置顶看门狗：WS_EX_TOPMOST 位还在不代表真的在置顶带，低频重钉一次（总开关见 TOPMOST_WATCHDOG_ENABLED）。 */
   function startTopmostWatchdog(win) {
+    if (!TOPMOST_WATCHDOG_ENABLED) return () => {};
     let lastTopmostAssertMs = Date.now();
     const topmostTimer = setInterval(() => {
       const nowMs = Date.now();
@@ -187,7 +191,7 @@ function createWindows({
           nowMs,
           lastAssertMs: lastTopmostAssertMs,
           destroyed: win.isDestroyed(),
-          visible: win.isVisible(),
+          visible: presentationVisible(win),
           paused: pointerFallbackPaused,
         },
         TOPMOST_WATCHDOG_ENABLED,
@@ -235,8 +239,9 @@ function createWindows({
     const win = new BrowserWindow(windowOptions(petWindowSize(pet.size * scale), geo.hull));
     win.setAlwaysOnTop(true, topmostLevel(process.platform));
     win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    // 被遮挡的窗口默认暂停渲染，表现成「消失」；关掉后台节流让它持续渲染
-    win.webContents.setBackgroundThrottling(false);
+    // Visible transparent windows retain upstream's occlusion workaround.
+    // Explicitly hidden/locked windows enable throttling and stop their pumps.
+    win.webContents.setBackgroundThrottling(true);
     // 屏蔽 Electron 默认右键菜单：右键菜单由渲染端统一自绘，绝无双菜单
     win.webContents.on('context-menu', (event) => event.preventDefault());
     // 页面级缩放与渲染端 CONFIG.scale 同源；show:false 的窗口 zoomFactor 不生效，须加载后设置
@@ -253,11 +258,19 @@ function createWindows({
         if (!win.isDestroyed() && !win.isVisible()) win.showInactive();
       }, 400);
     });
-    const stopPointerFallback = startPointerFallback(win);
-    const stopTopmostWatchdog = startTopmostWatchdog(win);
+    let stopPointer,stopTopmost;
+    const updatePresentation = () => {
+      stopPointer?.();stopTopmost?.();stopPointer=stopTopmost=undefined;
+      const visible=presentationVisible(win);
+      win.webContents.setBackgroundThrottling(!visible);
+      if(visible){stopPointer=startPointerFallback(win);stopTopmost=startTopmostWatchdog(win);}
+      win.webContents.send('pet:presentation-visibility',{visible,revision:++presentationRevision});
+    };
+    presentationUpdates.set(win.id,updatePresentation);
+    for(const event of ['show','hide','minimize','restore'])win.on(event,updatePresentation);
+    win.webContents.on('did-finish-load',updatePresentation);
     win.on('closed', () => {
-      stopPointerFallback();
-      stopTopmostWatchdog();
+      stopPointer?.();stopTopmost?.();presentationUpdates.delete(win.id);
       windows.delete(pet.id);
       petStates.delete(pet.id);
       broadcastPetStates();
@@ -338,6 +351,14 @@ function createWindows({
     updatePetState,
     broadcastPetStates,
     keepOffTaskbar,
+    presentationState(contents) {
+      const win=[...windows.values()].find(win=>win.webContents===contents);
+      return {visible:Boolean(win&&presentationVisible(win)),revision:presentationRevision};
+    },
+    setPresentationPaused(value) {
+      presentationPaused=Boolean(value);
+      for(const update of presentationUpdates.values())update();
+    },
     stopTaskbarWatchdog,
     setPointerFallbackPaused: (paused) => {
       pointerFallbackPaused = paused;

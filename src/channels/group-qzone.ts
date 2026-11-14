@@ -23,9 +23,9 @@ type Send = (content:string)=>Promise<unknown>;
 
 /** Posts are reserved durably before submitting to the platform. A crash or
  * ambiguous response leaves an uncertain item which will never be retried. */
-export function createQzoneLedger(deviceDirectory:string, accountId:string, clock=Date.now) {
+export function createQzoneLedger(dataDirectory:string, accountId:string, clock=Date.now) {
   if (!/^\d{1,24}$/.test(accountId)) throw Error('请先指定 QQ 帐号');
-  const file = join(privateDeviceDirectory(deviceDirectory,'qzone-'+accountId),'published.json');
+  const file = join(privateDeviceDirectory(dataDirectory,'qzone-'+accountId),'published.json');
   function read():State {
     const stat=lstatSync(file,{throwIfNoEntry:false});
     if (!stat) return {settings:{...defaults,times:[...defaults.times]},drafts:[],posts:[]};

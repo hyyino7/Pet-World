@@ -9,7 +9,7 @@ import json
 import hashlib
 from typing import Any
 
-from cognitive_memory.core.service import ConflictError
+from cognitive_memory.core.service import ConflictError, NotFoundError
 from cognitive_memory.domain.models import ContextBuildIn, Memory, MemoryProposeIn, MemoryUpdateIn, MemoryType, ObservationIn, SearchQuery
 from cognitive_memory.domain.spatiotemporal import is_temporally_expired
 from cognitive_memory.retrieval.pipeline import run_retrieve

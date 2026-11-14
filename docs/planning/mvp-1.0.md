@@ -1,5 +1,29 @@
 # Dafeiyu MVP 1.0
 
+The owner's [Core retirement amendment](native-service-refactor.md#core-retirement-amendment-2026-11-13)
+of 2026-11-13 supersedes historical Core activity/execution/matter/resource and
+whole-chat eligibility responsibilities below. Current Core retains binding,
+persona, settings, records and native Memory hooks; DSH and domain modules own
+their actual execution and receipts. Installed acceptance remains owner-run.
+
+The later [owner-confirmed life design](autonomous-life-game.md#owner-confirmed-design-update)
+also supersedes earlier open choices and random-body playback goals: Desktop is
+Room's adjunct, fully mirrors its actual activity while open and presents the
+retained plan when closed; new companions receive no starter money/resources or
+system gifts; additional offline body deterioration is bounded by a configurable
+allowance initially four hours plus confirmed configurable gentle defaults of
+70% maximum hunger/thirst/bladder need and 35% minimum energy. These bounds do
+not heal worse pre-existing states or add pain penalties. Free basic food
+and water remain. [Economic settings](economy.md) allow customizing shop goods
+sold to Xiaoxi, not target daily income, crop yield or crop buyback prices. Life
+rhythm and resource budgets remain configurable. These are confirmed design
+goals whose implementation was subsequently authorized; see the
+[implementation record](../validation/life-design-implementation-2026-11-14.md).
+The personal installation is unchanged; missing activity media is not accepted
+as complete visual mirroring. The owner selected supplementary desktop animation
+assets through the existing pipeline, rather than Room-character rendering.
+That choice does not establish delivery or visual acceptance of those assets.
+
 > Current execution update (2026-11-12): the owner approved the
 > [native-service refactor](native-service-refactor.md) after review of Claude's
 > proposal. It supersedes ordinary Core execution gating, new-session-only
@@ -23,7 +47,16 @@ On 2026-11-11 the owner selected the full three-reference comparison. It extends
 | dsh-world 0.7.4 | Native Life home and alarms, daily review of eligible conversations, self-description, date browsing and search, long-term photos, cold-session refresh, configurable hours and spending reminder, optional review consolidation, local messaging bridge, QQ and WeChat. |
 | feiyu-room-template | Furnished 3D room, camera and models, visitor notes, role and owner interactions, autonomous garden economy, shared TV and first-person photos. Room QQ features include group-specific relationships, language, stickers, forwards, public role cards, Qzone posts, voice and usage. |
 
-Life's dedicated home is the only companion conversation that accepts autonomous Life events. Core applies its normal execution limits and Memory controls. Quiet mode suppresses proactive bubbles while Life runs. Automatic Desktop whispers yield to Life. Room, Life and Desktop share one body. Emotion accepts text and the original Room score/dimensions from the same native reply and preserves earlier text-only entries.
+Life's native home remains the delivery endpoint for autonomous Life events. The owner-approved [persistent life plan](persistent-life-plan.md) supersedes reliance on that conversation for life continuity: intent and execution progress are persistent, and eligible owner conversations can read or revise the same plan. Core applies its normal execution limits and Memory controls. Quiet mode suppresses proactive bubbles while Life runs. Automatic Desktop whispers yield to Life. Room, Life and Desktop share one body. Emotion accepts text and the original Room score/dimensions from the same native reply and preserves earlier text-only entries.
+
+On 2026-11-13 the owner authorized the [virtual economy extension](economy.md):
+free basic meals/water, optional food/readings/garden supplies, owner grants/gifts,
+portable wallet/items/ledger and companion-chosen harvesting/spending through the
+existing Life plan. Later confirmed settings separate customizable shop goods
+from non-customizable income targets, crop yields and crop buyback prices; earlier
+purchasing-power figures are historical calibration. Source delivery is
+separate from installation and owner testing; no real payments or mandatory
+earning/scheduled harvest loop are included.
 
 The owner selected identity and conversation isolation for external messages. Only verified owner private messages may enter the Life home. Each other private conversation and group gets its own native session and public-facing material. A reply returns to its originating account and chat. Multiple bodies may choose independent appearance and position and otherwise follow the bound companion. Device credentials and external-account configuration remain device-local.
 
@@ -97,8 +130,10 @@ replace an ongoing activity in only one surface.
   not be reduced to a random animation selected after each reply.
 - Actual behavior has one authoritative state and execution path. Room and
   Desktop present its corresponding phases: for example, going to eat,
-  eating and finishing, or entering sleep and remaining asleep. Each surface
-  may render differently, but cannot independently contradict the activity.
+  eating and finishing, or entering sleep and remaining asleep. Desktop is
+  Room's adjunct: while Room is open it fully mirrors the actual activity,
+  phase and progress; when Room is closed it presents the same retained plan
+  and progress. Rendering form does not grant an independent activity choice.
   A request or intention alone is not evidence that the behavior happened.
 - Keep Emotion, Room and Desktop as separate components with explicit
   interfaces. Presentation surfaces offer available capabilities and report
@@ -302,9 +337,22 @@ The existing custom Memory adapter, patched vendor copy and historical Core work
 
 ## Playback and settings
 
-Daily body actions remain varied and random. Desktop may play the native reply's chosen action even on short chats. When the fish wants to send a sticker, apply the owner's probability once for that reply. Zero suppresses stickers. At 100 percent an eligible, available sticker is shown whenever the fish wants one. Reopening a reply never rolls again.
+Body playback follows the confirmed Room/Desktop relationship and actual accepted
+activity; random clips or a native reply cannot independently replace it.
+Compatible expressions may accompany that activity. When the fish wants to send
+a sticker, apply the owner's probability once for that reply. Zero suppresses
+stickers. At 100 percent an eligible, available sticker is shown whenever the
+fish wants one. Reopening a reply never rolls again.
 
-The work-animation delay defaults to **5 seconds** and is adjustable. Measure elapsed time from the start of the bound native turn. A turn ending at or below the threshold produces zero work animations, including success/error. Once strictly above the threshold and still active, enter the current DSH state directly. Tool transitions and window folding keep the same timer. Dragging takes immediate precedence. On release or animation end, consult the same eligibility decision before resuming an active work animation. A stopped turn returns to daily activity. Streaming text and stop controls remain available throughout.
+The earlier work-indicator timing uses an adjustable **5-second** default measured
+from the bound native turn; this is a presentation setting, not a new life rule.
+Turns ending at or below the configured threshold produce no work indication.
+Under the confirmed design, that timer controls only a separate or compatible
+status indication: body playback still follows Room's actual activity, phase and
+progress when open and the retained plan when closed. Tool transitions and window
+folding retain the timer. Dragging temporarily controls local position; releasing
+it or ending a turn returns to the current accepted activity without resetting
+progress. Streaming text and stop controls remain available throughout.
 
 ## Three retention levels
 

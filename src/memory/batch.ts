@@ -35,8 +35,9 @@ export function installMemoryBatch(ctx: Context, host: PetCoreHost): () => Promi
     const presets = services.get('agentPresets') as { serviceFor?(agent: Agent, name: string): unknown } | undefined;
     const compaction = (presets?.serviceFor?.(agent, 'compaction') ?? services.get('compaction')) as Engine | undefined;
     if (!memory || !compaction) throw Error('Native compaction service is unavailable');
-    await memory.prepare(row.sessionId);
+    const binding=await memory.prepare(row.sessionId);
     if (!matches(row) || signal.aborted) return;
+    memory.assertBinding(binding);
     let pending = row.summary;
     const recovered = [...agent.session.snapshotEvents()].reverse().find(event => String(event.type) === 'compaction/summary' && event.time >= row.lastActivity);
     if (!pending && recovered) {
@@ -47,6 +48,7 @@ export function installMemoryBatch(ctx: Context, host: PetCoreHost): () => Promi
     if (!pending) {
       const result = await compaction.compactNow(agent, signal);
       if (!matches(row) || signal.aborted) return;
+      memory.assertBinding(binding);
       if (result) {
         pending = { seq: result.summarySeq,
           content: result.summary.flatMap(part => part.type === 'text' ? [part.text ?? ''] : []).join('\n'),
@@ -59,23 +61,26 @@ export function installMemoryBatch(ctx: Context, host: PetCoreHost): () => Promi
       const checkpoint=pending.seq;
       let withheld:string|null=null;
       const sources=[...pending.sources];
-      const bank=host.workspace.storageId();
+      memory.assertBinding(binding);const bank=binding.storageId;
       const tracked=sources.every(id=>store.get<{workspaceId:string}>('memory-source-work',id)?.workspaceId===bank);
       // A native checkpoint can still contain original text from a Memory-off
       // period. Keep it in DSH, but do not silently backfill it into the Bank.
       if(!tracked){pending=undefined;withheld='memory_off_sources_not_observed';}
-      if(pending)await memory.capture(sources);
+      if(pending)await memory.capture(sources,binding);
       // Withhold a checkpoint containing withdrawn material without rejecting
       // the native chat or retrying the same unusable summary indefinitely.
-      const decision=pending ? await memory.connection.validate({sources:sources.map(id=>({id,revision:'1'})),memories:[]}) : 'ineligible';
+      const decision=pending ? await memory.connection.validate({sources:sources.map(id=>({id,revision:'1'})),memories:[]},bank) : 'ineligible';
+      memory.assertBinding(binding);
       if(decision==='unknown')throw Error('Memory summary source status unavailable');
       if(decision==='ineligible' && pending){pending=undefined;withheld='source_withdrawn_or_corrected';}
       const saved=pending && sources.length ? await memory.connection.call<{id:string}>('summary', { session_id: row.sessionId, summary_seq: pending.seq, content: pending.content,
-        sources:sources.map(id=>({id,revision:'1'})) }) : undefined;
+        sources:sources.map(id=>({id,revision:'1'})) },bank) : undefined;
+      memory.assertBinding(binding);
       if(saved?.id && pending)store.put('native-summary-memory',digest([row.sessionId,pending.seq]),saved.id);
       const latest=store.get<Pending>('memory-batch',row.sessionId)!;
       store.put('memory-batch',row.sessionId,{...latest,lastSummary:{seq:checkpoint,state:saved?.id?'joined':'withheld',reason:saved?.id?null:withheld ?? 'no_observed_sources',at:Date.now()}});
     }
+    memory.assertBinding(binding);
     const latest = store.get<Pending>('memory-batch', row.sessionId)!;
     // Maintenance serializes waking input; preserve any newly completed turns.
     const {summary: _summary, error: _error, ...clean} = latest;
@@ -84,11 +89,13 @@ export function installMemoryBatch(ctx: Context, host: PetCoreHost): () => Promi
   const interval = setInterval(() => {
     for (const row of store.all<Pending>('memory-batch')) {
       if (!row.turns || !matches(row) || running.has(row.sessionId)) continue;
-      const settings = host.workspace.companionSettings(), now = Date.now();
+      const configured = host.workspace.companionConfiguration(), now = Date.now();
       const review = reviews.has(row.sessionId) && ctx.get('petLife')?.isHome(row.sessionId);
-      if (!review && row.turns < settings.memorySummaryTurns && now - row.lastActivity < settings.memorySummaryIdleMinutes * 60_000) continue;
+      const dueTurns = configured.memorySummaryTurns != null && row.turns >= configured.memorySummaryTurns;
+      const dueIdle = configured.memorySummaryIdleMinutes != null && now - row.lastActivity >= configured.memorySummaryIdleMinutes * 60_000;
+      if (!review && !dueTurns && !dueIdle) continue;
       if (row.retryAt && now < row.retryAt) continue;
-      if (row.lastAttempt && now - row.lastAttempt < Math.max(1000, settings.memorySummaryMinimumMinutes * 60_000)) continue;
+      if (row.lastAttempt && now - row.lastAttempt < Math.max(1000, (configured.memorySummaryMinimumMinutes ?? 0) * 60_000)) continue;
       const agent = ctx.agents.get(row.sessionId as never);
       if (!agent || agent.status !== 'idle') continue;
       const abort = new AbortController();

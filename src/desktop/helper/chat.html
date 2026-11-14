@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src blob:; connect-src dsh-pet-bridge:">
-  <title>大肥鱼聊天</title>
+  <title>伙伴聊天</title>
   <link rel="stylesheet" href="chat.css">
 </head>
 <body>
   <header>
-    <strong>大肥鱼</strong>
+    <strong id="companion-name">伙伴</strong>
     <span id="status" role="status"></span>
     <button id="fresh" title="归档本次聊天并新建会话">新会话</button>
     <button id="hide" aria-label="收起聊天">收起</button>
@@ -21,7 +21,7 @@
     <button id="pick-image" type="button" title="添加图片">图片</button>
     <button id="capture" type="button" title="截取桌宠所在屏幕，确认后发送">截图</button>
     <button id="mic" type="button" title="按住录音，松开后可修改文字">按住说话</button>
-    <textarea rows="1" id="input" aria-label="给大肥鱼发消息" placeholder="聊点什么…" autofocus></textarea>
+    <textarea rows="1" id="input" aria-label="给伙伴发消息" placeholder="聊点什么…" autofocus></textarea>
     <button id="send">发送</button>
     <button id="stop" type="button" hidden>停止</button>
   </form>

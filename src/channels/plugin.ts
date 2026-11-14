@@ -8,13 +8,14 @@ import type {PetCoreHost} from '../core/index.js';
 import {bridgePrefix, LocalBridge, privateDeviceDirectory} from './bridge.js';
 import {createMessaging} from './messaging.js';
 import {isCompanionHome, resolveCompanionHome} from '../core/companion-foundation.js';
+import {companionChannelDirectory} from './storage.js';
 
 interface Services {
   webServer: {getOrigin(): string; register(route: ReturnType<typeof bridgeRoute>): () => void};
   profileContext?: {dir: string};
   sessionController: {resolveAgent(id: string): Promise<{agent?: Agent}>};
 }
-type Binding = {id:string; storageId:string; bridge:LocalBridge; messaging:Awaited<ReturnType<typeof createMessaging>>};
+type Binding = {id:string; path:string; storageId:string; bridge:LocalBridge; messaging:Awaited<ReturnType<typeof createMessaging>>};
 export class CompanionChannels {
   private bound?: Binding;
   private closed = false;
@@ -29,16 +30,24 @@ export class CompanionChannels {
     const status = this.host.workspace.status();
     return !this.closed && status.state === 'ready' ? status.target : undefined;
   }
+  private current(binding: Pick<Binding,'id'|'path'|'storageId'>) {
+    const target=this.target();
+    return target?.id===binding.id && target.path===binding.path && this.host.workspace.storageId()===binding.storageId;
+  }
   private async reconcile() {
-    const current = this.target(), storageId = current ? this.host.workspace.storageId() : undefined;
-    if (this.bound && (this.bound.id !== current?.id || this.bound.storageId !== storageId)) {
+    if (this.bound && !this.current(this.bound)) {
       const previous = this.bound; this.bound = undefined;
       previous.bridge.stop(); await previous.messaging.close();
     }
+    // Closing an old adapter can await external cleanup. Capture the current
+    // root afterwards, rather than reopening a root which has already moved.
+    const current = this.target(), storageId = current ? this.host.workspace.storageId() : undefined;
     if (!current || !storageId || !this.profileDir) return;
     if (!this.bound) {
-      const id = current.id, deviceDirectory = privateDeviceDirectory(privateDeviceDirectory(this.profileDir, 'chatpet-channels'), digest(storageId));
-      const active = () => this.target()?.id === id && this.host.workspace.storageId() === storageId;
+      const {id,path}=current, binding={id,path,storageId};
+      const deviceDirectory = privateDeviceDirectory(privateDeviceDirectory(this.profileDir, 'chatpet-channels'), digest(storageId));
+      const dataDirectory=companionChannelDirectory(path,deviceDirectory);
+      const active = () => this.current(binding);
       const isHome = (sessionId: string) => active() && isCompanionHome(this.ctx,this.host,sessionId);
       const ownerHome = async () => {
         if (!active()) throw Error('主人会话工作区已切换');
@@ -49,18 +58,18 @@ export class CompanionChannels {
       const bridge = new LocalBridge(this.ctx, deviceDirectory, () => this.services.webServer.getOrigin(), ownerHome, isHome,
         () => this.host.workspace.runtime.policy().quiet, () => this.host.workspace.runtime.identity().displayName,
         this.host.workspace.runtime.store,storageId);
-      const messaging = await createMessaging(this.ctx, this.host, {deviceDirectory, workspaceId:id, storageId, active, ownerHome});
+      const messaging = await createMessaging(this.ctx, this.host, {deviceDirectory, dataDirectory, workspaceId:id, storageId, active, ownerHome});
       if (!active()) { bridge.stop(); await messaging.close(); return; }
-      this.bound = {id, storageId, messaging, bridge};
+      this.bound = {...binding, messaging, bridge};
     }
     this.bound.bridge.sync(true);
     return this.bound;
   }
   refresh() { return this.serial(() => this.reconcile()); }
-  get local() { return this.bound?.id === this.target()?.id ? this.bound?.bridge.current : undefined; }
+  get local() { return this.bound && this.current(this.bound) ? this.bound.bridge.current : undefined; }
   qqConnection(): 'off'|'online'|'unavailable' {
     const bound=this.bound;
-    if(!bound || this.target()?.id!==bound.id || this.host.workspace.storageId()!==bound.storageId)return 'off';
+    if(!bound || !this.current(bound))return 'off';
     const state=bound.messaging.qqConnection();
     return state;
   }
@@ -74,7 +83,7 @@ export class CompanionChannels {
   }
   async reach(workspaceId: string, push: Push) {
     const bound = this.bound;
-    if (!bound || bound.id !== workspaceId || this.target()?.id !== workspaceId || this.host.workspace.runtime.policy().quiet) return [];
+    if (!bound || bound.id !== workspaceId || !this.current(bound) || this.host.workspace.runtime.policy().quiet) return [];
     const home = this.ctx.get('petLife')?.homeSessionId();
     if (!home) return [];
     const deliveries = await Promise.allSettled([bound.bridge.reach(push,home),bound.messaging.reach(push,home)]);
@@ -83,10 +92,10 @@ export class CompanionChannels {
   request(id: string, operation: string, input: Record<string, unknown>) {
     return this.serial(async () => {
       const bound = await this.reconcile();
-      if (!bound || bound.id !== id) throw {code:'STALE_BINDING'};
+      if (!bound || bound.id !== id || !this.current(bound)) throw {code:'STALE_BINDING'};
       if (['groupState','groupSettings','groupSlang','groupResearch','qzoneState','qzoneSettings','qzoneDraft','qzoneRemove'].includes(operation)) {
         const response = await bound.messaging.group(operation, input);
-        if (this.target()?.id !== id || this.host.workspace.storageId() !== bound.storageId) throw {code:'STALE_BINDING'};
+        if (!this.current(bound)) throw {code:'STALE_BINDING'};
         return response;
       }
       if (operation === 'bridgeSettings') {
@@ -97,7 +106,7 @@ export class CompanionChannels {
         if (!isDeepStrictEqual(input.expected, bound.messaging.status().config)) throw {code:'STALE_REVISION'};
         await bound.messaging.configure(input.next as Parameters<typeof bound.messaging.configure>[0]);
       } else if (operation !== 'channelStatus') throw {code:'INVALID_ARGUMENT'};
-      if (this.target()?.id !== id) throw {code:'STALE_BINDING'};
+      if (!this.current(bound)) throw {code:'STALE_BINDING'};
       return {bridge:bound.bridge.status(), messaging:bound.messaging.status()};
     });
   }

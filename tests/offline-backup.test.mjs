@@ -15,14 +15,20 @@ function fixture(t) {
   t.after(() => rmSync(root,{recursive:true,force:true}));
   const repo=join(root,'repo'), home=join(root,'dsh'), profile=join(home,'profiles','desktop'), managed=join(repo,'.chatpet');
   const config={companionId:'fish',scopeId:'scope',ownerActorId:'human',dataDir:join(managed,'data','core'),memory:{dataDir:join(managed,'data','memory')}};
-  write(join(managed,'manifest.json'),JSON.stringify({schemaVersion:2,companionId:'fish'}));
-  for (const [name, value] of Object.entries({'SOUL.md':'original role','USER.md':'original owner','COMPANION.md':'guidance',
+  write(join(managed,'manifest.json'),JSON.stringify({schemaVersion:2,companionId:'fish',files:['README.md','manifest.json','SOUL.md','USER.md','core.json']}));
+  for (const [name, value] of Object.entries({'README.md':'companion fixture','core.json':'{}','SOUL.md':'original role','USER.md':'original owner','COMPANION.md':'guidance',
     'data/memory/data/memory.db':'original Bank','data/emotion/state.json':'original emotion',
     'data/life/self.md':'original self','data/life/home.json':'original body','data/life/diary/2026-11-12.md':'diary',
     'data/pet-platform/pet/custom/animation.webm':'custom pack','data/life/album/photo.png':'photo'})) write(join(managed,name),value);
   mkdirSync(config.dataDir,{recursive:true});
   const db=new DatabaseSync(join(config.dataDir,'core.sqlite'));
   db.exec('CREATE TABLE records(seq INTEGER PRIMARY KEY AUTOINCREMENT,kind TEXT NOT NULL,id TEXT NOT NULL,value TEXT NOT NULL,UNIQUE(kind,id))');
+  db.exec('CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT NOT NULL)');
+  const workspace={id:'owner',path:repo,title:'fish'};
+  const put=db.prepare('INSERT INTO records(kind,id,value) VALUES (?,?,?)');
+  for(const [kind,value]of [['identity',{companionId:'fish',ownerActorId:'human'}],['preferences',{workspace}],['workspace-binding',{phase:'ready',target:workspace}]])put.run(kind,'current',JSON.stringify(value));
+  const meta=db.prepare('INSERT INTO meta(key,value) VALUES (?,?)');
+  meta.run('scope',JSON.stringify('scope'));meta.run('workspace.storage-id',JSON.stringify('stable-bank'));
   db.prepare('INSERT INTO records(kind,id,value) VALUES (?,?,?)').run('commitment','task',JSON.stringify({status:'original'}));db.close();
   write(join(profile,'node_modules','dsh-Chatpet','package.json'),'runtime version A');
   write(join(profile,'cordis.patch.yml'),'global settings A');

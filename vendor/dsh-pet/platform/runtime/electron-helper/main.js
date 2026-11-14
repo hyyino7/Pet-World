@@ -44,7 +44,6 @@ const { HOST_POLL_MS, hostIsGone, isBrokenPipeError, parseHostPid } = require('.
 // 托盘的平台差异（模板图 / 左键是否自动弹菜单 / Dock）：规则住在模块里，main.js 只接线
 const { trayPlatform } = require('./tray-platform.js');
 const { buildDeskGeometry } = require('./desktop-geometry.js');
-const { runSmokeCheck } = require('./main/smoke.js');
 const { createDpi } = require('./main/dpi.js');
 const { createBridge } = require('./main/bridge.js');
 const { createTray } = require('./main/tray.js');
@@ -300,21 +299,19 @@ app.whenReady().then(() => {
     for (const win of petWindows.state.windows.values()) petWindows.keepOffTaskbar(win);
   };
   powerMonitor.on('resume', reassertTaskbar);
+  let locked=powerMonitor.getSystemIdleState?.(1)==='locked',suspended=false;
+  const displayLifetime=()=>petWindows.setPresentationPaused(locked||suspended);
+  displayLifetime();
+  powerMonitor.on('lock-screen',()=>{locked=true;displayLifetime();});
+  powerMonitor.on('unlock-screen',()=>{locked=false;displayLifetime();});
+  powerMonitor.on('suspend',()=>{suspended=true;displayLifetime();});
+  powerMonitor.on('resume',()=>{suspended=false;displayLifetime();});
+  ipcMain.handle('pet:presentation-state',event=>petWindows.presentationState(event.sender));
   powerMonitor.on('unlock-screen', reassertTaskbar);
 
   registerIpc({ ipcMain, petWindows, shell, openTarget: OPEN_TARGET, petRoute: PET_ROUTE });
   createDisplaySync({ screen, petWindows, dpi });
 
-  // 冒烟自检（默认关闭）：DSH_PET_SMOKE=1 时延时截图到 DSH_PET_SMOKE_OUT 后退出，
-  // 用于验证窗口/渲染/动画链路。
-  if (process.env.DSH_PET_SMOKE === '1') {
-    runSmokeCheck({
-      app,
-      windows: petWindows.state.windows,
-      windowIgnore: petWindows.state.windowIgnore,
-      setPointerFallbackPaused: petWindows.setPointerFallbackPaused,
-    });
-  }
 });
 
 // 退出时销毁托盘图标：不销毁会在 Windows 通知区留下「幽灵图标」（鼠标划过才消失）。

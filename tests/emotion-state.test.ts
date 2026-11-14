@@ -9,7 +9,7 @@ import type { Result } from '../src/contracts/common.js';
 
 test('text-only emotion survives neutral replies, ledger expiry and restart without invented Room scores', async () => {
   const root=realpathSync(mkdtempSync(join(tmpdir(),'pet-emotion-'))), repo=join(root,'repo'); mkdirSync(repo);
-  const config={dataDir:join(root,'core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fish',character:'Fixture'};
+  const config={dataDir:join(repo,'.chatpet/data/core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fish',character:'Fixture'};
   let host=createCore(config);
   const ok=<T>(r:Result<T>)=>{if(!r.ok) throw Error(r.error.message);return r.value;};
   try {
@@ -26,7 +26,7 @@ test('text-only emotion survives neutral replies, ledger expiry and restart with
     assert.equal(emotion.current('repo')?.mood,'愉快');
     assert.equal((events.at(-1) as {mood:string}).mood,'愉快');
     assert.equal(emotion.roomSnapshot('repo')?.dims?.happy,40);
-    const settings=host.workspace.companionSettings();
+    const settings=host.workspace.companionConfiguration();
     ok(await host.services.workspace.saveCompanion(host.operator.request('retention'),{workspaceId:'repo',expectedSettings:settings,settings:{...settings,recentMoodHours:0}}));
     assert.deepEqual(emotion.ledger('repo')!.read().moods,[]);
     assert.equal(emotion.current('repo')?.mood,'愉快','Current emotional state is separate from retained changes');
@@ -43,14 +43,16 @@ test('text-only emotion survives neutral replies, ledger expiry and restart with
 
 test('canonical emotion imports legacy once, rejects stale writers and remains independent of Memory after reload', async () => {
   const root=realpathSync(mkdtempSync(join(tmpdir(),'pet-emotion-file-'))),repo=join(root,'repo');mkdirSync(repo);
-  const host=createCore({dataDir:join(root,'core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fish',character:'Fixture'});
+  const host=createCore({dataDir:join(repo,'.chatpet/data/core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fish',character:'Fixture'});
   const ok=<T>(r:Result<T>)=>{if(!r.ok)throw Error(r.error.message);return r.value;};
   try {
     const prefs=ok(await host.services.preferences.read(host.operator.request('prefs'),{}));
     const saved=ok(await host.services.preferences.save(host.operator.request('bind'),{expectedRevision:prefs.revision,workspace:{id:'repo',path:repo,title:'Repo'},conversation:prefs.conversation}));
-    ok(await host.services.workspace.initialize(host.operator.request('init'),{expectedPreferencesRevision:saved.revision}));
     const legacy={mood:'有点无聊',reason:'先前聊过的偏好',at:1234,memories:['fact'],roomMood:{mood:44,dims:{calm:12}}};
+    // Simulate the pre-canonical store before the public initializer performs
+    // the one-time adoption, rather than injecting a stale row after it.
     host.workspace.runtime.store.put('emotion-state',host.workspace.storageId(),legacy);
+    ok(await host.services.workspace.initialize(host.operator.request('init'),{expectedPreferencesRevision:saved.revision}));
     let eligible=true;
     host.native.memory={validateMemoryIds:async()=>eligible?'eligible':'ineligible',validateMaterial:async()=>eligible?'eligible':'ineligible',resolveMemoryMaterial:async()=>({decision:eligible?'eligible':'ineligible',dependencies:{sources:[],memories:[{id:'fact',revision:'1'}]}})} as unknown as NonNullable<typeof host.native.memory>;
     let emotion=new CompanionEmotion(host);
@@ -86,7 +88,7 @@ test('canonical emotion imports legacy once, rejects stale writers and remains i
 
 test('all nine semantic feelings work without displays, Memory or invented numeric scores', async () => {
   const root=realpathSync(mkdtempSync(join(tmpdir(),'pet-feelings-'))),repo=join(root,'repo');mkdirSync(repo);
-  const host=createCore({dataDir:join(root,'core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fish',character:'Fixture'});
+  const host=createCore({dataDir:join(repo,'.chatpet/data/core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fish',character:'Fixture'});
   const ok=<T>(r:Result<T>)=>{if(!r.ok)throw Error(r.error.message);return r.value;};
   try {
     const prefs=ok(await host.services.preferences.read(host.operator.request('prefs'),{}));

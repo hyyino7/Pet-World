@@ -45,7 +45,7 @@ export async function mountInstalledStandard(ctx, hostRequire) {
 
 /** Scope of the authorized live continuation, not a product tool policy. */
 export function guardContinuationReads(root, exec, documents = ['cedar.txt', 'willow.txt']) {
-  if (['pet_memory_recall', 'pet_matter_list', 'pet_matter_read'].includes(exec.name)) return undefined;
+  if (['pet_memory_recall'].includes(exec.name)) return undefined;
   if (exec.name === 'glob' && exec.arguments?.pattern === '*.txt'
       && resolve(root, exec.arguments.path ?? '.') === root) return undefined;
   if (exec.name === 'read' && documents.some(name =>

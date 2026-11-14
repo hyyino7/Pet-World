@@ -2,6 +2,9 @@ import type { Agent } from '@deepseek-ai/dsh-agent';
 import { type Faults } from '../faults.ts';
 import { type InWorld } from '../worldScope.ts';
 import type { LifeHost } from './host.ts';
+import type { LifeState } from './types.ts';
+/** Record the existing pending arrival without sending a turn or starting Life. */
+export declare function markHomeArrival(state: LifeState, sessionId: string, at?: string): LifeState;
 export interface HomeDeps {
     host: LifeHost;
     roomDir: string;

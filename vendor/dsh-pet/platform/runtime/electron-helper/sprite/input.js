@@ -403,6 +403,14 @@ Object.assign(PetSprite.prototype, {
     }
     // 点击音效与浏览器同位置：放在「按下已触发积分」的早退之后、点击动画判断之前
     playClickSound();
+    if (this.pet.companionPlayback) {
+      this.pendingSquash = false;
+      if (!this.frozen) {
+        const body = JSON.stringify({requestId:crypto.randomUUID()});
+        void S.postAction(BASE + '/native-feature?pet=' + encodeURIComponent(this.pet.id), {path:'/pet',method:'POST',body});
+      }
+      return;
+    }
     if (!this.animations.clicks.length) return;
     this.pendingSquash = true; // 等新点击动画切到前台后 Q 弹（压新首帧，与浏览器一致）
     this.playOnce(S.pick(this.animations.clicks));

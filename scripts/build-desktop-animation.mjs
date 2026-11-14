@@ -4,9 +4,12 @@ import ts from 'typescript';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, posix, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
+import { adaptCompactVoice } from './lib/compact-voice-lifecycle.mjs';
+import { verifyLifeMedia } from './build-life-media.mjs';
 const root = resolve(import.meta.dirname, '../vendor/dsh-pet');
 const origin = JSON.parse(readFileSync(resolve(root, 'origin.json'), 'utf8'));
 const modules = [];
+verifyLifeMedia();
 for (const [path, hash] of Object.entries(origin.files)) {
   const source = readFileSync(resolve(root, path), 'utf8');
   if (createHash('sha256').update(source).digest('hex') !== hash) throw Error('Upstream source changed: ' + path);
@@ -15,7 +18,7 @@ for (const [path, hash] of Object.entries(origin.files)) {
     mkdirSync(dirname(target), {recursive:true}); writeFileSync(target, source);
     continue;
   }
-  let code = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
+  let code = ts.transpileModule(adaptCompactVoice(path,source), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
   if (path === 'src/shared/voice.ts') {
     // The compact chat persists across hides and can be rebound to another session.
     code += '\nexports.stopManualSpeech = () => { manualSeq++; if (manualAudio) { manualAudio.pause(); URL.revokeObjectURL(manualAudio.src); manualAudio = null; } };';
@@ -29,13 +32,14 @@ writeFileSync(resolve(import.meta.dirname, '../src/desktop/helper/upstream/share
   `function require(id) { if (cache[id]) return cache[id]; const out = cache[id] = {}; modules[id](out, require); return out; }\n` +
   `window.PetShared = { ...require('src/shared/index.ts'), ...require('src/shared/chat/encode.ts'), ...require('src/shared/chat/hear-control.ts') }; })();\n`);
 
-// Native feature modules are kept verbatim in vendor; adapt only import suffixes.
+// Keep pinned native inputs unchanged; bind voice cancellation at the original
+// route/queue/synthesis boundaries, then adapt their import suffixes.
 for (const [path, hash] of Object.entries(origin.nativeFiles ?? {})) {
   const source = readFileSync(resolve(root, path), 'utf8');
   if (createHash('sha256').update(source).digest('hex') !== hash) throw Error('Upstream source changed: ' + path);
   const target = resolve(import.meta.dirname, '../dist/src/desktop/upstream', path.replace(/^src\//, '').replace(/\.ts$/, '.js'));
   mkdirSync(dirname(target), {recursive:true});
-  const code = ts.transpileModule(source, {compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;
+  const code = ts.transpileModule(adaptCompactVoice(path,source), {compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;
   writeFileSync(target, code.replace(/(from\s+['"][^'"]+)\.ts(['"])/g, '$1.js$2'));
 }
 for (const item of Object.values(origin.assets ?? {})) {

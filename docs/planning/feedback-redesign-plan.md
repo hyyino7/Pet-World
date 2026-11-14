@@ -15,6 +15,22 @@ the implementation, renewed paid-model authority or a request to replace the
 installed personal package. Current delivery evidence belongs in
 [the runtime record](../mvp-runtime.md#four-feedback-redesign-implementation-2026-11-12).
 
+The later [owner-confirmed life design](autonomous-life-game.md#owner-confirmed-design-update)
+amends the goals below: Desktop fully mirrors actual Room activity while Room
+is open and presents the retained plan when it is closed; new companions receive
+no starter funds/resources/system gifts; offline negative body changes have a
+configurable allowance initially four hours plus confirmed configurable gentle
+defaults (70% maximum hunger/thirst/bladder need, 35% minimum energy), without
+healing worse pre-existing states or adding pain penalties;
+income-side settings are fixed while shop goods sold to Xiaoxi may be customized.
+Free basic food/water and explicit-pause semantics remain. This amendment is
+now authorized for implementation and isolated verification; the
+[implementation record](../validation/life-design-implementation-2026-11-14.md)
+owns source evidence. The personal installation and owner acceptance are unchanged.
+The owner selected supplementary desktop animation assets through the existing
+pipeline to close known representation gaps, rather than Room-character
+rendering. This selection is not evidence of asset delivery or visual acceptance.
+
 ## 1. Result the owner should receive
 
 One bound companion, one normal desktop body and one coherent settings entry.
@@ -289,6 +305,11 @@ Use existing activity semantics where available: pending/requested, moving,
 arrived/working, completed/cancelled/failed. Preserve the distinction between
 walking to bed and actually asleep. Scene coordinates and desktop screen
 coordinates remain surface-specific; shared semantic activity and phase agree.
+The latest confirmed goal makes Desktop Room's adjunct: while Room is open it
+100% mirrors the actual activity, phase and progress; when Room is closed it
+presents the same original plan and progress. Window changes do not restart work.
+Room remains usable with Desktop off; Body retains its single authority. Whether
+hidden/minimized Room counts as closed is not decided by this requirement.
 
 ### 5.4 Paused autonomy: selected first-delivery policy
 
@@ -298,11 +319,13 @@ coordinates remain surface-specific; shared semantic activity and phase agree.
   Their accepted route/dwell work can progress to an actual result without Life.
 - Stop an already active automatic job at the next safe durable checkpoint;
   do not manufacture completion. Explicit owner work takes precedence.
-- For the first change, preserve the current paused-time baseline for passive
-  needs/crop progression rather than silently adding offline catch-up. Advance
-  explicit tasks using a separated task clock without replaying autonomous goals.
-  W0 verifies this separation against the reused state machine before the seam
-  is coded; this release does not introduce a new passive-time policy.
+- Explicit pause freezes passive needs/crop progression without later catch-up.
+  Advance accepted explicit tasks without replaying autonomous goals. The later
+  [offline body policy](autonomous-life-game.md#offline-body-policy) separately
+  bounds new negative body change during enabled-life absence (configurable,
+  initially four hours), preserves real accepted recovery and separates crop
+  growth. The implementation record owns this later source change; it does not alter
+  historical installation evidence.
 - Resuming Life retains the current body and queued explicit work. It must not
   replay every missed alarm or replace a manual action with a new autonomous one.
 
@@ -319,9 +342,9 @@ narrow seam, return the concrete limitation before selecting a replacement.
 | Happy while asleep | Remain asleep. A new emotion does not wake her without an admitted wake decision. |
 | Bored while idle | The native Agent may choose a different permitted activity on conversation/autonomous opportunity. No model call per render frame. |
 | Dragging a body | Temporary local input/motion priority; it does not independently change the room's eating/sleep facts. |
-| Work-status animation during another activity | Work is an execution indicator, not the companion's emotional/physical state. Use a noncontradictory indicator or defer the conflicting clip. |
-| Cosmetic random action implies eating/sleep | Schedule it only against the corresponding actual activity, or reclassify it as unsupported for that state. Audit upstream pools rather than allowing false cross-surface facts. |
-| Requested activity has no surface asset | Expose a presentation gap; preserve truthful shared state. Fill the required asset/mapping before claiming that activity's visual acceptance. |
+| Work-status animation during another activity | Work is an execution indicator. Defer a conflicting body clip or use a separate noncontradictory indicator; Desktop must still mirror Room's actual activity. |
+| Cosmetic random action implies eating/sleep | It cannot choose a life activity; Desktop must mirror actual Room activity when open and the retained plan when closed. Audit upstream pools rather than allowing false cross-surface facts. |
+| Requested activity has no surface asset | Expose a presentation gap and preserve truthful shared state. A neutral pose plus label does not fulfill 100% mirroring; fill the required asset/mapping before visual acceptance. |
 
 Eating and sleep assets already exist in the packaged catalogue, including
 `吃早餐`, `吃午餐`, `吃晚餐`, `吃饭·碗饭` and the three sleep clips.
@@ -792,7 +815,7 @@ behavior quality require owner judgment, not deterministic fixtures alone.
 | Decision/risk | Recommended choice | When it must be resolved |
 | --- | --- | --- |
 | Independent body owner | Add optional Behavior using existing feiyu code; no new behavior engine. | Before W2 implementation. |
-| Paused active automatic work and passive time | Preserve manual progression, stop automatic work at safe checkpoints, retain paused passive-time baseline for this release. | Before autonomy-gating changes in W0/W2. |
+| Paused active automatic work and passive time | Preserve manual progression, stop automatic work at safe checkpoints, freeze paused passive body/crop time. The later offline body policy owns the approved enabled-life absence policy and its current implementation evidence. | Earlier W0/W2 baseline retained; new cap details belong to the autonomous-life plan. |
 | Emotion format and numerical rules | Text plus preserved optional existing Room values; revisioned file and source validation; no new decay engine. | Before W3 schema/migration. |
 | Self-description ownership/path | Core identity resource, original guarded path retained initially. | Before W1 read/write changes. |
 | Presentation host | Original PetPlatform for bodies; existing native compact capabilities retained. | W0, before retiring any old body entry. |

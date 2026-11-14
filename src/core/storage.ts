@@ -1,8 +1,8 @@
-import { DatabaseSync } from 'node:sqlite';
+import { backup, DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
-import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
-import type { ContractError, Page, PageRequest } from '../contracts/common.js';
+import type { ContractError } from '../contracts/common.js';
 
 export class Rejection extends Error {
   constructor(readonly detail: ContractError) { super(detail.message); }
@@ -51,17 +51,29 @@ export function revision(actual: number, expected: number): void {
 
 /** One process owns one Core database. Only trusted host configuration selects storage paths. */
 export class CoreStore {
-  readonly db: DatabaseSync;
+  db: DatabaseSync;
   readonly directory: string;
   private readonly lockPath: string;
   private readonly lockToken = `${process.pid}:${randomUUID()}`;
   private closed = false;
+  private recovering = false;
+  private databaseFile!: {dev: number; ino: number};
   constructor(directory: string) {
     check(isAbsolute(directory), 'dataDir must be absolute');
     mkdirSync(directory, { recursive: true, mode: 0o700 });
     check(!lstatSync(directory).isSymbolicLink(), 'dataDir must not be a symlink');
     this.directory = realpathSync(directory);
     chmodSync(this.directory, 0o700);
+    const manifestPath = join(this.directory, '../../manifest.json');
+    // An initialized bootstrap Repo also has an identity manifest, before its
+    // existing Core is relocated. A missing declaration must never authorize
+    // a blank second Core, including a crash before migration's final manifest.
+    if (!existsSync(join(this.directory, 'core.sqlite')) && lstatSync(manifestPath, {throwIfNoEntry: false})) {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {schemaVersion?: number; companionId?: string; files?: string[]};
+      if (manifest.files?.includes('data/core/core.sqlite')
+        || typeof manifest.companionId === 'string' && [1, 2, 3].includes(manifest.schemaVersion!))
+        unavailable('This workspace has no Core database; migrate its existing Core or recover its data before starting Core');
+    }
     this.lockPath = join(this.directory, 'core.lock');
     if (existsSync(this.lockPath)) {
       check(!lstatSync(this.lockPath).isSymbolicLink(), 'Core lock must not be a symlink');
@@ -80,6 +92,7 @@ export class CoreStore {
       const path = join(this.directory, 'core.sqlite');
       check(!existsSync(path) || !lstatSync(path).isSymbolicLink(), 'Database must not be a symlink');
       this.db = database = new DatabaseSync(path);
+      this.databaseFile = lstatSync(path);
       chmodSync(path, 0o600);
       this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;
         CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -94,6 +107,56 @@ export class CoreStore {
       if (schema && schema !== '1') reject('INCOMPATIBLE', `Unsupported database schema ${schema}`);
       this.setMeta('schema', '1');
     } catch (error) { database?.close(); unlinkSync(this.lockPath); throw error; }
+  }
+  /** A live connection alone does not establish that its database is still in the Repo. */
+  persisted(): boolean {
+    try {
+      const stat = lstatSync(join(this.directory, 'core.sqlite'));
+      return !this.closed && !this.recovering && stat.isFile() && !stat.isSymbolicLink()
+        && stat.dev === this.databaseFile.dev && stat.ino === this.databaseFile.ino
+        && readFileSync(this.lockPath, 'utf8') === this.lockToken;
+    } catch { return false; }
+  }
+  /** Explicit initialization may recover this live connection, never another cached identity. */
+  async ensurePersisted(): Promise<void> {
+    if (this.persisted()) return;
+    if (this.closed || this.recovering) unavailable('Core storage recovery is unavailable');
+    const path = join(this.directory, 'core.sqlite');
+    const ownLease = () => !existsSync(this.lockPath) || !lstatSync(this.lockPath).isSymbolicLink()
+      && readFileSync(this.lockPath, 'utf8') === this.lockToken;
+    check(ownLease(), 'Core storage acquired another owner');
+    if (existsSync(path)) {
+      const stat = lstatSync(path);
+      check(!stat.isSymbolicLink() && stat.dev === this.databaseFile.dev && stat.ino === this.databaseFile.ino,
+        'Core database was replaced; preserve it before initialization');
+      writeFileSync(this.lockPath, this.lockToken, {flag: 'wx', mode: 0o600});
+      return;
+    }
+    mkdirSync(this.directory, {recursive: true, mode: 0o700});
+    check(realpathSync(this.directory) === this.directory, 'Core storage directory changed');
+    const stage = join(this.directory, `.core-recovery-${randomUUID()}.sqlite`);
+    this.recovering = true;
+    try {
+      const fingerprint = (db: DatabaseSync) => JSON.stringify(db.prepare("SELECT name, sql FROM sqlite_schema WHERE type='table' ORDER BY name").all().map(row =>
+        [row.name, row.sql, db.prepare(`SELECT * FROM "${String(row.name).replaceAll('"', '""')}" ORDER BY rowid`).all()]));
+      await backup(this.db, stage);
+      chmodSync(stage, 0o600);
+      const saved = new DatabaseSync(stage);
+      try {
+        check(saved.prepare('PRAGMA integrity_check').get()?.integrity_check === 'ok', 'Core recovery integrity check failed');
+        check(fingerprint(saved) === fingerprint(this.db), 'Core changed during recovery; retry initialization');
+      } finally { saved.close(); }
+      check(!existsSync(path) && ownLease(), 'Core storage acquired another owner');
+      this.db.close();
+      renameSync(stage, path);
+      this.db = new DatabaseSync(path);
+      this.databaseFile = lstatSync(path);
+      this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000');
+      if (!existsSync(this.lockPath)) writeFileSync(this.lockPath, this.lockToken, {flag: 'wx', mode: 0o600});
+    } finally {
+      this.recovering = false;
+      if (existsSync(stage)) unlinkSync(stage);
+    }
   }
   meta<T>(key: string): T | undefined {
     const row = this.db.prepare('SELECT value FROM meta WHERE key=?').get(key);
@@ -116,15 +179,8 @@ export class CoreStore {
   all<T>(kind: string): T[] {
     return this.db.prepare('SELECT value FROM records WHERE kind=? ORDER BY seq').all(kind).map(r => JSON.parse(r.value as string) as T);
   }
-  page<T>(items: T[], input: PageRequest): Page<T> {
-    integer(input.limit, 'page limit', 1, 200);
-    check(input.cursor === undefined || /^\d+$/.test(input.cursor), 'Invalid cursor');
-    const start = input.cursor === undefined ? 0 : Number(input.cursor);
-    integer(start, 'cursor');
-    const end = start + input.limit;
-    return { items: items.slice(start, end), nextCursor: end < items.length ? String(end) : null };
-  }
   transaction<T>(fn: () => T): T {
+    if (!this.persisted()) unavailable('Core database is absent or moved; initialize the workspace to recover the live state');
     this.db.exec('BEGIN IMMEDIATE');
     try { const value = fn(); this.db.exec('COMMIT'); return value; }
     catch (error) { this.db.exec('ROLLBACK'); throw error; }
@@ -146,6 +202,6 @@ export class CoreStore {
     if (this.closed) return;
     this.closed = true;
     this.db.close();
-    if (readFileSync(this.lockPath, 'utf8') === this.lockToken) unlinkSync(this.lockPath);
+    if (existsSync(this.lockPath) && readFileSync(this.lockPath, 'utf8') === this.lockToken) unlinkSync(this.lockPath);
   }
 }

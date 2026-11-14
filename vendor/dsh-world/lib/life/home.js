@@ -1,6 +1,15 @@
 import { mkdirSync } from 'node:fs';
 import { errorText } from "../faults.js";
 import { admit } from "../worldScope.js";
+/** The existing durable first-home transition, shared by foreground and Life
+ * openers. Recording it does not deliver a turn or start an autonomous runtime. */
+export function markHomeArrival(state, sessionId, at = new Date().toISOString()) {
+    if (state.homeSessionId === sessionId)
+        return state;
+    state.homeSessionId = sessionId;
+    state.greeting = { at, kind: 'arrival' };
+    return state;
+}
 /**
  * Her home session: the recorded one while it exists and is not archived, otherwise a new one.
  * Her world lives only in her room's workspace, so the home is built in it, or moved into it, or not opened at all.

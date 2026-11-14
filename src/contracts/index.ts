@@ -1,18 +1,8 @@
-/** Stable draft import surface. No module implementations or host imports. */
+/** Actual shared contract surface; native DSH owns conversations and execution. */
 export { CONTRACT_VERSION } from './version.js';
 export type * from './common.js';
 export type * from './core.js';
-export type * from './execution.js';
-export type * from './memory.js';
-export type * from './life.js';
-export type * from './desktop.js';
 export type * from './emotion.js';
 export { COMPANION_FEELINGS } from './emotion.js';
 export type * from './behavior.js';
-export type * from './channels.js';
-export type * from './bilibili.js';
-export type * from './console.js';
-export type * from './events.js';
-export type * from './services.js';
-export type * from './resources.js';
-export type * from './maintenance.js';
+export type * from './interaction.js';

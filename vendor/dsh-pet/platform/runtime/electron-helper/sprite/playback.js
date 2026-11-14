@@ -47,6 +47,7 @@ Object.assign(PetSprite.prototype, {
     const loadGuard = (why) => {
       if (!this.pending || this.pending.gen !== gen) return;
       this.pending = null;
+      if (this.companionLoadFailure?.gen === gen) this.companionLoadFailure.fail(why);
       console.warn('[dsh-pet] 素材加载失败 pet=' + this.pet.id + ' anim=' + next + '：' + why + '（已释放本次切换）');
       // 播放回执：这一段没能播起来 → 如实回 failed（而不是让调用方干等到 timeout）
       if (playbackId) {
@@ -55,16 +56,20 @@ Object.assign(PetSprite.prototype, {
       }
     };
     const loadTimer = window.setTimeout(() => loadGuard('10s 超时'), 10000);
+    if (this.pet.companionPlayback) this.companionLoadTimer = loadTimer;
     el.onerror = () => {
       window.clearTimeout(loadTimer);
+      if (this.companionLoadTimer === loadTimer) this.companionLoadTimer = undefined;
       loadGuard('video error');
     };
     el.load();
     const onReady = () => {
       el.removeEventListener('loadeddata', onReady);
       window.clearTimeout(loadTimer);
+      if (this.companionLoadTimer === loadTimer) this.companionLoadTimer = undefined;
+      if (this.companionLoadReady?.listener === onReady) this.companionLoadReady = undefined;
+      if (this.gen !== gen) return;
       el.onerror = null;
-      if (this.pending && this.pending.gen !== gen) return;
       const old = this.front === 0 ? this.videoA : this.videoB;
       el.classList.add('is-front');
       if (old && old !== el) {
@@ -81,7 +86,7 @@ Object.assign(PetSprite.prototype, {
       this.pending = null;
       this.playback = playbackId || null;
       el.style.transform = this.facing === 'right' ? 'scaleX(-1)' : '';
-      el.play()
+      if (!this.pet.companionPlayback) el.play()
         .then(() => {
           // 只有 play() 兑现才代表确实开始出画（loadeddata 只代表可解码）
           if (playbackId) this.reportPlayback(playbackId, 'playing');
@@ -99,6 +104,7 @@ Object.assign(PetSprite.prototype, {
       }
       if (this.pendingMove) this.startMoveDrive(el);
     };
+    if (this.pet.companionPlayback) this.companionLoadReady = {video:el,listener:onReady};
     el.addEventListener('loadeddata', onReady);
     if (el.readyState >= 2) onReady();
   },

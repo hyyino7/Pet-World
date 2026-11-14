@@ -6,14 +6,15 @@ export function alarmDescriptions(messages = readAlarmMessages(undefined), value
 }
 const text = { schema: { type: 'string' }, render: (_args, value) => [{ type: 'text', text: value }] };
 export function lifeTools(host) {
-    const { companion, partner } = host.names ?? { companion: 'TA', partner: '伙伴' };
+    const names = host.names ?? { companion: 'TA', partner: '伙伴' };
+    const { partner } = names;
     const descriptions = host.descriptions ?? alarmDescriptions();
     const planNext = defineTool({
         name: 'plan_next',
         description: descriptions.plan,
         parameters: { at: { type: 'string' }, after_minutes: { type: 'number' }, note: { type: 'string', required: true } },
         output: text,
-        execute: async ({ at, after_minutes, note }) => host.planNext({ ...(at === undefined ? {} : { at }), ...(after_minutes === undefined ? {} : { after_minutes }) }, note),
+        execute: async ({ at, after_minutes, note }, execution) => host.planNext({ ...(at === undefined ? {} : { at }), ...(after_minutes === undefined ? {} : { after_minutes }) }, note, () => execution?.signal?.throwIfAborted()),
     });
     const { toast, outlets } = host.notifier;
     const reaching = outlets.filter(outlet => outlet.kinds.includes('reach'));
@@ -26,11 +27,11 @@ export function lifeTools(host) {
         execute: async ({ text: message, image }, execution) => {
             if (!channelNames.length)
                 throw new Error('现在还没有配置任何通道，话留在家里了。');
-            const push = pushOf(message, 'reach', companion, host.origin?.(), image);
+            const push = pushOf(message, 'reach', names.companion, host.origin?.(), image);
             // Device channels deduplicate the native tool call. Outlets receive only the original public push.
             if (execution?.callId) Object.defineProperty(push, 'deliveryId', {value:String(execution.callId)});
             const channels = [
-                ...(toast ? [['系统通知', '已发出', toast.call(host.notifier, companion, message)]] : []),
+                ...(toast ? [['系统通知', '已发出', toast.call(host.notifier, names.companion, message)]] : []),
                 ...reaching.map(outlet => [outlet.name, '已送到', outlet.send(push)]),
             ];
             const results = await Promise.allSettled(channels.map(([, , sent]) => sent));
@@ -44,6 +45,6 @@ export function lifeTools(host) {
     if (!checkAlarm || !cancelAlarm)
         return [planNext, reachOut];
     const check = defineTool({ name: 'check_alarm', description: descriptions.check, parameters: {}, output: text, execute: async () => checkAlarm.call(host) });
-    const cancel = defineTool({ name: 'cancel_alarm', description: descriptions.cancel, parameters: {}, output: text, execute: async () => cancelAlarm.call(host) });
+    const cancel = defineTool({ name: 'cancel_alarm', description: descriptions.cancel, parameters: {}, output: text, execute: async (_args, execution) => cancelAlarm.call(host, () => execution?.signal?.throwIfAborted()) });
     return [planNext, reachOut, check, cancel];
 }

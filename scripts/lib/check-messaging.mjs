@@ -3,10 +3,11 @@ import {createHash} from 'node:crypto';
 import {once} from 'node:events';
 import {existsSync, mkdirSync, readFileSync, statSync, writeFileSync} from 'node:fs';
 import {createServer} from 'node:http';
-import {dirname,join} from 'node:path';
+import {join} from 'node:path';
 import {WebSocketServer} from 'ws';
 import {conversationKey} from '#dsh-world/ecosystem/shared/identity';
 import {createMessaging} from '../../dist/src/channels/messaging.js';
+import {digest} from '../../dist/src/core/storage.js';
 import {call,say} from '../native-conversation-scenarios.mjs';
 
 async function until(check, description) {
@@ -14,6 +15,7 @@ async function until(check, description) {
   throw Error('Timed out waiting for '+description);
 }
 export async function checkMessaging({ctx,host,workspace,deviceDirectory,home,mockLife,setProgram}) {
+  const dataDirectory=join(workspace.path,'.chatpet/data/channels');
   const originalWarn=ctx.logger.warn;
   ctx.logger.warn=(...args)=>console.error(...args);
   const deliveries=[];
@@ -44,7 +46,7 @@ export async function checkMessaging({ctx,host,workspace,deviceDirectory,home,mo
       socket.send(JSON.stringify({status:'ok',retcode:0,data,echo:input.echo}));
     });
   });
-  const start=()=>createMessaging(ctx,host,{deviceDirectory,workspaceId:workspace.id,storageId:host.workspace.storageId(),ownerHome:async()=>home,active:()=>true});
+  const start=()=>createMessaging(ctx,host,{deviceDirectory,dataDirectory,workspaceId:workspace.id,storageId:host.workspace.storageId(),ownerHome:async()=>home,active:()=>true});
   try {
     msg=await start();assert.equal(msg.status().wechat.path,null);assert.equal(client,undefined);
     await msg.configure({qq:{enabled:true,accountId:'100',ownerSpeakerId:'101',allowPrivate:['101','102'],allowGroups:['201'],voiceEnabled:true,
@@ -136,7 +138,8 @@ export async function checkMessaging({ctx,host,workspace,deviceDirectory,home,mo
     assert.equal((await post({identity:identity('someone','visitor','bad'),text:'hello'}))[0],403);
     const visitor=identity('visitor','visitor','image-1'), hash=value=>createHash('sha256').update(value).digest('hex');
     const data=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==','base64'),file=hash(data)+'.png';
-    const imgDir=join(dirname(discovery),'incoming',hash(conversationKey(visitor)));
+    const wxDataDirectory=join(dataDirectory,'wechat-'+digest([host.workspace.storageId(),'wx-fixture']).slice(7,31));
+    const imgDir=join(wxDataDirectory,'incoming',hash(conversationKey(visitor)));
     mkdirSync(imgDir,{recursive:true});writeFileSync(join(imgDir,file),data);
     const image={id:'image:1',occurredAt:new Date().toISOString(),text:'image',identity:visitor,image:{file,quality:'original'}};
     let wxNames,wxImage,wxText;
@@ -174,7 +177,7 @@ export async function checkMessaging({ctx,host,workspace,deviceDirectory,home,mo
     await ok({receipt:{id:explicit.id,status:'uncertain',confirmed:0}});assert.equal((await ok(inbox)).job,undefined);assert.equal(msg.status().wechat.uncertain,1);
     await until(()=>!ctx.agents.list().some(agent=>agent.status==='running'),'previous tool turn complete');
     const requestId=identity('guest','group@chatroom','history-3');
-    const dir=join(dirname(discovery),'incoming',hash(conversationKey(requestId)));
+    const dir=join(wxDataDirectory,'incoming',hash(conversationKey(requestId)));
     mkdirSync(dir,{recursive:true});writeFileSync(join(dir,file),data);
     const record={...image,identity:requestId,id:'history:8',text:'the fixture image'};
     let readStep=0, sawGroupImage=false;

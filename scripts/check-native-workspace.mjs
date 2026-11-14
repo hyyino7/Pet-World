@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { say } from './native-conversation-scenarios.mjs';
-import { digest } from '../dist/src/core/storage.js';
+import {nativeResult} from '../dist/src/core/native-result.js';
 import { mountInstalledStandard } from './native-standard-preset.mjs';
 
 const app = '/Applications/DeepSeek Harness.app/Contents';
@@ -99,7 +99,7 @@ try {
   for (const dispose of registrations) dispose();
   await legacy.dispose();
   const corePlugin = await import('../dist/src/core/plugin.js');
-  await ctx.plugin(corePlugin, { dataDir: join(root, 'core'), cwd: root, companionId: 'fixture-pet', scopeId: 'fixture-owner',
+  await ctx.plugin(corePlugin, { dataDir: join(root, '.chatpet/data/core'), cwd: root, companionId: 'fixture-pet', scopeId: 'fixture-owner',
     ownerActorId: 'fixture-owner', displayName: 'Repo identity', character: 'Repo character' });
   const host = ctx.petCore;
   await ctx.plugin(await import('../dist/src/memory/plugin.js'));
@@ -130,27 +130,19 @@ try {
   let stage = 0;
   program = async function* (options) {
     assert.ok(text(options).includes('Repo character') && text(options).includes('Fixture owner preference'));
-    assert.ok(text(options).includes('这个 Repo 是大肥鱼与用户共同使用的工作区'), 'Native instruction loader must read the generated root AGENTS.md');
-    assert.ok(options.tools.some(t => t.name === 'pet_matter_create'));
+    assert.ok(text(options).includes('The companion documents are under .chatpet/'), 'Native instruction loader reads the generated root AGENTS.md');
+    assert.ok(!options.tools.some(t => t.name.startsWith('pet_matter_')), 'The retired Core task tools are absent');
     assert.ok(options.tools.some(t => t.name === 'read'), 'Official native filesystem tools remain available');
-    if (stage++ === 0) { yield* call('pet_matter_create', { requestedOutcome: 'Track native work', nextAction: 'Report the result' }); return; }
-    yield* say('Native tracked reply');
+    if (stage++ === 0) { yield* call('write', {file_path:join(root,'first-native-result.txt'),content:'An actual native tool step.'}); return; }
+    yield* say('Native reply after the file write.');
   };
-  await send(handle, 'Create a matter and reply.');
+  await send(handle, 'Write first-native-result.txt and reply.');
   assert.ok(handle.agent.session.snapshotEvents().some(event => event.type === 'user/message'
     && event.data.source.kind === 'agent-instructions'), 'DSH persists its actual instruction baseline');
   assert.equal(calls - requestStart, 2, 'No hidden duplicate model turn');
   const initialSystem = assertPersonaPlacement(requests[requestStart], 'Repo character');
   assert.equal(assertPersonaPlacement(requests[requestStart + 1], 'Repo character'), initialSystem,
     'Tool follow-up keeps the same system prefix as the opening request');
-  const matters = unwrap(await host.services.core.listCommitments(request(), { limit: 20 }));
-  assert.equal(matters.items.length, 1);
-  const overview = unwrap(await host.services.workbench.snapshot(request(), {}));
-  assert.equal(overview.matters[0].commitmentId, matters.items[0].commitmentId);
-  const detail = unwrap(await host.services.workbench.matter(request(), { commitmentId: matters.items[0].commitmentId }));
-  assert.equal(detail.progress[0].kind, 'created');
-  const forbiddenWorkbench = await host.services.workbench.snapshot(host.connectModule('console').request('forged-workbench'), {});
-  assert.equal(forbiddenWorkbench.ok, false, 'Only authenticated owner delegation can read workbench');
   assert.ok(!existsSync(join(root, '.chatpet/STATE.md')), 'Execution must not generate a Repo task summary');
   assert.equal(host.workspace.runtime.store.all('activity').length,0,'Ordinary native chat does not allocate Core activities');
   assert.equal(host.workspace.runtime.store.all('execution').length,0,'Ordinary native chat does not allocate Core executions');
@@ -159,10 +151,13 @@ try {
   await send(handle, 'Use the changed role.');
   assertPersonaPlacement(requests.at(-1), 'Revised character');
   assert.ok(!text(requests.at(-1)).includes('Repo character'), 'Personalization edits replace the old model-visible text');
-  const observer = new (await import('../dist/src/core/dsh-driver.js')).DshDriver(ctx, { cwd: root });
+  const observeNative=async(sessionId,messageId)=>{
+    const reader=await ctx.sessionPersistence.open(sessionId,'read');
+    try{return nativeResult((await reader.read()).events,messageId);}finally{await reader.close();}
+  };
   const nativeInput = handle.agent.session.snapshotEvents().find(event => event.type === 'user/message').data.id;
   const beforeRead = handle.agent.session.snapshotEvents().length;
-  assert.equal((await observer.inspectObserved(handle.agent.id, nativeInput)).state, 'completed');
+  assert.equal((await observeNative(handle.agent.id, nativeInput)).state, 'completed');
   assert.equal(handle.agent.session.snapshotEvents().length, beforeRead, 'Reconciliation never changes the active session');
   let entered;
   const waiting = new Promise(resolve => { entered = resolve; });
@@ -178,18 +173,18 @@ try {
   const configPath = join(root, '.chatpet/core.json');
   const validConfig = readFileSync(configPath, 'utf8');
   writeFileSync(configPath, '{invalid');
-  assert.equal((await host.services.core.getIdentity(request(), {})).ok, false);
+  assert.equal((await host.services.core.getIdentity(request(), {})).ok, true, 'Identity metadata remains available while native cancellation owns execution');
   handle.agent.cancel({kind:'user'});
   await stopped;
   writeFileSync(configPath,validConfig);
-  assert.equal((await observer.inspectObserved(handle.agent.id,handle.agent.session.snapshotEvents().filter(event=>event.type==='user/message' && event.data.source.kind==='user').at(-1).data.id)).state,'cancelled');
+  assert.equal((await observeNative(handle.agent.id,handle.agent.session.snapshotEvents().filter(event=>event.type==='user/message' && event.data.source.kind==='user').at(-1).data.id)).state,'cancelled');
   const nativeSessionId = handle.agent.id;
   await handle.dispose();
   const resumed = await ctx.agents.resume({ resumeSessionId: nativeSessionId,
     setup: async scope => { await ctx.agentPresets.mount(scope, 'standard'); } });
   program = async function* (options) {
     assert.ok(text(options).includes('Revised character'));
-    assert.ok(options.tools.some(t => t.name === 'pet_matter_list'));
+    assert.ok(!options.tools.some(t => t.name.startsWith('pet_matter_')));
     yield* say('Resumed ordinary native session with Core');
   };
   await send(resumed, 'Continue after reopening the native session.');
@@ -228,7 +223,7 @@ try {
   const nativeFile = join(root, 'native-result.txt');
   program = async function* (options) {
     assert.ok(text(options).includes('Revised character'));
-    assert.ok(!text(options).includes('Track native work'), 'A fresh native session must not automatically recall the optional matter ledger');
+    assert.ok(!options.tools.some(tool=>tool.name.startsWith('pet_matter_')), 'A fresh native session exposes no retired Core task tools');
     if (plainStage++ === 0) {
       yield* call('write', { file_path: nativeFile, content: 'Actual native tool result\n' });
       return;
@@ -240,7 +235,6 @@ try {
   assert.equal(calls, plainCalls + 2, 'One conversation turn: native write then final reply, no duplicate submission');
   const plainResult = plainSession.agent.session.snapshotEvents();
   assert.ok(JSON.stringify(plainResult).includes('Ordinary companion reply without creating a matter'), 'The reply is present in actual native history');
-  assert.equal(unwrap(await host.services.core.listCommitments(request(), { limit: 20 })).items.length, 1);
   await plainSession.dispose();
   const otherDirectory = join(root, 'other'); mkdirSync(otherDirectory);
   const ordinary = await open(otherDirectory, false);
@@ -273,12 +267,7 @@ try {
   await send(fresh, '刚才呢');
   assert.equal(expressions.length, 1);
   off();unregisterCatalog(); await fresh.dispose(); await reacting.dispose();
-  const withdrawn = matters.items[0].sourceIds[0];
-  host.setHistoryGuard({ inspect: sourceIds => sourceIds.includes(withdrawn) ? 'ineligible' : 'eligible' });
-  const withheld = unwrap(await host.services.workbench.snapshot(request(), {}));
-  assert.equal(withheld.matters.length,1);assert.equal(withheld.withheldMatters,0,'Matter records are independent of Memory withdrawal');
-  assert.equal((await host.services.workbench.matter(request(), { commitmentId: matters.items[0].commitmentId })).ok,true);
   await unattached.dispose(); await ordinary.dispose(); await resumed.dispose(); await unregister();
   console.log(JSON.stringify({ check: 'native-workspace', status: 'passed', modelCalls: calls, externalModel: false,
-    covered: ['ordinary Standard preset without extra mode', 'real workspace membership', 'identity and USER appear once in the stable system prefix across tool steps and follow-ups', 'native matter tool', 'ordinary native file write without matter creation', 'no generated STATE file', 'single model loop', 'manual role refresh replaces prior in-history content', 'native cancellation', 'read-only reconciliation', 'native session resume', 'legacy mixed runtime snapshots migrate on resume with original events and unrelated sections retained', 'detached session removes scoped profile', 'other workspace isolation', 'unattached ordinary chat', 'owner workbench remains readable independently of Memory withdrawal', 'actual playback feedback and recent mood in first fresh request'] }));
+    covered: ['ordinary Standard preset without extra mode', 'real workspace membership', 'identity and USER appear once in the stable system prefix across tool steps and follow-ups', 'ordinary native tool step without Core task state', 'ordinary native file write without matter creation', 'no generated STATE file', 'single model loop', 'manual role refresh replaces prior in-history content', 'native cancellation', 'read-only reconciliation', 'native session resume', 'legacy mixed runtime snapshots migrate on resume with original events and unrelated sections retained', 'detached session removes scoped profile', 'other workspace isolation', 'unattached ordinary chat', 'actual playback feedback and recent mood in first fresh request'] }));
 } finally { await ctx.fiber.dispose(); rmSync(root, { recursive: true, force: true }); }

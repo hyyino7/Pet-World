@@ -4,16 +4,29 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createCore, type CoreConfig } from '../src/core/index.js';
+import {NativeMemory} from '../src/core/native-memory.js';
 import { settingsHandler } from '../src/console/settings.js';
 import { reject } from '../src/core/storage.js';
 import type { Result } from '../src/contracts/common.js';
 import { estimateTokens } from '#dsh-world/console/snapshot';
 const unwrap = <T>(value: Result<T>): T => { if (!value.ok) assert.fail(value.error.code); return value.value; };
 const fixture = () => {
-  const directory = mkdtempSync(join(tmpdir(), 'chatpet-settings-'));
-  const config: CoreConfig = { dataDir: directory, companionId: 'settings-fish', scopeId: 'settings-scope', ownerActorId: 'owner', displayName: 'Initial', character: 'Initial character' };
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), 'chatpet-settings-')));
+  const config: CoreConfig = { dataDir: join(directory,'.chatpet/data/core'), companionId: 'settings-fish', scopeId: 'settings-scope', ownerActorId: 'owner', displayName: 'Initial', character: 'Initial character' };
   return { directory, config };
 };
+
+/** Scope tests switch between complete disposable workspaces. Their inactive
+ * schemas are prepared through the public initializer, not blank DB files. */
+async function prepareTarget(config:CoreConfig,target:{id:string;path:string;title:string}) {
+  const owner=createCore({...config,dataDir:join(target.path,'.chatpet/data/core'),memory:undefined});
+  try {
+    const before=unwrap(await owner.services.preferences.read(owner.operator.request('prepare.read'),{}));
+    const saved=unwrap(await owner.services.preferences.save(owner.operator.request('prepare.bind'),{expectedRevision:before.revision,
+      workspace:{id:target.id,path:target.path,title:target.title},conversation:before.conversation}));
+    unwrap(await owner.services.workspace.initialize(owner.operator.request('prepare.initialize'),{expectedPreferencesRevision:saved.revision}));
+  } finally {await owner.close();}
+}
 
 test('settings distinguish the current-turn Memory switch from its on-demand provider', async () => {
   const f = fixture();
@@ -31,13 +44,13 @@ test('settings distinguish the current-turn Memory switch from its on-demand pro
   } finally { await host.close(); rmSync(f.directory, { recursive: true, force: true }); }
 });
 
-test('Core preferences enforce owner/revision/limits, persist and change subsequent execution options', async () => {
+test('Core preferences enforce owner/revision/limits and retain autonomous settings after reopen', async () => {
   const f = fixture(); let host = createCore(f.config);
   try {
     const read = () => host.services.preferences.read(host.operator.request('read'), {});
     const initial = unwrap(await read());
     assert.equal(initial.revision, 1);
-    const nonOwner = await host.services.preferences.save(host.connectModule('console').request('forbidden'), {
+    const nonOwner = await host.services.preferences.save({...host.operator.request('forbidden')}, {
       expectedRevision: 1, workspace: null, conversation: { ...initial.conversation, maxSteps: 3 },
     });
     assert.equal(nonOwner.ok, false);
@@ -53,20 +66,12 @@ test('Core preferences enforce owner/revision/limits, persist and change subsequ
     const quietContext = host.operator.request('quiet');
     const quiet = unwrap(await host.services.preferences.setQuiet(quietContext, { expectedRevision: 1, quiet: true }));
     assert.deepEqual(unwrap(await host.services.preferences.setQuiet(quietContext, { expectedRevision: 1, quiet: true })), quiet);
-    assert.equal(quiet.quiet, true); assert.equal(quiet.autonomyPaused, true);
+    assert.equal(quiet.quiet, true);
     await host.close();
-    let appliedSteps = 0;
-    host = createCore({ ...f.config, conversation: { maxSteps: 20 } }, {
-      kind: 'test', run: async input => { appliedSteps = input.maxSteps; return { state: 'completed', text: 'Actual fixture result', hostTurnIds: ['fixture-turn'] }; },
-      inspect: async () => ({ state: 'unknown', text: '', hostTurnIds: [] }), close: async () => {},
-    });
-    assert.equal(unwrap(await read()).conversation.maxSteps, 3, 'saved settings survive config seed and restart');
+    host = createCore({ ...f.config, conversation: { maxSteps: 20 } });
+    assert.equal(unwrap(await read()).conversation.maxSteps, 3, 'Saved autonomous settings survive config seed and restart');
+    assert.equal(host.workspace.runtime.conversation.maxSteps,3);
     assert.equal(unwrap(await host.services.core.getPolicy(host.operator.request('policy'), {})).quiet, true);
-    const target = { channel: { kind: 'dsh' as const, sceneId: 'settings-scene' }, transportAccountRef: 'fixture', transportAccountId: 'fixture', ownerExternalId: 'fixture-owner' };
-    const binding = unwrap(await host.services.core.bindChannel(host.operator.request('pair'), { ...target, expectedRevision: null, pairingProofRef: host.operator.issuePairingProof(target) }));
-    unwrap(await host.chat(host.operator.request('chat'), { channel: target.channel, binding: { bindingId: binding.bindingId, revision: binding.revision }, externalMessageId: 'after-settings', senderId: target.ownerExternalId,
-      receivedAt: new Date().toISOString(), parts: [{ kind: 'text', text: 'Hello' }] }));
-    assert.equal(appliedSteps, 3, 'the next execution uses persisted settings');
   } finally { await host.close(); rmSync(f.directory, { recursive: true, force: true }); }
 });
 
@@ -93,14 +98,14 @@ test('native settings RPC rejects forged authority and unknown workspaces; indep
     assert.deepEqual((unmounted.value as { worldModules: string[] }).worldModules, []);
     assert.equal(data.workspaces.length, 1);
     assert.ok(!('companionId' in data.identity));
-    const forged = await call('identity', { expectedRevision: 1, displayName: 'Changed', character: 'Changed', ownerActorId: 'fake' });
+    const forged = await call('identity', { expectedScope:host.workspace.editScope(),expectedRevision: 1, displayName: 'Changed', character: 'Changed', ownerActorId: 'fake' });
     assert.equal(forged.ok, false);
     const unknown = await call('preferences', { expectedRevision: 1, workspaceId: '/arbitrary/path', conversation: data.preferences.conversation });
     assert.equal(unknown.ok, false); if (!unknown.ok) assert.equal(unknown.error.code, 'NOT_FOUND');
-    const saved = await call('identity', { expectedRevision: 1, displayName: '中文角色', character: 'Custom character' }, 'identity-save');
+    const saved = await call('identity', { expectedScope:host.workspace.editScope(),expectedRevision: 1, displayName: '中文角色', character: 'Custom character' }, 'identity-save');
     assert.equal(saved.ok, true);
     if (saved.ok) { assert.ok(!('ownerActorId' in (saved.value as object))); assert.ok(!('companionId' in (saved.value as object))); }
-    const conflict = await call('identity', { expectedRevision: 1, displayName: 'Other', character: 'Other' }, 'identity-stale');
+    const conflict = await call('identity', { expectedScope:host.workspace.editScope(),expectedRevision: 1, displayName: 'Other', character: 'Other' }, 'identity-stale');
     assert.equal(conflict.ok, false); if (!conflict.ok) assert.equal(conflict.error.code, 'STALE_REVISION');
     const bound = await call('preferences', { expectedRevision: 1, workspaceId: target.id, conversation: data.preferences.conversation }, 'workspace-save');
     assert.equal(bound.ok, true);
@@ -115,11 +120,15 @@ test('native settings RPC rejects forged authority and unknown workspaces; indep
 
 test('World view projects only the current bound workspace and loaded module owners', async (t) => {
   const f = fixture();
-  const host = createCore({ ...f.config, memory: { dataDir: join(f.directory, 'memory'), python: '/unused/python' } });
+  const host = createCore(f.config);
+  // Archive RPCs below mock the provider methods; no Python service or model is
+  // started merely to test owner/binding/error mapping at this boundary.
+  host.native.memory=new NativeMemory(host.workspace.runtime,{dataDir:join(f.directory,'memory'),python:'/unused/python'});
   const target = (id: string, sessionIds: string[]) => ({
     id, title: id, path: realpathSync(mkdtempSync(join(f.directory, 'world-'))), sessionIds, status: async () => 'ok' as const,
   });
   const a = target('a', ['session-a']), b = target('b', ['session-b', 'session-c']);
+  await prepareTarget(f.config,a);await prepareTarget(f.config,b);
   let registered = [a, b];
   const registry = { list: () => registered, get: (id: string) => registered.find(workspace => workspace.id === id) };
   const modules = ['persona', 'archive', 'mood', 'memory'];
@@ -231,6 +240,7 @@ test('companion settings are validated, workspace-local, and read by the runtime
   const f = fixture(); let host = createCore(f.config);
   const makeTarget = (id: string) => ({ id, title: id, path: realpathSync(mkdtempSync(join(f.directory, 'repo-'))), status: async () => 'ok' as const });
   const a = makeTarget('a'), b = makeTarget('b');
+  await prepareTarget(f.config,a);await prepareTarget(f.config,b);
   const handler = settingsHandler(() => host, () => ({ list: () => [a, b], get: id => [a, b].find(t => t.id === id) }));
   const signal = new AbortController().signal;
   let sequence = 0;
@@ -242,20 +252,20 @@ test('companion settings are validated, workspace-local, and read by the runtime
   };
   try {
     await bind(a);
-    const defaults = host.workspace.companionSettings();
-    assert.equal(defaults.workAnimationDelaySeconds, 5);
+    const defaults = host.workspace.companionConfiguration();
+    assert.equal(host.workspace.companionSettings().workAnimationDelaySeconds, 5);
     const settings = { ...defaults, desktopClickSound:false, desktopReplyBubble:false, desktopFixed:true, desktopSize:200, desktopWhisperMinutes:7, desktopBalanceMinutes:20, desktopBubbleSeconds:15, stickerProbabilityPercent: 0, recentMoodHours: 2, memorySummaryTurns:7, memorySummaryIdleMinutes:3, memorySummaryMinimumMinutes:1, memoryRecallCount:5, memoryRecallBlockChars:256 };
     assert.equal((await call('companion', { workspaceId: a.id, expectedSettings: defaults, settings: { ...settings, recentActionCount: -1 } })).ok, false);
     assert.equal((await call('companion', { workspaceId:a.id, expectedSettings:defaults, settings:{...settings,desktopClickSound:'yes'} })).ok,false);
     assert.ok((await call('companion', { workspaceId: a.id, expectedSettings: defaults, settings })).ok);
     assert.equal((await call('companion', { workspaceId: a.id, expectedSettings: defaults, settings: defaults })).ok, false);
     await host.close(); host = createCore(f.config);
-    assert.deepEqual(host.workspace.companionSettings(), settings);
+    assert.deepEqual(host.workspace.companionConfiguration(), settings);
     await bind(b);
-    assert.deepEqual(host.workspace.companionSettings(), defaults);
+    assert.deepEqual(host.workspace.companionConfiguration(), defaults);
     assert.equal((await call('companion', { workspaceId: a.id, expectedSettings: defaults, settings })).ok, false);
     await bind(a);
-    assert.deepEqual(host.workspace.companionSettings(), settings);
+    assert.deepEqual(host.workspace.companionConfiguration(), settings);
   } finally { await host.close(); rmSync(f.directory, { recursive: true, force: true }); }
 });
 

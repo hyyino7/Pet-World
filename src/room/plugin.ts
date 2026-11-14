@@ -16,7 +16,7 @@ const output = {schema:{type:'string' as const}, render: (_:unknown, text:string
 export class Room {
   readonly chat: RoomChat;
   private closed = false;
-  private receipts = new Map<string, {fingerprint:string; result:Promise<unknown>}>();
+  private receipts = new Map<string, {fingerprint:string; result:unknown}>();
   private subscriptions:(()=>void)[]=[];
   readonly window: RoomWindow;
   constructor(private ctx: Context) {
@@ -69,8 +69,9 @@ export class Room {
       if (prior.fingerprint !== fingerprint) throw Error('同一房间请求的操作已变化');
       return prior.result;
     }
-    const result = endpoint === 'roomAction' ? behavior.roomAction(workspaceId, data) : endpoint === 'roomPlant' ? behavior.garden(workspaceId, 'act', data) :
-      behavior.garden(workspaceId, 'control', {...data, requestId:data.requestId ?? key});
+    const result = await (endpoint === 'roomAction' ? behavior.roomAction(workspaceId, data,'主人',{requestId:key,
+      actor:{kind:'owner',id:this.ctx.petCore.workspace.runtime?.config?.ownerActorId ?? 'owner',channel:'room'}}) : endpoint === 'roomPlant' ? behavior.garden(workspaceId, 'act', {...data,requestId:key}) :
+      behavior.garden(workspaceId, 'control', {...data, requestId:['pause','resume','cancel'].includes(String(data.type))&&typeof data.requestId==='string'?data.requestId:key}));
     this.receipts.set(key,{fingerprint,result});
     if (this.receipts.size > 256) this.receipts.delete(this.receipts.keys().next().value!);
     return result;
@@ -95,13 +96,16 @@ export class Room {
     const act = defineTool({name:'room_action',description:'在自己的房间移动到 room_state 里的 room/spot，或进行日常互动。睡着需先 wake，不舒服时不能移动。talk 的 text 是给房间的留言。',parameters:{
       action:{type:'string',enum:roleActions,required:true}, room:{type:'string'},spot:{type:'string'},text:{type:'string'},on:{type:'boolean'}},output,
       execute:async (input,exec) => {
-        const result = await behavior.roomAction(this.checked(exec),input,'大肥鱼');
+        if(exec.agent && this.ctx.petCore.native.isAutonomous(exec.agent.id))throw Error('自主生活请通过 life_plan_update 提交持久活动；普通房间操作仍供主人交互使用');
+        const result = await behavior.roomAction(this.checked(exec),input,'大肥鱼',{requestId:digest([exec.agent!.id,exec.callId]),
+          actor:{kind:'companion',id:this.ctx.petCore.workspace.runtime.config.companionId,channel:'dsh',sessionId:exec.agent!.id}});
         return JSON.stringify({changed:result.changed,event:result.event,her:result.home.her,body:result.home.body});
       }});
     const garden = defineTool({name:'room_garden',description:'查看菜园，自己走去照料某块田或管理自主照料。state 返回作物、田块、库房和任务。control 按真实时间排队，读取结果确认是否完成。',parameters:{
       type:{type:'string',enum:['state','visit','careNow','auto','till','plant','water','fertilize','harvest','sell','buySeed','buyCompost'],required:true},
       plotId:{type:'integer'},cropId:{type:'string'},quantity:{type:'integer'},enabled:{type:'boolean'},decision:{type:'string',enum:['force','defer']}},output,
       execute:async(input,exec) => {
+        if(input.type!=='state' && exec.agent && this.ctx.petCore.native.isAutonomous(exec.agent.id))throw Error('自主园艺请通过 life_plan_update 安排明确步骤，不直接连派操作');
         const id = this.checked(exec);
         return JSON.stringify(input.type === 'state' ? await behavior.garden(id, 'state') : await behavior.garden(id,'control',{...input,requestId:digest([exec.agent!.id,exec.callId])}));
       }});

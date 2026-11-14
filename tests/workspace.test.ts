@@ -1,14 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, symlinkSync, rmSync, realpathSync } from 'node:fs';
+import fs from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, symlinkSync, rmSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import {syncBuiltinESMExports} from 'node:module';
 import { createCore, type CoreConfig } from '../src/core/index.js';
 import type { Result } from '../src/contracts/common.js';
 const unwrap = <T>(result: Result<T>): T => { if (!result.ok) assert.fail(JSON.stringify(result.error)); return result.value; };
 const fixture = () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'chatpet-workspace-'))); const repo = join(root, 'repo'); mkdirSync(repo);
-  const config: CoreConfig = { dataDir: join(root, 'data'), companionId: 'fixture-companion', scopeId: 'fixture-scope', ownerActorId: 'owner', displayName: 'Example', character: 'A configured character.' };
+  // Core's real schema must live in the complete bound workspace before
+  // initialization can advertise it in the portable inventory.
+  const config: CoreConfig = { dataDir: join(repo, '.chatpet/data/core'), companionId: 'fixture-companion', scopeId: 'fixture-scope', ownerActorId: 'owner', displayName: 'Example', character: 'A configured character.' };
   return { root, repo, config };
 };
 
@@ -22,8 +26,10 @@ test('only an initialized companion Repo gets native-discoverable instructions, 
     }));
     unwrap(await host.services.workspace.initialize(host.operator.request('instructions.initialize'), { expectedPreferencesRevision: saved.revision }));
     const instructions = readFileSync(join(f.repo, 'AGENTS.md'), 'utf8');
-    assert.ok(instructions.includes('.chatpet/SOUL.md') && instructions.includes('pet_memory_recall'));
-    assert.ok(instructions.includes('不要通过读取数据库、旧日志、备份'));
+    for (const resource of ['.chatpet/', 'SOUL.md', 'USER.md', 'COMPANION.md', 'manifest.json']) assert.ok(instructions.includes(resource));
+    assert.ok(instructions.includes('Use registered memory capabilities'));
+    assert.ok(instructions.includes('do not create a parallel MEMORY.md or revive STATE.md'));
+    assert.ok(!instructions.includes(f.config.character!), 'Navigation instructions must not become another persona source');
     writeFileSync(join(f.repo, 'AGENTS.md'), '# Owner instructions\n');
     await host.close(); host = createCore(f.config);
     unwrap(await host.services.workspace.initialize(host.operator.request('instructions.restart'), { expectedPreferencesRevision: saved.revision }));
@@ -31,7 +37,7 @@ test('only an initialized companion Repo gets native-discoverable instructions, 
   } finally { await host.close(); rmSync(f.root, { recursive: true, force: true }); }
 });
 
-test('workspace initialization preserves project files, uses five profile/config files, reloads file authority and survives restart', async () => {
+test('workspace initialization preserves files, prepares the declared inventory and retains authority after restart and relocation', async () => {
   const f = fixture(); let host = createCore(f.config); let request = 0;
   const context = () => host.operator.request(`workspace-${++request}`);
   try {
@@ -41,20 +47,40 @@ test('workspace initialization preserves project files, uses five profile/config
     assert.equal(unwrap(await host.services.workspace.inspect(context(), {})).state, 'pending');
     const initialized = unwrap(await host.services.workspace.initialize(context(), { expectedPreferencesRevision: prefs.revision }));
     assert.equal(initialized.state, 'ready');
-    assert.deepEqual(readdirSync(join(f.repo, '.chatpet')).sort(), ['README.md', 'manifest.json', 'SOUL.md', 'USER.md', 'core.json'].sort());
+    for (const resource of ['README.md', 'manifest.json', 'SOUL.md', 'USER.md', 'COMPANION.md', 'core.json', 'self.md',
+      'self.history/', 'diary/', 'data/core/core.sqlite', 'data/core/native-sessions/', 'data/core/photos/album.sqlite',
+      'data/memory/recent-interactions.sqlite', 'data/life/control.json', 'data/emotion/state.json', 'data/pet-platform/main-config.jsonc']) {
+      assert.ok(initialized.files.includes(resource), `The initialized manifest declares ${resource}`);
+      assert.ok(existsSync(join(f.repo, '.chatpet', resource)), `The declared ${resource} actually exists`);
+    }
+    for (const database of ['data/core/core.sqlite', 'data/core/photos/album.sqlite', 'data/memory/recent-interactions.sqlite']) {
+      assert.ok(statSync(join(f.repo, '.chatpet', database)).size > 0, 'A declared database is not an empty placeholder');
+      assert.equal(readFileSync(join(f.repo, '.chatpet', database)).subarray(0, 16).toString(), 'SQLite format 3\0');
+    }
+    assert.equal(JSON.parse(readFileSync(join(f.repo, '.chatpet/manifest.json'), 'utf8')).schemaVersion, 3);
+    assert.equal(JSON.parse(readFileSync(join(f.repo, '.chatpet/data/life/control.json'), 'utf8')).enabled, false);
+    assert.deepEqual(JSON.parse(readFileSync(join(f.repo, '.chatpet/data/pet-platform/main-config.jsonc'), 'utf8')), {pets: []});
+    assert.equal(readFileSync(join(f.repo, '.chatpet/self.md'), 'utf8'), '');
+    assert.deepEqual(readdirSync(join(f.repo, '.chatpet/diary')), []);
+    assert.equal(host.workspace.storageStatus().core.current, f.config.dataDir);
+    assert.equal(host.workspace.storageStatus().complete, true, 'Core-only configuration has portable actual storage');
     const before = readFileSync(join(f.repo, '.chatpet/SOUL.md'), 'utf8');
+    const identityBefore = unwrap(await host.services.core.getIdentity(context(), {}));
     const again = unwrap(await host.services.workspace.initialize(context(), { expectedPreferencesRevision: prefs.revision }));
-    assert.equal(again.revision, initialized.revision); assert.equal(readFileSync(join(f.repo, '.chatpet/SOUL.md'), 'utf8'), before);
+    assert.equal(again.state, 'ready'); assert.deepEqual(again.files, initialized.files);
+    assert.equal(again.sourceRevision, initialized.sourceRevision);
+    assert.equal(readFileSync(join(f.repo, '.chatpet/SOUL.md'), 'utf8'), before);
+    assert.equal(unwrap(await host.services.core.getIdentity(context(), {})).companionId, identityBefore.companionId);
     const identity = unwrap(await host.services.core.getIdentity(context(), {}));
-    unwrap(await host.services.core.reviseIdentity(context(), { expectedRevision: identity.revision, displayName: 'UI name', character: 'UI character' }));
+    unwrap(await host.services.core.reviseIdentity(context(), { expectedScope:host.workspace.editScope(),expectedRevision: identity.revision, displayName: 'UI name', character: 'UI character' }));
     assert.equal(readFileSync(join(f.repo, '.chatpet/SOUL.md'), 'utf8'), '# UI name\n\nUI character');
     writeFileSync(join(f.repo, '.chatpet/SOUL.md'), '# File name\n\nA manually edited character.');
     const changed = unwrap(await host.services.core.getIdentity(context(), {}));
     assert.equal(changed.displayName, 'File name');
-    const stale = await host.services.core.reviseIdentity(context(), { expectedRevision: identity.revision, displayName: 'Stale', character: 'Stale' });
+    const stale = await host.services.core.reviseIdentity(context(), { expectedScope:host.workspace.editScope(),expectedRevision: identity.revision, displayName: 'Stale', character: 'Stale' });
     assert.equal(stale.ok, false);
     const user = unwrap(await host.services.workspace.readProfile(context(), {}));
-    unwrap(await host.services.workspace.saveProfile(context(), { expectedRevision: user.revision, text: '# User\n\nLanguage: Chinese.' }));
+    unwrap(await host.services.workspace.saveProfile(context(), { expectedScope:host.workspace.editScope(),expectedRevision: user.revision, text: '# User\n\nLanguage: Chinese.' }));
     const p = unwrap(await host.services.preferences.read(context(), {}));
     unwrap(await host.services.preferences.save(context(), { expectedRevision: p.revision, workspace: p.workspace, conversation: { ...p.conversation, maxSteps: 5 } }));
     const config = JSON.parse(readFileSync(join(f.repo, '.chatpet/core.json'), 'utf8')); config.quiet = true; config.conversation.maxSteps = 6;
@@ -67,43 +93,61 @@ test('workspace initialization preserves project files, uses five profile/config
     assert.equal(readFileSync(join(f.repo, 'AGENTS.md'), 'utf8'), '# Existing instructions\n');
     assert.equal(readFileSync(join(f.repo, 'README.md'), 'utf8'), '# Existing project\n');
     assert.ok(!readFileSync(join(f.repo, '.chatpet/manifest.json'), 'utf8').includes(f.root));
+    const storageId = host.workspace.storageId();
+    await host.close();
+    const relocated = join(f.root, 'relocated-repo'); cpSync(f.repo, relocated, {recursive: true});
+    host = createCore({...f.config, dataDir: join(relocated, '.chatpet/data/core')});
+    const relocatedPrefs = unwrap(await host.services.preferences.read(context(), {}));
+    const rebound = unwrap(await host.services.preferences.save(context(), {expectedRevision: relocatedPrefs.revision,
+      workspace: {id: 'new-native-workspace', path: relocated, title: 'Relocated Repo'}, conversation: relocatedPrefs.conversation}));
+    assert.equal(unwrap(await host.services.workspace.initialize(context(), {expectedPreferencesRevision: rebound.revision})).state, 'ready');
+    assert.equal(host.workspace.storageId(), storageId, 'A native workspace ID/path change retains portable storage identity');
+    assert.equal(host.workspace.storageStatus().core.current, join(relocated, '.chatpet/data/core'));
+    assert.equal(host.workspace.storageStatus().complete, true);
+    assert.equal(unwrap(await host.services.core.getIdentity(context(), {})).companionId, identityBefore.companionId);
+    assert.equal(unwrap(await host.services.core.getIdentity(context(), {})).displayName, 'File name');
+    assert.equal(unwrap(await host.services.workspace.readProfile(context(), {})).text, '# User\n\nLanguage: Chinese.');
+    assert.equal(readFileSync(join(relocated, 'AGENTS.md'), 'utf8'), '# Existing instructions\n');
+    assert.equal(readFileSync(join(f.repo, '.chatpet/SOUL.md'), 'utf8'), '# File name\n\nA manually edited character.');
   } finally { await host.close(); rmSync(f.root, { recursive: true, force: true }); }
 });
 
-test('workspace refuses unknown existing content, foreign identity, symlinks and malformed authority without overwriting', async () => {
+test('workspace retains unknown files and refuses foreign identity, symlinks and malformed authority without overwriting', async () => {
   const f = fixture(); const host = createCore(f.config); let request = 0; const context = () => host.operator.request(`deny-${++request}`);
   try {
     const prefs = unwrap(await host.services.preferences.read(context(), {}));
     const saved = unwrap(await host.services.preferences.save(context(), { expectedRevision: prefs.revision, workspace: { id: 'repo', path: f.repo, title: 'Repo' }, conversation: { ...prefs.conversation } }));
-    const dir = join(f.repo, '.chatpet'); mkdirSync(dir); writeFileSync(join(dir, 'custom.txt'), 'Preserve me');
-    assert.equal((await host.services.workspace.initialize(context(), { expectedPreferencesRevision: saved.revision })).ok, false);
+    const dir = join(f.repo, '.chatpet'); writeFileSync(join(dir, 'custom.txt'), 'Preserve me');
+    assert.equal(unwrap(await host.services.workspace.initialize(context(), { expectedPreferencesRevision: saved.revision })).state, 'ready');
     assert.equal(readFileSync(join(dir, 'custom.txt'), 'utf8'), 'Preserve me');
-    rmSync(dir, { recursive: true });
-    unwrap(await host.services.workspace.initialize(context(), { expectedPreferencesRevision: saved.revision }));
     const soul = readFileSync(join(dir, 'SOUL.md'), 'utf8');
-    const target = { channel: { kind: 'dsh' as const, sceneId: 'stop-fixture' }, transportAccountRef: 'fixture', transportAccountId: 'fixture', ownerExternalId: 'owner' };
-    const binding = unwrap(await host.services.core.bindChannel(context(), { ...target, expectedRevision: null,
-      pairingProofRef: host.operator.issuePairingProof(target) }));
-    const pending = unwrap(await host.services.core.receiveMessage(context(), { channel: target.channel,
-      binding: { bindingId: binding.bindingId, revision: binding.revision }, externalMessageId: 'stop-fixture-input',
-      senderId: 'owner', receivedAt: new Date().toISOString(), parts: [{ kind: 'text', text: 'Pending work' }] }));
-    writeFileSync(join(dir, 'core.json'), '{broken');
-    assert.equal((await host.services.core.getIdentity(context(), {})).ok, false);
-    assert.equal(unwrap(await host.services.workspace.inspect(context(), {})).state, 'unavailable');
+    const originalManifest = readFileSync(join(dir, 'manifest.json'), 'utf8');
+    const foreignManifest = {...JSON.parse(originalManifest), companionId: 'foreign-companion'};
+    writeFileSync(join(dir, 'manifest.json'), JSON.stringify(foreignManifest));
+    assert.equal((await host.services.workspace.initialize(context(), {expectedPreferencesRevision: saved.revision})).ok, false);
+    assert.deepEqual(JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8')), foreignManifest);
     assert.equal(readFileSync(join(dir, 'SOUL.md'), 'utf8'), soul);
-    const stopped = unwrap(await host.services.core.cancelActivity(context(), { activityId: pending.operation.operationId,
-      expectedRevision: pending.operation.revision, reason: 'Stop even when repository configuration is malformed' }));
-    assert.equal(stopped.state, 'cancelled', 'Broken Repo files must never block the stop control');
-    const badActor = host.connectModule('console');
-    const unauthorized = await host.services.core.reviseIdentity(badActor.request('bad'), { expectedRevision: 1, displayName: 'No', character: 'No' });
+    writeFileSync(join(dir, 'manifest.json'), originalManifest);
+    const originalConfig = readFileSync(join(dir, 'core.json'), 'utf8');
+    const retainedIdentity = unwrap(await host.services.core.getIdentity(context(), {}));
+    writeFileSync(join(dir, 'core.json'), '{broken');
+    assert.deepEqual(unwrap(await host.services.core.getIdentity(context(), {})), retainedIdentity,
+      'The control plane can report retained identity without admitting unavailable workspace content');
+    assert.equal(unwrap(await host.services.workspace.inspect(context(), {})).state, 'unavailable');
+    assert.equal((await host.services.core.reviseIdentity(context(), { expectedScope:host.workspace.editScope(),expectedRevision: retainedIdentity.revision, displayName: 'Blocked', character: 'Blocked'})).ok, false);
+    assert.equal(readFileSync(join(dir, 'SOUL.md'), 'utf8'), soul);
+    const unauthorized = await host.services.core.reviseIdentity({...context()}, { expectedScope:host.workspace.editScope(),expectedRevision: 1, displayName: 'No', character: 'No' });
     assert.equal(unauthorized.ok, false); if (!unauthorized.ok) assert.equal(unauthorized.error.code, 'UNAUTHORIZED');
+    writeFileSync(join(dir, 'core.json'), originalConfig);
+    assert.equal(unwrap(await host.services.workspace.inspect(context(), {})).state, 'ready');
     rmSync(join(dir, 'SOUL.md')); symlinkSync(join(f.repo, 'outside.md'), join(dir, 'SOUL.md')); writeFileSync(join(f.repo, 'outside.md'), 'Outside');
     assert.equal(unwrap(await host.services.workspace.inspect(context(), {})).state, 'unavailable');
+    assert.equal((await host.services.workspace.initialize(context(), {expectedPreferencesRevision: saved.revision})).ok, false);
     assert.equal(readFileSync(join(f.repo, 'outside.md'), 'utf8'), 'Outside');
   } finally { await host.close(); rmSync(f.root, { recursive: true, force: true }); }
 });
 
-test('legacy STATE declarations migrate without reading, rewriting or recreating the retired summary', async () => {
+test('legacy STATE declarations migrate without reading, rewriting or recreating the retired summary', async t => {
   const f = fixture(); const host = createCore(f.config); let sequence = 0;
   const context = () => host.operator.request(`retire-state-${++sequence}`);
   try {
@@ -113,17 +157,33 @@ test('legacy STATE declarations migrate without reading, rewriting or recreating
     unwrap(await host.services.workspace.initialize(context(), { expectedPreferencesRevision: prefs.revision }));
     const dir = join(f.repo, '.chatpet');
     const manifest = JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8'));
-    const legacy = { ...manifest, schemaVersion: 1, files: [...manifest.files, 'STATE.md'] };
+    // A real v1 declaration has the historical six-file inventory, rather
+    // than a modern inventory with a retired filename appended to it.
+    const legacy = { ...manifest, schemaVersion: 1, files: ['README.md', 'manifest.json', 'SOUL.md', 'USER.md', 'core.json', 'STATE.md'] };
     const retired = '# Old summary\n\nOwner-edited text that must be preserved.\n';
-    writeFileSync(join(dir, 'STATE.md'), retired);
+    const retiredFile = join(dir, 'STATE.md'); writeFileSync(retiredFile, retired);
     writeFileSync(join(dir, 'manifest.json'), JSON.stringify(legacy));
-    const migrated = unwrap(await host.services.workspace.initialize(context(), { expectedPreferencesRevision: prefs.revision }));
-    assert.equal(migrated.state, 'ready'); assert.ok(!migrated.files.includes('STATE.md'));
-    assert.equal(JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8')).schemaVersion, 2);
-    const identity = unwrap(await host.services.core.getIdentity(context(), {}));
-    unwrap(await host.services.core.reviseIdentity(context(), { expectedRevision: identity.revision, displayName: identity.displayName, character: 'Updated role' }));
-    assert.equal(readFileSync(join(dir, 'STATE.md'), 'utf8'), retired);
-    rmSync(join(dir, 'STATE.md'));
+    const originalOpen = fs.openSync, originalRead = fs.readFileSync;
+    const guard = (read: (...args:any[])=>any) => (path:any, ...args:any[]) => {
+      assert.notEqual(path, retiredFile, 'Migration and role writes must never read the retired summary');
+      return read(path, ...args);
+    };
+    const openGuard = t.mock.method(fs, 'openSync', guard(originalOpen));
+    const readGuard = t.mock.method(fs, 'readFileSync', guard(originalRead));
+    // Synchronize named fs imports used by the actual modules, then restore
+    // both surfaces before the fixture itself verifies the preserved bytes.
+    syncBuiltinESMExports();
+    try {
+      const migrated = unwrap(await host.services.workspace.initialize(context(), { expectedPreferencesRevision: prefs.revision }));
+      assert.equal(migrated.state, 'ready'); assert.ok(!migrated.files.includes('STATE.md'));
+      assert.equal(JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8')).schemaVersion, 3);
+      const identity = unwrap(await host.services.core.getIdentity(context(), {}));
+      unwrap(await host.services.core.reviseIdentity(context(), { expectedScope:host.workspace.editScope(),expectedRevision: identity.revision, displayName: identity.displayName, character: 'Updated role' }));
+    } finally {
+      openGuard.mock.restore(); readGuard.mock.restore(); syncBuiltinESMExports();
+    }
+    assert.equal(readFileSync(retiredFile, 'utf8'), retired);
+    rmSync(retiredFile);
     writeFileSync(join(dir, 'manifest.json'), JSON.stringify(legacy));
     assert.equal(unwrap(await host.services.workspace.initialize(context(), { expectedPreferencesRevision: prefs.revision })).state, 'ready');
     assert.ok(!readdirSync(dir).includes('STATE.md'), 'A missing retired file must not be recreated');

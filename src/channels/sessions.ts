@@ -20,7 +20,7 @@ interface Services {
   get(key: 'agentPresets'): {composedPreset(ctx: Context): string | undefined};
 }
 interface Options {
-  deviceDirectory: string;
+  dataDirectory: string;
   ownerHome(): Promise<Agent>;
   identityAllowed(identity: SpeakerIdentity): boolean;
   ownerIdentity(identity: SpeakerIdentity): boolean;
@@ -38,6 +38,8 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
   const guests = new Map<string, {identity: SpeakerIdentity; agent: Agent; directory: string}>();
   const pending = new Map<string, Map<string, number>>();
   const accepted = new Map<string, Map<string, string>>();
+  const delivered = new Map<string, {message: string; identity: SpeakerIdentity; scope: string}>();
+  const nudges = new Map<string, {id: string; message: string; original: string; identity: SpeakerIdentity; scope: string}>();
   let owner: Agent | undefined, stopped = false;
   const active = () => !stopped && options.active();
   const allowed = (identity: SpeakerIdentity) => active() && !!identity.conversationType && options.identityAllowed(identity);
@@ -45,6 +47,11 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
   const ownerAlive = (id: string) => !!owner && owner.id === id && active()
     && host.workspace.sessionStatus(owner.session,native.get('workspaceRegistry'))?.state === 'ready'
     && !registry.archivedSessionIds.includes(id);
+  function latestInput(id:string) {
+    const agent=owner?.id===id?owner:guests.get(id)?.agent;
+    const event=agent?.session.snapshotEvents().filter(event=>event.type==='user/message' && event.data.source.kind==='user').at(-1);
+    return event?.type==='user/message'?JSON.stringify(event.data):undefined;
+  }
   function guest(id: string) {
     const row = guests.get(id);
     return !!row && allowed(row.identity) && !isOwner(row.identity) && row.agent.session.header.cwd === row.directory
@@ -59,6 +66,13 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
     return guest(id) && row !== undefined && keyFor(row.identity) === keyFor(identity);
   }
   function admit(id: string, message: UserMessage) {
+    if (message.source.kind === 'dsh-world-reply-nudge') {
+      const grant=nudges.get(id), original=delivered.get(id);
+      return !!grant && !!original && grant.id===message.id && grant.message===JSON.stringify(message)
+        && original.message===grant.original && original.scope===grant.scope
+        && latestInput(id)===grant.original
+        && JSON.stringify(host.native.scopeFor(id)??null)===grant.scope && allowsReply(id,grant.identity);
+    }
     if (message.source.kind !== 'user' || !('identity' in message.source)) return false;
     let identity: SpeakerIdentity;
     try { identity = speakerIdentity(message.source.identity); } catch { return false; }
@@ -71,6 +85,7 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
     const messages = checked ?? new Map<string, string>();
     messages.set(message.id, key);
     accepted.set(id, messages);
+    delivered.set(id,{message:JSON.stringify(message),identity,scope:JSON.stringify(host.native.scopeFor(id)??null)});
     return true;
   }
   if (host.native.channelBoundary) throw Error('渠道会话已由另一个接入实例管理');
@@ -83,7 +98,7 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
     const key = keyFor(identity), previous = routes.get(key);
     if (previous) return previous;
     const digest = createHash('sha256').update(key).digest('hex');
-    const root = privateDeviceDirectory(options.deviceDirectory, 'conversations');
+    const root = privateDeviceDirectory(options.dataDirectory, 'conversations');
     const directory = realpathSync(privateDeviceDirectory(root, digest));
     const prefix = 'chatpet-guest-' + digest + '-';
     let workspace: Workspace | undefined;
@@ -102,6 +117,9 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
       host: {
         workspace: async (path, title) => {
           workspace = await registry.create(path, title);
+          const logs=ctx.get('petTranscripts');
+          if(!logs)throw Error('Core 完整聊天存储尚未就绪');
+          await logs.registerChannelWorkspace(workspace.id,directory,prefix);
           return requireBound();
         },
         createSession: async (_path, agentPreset, workspaceId) => {
@@ -127,12 +145,13 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
     return result;
   }
   return {
-    async open(supplied: SpeakerIdentity): Promise<Agent> {
+    async open(supplied: SpeakerIdentity, expectedSessionId?:string): Promise<Agent> {
       const identity = speakerIdentity(supplied);
       if (!allowed(identity)) throw Error('外部聊天未登记或已停用');
       const ownerRoute = isOwner(identity);
       const agent = ownerRoute ? await options.ownerHome() : await route(identity).open(identity);
       if (!allowed(identity) || ownerRoute !== isOwner(identity)) throw Error('外部聊天的绑定已变更');
+      if(expectedSessionId && agent.id!==expectedSessionId)throw Error('QQ 原输入会话已关闭，不能转交其他会话');
       if (ownerRoute) owner = agent;
       else guests.set(agent.id, {identity, agent, directory: agent.session.header.cwd!});
       if (!allowsReply(agent.id, identity)) throw Error('外部聊天会话已关闭');
@@ -144,6 +163,19 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
     owns: (id: string) => active() && (ownerAlive(id) || guest(id)),
     identityFor: (id: string) => guest(id) ? guests.get(id)?.identity : undefined,
     allowsReply,
+    /** Adapter-only capability for the one retry of an actually admitted QQ input.
+     * Source-kind text alone never grants native or guest admission. */
+    replyNudge(id: string, original: UserMessage, message: UserMessage) {
+      const previous=delivered.get(id);
+      if (!previous || previous.identity.channel!=='qq' || previous.message!==JSON.stringify(original)
+        || latestInput(id)!==previous.message
+        || !allowsReply(id,previous.identity) || JSON.stringify(host.native.scopeFor(id)??null)!==previous.scope
+        || message.source.kind!=='dsh-world-reply-nudge' || !('forMessageId' in message.source) || message.source.forMessageId!==original.id
+        || nudges.has(id)) throw Error('QQ 补答的原消息或会话已失效');
+      const grant={id:message.id,message:JSON.stringify(message),original:previous.message,identity:previous.identity,scope:previous.scope};
+      nudges.set(id,grant);
+      return ()=>{if(nudges.get(id)===grant)nudges.delete(id);};
+    },
     stop() {
       if (stopped) return;
       stopped = true;
@@ -151,7 +183,7 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
       for (const router of routes.values()) router.stop();
       for (const {agent} of guests.values()) if (agent.status !== 'idle') agent.cancel({kind: 'user'});
       if (owner && accepted.has(owner.id) && owner.status !== 'idle') owner.cancel({kind: 'user'});
-      cleared(); routes.clear(); guests.clear(); pending.clear(); accepted.clear(); owner = undefined;
+      cleared(); routes.clear(); guests.clear(); pending.clear(); accepted.clear(); delivered.clear(); nudges.clear(); owner = undefined;
     },
   };
 }

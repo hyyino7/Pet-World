@@ -6,6 +6,7 @@ import { readRoomMood } from './index.js';
 
 interface Scope { path: string; companionId: string; scopeId: string; storageId: string }
 interface Document { schema: 1; companionId: string; scopeId: string; storageId: string; revision: number; current: EmotionState | null; importedLegacy?: true }
+const MAX_DOCUMENT_BYTES = 262144;
 const hash = (text: string) => createHash('sha256').update(text).digest('hex');
 const object = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value));
 function strings(value: unknown, name: string): string[] {
@@ -33,6 +34,13 @@ export function readEmotionState(value: unknown): EmotionState {
 /** One canonical file; old Core rows are only a one-time import source. */
 export class EmotionFile {
   constructor(private readonly scope: Scope, private readonly legacy: () => unknown) {}
+  /** Prepare the existing canonical store without inventing a first feeling. */
+  initialize(): void {
+    const current = this.load();
+    const file = this.location();
+    if (file && existsSync(file)) return;
+    this.write({...current.document, revision: 1}, {revision: 0, contentHash: hash('absent')});
+  }
   private location(create = false) {
     if (realpathSync(this.scope.path) !== this.scope.path) throw Error('Emotion workspace moved');
     let directory = this.scope.path;
@@ -62,7 +70,7 @@ export class EmotionFile {
       return {document, contentHash: hash('absent')};
     }
     const stat = lstatSync(file);
-    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 262144) throw Error('Invalid emotion file; the original has been retained');
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > MAX_DOCUMENT_BYTES) throw Error('Invalid emotion file; the original has been retained');
     const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
     let text: string; try { text = readFileSync(fd, 'utf8'); } finally { closeSync(fd); }
     const raw: unknown = JSON.parse(text);
@@ -74,6 +82,10 @@ export class EmotionFile {
     return {status: value.document.current ? 'ready' : 'empty', revision: value.document.revision, contentHash: value.contentHash, ...(value.document.current ? {state: structuredClone(value.document.current)} : {})};
   }
   private write(document: Document, expected: {revision: number; contentHash: string}) {
+    // Lists may each be valid while their final UTF-8/escaped JSON exceeds the
+    // reader's limit. Reject before creating/replacing any canonical file.
+    const text = JSON.stringify(document, null, 2) + '\n';
+    if (Buffer.byteLength(text, 'utf8') > MAX_DOCUMENT_BYTES) throw Error('Emotion document exceeds the readable byte limit; the existing state has been retained');
     const file = this.location(true)!;
     // No await between the final comparison and rename: stale editors cannot replace a newer revision.
     if (existsSync(file)) {
@@ -82,7 +94,7 @@ export class EmotionFile {
     } else if (expected.revision !== 0 || expected.contentHash !== hash('absent')) throw Error('Emotion file changed; refresh before saving');
     const temp = file + '.' + randomUUID() + '.tmp';
     const fd = openSync(temp, 'wx', 0o600);
-    try { writeFileSync(fd, JSON.stringify(document, null, 2) + '\n'); fsyncSync(fd); } finally {closeSync(fd);}
+    try { writeFileSync(fd, text); fsyncSync(fd); } finally {closeSync(fd);}
     try {renameSync(temp, file);} finally {if (existsSync(temp)) unlinkSync(temp);}
   }
   update(input: EmotionUpdate, at = Date.now()): EmotionSnapshot {

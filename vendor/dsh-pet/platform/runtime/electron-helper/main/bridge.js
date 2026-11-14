@@ -28,15 +28,16 @@ function createBridge({ isBridge, prefix, origin, token }) {
   function bridgeRequest(method, url, body) {
     return new Promise((resolve, reject) => {
       const id = ++bridgeSeq;
-      bridgePending.set(id, { resolve, reject });
-      process.stdout.write(prefix + JSON.stringify({ id, method, url, body, cb: bridgeCallbackUrl }) + '\n');
       // 宿主若长期不应答（进程退出/宿主动作挂起）不无限挂起：45s 兜底（LLM 生成最长 30-60s）
-      setTimeout(() => {
+      const timeout=setTimeout(() => {
         const p = bridgePending.get(id);
         if (!p) return;
         bridgePending.delete(id);
         p.reject(new Error('bridge request timeout'));
-      }, 45000).unref?.();
+      }, 45000);
+      timeout.unref?.();
+      bridgePending.set(id, { resolve, reject, timeout });
+      process.stdout.write(prefix + JSON.stringify({ id, method, url, body, cb: bridgeCallbackUrl }) + '\n');
     });
   }
 
@@ -45,6 +46,7 @@ function createBridge({ isBridge, prefix, origin, token }) {
     const p = resp && bridgePending.get(resp.id);
     if (!p) return;
     bridgePending.delete(resp.id);
+    clearTimeout(p.timeout);
     p.resolve(resp);
   }
 
@@ -135,6 +137,15 @@ function createBridge({ isBridge, prefix, origin, token }) {
 
   /** 与宿主 handlePetRoute 通信：bridge 模式走管道，手动 start-desktop 流退回 HTTP 直连 */
   async function hostRequest(method, url, body) {
+    // Bind an owner's actual interaction before transport. A retry carrying
+    // this same body reuses the domain receipt instead of applying it twice.
+    if(method==='POST' && /\/(?:anim|sleep|wake)(?:\?|$)/.test(url)) {
+      try {
+        const value=body?JSON.parse(body):{};
+        if(value && typeof value==='object' && !Array.isArray(value) && !value.requestId)
+          body=JSON.stringify({...value,requestId:require('node:crypto').randomUUID()});
+      } catch { /* The original route retains malformed-input handling. */ }
+    }
     if (isBridge) return bridgeRequest(method, url, body);
     const resp = await fetch(origin + url, {
       method,

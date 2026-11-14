@@ -9,7 +9,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / "vendor/mnemosyne/service/src"), str(ROOT / "src/memory")]
 from cognitive_memory.bootstrap import build_context
-from cognitive_memory.core.service import ConflictError
+from cognitive_memory.core.service import ConflictError, NotFoundError
 from cognitive_memory.evidence.derivation import DerivationStore
 from cognitive_memory.domain.models import MemoryUpdateIn, MemoryProposeIn
 from provider import MemoryPort
@@ -38,6 +38,23 @@ class ProviderConformance(unittest.TestCase):
     def memory(self, key, text):
         source, _ = self.source(key, text)
         return self.port.propose(self.scope, operation_id=key, content=text, sources=[source]), source
+
+    def test_missing_context_observation_keeps_the_provider_error_and_bank(self):
+        def counts():
+            conn = self.ctx.db.connect()
+            return tuple(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                         for table in ("observations", "memories"))
+
+        before = counts()
+        for reopened in (False, True):
+            if reopened:
+                self.ctx.runtime.stop()
+                self.ctx.db.close()
+                self.open()
+            with self.assertRaisesRegex(NotFoundError, "conversation observation missing"):
+                self.port.consolidate_context("missing-conversation-observation")
+            self.assertEqual(counts(), before)
+            self.assertEqual(self.ctx.db.connect().execute("SELECT 1").fetchone()[0], 1)
 
     def test_explicit_archive_reuses_checkpoint_and_respects_withdrawal(self):
         turn, _ = self.source("native-user", "Next time we will compare the two sketches.")

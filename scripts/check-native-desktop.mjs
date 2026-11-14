@@ -89,7 +89,7 @@ try {
   await mount('dsh-api-session-controller', { nativeOpen: false });
   assert.ok(ctx.sessionController);
   ctx.llm.registerAdapter(['desktop-fixture'], new Fixture());
-  await ctx.plugin(await import('../dist/src/core/plugin.js'), { dataDir: join(root, 'core'), cwd: root,
+  await ctx.plugin(await import('../dist/src/core/plugin.js'), { dataDir: join(root, '.chatpet/data/core'), cwd: root,
     companionId: 'fish', scopeId: 'fixture', ownerActorId: 'owner', displayName: '蓝鱼', character: '测试',
     memory: { dataDir: join(root, '.chatpet/data/memory'), python: resolve('.venv/bin/python') } });
   const host = ctx.petCore;

@@ -33,7 +33,15 @@ function registerCompanion(info) {
                 const headers=new Headers(input instanceof Request ? input.headers : undefined);
                 new Headers(init?.headers).forEach((value,key)=>headers.set(key,value));
                 headers.set('Authorization','Bearer '+token);
-                const response=await globalThis.fetch(input,{...init,headers,redirect:'error'});
+                const options={...init,headers,redirect:'error'};
+                if(String(init?.method || 'GET').toUpperCase()==='POST' && /\/(?:anim|sleep|wake)$/.test(url.pathname)) {
+                  try {
+                    const value=typeof init?.body==='string'?JSON.parse(init.body):{};
+                    if(value && typeof value==='object' && !Array.isArray(value) && !value.requestId)
+                      options.body=JSON.stringify({...value,requestId:crypto.randomUUID()});
+                  } catch { /* Preserve the original route's validation. */ }
+                }
+                const response=await globalThis.fetch(input,options);
                 if(response.status===401)schedule(25);
                 return response;
               };

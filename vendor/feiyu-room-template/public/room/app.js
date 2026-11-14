@@ -7,10 +7,20 @@ import { SpriteActor, CLIPS } from './actor.js';
 import { createGardenClient } from './garden-client.js';
 import { createGardenWorld } from './garden-world.js';
 import { getGardenFraming } from './garden-camera.js';
+import { createPresentationLoop, createMediaGate } from './presentation-loop.js';
+import { resolveActivityPlayback, sampleActivityPlayback } from './activity-playback.js';
+import { animationStickers } from './animation-map.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const SHOT = params.get('shot') === '1';
+let nativeVisible = !window.chatpetRoomBridge?.onVisibility;
+let presentationReady = false, presentationNeedsSnapshot = true, presentationDisposed = false;
+let presentationGeneration = 0;
+let viewRefreshTimer, viewRefreshAt, presentationLoop, activeViewUntil = 0;
+const displayAllowed = () => !presentationDisposed && !document.hidden && nativeVisible;
+const mediaGate = SHOT ? null : createMediaGate(document);
+if (!SHOT) mediaGate.setVisible(false);
 const SHOT_VIEW = params.get('shotView') || (params.get('pov') === '1' ? 'eyes' : 'overview');
 const SHOT_LOOK = params.get('shotLook') || 'forward';
 const INITIAL_CAM = params.get('cam');
@@ -36,23 +46,10 @@ const lerp = (a, b, t) => a + (b - a) * t;
 
 // 客户端沿服务端给的路点前进：快照每 1.2 秒才来一次，靠它做插值，
 // 出发那一刻就能连续移动，不再等下一次轮询。
-function advanceRoute(points, start, distance) {
-  if (!Array.isArray(points) || points.length < 2) return start;
-  let idx = 0;
-  let best = Infinity;
-  // Choose the current segment, not the nearest waypoint. After a segment's
-  // midpoint, nearest-waypoint prediction would skip the next corner and cut
-  // through a wall or raised bed before the next server snapshot arrives.
-  for (let i = 0; i < points.length - 1; i += 1) {
-    const a = points[i], b = points[i + 1];
-    const dx = b[0] - a[0], dz = b[1] - a[1], len2 = dx * dx + dz * dz;
-    const t = len2 ? clamp(((start[0] - a[0]) * dx + (start[1] - a[1]) * dz) / len2, 0, 1) : 0;
-    const d = Math.hypot(a[0] + dx * t - start[0], a[1] + dz * t - start[1]);
-    if (d < best) { best = d; idx = i; }
-  }
-  let pos = [start[0], start[1]];
+function advanceRoute(points, distance) {
+  let pos = points[0].slice();
   let left = Math.max(0, distance);
-  for (let i = idx + 1; i < points.length; i += 1) {
+  for (let i = 1; i < points.length; i += 1) {
     const nx = points[i][0];
     const nz = points[i][1];
     const seg = Math.hypot(nx - pos[0], nz - pos[1]);
@@ -68,7 +65,7 @@ function advanceRoute(points, start, distance) {
 }
 
 const canvas = $('scene');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'low-power' });
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, tier === 'low' ? 1 : 1.35));
 renderer.setSize(innerWidth, innerHeight, false);
 renderer.shadowMap.enabled = tier !== 'low';
@@ -86,6 +83,7 @@ const world = createWorld(renderer, { quality: tier });
 // 抖音网页不能可靠地 iframe 进 3D 画布；这里用用户主动选择的屏幕共享流做实时纹理，
 // 选「抖音标签页」后，原标签页里滚动/刷视频，房间电视同步显示。
 let tvStream = null;
+let tvCastGeneration = 0, tvCastPending = false;
 let tvTexture = null;
 let tvVideoEl = null;
 const tvMat = world.tvScreen?.material || null;
@@ -99,6 +97,7 @@ let tvFollowOn = false;
 let tvCompanionSize = Math.max(160, Math.min(520, Number(localStorage.getItem('home-tv-companion-size')) || 320));
 let tvBubbleOn = localStorage.getItem('home-tv-bubble') === '1';
 let tvOpinionBusy = false;
+let tvOpinionRequest = null;
 let tvOpinionTimer = 0;
 let tvOpinionWarmup = 0;
 let tvBubbleTimer = 0;
@@ -172,7 +171,10 @@ function applyTvBubblePref() {
     button.textContent = tvBubbleOn ? '气泡 开' : '气泡 关';
     button.setAttribute('aria-pressed', String(tvBubbleOn));
   }
-  if (!tvBubbleOn) hideTvCompanionBubble();
+  if (!tvBubbleOn) {
+    if (!tvOpinionRequest?.manual) cancelTvOpinion();
+    hideTvCompanionBubble();
+  }
 }
 function hideTvCompanionBubble() {
   const bubble = $('tvCompanionBubble');
@@ -201,36 +203,50 @@ function captureTvFrame() {
   try { ctx.drawImage(video, 0, 0, canvas.width, canvas.height); } catch { return ''; }
   return canvas.toDataURL('image/jpeg', 0.82);
 }
+function cancelTvOpinion() {
+  const request = tvOpinionRequest;
+  tvOpinionRequest = null;
+  tvOpinionBusy = false;
+  request?.controller.abort();
+}
 async function requestTvOpinion(manual = false) {
   if (tvOpinionBusy) return;
   if (!tvStream || !tvFollowOn) { if (manual) toast(!tvStream ? '先打开电视投屏' : '先让她跟随一起看'); return; }
-  if (!manual && document.hidden) return;
+  if (!displayAllowed()) return;
+  if (!manual && !tvBubbleOn) return;
   const image = captureTvFrame();
   if (!image) { if (manual) toast('电视画面还没准备好'); return; }
+  const request = { cast: tvCastGeneration, stream: tvStream, controller: new AbortController(), manual };
+  tvOpinionRequest = request;
+  const live = () => tvOpinionRequest === request && !request.controller.signal.aborted && request.cast === tvCastGeneration
+    && request.stream === tvStream && tvFollowOn && displayAllowed() && (manual || tvBubbleOn);
   tvOpinionBusy = true;
   if (manual && tvBubbleOn) showTvCompanionBubble('……让我看看。');
   try {
     const response = await roomRequest(api('/api/tv/opinion'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ image })
+      body: JSON.stringify({ image }),
+      signal: request.controller.signal
     });
     const data = await response.json().catch(() => ({}));
+    if (!live()) return;
     if (!response.ok || data.ok === false) throw new Error(data.error || `HTTP ${response.status}`);
     const reply = String(data.reply || '').trim();
     if (!reply) throw new Error('她没说出看法');
     showTvCompanionBubble(reply);
     if (manual && !tvBubbleOn) toast(`她：${reply.slice(0, 90)}`);
   } catch (error) {
-    if (manual) toast(`她没看清：${error?.message || error}`);
+    if (manual && live()) toast(`她没看清：${error?.message || error}`);
   } finally {
-    tvOpinionBusy = false;
+    if (tvOpinionRequest === request) { tvOpinionRequest = null; tvOpinionBusy = false; }
   }
 }
 function syncTvOpinionTimer() {
   if (tvOpinionTimer) { clearInterval(tvOpinionTimer); tvOpinionTimer = 0; }
   if (tvOpinionWarmup) { clearTimeout(tvOpinionWarmup); tvOpinionWarmup = 0; }
-  if (!tvFollowOn || !tvBubbleOn || !tvStream) return;
+  if (!displayAllowed() || !tvFollowOn || !tvStream) { cancelTvOpinion(); return; }
+  if (!tvBubbleOn) { if (!tvOpinionRequest?.manual) cancelTvOpinion(); return; }
   tvOpinionWarmup = setTimeout(() => { tvOpinionWarmup = 0; requestTvOpinion(false); }, 2200);
   tvOpinionTimer = setInterval(() => requestTvOpinion(false), 60_000);
 }
@@ -303,6 +319,8 @@ function applyTvCastChip() {
 }
 
 function stopTvCast(message) {
+  tvCastGeneration++; tvCastPending = false;
+  cancelTvOpinion();
   if (tvStream) {
     const stream = tvStream;
     tvStream = null;
@@ -354,16 +372,24 @@ function tvCastUnavailableReason() {
 }
 
 async function startTvCast() {
-  if (tvStream) return;
+  if (tvStream || tvCastPending || !displayAllowed()) return;
   if (!tvMat) { toast('电视屏幕还没准备好，等房间加载完再点'); return; }
   const reason = tvCastUnavailableReason();
   if (reason) { toast(reason); return; }
+  const ticket = presentationGeneration, request = ++tvCastGeneration;
+  cancelTvOpinion();
+  tvCastPending = true;
+  let stream;
   try {
-    const stream = await navigator.mediaDevices.getDisplayMedia({
+    stream = await navigator.mediaDevices.getDisplayMedia({
       video: { frameRate: 30 },
       audio: false
     });
     if (!stream) return;
+    if (!displayAllowed() || ticket !== presentationGeneration || request !== tvCastGeneration) {
+      for (const track of stream.getTracks()) track.stop();
+      return;
+    }
     tvStream = stream;
     tvVideoEl = document.createElement('video');
     tvVideoEl.muted = true;
@@ -392,6 +418,8 @@ async function startTvCast() {
     applyTvCastChip();
     toast('已投到电视：在原标签页里打开抖音并滚动，房间电视会同步');
   } catch (error) {
+    if (stream) for (const track of stream.getTracks()) { try { track.stop(); } catch {} }
+    if (!displayAllowed() || ticket !== presentationGeneration || request !== tvCastGeneration) return;
     const name = String(error?.name || '');
     if (name === 'NotAllowedError' || name === 'AbortError') {
       stopTvCast();
@@ -408,9 +436,10 @@ async function startTvCast() {
       toast(`投屏被浏览器拦截（${name}）：请检查系统屏幕录制权限、企业策略，或换桌面 Chrome/Edge`);
       return;
     }
-    tvStream = null;
     stopTvCast();
     toast(`投屏失败：${error?.message || name || '浏览器拒绝共享'}`);
+  } finally {
+    if (request === tvCastGeneration) tvCastPending = false;
   }
 }
 
@@ -711,10 +740,11 @@ function updateCamera(dt) {
     // 她的视角
     const her = state?.her;
     if (her) {
+      const pos = lastDisplayPos || her.pos;
       const facing = (her.facing || 0) * Math.PI / 180;
       const eye = her.asleep ? 0.86 : 1.22;
-      desiredPos.set(her.pos[0] + Math.sin(facing) * 0.08, eye, her.pos[1] - Math.cos(facing) * 0.08);
-      desiredLook.set(her.pos[0] + Math.sin(facing) * 4, eye - 0.35, her.pos[1] - Math.cos(facing) * 4);
+      desiredPos.set(pos[0] + Math.sin(facing) * 0.08, eye, pos[1] - Math.cos(facing) * 0.08);
+      desiredLook.set(pos[0] + Math.sin(facing) * 4, eye - 0.35, pos[1] - Math.cos(facing) * 4);
     } else {
       desiredPos.set(6.3, 1.5, 5.0);
       desiredLook.set(6.3, 1.2, 2.0);
@@ -848,7 +878,7 @@ function beginCharDrag() {
   dragging = false;
   canvas.classList.remove('dragging');
   canvas.classList.add('grabbing');
-  if (charMode === 'webm') {
+  if (charMode === 'webm' && !state?.behavior) {
     try { actor.setClip('react_scare'); } catch { /* 忽略 */ }
   }
   showClickMarker(base);
@@ -1013,6 +1043,7 @@ let petActionOverride = null;
 let requestInFlight = false;
 let lastActivity = '';
 let bubbleUntil = 0;
+let animationFeedbackKey = '', bubbleFeedbackId;
 let lastSleep = false;
 let sleepPhase = 'none';
 let lastOnceKey = '';
@@ -1209,17 +1240,29 @@ function applyState(next) {
       hour: next.hour, lamp: next.env?.lamp !== false, asleep: next.her.asleep, kind: next.her.kind
     });
     world.setClock?.(next.hour || 0, 0);
-    if (next.her.walking && Array.isArray(next.her.route) && next.her.route.length > 1) {
-      walkPredict = {
-        points: next.her.route,
-        start: next.her.pos.slice(),
-        at: performance.now(),
-        speed: Math.max(0.5, Number(next.her.speed) || 1.05)
-      };
+    if (next.her.walking && Array.isArray(next.her.route) && next.her.route.length > 1
+      && Number.isFinite(next.now) && Number.isFinite(next.her.etaMs)) {
+      const points = next.her.route;
+      const speed = Number(next.her.speed) || 1.05;
+      const length = points.slice(1).reduce((sum, point, i) => sum + Math.hypot(point[0] - points[i][0], point[1] - points[i][1]), 0);
+      const arrival = Math.round(next.now + next.her.etaMs);
+      const routeKey = JSON.stringify([points, speed, arrival]);
+      // A late/repeated snapshot must not restart the same walk at its old
+      // position. Keep the original monotonic clock until the route changes.
+      // ETA locates progress along the ordered path, including overlapping legs.
+      if (walkPredict?.routeKey !== routeKey) {
+        walkPredict = {
+          points, routeKey,
+          distance: clamp(length - speed * next.her.etaMs / 1000, 0, length),
+          // The native Room and host share the device clock. Include time
+          // spent delivering the first snapshot, then advance monotonically.
+          at: performance.now() - Math.max(0, Date.now() - next.now), speed
+        };
+      }
     } else {
       walkPredict = null;
     }
-    lastDisplayPos = next.her.pos.slice();
+    if (!lastDisplayPos) lastDisplayPos = next.her.pos.slice();
   }
   if (placeHold && next.her) {
     const hp = next.her.pos;
@@ -1229,12 +1272,15 @@ function applyState(next) {
   }
   renderHUD();
   if (!charDrag?.active) syncCharacter();
-  if (SHOT) return;
+  presentationLoop?.invalidate();
+  if (SHOT) return true;
   const bubbleText = state.her?.activity || '';
   if (bubbleOn && bubbleText && (bubbleText !== lastActivity || Date.now() < bubbleUntil)) {
     lastActivity = bubbleText;
     bubbleUntil = Date.now() + 4800;
   }
+  presentAnimationFeedback(next);
+  return true;
 }
 
 function renderHUD() {
@@ -1359,7 +1405,7 @@ function applyModelExpression(model, her, time = performance.now() / 1000) {
 
 function clipFor(her) {
   if (!her) return 'idle';
-  if (petActionOverride && !her.asleep && Date.now() < petActionOverride.until) return petActionOverride.clip;
+  if (state?.behavior) return sampleActivityPlayback(state.playback || resolveActivityPlayback(state), Date.now())?.roomClip || 'idle';
   if (her.asleep) {
     // 兜底：旧状态/异常状态下如果还没到床，绝不播睡眠动画。
     if (her.spot !== 'bed') return her.walking ? 'run_happy' : 'idle';
@@ -1370,19 +1416,28 @@ function clipFor(her) {
     if (isSideRun(her)) return 'run_hurry';
     return 'run_happy'; // 正面只有 run_happy 是正面帧；walk_fast 是侧跑，不能当前面用
   }
-  if (Date.now() < opinionUntil && opinionClip) return opinionClip;
-
   const k = her.kind || 'idle';
+  if(state?.behavior && (k === 'idle' || k === 'free'))return 'idle';
+  // Actual activity and content admission precede cosmetic/TV clip overrides.
+  if(k === 'planned') return state?.behavior?.presentationKind === 'read'
+    && state?.behavior?.readingState === 'offered' ? 'life-read' : 'idle';
+  if(k === 'drink') return 'life-drink';
   if (k.startsWith('garden_')) {
-    if (k === 'garden_till' || k === 'garden_plant' || k === 'garden_harvest') return 'desk_tap';
+    const work={garden_till:'life-garden-till',garden_plant:'life-garden-plant',garden_water:'life-garden-water',
+      garden_fertilize:'life-garden-fertilize',garden_harvest:'life-garden-harvest',
+      garden_sell:'life-trade',garden_buySeed:'life-trade',garden_buyCompost:'life-trade'};
+    if(work[k])return work[k];
     return 'idle_look';
   }
+  if(k === 'idle' && petActionOverride && Date.now() < petActionOverride.until) return petActionOverride.clip;
+  if(k === 'idle' && Date.now() < opinionUntil && opinionClip) return opinionClip;
   // 自由视角只在站立/自由落点/行走时用背面；坐着、吃饭、反应等仍保留正面动作。
   if (isBackView() && her.pose === 'stand' && (her.elev || 0) < 0.2 && (k === 'idle' || k === 'free')) return 'back_idle';
   const night = (state?.hour ?? 12) >= 19 || (state?.hour ?? 12) < 7;
   switch (k) {
+    // A long-lived semantic activity is not a request to invent a new visual
+    // action. Keep its real pose; looping/ending this fallback never ends it.
     case 'eat': return (her.activity || '').includes('小鱼干') ? 'eat_snack' : 'eat_rice';
-    case 'drink': return 'eat_snack';
     case 'toilet': return 'mutter';
     case 'bath': return 'brush';
     case 'balcony': return night ? 'mooncake' : 'fan';
@@ -1422,43 +1477,53 @@ const ONCE = new Set(['react_happy', 'react_shy', 'react_scare', 'stretch', 'cur
 function syncCharacter() {
   const her = state?.her;
   if (!her) return;
-  if (her.asleep || her.room === 'garden') petActionOverride = null;
-  const wasAsleep = lastSleep;
-  lastSleep = her.asleep;
+  const shared = Boolean(state?.behavior);
+  if (shared) {
+    petActionOverride = null;
+    sleepPhase = her.asleep ? 'loop' : 'none';
+    lastSleep = her.asleep;
+    actor.setPlayback(state.playback || resolveActivityPlayback(state), sampleActivityPlayback);
+  } else {
+    actor.clearPlayback();
+    if (her.asleep || her.room === 'garden') petActionOverride = null;
+    const wasAsleep = lastSleep;
+    lastSleep = her.asleep;
 
-  if (her.asleep && her.spot !== 'bed') {
-    // 还没进被窝：按移动/站立处理，不进入 sleep_in/sleep_loop。
-    const name = her.walking ? 'run_happy' : 'idle';
-    if (actor.current !== name) actor.setClip(name);
-    return;
-  }
-  if (her.asleep && her.spot === 'bed') {
-    if (!wasAsleep) {
-      sleepPhase = 'in';
-      actor.setClip('sleep_in', { once: true, onEnded: () => { if (lastSleep) { sleepPhase = 'loop'; actor.setClip('sleep_loop'); } } });
-    } else if (sleepPhase === 'none') {
-      sleepPhase = 'loop';
-      actor.setClip('sleep_loop');
+    if (!shared && her.asleep && her.spot !== 'bed') {
+      // 还没进被窝：按移动/站立处理，不进入 sleep_in/sleep_loop。
+      const name = her.walking ? 'run_happy' : 'idle';
+      if (actor.current !== name) actor.setClip(name);
+      return;
     }
-    if (sleepPhase === 'out') sleepPhase = 'loop';
-  } else if (!her.asleep && wasAsleep) {
-    sleepPhase = 'out';
-    actor.setClip('sleep_out', { once: true, onEnded: () => { sleepPhase = 'none'; actor.setClip(clipFor(state.her), { fade: true }); } });
-  } else if (!her.asleep && sleepPhase !== 'none' && !her.walking) {
-    sleepPhase = 'none';
-  }
+    if (!shared && her.asleep && her.spot === 'bed') {
+      if (!wasAsleep) {
+        sleepPhase = 'in';
+        actor.setClip('sleep_in', { once: true, onEnded: () => { if (lastSleep) { sleepPhase = 'loop'; actor.setClip('sleep_loop'); } } });
+      } else if (sleepPhase === 'none') {
+        sleepPhase = 'loop';
+        actor.setClip('sleep_loop');
+      }
+      if (sleepPhase === 'out') sleepPhase = 'loop';
+    } else if (!shared && !her.asleep && wasAsleep) {
+      sleepPhase = 'out';
+      actor.setClip('sleep_out', { once: true, onEnded: () => { sleepPhase = 'none'; actor.setClip(clipFor(state.her), { fade: true }); } });
+    } else if (!her.asleep && sleepPhase !== 'none' && !her.walking) {
+      sleepPhase = 'none';
+    }
 
-  if (her.asleep || sleepPhase === 'in' || sleepPhase === 'out') return;
+    if (!shared && (her.asleep || sleepPhase === 'in' || sleepPhase === 'out')) return;
 
-  let name = clipFor(her);
-  const once = ONCE.has(name);
-  const key = `${name}:${her.activity}:${her.spot}`;
-  if (once) {
-    if (lastOnceKey === key && Date.now() - lastOnceAt < 9000) name = 'idle';
-    else { lastOnceKey = key; lastOnceAt = Date.now(); }
-  }
-  if (actor.current !== name) {
-    actor.setClip(name, { once, onEnded: () => { if (actor.current === name) actor.setClip(clipFor(state?.her), { fade: true }); } });
+    let name = clipFor(her);
+    const once = !shared && ONCE.has(name);
+    const key = `${name}:${her.activity}:${her.spot}`;
+    if (once) {
+      if (lastOnceKey === key && Date.now() - lastOnceAt < 9000) name = 'idle';
+      else { lastOnceKey = key; lastOnceAt = Date.now(); }
+    }
+    if (actor.current !== name) {
+      actor.setClip(name, { once, onEnded: () => { if (actor.current === name) actor.setClip(clipFor(state?.her), { fade: true }); } });
+    }
+
   }
 
   const pose = {
@@ -1477,6 +1542,7 @@ const PET_ACTION_DURATION = Object.freeze({
 });
 function playPetAction(clip, label) {
   if (!state?.her) { toast('她还没出来'); return; }
+  if(state.behavior){toast('请通过对话或陪伴操作安排活动。');return;}
   if (charMode !== 'webm') { toast('动作栏目前只在立绘模式播放；先切到「立绘」'); return; }
   if (state.her.asleep) { toast('她睡着了，先叫醒再让她跳舞'); return; }
   // 走路中也可以跳：先把“当前看到的脚下位置”提交为落点，停住路线再播。
@@ -1519,6 +1585,11 @@ async function act(action, extra = {}) {
     if (data.home) applyState(data.home);
     else await poll();
     const reactionText = data.event?.reaction;
+    if (state?.behavior) {
+      const factText=data.home?.playback?.feedback?.text;
+      if (factText || reactionText) toast(factText || reactionText);
+      return;
+    }
     if (reactionText) setBubble(reactionText, 3800);
     const msg = { pet: '她眯起眼睛，尾巴晃了一下', feed: '小鱼干被她叼走了', water: '她捧着杯子小口喝', play: '她被逗笑了', talk: '这句话贴到墙上了', sleep: '灯关了，她钻进被窝', wake: '她揉着眼睛坐起来', lamp: '灯换了状态', command: '她朝那边走过去', go: '她朝你指的地方走过去', place: '她乖乖落在你放下的地方' }[action];
     if (msg) toast(msg);
@@ -1568,12 +1639,33 @@ function toast(text) {
   clearTimeout(toast._t);
   toast._t = setTimeout(() => el.classList.remove('show'), 2600);
 }
-function setBubble(text, ms = 4500) {
-  if (!bubbleOn || !text || SHOT || VIEW.mode === 'eyes') return;
+function setBubble(text, ms = 4500, stickerLabel, feedbackId) {
+  if (!bubbleOn || !text || SHOT || VIEW.mode === 'eyes') return false;
   const el = $('bubble');
   el.textContent = text;
+  const sticker = animationStickers[stickerLabel];
+  if (sticker) {
+    const img=document.createElement('img');
+    img.alt=sticker.label;img.src='assets/stickers/'+encodeURIComponent(sticker.file);
+    img.style.cssText='display:block;max-width:100%;height:72px;object-fit:contain;margin:4px auto 0';
+    el.appendChild(img);
+  }
   el.classList.add('show');
   bubbleUntil = Date.now() + ms;
+  bubbleFeedbackId=feedbackId;
+  return true;
+}
+
+function presentAnimationFeedback(next) {
+  if (!displayAllowed()) return;
+  const feedback=next?.playback?.feedback,now=Date.now();
+  if(!feedback || feedback.at>now || feedback.until<=now) {
+    if(bubbleFeedbackId){$('bubble').textContent='';$('bubble').classList.remove('show');bubbleUntil=0;bubbleFeedbackId=undefined;}
+    return;
+  }
+  const key=JSON.stringify([next.behavior?.bootId,feedback.id]);
+  if(key===animationFeedbackKey){if(bubbleFeedbackId===feedback.id)bubbleUntil=feedback.until;return;}
+  if(setBubble(feedback.text,feedback.until-now,feedback.sticker,feedback.id))animationFeedbackKey=key;
 }
 
 // 按钮
@@ -1839,13 +1931,13 @@ document.querySelectorAll('#modeChip button').forEach((b) => {
     localStorage.setItem('home-char-mode', charMode);
     applySpriteViewPref();
     document.querySelectorAll('#modeChip button').forEach((x) => x.classList.toggle('on', x.dataset.mode === charMode));
-$('modelQualityChip')?.addEventListener('click', switchModelQuality);
-updateModelQualityChip(false);
-applyBubblePref();
+    applyBubblePref();
     applyCharVisibility();
     setMode(VIEW.mode);
   });
 });
+$('modelQualityChip')?.addEventListener('click', switchModelQuality);
+updateModelQualityChip(false);
 document.querySelectorAll('#modeChip button').forEach((x) => x.classList.toggle('on', x.dataset.mode === charMode));
 applyBubblePref();
 applyClickMovePref();
@@ -1941,20 +2033,40 @@ applyCharVisibility();
 
 // ── 轮询 ──────────────────────────────────────────────────────────────────
 async function poll() {
+  if (presentationReady && !displayAllowed()) return false;
   if (requestInFlight) return;
   requestInFlight = true;
+  const presentationTicket = presentationGeneration;
+  let refreshed = false;
   try {
     const res = await roomRequest(withToken('/api/home/state'), { cache: 'no-store' });
     const data = await res.json();
+    if (presentationReady && (!displayAllowed() || presentationTicket !== presentationGeneration)) {
+      requestViewRefresh();
+      return false;
+    }
     if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
-    applyState(data);
-    if (!SHOT && data.lifeEnabled && !visitRegistered) {
+    if (applyState(data) === false) return false;
+    refreshed = true;
+    if (presentationReady && displayAllowed()) {
+      if (presentationNeedsSnapshot) prevT = performance.now();
+      presentationNeedsSnapshot = false;
+      mediaGate?.setVisible(true);
+      actor.setSuspended(false);
+      gardenController?.setVisible(true);
+      presentationLoop?.setVisible(true);
+      presentationLoop?.invalidate();
+    }
+    if (!SHOT && displayAllowed() && data.lifeEnabled && !visitRegistered) {
       const visit = await roomRequest(withToken('/api/home/act'), {
         method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({action:'visit'})
       });
       if (visit.ok) {
         const result = await visit.json();
-        if (result.ok) {visitRegistered = true; if (result.home) applyState(result.home);}
+        if (result.ok) {
+          visitRegistered = true;
+          if (result.home && displayAllowed() && presentationTicket === presentationGeneration) applyState(result.home);
+        }
       }
     }
     $('qqChip').classList.add('online');
@@ -1965,7 +2077,67 @@ async function poll() {
     }
   } finally {
     requestInFlight = false;
+    if (presentationReady && displayAllowed()) {
+      if (!refreshed) requestViewRefresh(5000);
+      else if (!window.chatpetRoomBridge?.onChanged) requestViewRefresh(10000);
+    }
   }
+}
+
+// Native changes are the normal refresh path. A failed connection has a visible-only
+// retry; a non-native embedded view retains a slower compatibility refresh.
+function requestViewRefresh(delay = 0) {
+  if (!presentationReady || !displayAllowed()) return;
+  const at = performance.now() + delay;
+  if (viewRefreshTimer !== undefined && viewRefreshAt <= at) return;
+  if (viewRefreshTimer !== undefined) clearTimeout(viewRefreshTimer);
+  viewRefreshAt = at;
+  viewRefreshTimer = setTimeout(() => { viewRefreshTimer = undefined; viewRefreshAt = undefined; void poll(); }, delay);
+}
+
+function synchronizePresentation() {
+  if (SHOT || !presentationReady) return;
+  presentationGeneration++;
+  if (viewRefreshTimer !== undefined) { clearTimeout(viewRefreshTimer); viewRefreshTimer = undefined; viewRefreshAt = undefined; }
+  // Hide immediately. On return, do not resume an old pose until a fresh
+  // authoritative snapshot has replaced it.
+  presentationNeedsSnapshot = true;
+  $('bubble').classList.remove('show');
+  presentationLoop?.setVisible(false);
+  mediaGate?.setVisible(false);
+  actor.setSuspended(true);
+  gardenController?.setVisible(false);
+  if (!displayAllowed() && (tvStream || tvCastPending)) stopTvCast('房间已隐藏，电视投屏已停止；再次观看时请选择画面');
+  syncTvOpinionTimer();
+  if (displayAllowed()) requestViewRefresh();
+  else clearOpenViewKeys();
+}
+
+function startPresentation() {
+  presentationReady = true;
+  presentationLoop = createPresentationLoop({draw: frame, fps: () => {
+    const moving = state?.her?.walking || state?.her?.gardenWork || charDrag?.active || clickMarkerUntil > performance.now();
+    return moving || tvStream || performance.now() < activeViewUntil ? 30 : state?.her ? 6 : 0;
+  }});
+  const onInput = () => { activeViewUntil = performance.now() + 600; presentationLoop.invalidate(); };
+  for (const event of ['pointerdown','pointermove','wheel','keydown']) window.addEventListener(event,onInput,{passive:true});
+  const stopVisibility = window.chatpetRoomBridge?.onVisibility?.(value => {
+    if (nativeVisible === value.visible) return;
+    nativeVisible = value.visible; synchronizePresentation();
+  });
+  document.addEventListener('visibilitychange', synchronizePresentation);
+  window.addEventListener('pagehide', () => {
+    presentationDisposed = true;
+    presentationGeneration++;
+    if (viewRefreshTimer !== undefined) clearTimeout(viewRefreshTimer);
+    presentationLoop.dispose(); mediaGate?.dispose(); actor.setSuspended(true);
+    if (tvStream || tvCastPending) stopTvCast();
+    gardenController?.destroy(); stopVisibility?.();
+    document.removeEventListener('visibilitychange', synchronizePresentation);
+    for (const event of ['pointerdown','pointermove','wheel','keydown']) window.removeEventListener(event,onInput);
+    syncTvOpinionTimer();
+  }, {once:true});
+  synchronizePresentation();
 }
 
 // ── 主循环 ────────────────────────────────────────────────────────────────
@@ -1976,8 +2148,8 @@ let lastAdapt = 0;
 let ratio = renderer.getPixelRatio();
 
 function frame(now) {
-  requestAnimationFrame(frame);
-  const dt = Math.min(0.06, (now - prevT) / 1000);
+  if (!displayAllowed() || presentationNeedsSnapshot) return;
+  const dt = Math.min(0.2, (now - prevT) / 1000);
   prevT = now;
   gardenController?.tick(now);
   updateOpenView(dt);
@@ -1988,7 +2160,7 @@ function frame(now) {
     let displayPos = her.pos;
     if (walkPredict && her.walking) {
       const elapsed = Math.max(0, (performance.now() - walkPredict.at) / 1000);
-      displayPos = advanceRoute(walkPredict.points, walkPredict.start, walkPredict.speed * elapsed);
+      displayPos = advanceRoute(walkPredict.points, walkPredict.distance + walkPredict.speed * elapsed);
     }
     const dragging = !!charDrag?.active;
     if (dragging) displayPos = charDrag.pos;
@@ -2005,11 +2177,15 @@ function frame(now) {
     lastBackView = backNow;
     world.updateCutaway(camera.position, new THREE.Vector3(displayPos[0], 1, displayPos[1]), VIEW.mode !== 'first' && VIEW.mode !== 'eyes');
     const facing = (her.facing || 0) * Math.PI / 180;
-    gardenController?.updateCharacter(dragging || placeHold || VIEW.mode === 'eyes' ? { ...her, gardenWork: null } : her, { x: displayPos[0], y: her.elev || 0, z: displayPos[1] }, facing);
+    // Sprite life clips already carry their hand tools. Retain the existing
+    // scene rigs for 3D, but never draw a second tool over the same 2D action.
+    const clipTools = !use3dActive() && state.behavior
+      && (state.playback || resolveActivityPlayback(state))?.toolOwner === 'clip';
+    gardenController?.updateCharacter(dragging || placeHold || VIEW.mode === 'eyes' || clipTools ? { ...her, gardenWork: null } : her, { x: displayPos[0], y: her.elev || 0, z: displayPos[1] }, facing);
     // run_hurry 原片是“朝左跑”：只有侧面跑时按屏幕横向速度决定是否镜像；
     // 正面/背面/待机不镜像，避免左右脸和朝向突然翻面。
     let flip = false;
-    if (charMode === 'webm' && isSideRun(her) && !dragging && !placeHold) {
+    if (!state.behavior && charMode === 'webm' && isSideRun(her) && !dragging && !placeHold) {
       camera.updateMatrixWorld();
       const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
       const move = new THREE.Vector3(Math.sin(facing), 0, -Math.cos(facing));
@@ -2079,10 +2255,10 @@ function frame(now) {
     const fps = fpsN / fpsAcc;
     fpsAcc = 0; fpsN = 0;
     lastAdapt = now;
-    if (fps < 42 && ratio > 1.0) {
+    if (fps < 22 && ratio > 1.0) {
       ratio = Math.max(1.0, ratio - 0.2);
       renderer.setPixelRatio(ratio);
-    } else if (fps > 57 && ratio < Math.min(devicePixelRatio || 1, 1.35)) {
+    } else if (fps > 28 && ratio < Math.min(devicePixelRatio || 1, 1.35)) {
       ratio = Math.min(Math.min(devicePixelRatio || 1, 1.35), ratio + 0.1);
       renderer.setPixelRatio(ratio);
     }
@@ -2102,6 +2278,7 @@ function onResize() {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   if (gardenController?.isOpen) focusGarden();
+  presentationLoop?.invalidate();
 }
 addEventListener('resize', onResize);
 
@@ -2169,6 +2346,7 @@ window.__homeDebug = () => ({
   actorError: actor?.layers?.[actor.active]?.video?.error?.code ?? null,
   sleepPhase,
   clipLog: actor?.clipLog?.slice(-8) || [],
+  playbackFault: actor?.playbackFault || null,
   loadLog: actor?.layers?.map((l, i) => ({ i, src: l.src, rs: l.video.readyState, log: l.loadLog.slice(-4) })) || [],
   runStyle: state?.her?.runStyle || null,
   herRoom: state?.her?.room || null,
@@ -2306,15 +2484,15 @@ async function boot() {
       if (her) {
         gardenShot?.updateCharacter(her, { x: her.pos[0], y: her.elev || 0, z: her.pos[1] }, (her.facing || 0) * Math.PI / 180);
         gardenShot?.animateCharacter(performance.now());
-        actor.update(0.016, camera, { pos: her.pos, elev: her.elev || 0, walking: false, flip: false });
+        actor.update(0.016, camera, { pos: her.pos, elev: her.elev || 0, walking: false, flip: false, snap: true });
         if (charMode === '3d' && modelReady && model3d) {
           model3d.setPose({ pos: her.pos, elev: her.elev, pose: her.pose, kind: her.kind, walking: false, facing: her.facing, asleep: her.asleep, activity: her.activity, expression: her.expression });
           model3d.setVisible(true);
-          model3d.update(0.016, camera, { mode: 'overview', lookAtCamera: !her.gardenWork });
+          model3d.update(0.016, camera, { mode: 'overview', lookAtCamera: !her.gardenWork, snap: true });
           applyModelExpression(model3d, her);
         } else if (charMode === '3d' && chibi && chibiReady) {
           chibi.setPose({ pos: her.pos, elev: her.elev, pose: her.pose, kind: her.kind, walking: false, facing: her.facing, asleep: her.asleep, activity: her.activity, expression: her.expression });
-          chibi.update(0.016, camera, { mode: 'overview', lookAtCamera: !her.gardenWork });
+          chibi.update(0.016, camera, { mode: 'overview', lookAtCamera: !her.gardenWork, snap: true });
         }
         world.updateCutaway(camera.position, new THREE.Vector3(her.pos[0], 1, her.pos[1]), true);
       }
@@ -2349,12 +2527,10 @@ async function boot() {
   camLook.copy(desiredLook);
   camera.position.copy(camPos);
   camera.lookAt(camLook);
-  renderer.render(scene, camera);
+  if (displayAllowed()) renderer.render(scene, camera);
   setTimeout(() => $('loading').classList.add('hide'), 250);
-  setInterval(poll, 1200);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
   if(params.get('garden')==='1') gardenController?.setOpen(true);
-  requestAnimationFrame(frame);
+  startPresentation();
 }
 
 boot();

@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { say } from './native-conversation-scenarios.mjs';
-import { nativeResult } from '../dist/src/core/dsh-driver.js';
+import { nativeResult } from '../dist/src/core/native-result.js';
 import { mountInstalledStandard } from './native-standard-preset.mjs';
 
 const app = '/Applications/DeepSeek Harness.app/Contents';
@@ -55,9 +55,9 @@ async function boot(enableMemory = true) {
   ctx = new Context();
   ctx.baseUrl = pathToFileURL(join(app, 'Resources/app.asar/dsh/index.js')).href;
   await mountFixtureServices(ctx, load, root);
-  await ctx.plugin(await import('../dist/src/core/plugin.js'), { dataDir: join(root, 'core'), cwd: root,
+  await ctx.plugin(await import('../dist/src/core/plugin.js'), { dataDir: join(root, '.chatpet/data/core'), cwd: root,
     companionId: 'fixture-pet', scopeId: 'fixture-owner', ownerActorId: 'fixture-owner', displayName: 'Continuing fish', character: 'Fixture companion identity',
-    ...(enableMemory ? { memory: { dataDir: join(root, 'memory'), python: resolve('.venv/bin/python'), serviceEntry: resolve('tests/memory-service-fixture.py') } } : {}) });
+    ...(enableMemory ? { memory: { dataDir: join(root, '.chatpet/data/memory'), python: resolve('.venv/bin/python'), serviceEntry: resolve('tests/memory-service-fixture.py') } } : {}) });
   host = ctx.petCore;
   await ctx.plugin(await import('../dist/src/memory/plugin.js'));
   await ctx.plugin(await import('../dist/src/emotion/plugin.js'));
@@ -152,7 +152,6 @@ try {
   };
   await send(newSession, 'What do you remember about me?');
   assert.ok(!existsSync(join(root, '.chatpet/STATE.md')));
-  assert.equal(unwrap(await host.services.core.listCommitments(request(), { limit: 20 })).items.length, 0);
   await shutdown(); await boot();
   const restarted = await open();
   const beforeRestart = calls;
@@ -281,7 +280,6 @@ try {
   };
   await send(helpContinuation, 'Carry on from there.');
   host.native.memory.connection.call = originalMemoryCall;
-  assert.equal(unwrap(await host.services.core.listCommitments(request(), { limit: 20 })).items.length, 0);
   const greetingSource = await open();
   const agreement = 'We agreed to test cross-session continuity: open a new chat and say hello, then continue our discussion about the bronze telescope.';
   program = async function* () { yield* say(agreement); };

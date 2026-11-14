@@ -1,0 +1,3921 @@
+{
+  "version": 1,
+  "date": "2026-11-14",
+  "basis": "Owner-directed name/registration matching only; no visual inspection used for asset matching.",
+  "status": "Owner-approved allocation compiled into the shared runtime registry. Only actual domain phases and admitted metadata select it; dedicated gaps and conditional reserve roles remain. Not artistic or installed acceptance.",
+  "selection_order": [
+    "direct named match",
+    "combine or share compatible existing whole clips",
+    "labelled nearest proxy with uncovered details",
+    "leave dedicated slot empty"
+  ],
+  "match_meanings": {
+    "direct": "The name matches the activity family; not proof of all internal phases.",
+    "combined": "Reuse existing whole clips in actual phase order, or accompany the actual clip with factual text/stickers. No arbitrary face/prop extraction.",
+    "proxy": "Nearest related name; exact motion/object/emotion is not asserted.",
+    "blank": "Dedicated clip absent; a common main workflow/status may still be reused."
+  },
+  "summary": {
+    "actions": 122,
+    "stickers": 27,
+    "action_slots": 127,
+    "slot_matches": {
+      "proxy": 29,
+      "combined": 31,
+      "direct": 55,
+      "blank": 12
+    },
+    "distinct_actions_used_by_slots": 69,
+    "additional_context_or_optional_actions": 53,
+    "room_aliases": 42
+  },
+  "slots": [
+    {
+      "id": "move.normal",
+      "family": "Movement",
+      "target": "Ordinary movement",
+      "match": "proxy",
+      "clips": [
+        "walk"
+      ],
+      "stickers": [],
+      "note": "Use the in-place stepping title as a generic locomotion placeholder.",
+      "uncovered": [
+        "Ordinary natural walking gait"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.depart",
+      "family": "Movement",
+      "target": "Departure / initial attention",
+      "match": "combined",
+      "clips": [
+        "look",
+        "walk"
+      ],
+      "stickers": [],
+      "note": "Join existing attention and locomotion only when those phases actually occur.",
+      "uncovered": [
+        "Dedicated first step"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.happy",
+      "family": "Movement",
+      "target": "Cheerful run",
+      "match": "direct",
+      "clips": [
+        "开心小跑"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.hurry",
+      "family": "Movement",
+      "target": "Sideways hurried run",
+      "match": "direct",
+      "clips": [
+        "侧身急躁跑"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.left",
+      "family": "Movement",
+      "target": "Left-turn run",
+      "match": "direct",
+      "clips": [
+        "原地左转奔跑"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.crab",
+      "family": "Movement",
+      "target": "Crab-like sideways gait",
+      "match": "direct",
+      "clips": [
+        "螃蟹走路"
+      ],
+      "stickers": [],
+      "note": "Use only when this special gait is intended; not the default walk.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.sad",
+      "family": "Movement",
+      "target": "Quiet / sad travel",
+      "match": "proxy",
+      "clips": [
+        "walk"
+      ],
+      "stickers": [],
+      "note": "Reuse the basic movement; retain actual emotion in text instead of forcing a cheerful run.",
+      "uncovered": [
+        "Sad-specific gait"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.tired",
+      "family": "Movement",
+      "target": "Tired departure",
+      "match": "combined",
+      "clips": [
+        "哈欠连天",
+        "walk"
+      ],
+      "stickers": [],
+      "note": "Yawning can precede travel only when actually tired; it does not slow the route.",
+      "uncovered": [
+        "Tired-specific gait"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.arrive",
+      "family": "Movement",
+      "target": "Arrival and standstill",
+      "match": "combined",
+      "clips": [
+        "walk",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Switch at actual arrival; no extra movement fact.",
+      "uncovered": [
+        "Dedicated deceleration / foot settling"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.interrupt",
+      "family": "Movement",
+      "target": "Pause and resume a route",
+      "match": "combined",
+      "clips": [
+        "walk",
+        "idle",
+        "walk"
+      ],
+      "stickers": [],
+      "note": "The executor supplies the pause and retained route; movies do not start a new trip.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.right",
+      "family": "Movement",
+      "target": "Right-turn movement via mirrored left turn",
+      "match": "proxy",
+      "clips": [
+        "原地左转奔跑"
+      ],
+      "stickers": [],
+      "note": "Use the owner-approved horizontal mirror of the named left-turn movie on managed surfaces together when an actual route admits it. This remains a name-based proxy; no new file or physical path/speed is authored.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context.",
+      "transform_candidate": "mirror-x-both-surfaces"
+    },
+    {
+      "id": "move.back",
+      "family": "Movement",
+      "target": "Dedicated back-facing movement",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "Room back_idle aliases idle.webm and is not a distinct back-view asset.",
+      "uncovered": [
+        "Back-facing clip"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.carry",
+      "family": "Movement",
+      "target": "Walking with cup / book / basket",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "Use generic travel/status if needed; do not claim that a held item was visually preserved.",
+      "uncovered": [
+        "Cup-carry walk",
+        "Book-carry walk",
+        "Basket-carry walk"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "move.turn",
+      "family": "Movement",
+      "target": "Arbitrary-angle turn",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "The 360-degree display is reserved for an actual full rotation, not arbitrary route turns.",
+      "uncovered": [
+        "General turn segment"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "input.drag",
+      "family": "Movement",
+      "target": "Desktop window dragging",
+      "match": "combined",
+      "clips": [],
+      "stickers": [],
+      "note": "Keep CURRENT activity/phase while the window position changes; do not lift the shared body or cancel its route.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context.",
+      "body_source": "current"
+    },
+    {
+      "id": "input.pick-up",
+      "family": "Movement",
+      "target": "Independent-mode drag / lift feedback",
+      "match": "direct",
+      "clips": [
+        "held"
+      ],
+      "stickers": [],
+      "note": "Only the independent compatible renderer or a separately accepted pickup interaction; ordinary shared window dragging does not admit this movie.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "drink.cup",
+      "family": "Drinking",
+      "target": "Cup water",
+      "match": "direct",
+      "clips": [
+        "life-drink"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "drink.sequence",
+      "family": "Drinking",
+      "target": "General drinking sequence",
+      "match": "combined",
+      "clips": [
+        "idle",
+        "life-drink",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Reuse one complete drinking clip; entry/exit cuts do not assert extra operations.",
+      "uncovered": [
+        "Separate take / put-down cup segments"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "drink.continue",
+      "family": "Drinking",
+      "target": "Sustained drinking",
+      "match": "direct",
+      "clips": [
+        "life-drink"
+      ],
+      "stickers": [],
+      "note": "Continue the same accepted activity; repeated playback adds no consumption.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "drink.owner",
+      "family": "Drinking",
+      "target": "Owner-assisted water",
+      "match": "combined",
+      "clips": [
+        "look",
+        "life-drink",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Add factual owner interaction text; no invented giver inside the movie.",
+      "uncovered": [
+        "Dedicated receiving from owner"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "drink.hot",
+      "family": "Drinking",
+      "target": "Hot cup drink",
+      "match": "proxy",
+      "clips": [
+        "life-drink"
+      ],
+      "stickers": [],
+      "note": "Share cup drinking; temperature must be known independently.",
+      "uncovered": [
+        "Temperature test",
+        "Blowing on drink"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "drink.straw-base",
+      "family": "Drinking",
+      "target": "Straw drink: generic drinking fallback",
+      "match": "proxy",
+      "clips": [
+        "life-drink"
+      ],
+      "stickers": [],
+      "note": "Generic drinking fallback only; the named cup video is not a straw animation.",
+      "uncovered": [
+        "Straw/container-specific motion"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "drink.bottle-base",
+      "family": "Drinking",
+      "target": "Bottle drink: generic drinking fallback",
+      "match": "proxy",
+      "clips": [
+        "life-drink"
+      ],
+      "stickers": [],
+      "note": "Generic drinking fallback only; no claim that a bottle or cap is shown.",
+      "uncovered": [
+        "Bottle-specific motion",
+        "Open / close cap"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "drink.take",
+      "family": "Drinking",
+      "target": "Dedicated take / return container",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "Omit separate segments and join the main clip for now.",
+      "uncovered": [
+        "Take cup",
+        "Return cup",
+        "Receive container"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.rice",
+      "family": "Eating",
+      "target": "White rice",
+      "match": "direct",
+      "clips": [
+        "吃白饭"
+      ],
+      "stickers": [],
+      "note": "Use the named rice meal as the ordinary rice candidate; internal prop details are not certified by names.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.bowl",
+      "family": "Eating",
+      "target": "Bowl rice component",
+      "match": "direct",
+      "clips": [
+        "吃饭·碗饭"
+      ],
+      "stickers": [],
+      "note": "Keep the registered bowl-prop composition dependency; video alone is not asserted complete.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.breakfast",
+      "family": "Eating",
+      "target": "Breakfast meal",
+      "match": "direct",
+      "clips": [
+        "吃早餐"
+      ],
+      "stickers": [],
+      "note": "Meal type matches; individual ingredients are not inferred.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.lunch",
+      "family": "Eating",
+      "target": "Lunch meal",
+      "match": "direct",
+      "clips": [
+        "吃午餐"
+      ],
+      "stickers": [],
+      "note": "Meal type matches; individual ingredients are not inferred.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.dinner",
+      "family": "Eating",
+      "target": "Dinner meal",
+      "match": "direct",
+      "clips": [
+        "吃晚餐"
+      ],
+      "stickers": [],
+      "note": "Meal type matches; individual ingredients are not inferred.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.noodles",
+      "family": "Eating",
+      "target": "Longevity noodles / noodle meal",
+      "match": "direct",
+      "clips": [
+        "吃长寿面"
+      ],
+      "stickers": [],
+      "note": "Other noodles share this family with a declared variant difference.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.porridge",
+      "family": "Eating",
+      "target": "Laba porridge",
+      "match": "direct",
+      "clips": [
+        "吃腊八粥"
+      ],
+      "stickers": [],
+      "note": "Do not infer a separate spoon-only subclip.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.riceball",
+      "family": "Eating",
+      "target": "Rice ball",
+      "match": "direct",
+      "clips": [
+        "吃饭团"
+      ],
+      "stickers": [],
+      "note": "Keep the registered rice-ball prop dependency.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.dumpling",
+      "family": "Eating",
+      "target": "Dumplings",
+      "match": "direct",
+      "clips": [
+        "吃饺子"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.tangyuan",
+      "family": "Eating",
+      "target": "Tangyuan",
+      "match": "direct",
+      "clips": [
+        "吃汤圆"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.zongzi",
+      "family": "Eating",
+      "target": "Zongzi",
+      "match": "direct",
+      "clips": [
+        "吃粽子"
+      ],
+      "stickers": [],
+      "note": "Unwrapping is not independently established by its title.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.niangao",
+      "family": "Eating",
+      "target": "Nian gao",
+      "match": "direct",
+      "clips": [
+        "吃年糕"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.qingtuan",
+      "family": "Eating",
+      "target": "Qingtuan",
+      "match": "direct",
+      "clips": [
+        "吃青团"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.chongyang",
+      "family": "Eating",
+      "target": "Chongyang cake",
+      "match": "direct",
+      "clips": [
+        "吃重阳糕"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.watermelon",
+      "family": "Eating",
+      "target": "Watermelon",
+      "match": "direct",
+      "clips": [
+        "吃西瓜"
+      ],
+      "stickers": [],
+      "note": "Other fruit appearances are not covered by this name.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.snack",
+      "family": "Eating",
+      "target": "Generic snack",
+      "match": "direct",
+      "clips": [
+        "大口吃零食"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.icecream",
+      "family": "Eating",
+      "target": "Melting ice cream context",
+      "match": "direct",
+      "clips": [
+        "吃冰淇淋融化"
+      ],
+      "stickers": [],
+      "note": "Ordinary ice cream may reuse as a proxy; preserve the melting-context limitation.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.tanghulu",
+      "family": "Eating",
+      "target": "Tanghulu skewer",
+      "match": "direct",
+      "clips": [
+        "吃糖葫芦"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.mooncake",
+      "family": "Eating",
+      "target": "Mid-autumn mooncake context",
+      "match": "direct",
+      "clips": [
+        "中秋赏月吃月饼"
+      ],
+      "stickers": [],
+      "note": "Ordinary mooncake eating can reuse as a proxy; scene elements are not assumed removable.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.hotpot",
+      "family": "Eating",
+      "target": "Hotpot",
+      "match": "direct",
+      "clips": [
+        "涮火锅"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.crab",
+      "family": "Eating",
+      "target": "Mitten crab",
+      "match": "direct",
+      "clips": [
+        "吃大闸蟹"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.caught",
+      "family": "Eating",
+      "target": "Caught secretly snacking",
+      "match": "direct",
+      "clips": [
+        "偷吃零食被抓住"
+      ],
+      "stickers": [],
+      "note": "Only when that exact context actually exists; not the ordinary snack response.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.token",
+      "family": "Eating",
+      "target": "Token-themed virtual food / play",
+      "match": "direct",
+      "clips": [
+        "吃Token"
+      ],
+      "stickers": [],
+      "note": "Only an explicitly supported virtual item/activity; never fabricate a real food or spend actual tokens.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.await",
+      "family": "Eating",
+      "target": "Actually waiting for a meal",
+      "match": "combined",
+      "clips": [
+        "期待开饭",
+        "吃白饭",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Replace rice with the actually selected food clip; do not invent waiting when the meal is already eaten.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context.",
+      "selected_food_position": 1
+    },
+    {
+      "id": "food.choose",
+      "family": "Eating",
+      "target": "Actually choosing what to eat",
+      "match": "combined",
+      "clips": [
+        "是啊，吃什么",
+        "吃白饭",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Selection belongs to Xiaoxi/domain execution; use the selected food clip, not always rice.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context.",
+      "selected_food_position": 1
+    },
+    {
+      "id": "food.finish",
+      "family": "Eating",
+      "target": "Satisfied finish",
+      "match": "combined",
+      "clips": [
+        "吃白饭",
+        "idle"
+      ],
+      "stickers": [
+        "吃饱饱摸肚子"
+      ],
+      "note": "Replace rice with the actual meal clip; sticker only after real satiety.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context.",
+      "selected_food_position": 0
+    },
+    {
+      "id": "food.bread",
+      "family": "Eating",
+      "target": "Bread-specific eating",
+      "match": "proxy",
+      "clips": [
+        "吃早餐"
+      ],
+      "stickers": [],
+      "note": "Reuse breakfast as a name-based approximation, not proof of a bread prop.",
+      "uncovered": [
+        "Bread-specific clip"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.soup",
+      "family": "Eating",
+      "target": "Other porridge / soup",
+      "match": "proxy",
+      "clips": [
+        "吃腊八粥"
+      ],
+      "stickers": [],
+      "note": "A named porridge is the nearest eating family; exact soup/ingredients remain different.",
+      "uncovered": [
+        "Soup-specific prop/motion"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.otherfruit",
+      "family": "Eating",
+      "target": "Apple / banana / other fruit-specific eating",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "A specific different fruit is not relabeled as watermelon; generic eating/status remains possible.",
+      "uncovered": [
+        "Other named fruit clips"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "food.utensils",
+      "family": "Eating",
+      "target": "Separate receiving / utensil / chewing / swallowing / cleanup segments",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "Let the whole food clip carry the main meal for now; no new clips for every tiny phase.",
+      "uncovered": [
+        "Separate take food",
+        "Take utensil",
+        "Chew",
+        "Swallow",
+        "Clear utensils"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "sleep.full",
+      "family": "Sleep and reading",
+      "target": "Bed entry, sleep and wake",
+      "match": "combined",
+      "clips": [
+        "sleep-start",
+        "sleep-loop",
+        "sleep-end"
+      ],
+      "stickers": [],
+      "note": "Entry and wake once; loop only while actually sleeping. Skip past entries on late join.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "sleep.nap",
+      "family": "Sleep and reading",
+      "target": "Nap",
+      "match": "direct",
+      "clips": [
+        "原地小憩沉眠"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "sleep.drowsy",
+      "family": "Sleep and reading",
+      "target": "Drowsiness",
+      "match": "direct",
+      "clips": [
+        "哈欠连天"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "sleep.startled",
+      "family": "Sleep and reading",
+      "target": "Actually startled out of a nap",
+      "match": "direct",
+      "clips": [
+        "打瞌睡被惊醒"
+      ],
+      "stickers": [],
+      "note": "Not the default ordinary wake.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "sleep.stretch",
+      "family": "Sleep and reading",
+      "target": "Wake then stretch",
+      "match": "combined",
+      "clips": [
+        "sleep-end",
+        "stretch"
+      ],
+      "stickers": [],
+      "note": "Only when an actual stretch is intended; not automatic every wake.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "read.main",
+      "family": "Sleep and reading",
+      "target": "Reading",
+      "match": "direct",
+      "clips": [
+        "life-read"
+      ],
+      "stickers": [],
+      "note": "Real offered text is still required; animation does not confirm comprehension.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "read.notes",
+      "family": "Sleep and reading",
+      "target": "Writing notes",
+      "match": "direct",
+      "clips": [
+        "轻快记录"
+      ],
+      "stickers": [],
+      "note": "Only actual note-taking; not a substitute for reading.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "read.with-notes",
+      "family": "Sleep and reading",
+      "target": "Read with chosen notes",
+      "match": "combined",
+      "clips": [
+        "life-read",
+        "轻快记录",
+        "life-read"
+      ],
+      "stickers": [],
+      "note": "Only if note-taking is actually chosen; preserve bookmark rules.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "desk.code",
+      "family": "Sleep and reading",
+      "target": "Desk coding",
+      "match": "direct",
+      "clips": [
+        "写代码"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "desk.tap",
+      "family": "Sleep and reading",
+      "target": "Desk tapping interaction",
+      "match": "direct",
+      "clips": [
+        "原地敲击桌面互动"
+      ],
+      "stickers": [],
+      "note": "Not an automatic substitute for coding or reading.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "read.handling",
+      "family": "Sleep and reading",
+      "target": "Separate book / pen handling",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "Join main reading/notes with existing idle for now.",
+      "uncovered": [
+        "Take/open/close/return book",
+        "Separate page turn",
+        "Take/return pen"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.till",
+      "family": "Garden and trade",
+      "target": "Till",
+      "match": "direct",
+      "clips": [
+        "life-garden-till"
+      ],
+      "stickers": [],
+      "note": "Actual accepted work only; repeated loops add no inventory/effects.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.plant",
+      "family": "Garden and trade",
+      "target": "Plant",
+      "match": "direct",
+      "clips": [
+        "life-garden-plant"
+      ],
+      "stickers": [],
+      "note": "Actual accepted work only; repeated loops add no inventory/effects.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.water",
+      "family": "Garden and trade",
+      "target": "Water",
+      "match": "direct",
+      "clips": [
+        "life-garden-water"
+      ],
+      "stickers": [],
+      "note": "Actual accepted work only; repeated loops add no inventory/effects.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.fertilize",
+      "family": "Garden and trade",
+      "target": "Fertilize",
+      "match": "direct",
+      "clips": [
+        "life-garden-fertilize"
+      ],
+      "stickers": [],
+      "note": "Actual accepted work only; repeated loops add no inventory/effects.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.harvest",
+      "family": "Garden and trade",
+      "target": "Harvest",
+      "match": "direct",
+      "clips": [
+        "life-garden-harvest"
+      ],
+      "stickers": [],
+      "note": "Actual accepted work only; repeated loops add no inventory/effects.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.visit",
+      "family": "Garden and trade",
+      "target": "Inspect / visit a plot",
+      "match": "combined",
+      "clips": [
+        "walk",
+        "look",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Movement and look match the actual visit; no automatic garden task.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.harvest-root",
+      "family": "Garden and trade",
+      "target": "Root crop harvest",
+      "match": "proxy",
+      "clips": [
+        "life-garden-harvest"
+      ],
+      "stickers": [],
+      "note": "Share the general harvest family until a specific technique exists.",
+      "uncovered": [
+        "Root-specific pull/dig/cut/pick motion"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.harvest-leaf",
+      "family": "Garden and trade",
+      "target": "Leaf crop harvest",
+      "match": "proxy",
+      "clips": [
+        "life-garden-harvest"
+      ],
+      "stickers": [],
+      "note": "Share the general harvest family until a specific technique exists.",
+      "uncovered": [
+        "Leaf-specific pull/dig/cut/pick motion"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.harvest-fruit",
+      "family": "Garden and trade",
+      "target": "Fruit crop harvest",
+      "match": "proxy",
+      "clips": [
+        "life-garden-harvest"
+      ],
+      "stickers": [],
+      "note": "Share the general harvest family until a specific technique exists.",
+      "uncovered": [
+        "Fruit-specific pull/dig/cut/pick motion"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.harvest-corn",
+      "family": "Garden and trade",
+      "target": "Corn crop harvest",
+      "match": "proxy",
+      "clips": [
+        "life-garden-harvest"
+      ],
+      "stickers": [],
+      "note": "Share the general harvest family until a specific technique exists.",
+      "uncovered": [
+        "Corn-specific pull/dig/cut/pick motion"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.dig-harvest",
+      "family": "Garden and trade",
+      "target": "Loosen soil then harvest portrayal",
+      "match": "combined",
+      "clips": [
+        "life-garden-till",
+        "life-garden-harvest"
+      ],
+      "stickers": [],
+      "note": "Only if that handling fits the real harvest; the sequence must not issue an extra till job.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "garden.tools",
+      "family": "Garden and trade",
+      "target": "Separate tool preparation / cleanup",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "Use whole work clips; one owner for character tools, no duplicated scene tools.",
+      "uncovered": [
+        "Separate pick up / return tool"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "trade.inspect",
+      "family": "Garden and trade",
+      "target": "Inspect / arrange goods",
+      "match": "direct",
+      "clips": [
+        "life-trade"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "trade.sell",
+      "family": "Garden and trade",
+      "target": "Sell",
+      "match": "combined",
+      "clips": [
+        "idle",
+        "life-trade",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Shared transaction portrayal; actual transfer and result come from the domain.",
+      "uncovered": [
+        "Separate payment",
+        "Goods-specific handover"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "trade.buy-seed",
+      "family": "Garden and trade",
+      "target": "Buy Seed",
+      "match": "combined",
+      "clips": [
+        "idle",
+        "life-trade",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Shared transaction portrayal; actual transfer and result come from the domain.",
+      "uncovered": [
+        "Separate payment",
+        "Goods-specific handover"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "trade.buy-compost",
+      "family": "Garden and trade",
+      "target": "Buy Compost",
+      "match": "combined",
+      "clips": [
+        "idle",
+        "life-trade",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Shared transaction portrayal; actual transfer and result come from the domain.",
+      "uncovered": [
+        "Separate payment",
+        "Goods-specific handover"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "gift.open",
+      "family": "Garden and trade",
+      "target": "Actually unwrap a gift",
+      "match": "combined",
+      "clips": [
+        "look",
+        "拆礼物",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "The real item and choice to unwrap are required; no automatic happy response.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "gift.inspect",
+      "family": "Garden and trade",
+      "target": "Receive / inspect a gift without opening",
+      "match": "combined",
+      "clips": [
+        "look",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Use actual item text; do not play unwrap before that choice.",
+      "uncovered": [
+        "Inspect / store item-specific movement"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "gift.thanks",
+      "family": "Garden and trade",
+      "target": "Express thanks",
+      "match": "proxy",
+      "clips": [
+        "女仆屈膝礼仪"
+      ],
+      "stickers": [],
+      "note": "Use only if her actual response is thankful; do not force this after every transaction.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "gift.redpacket",
+      "family": "Garden and trade",
+      "target": "Receive an actual red packet",
+      "match": "direct",
+      "clips": [
+        "收红包"
+      ],
+      "stickers": [],
+      "note": "Never use as sale income or automatic wages.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "rest.happy",
+      "family": "Emotional rest",
+      "target": "Happy rest",
+      "match": "combined",
+      "clips": [
+        "idle",
+        "hum",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.happy",
+      "family": "Head touch",
+      "target": "Happy head-touch response",
+      "match": "combined",
+      "clips": [
+        "look",
+        "点击回应-开心跃动"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Then return to the same valid original activity; a head-touch-specific response is not claimed.",
+      "uncovered": [
+        "Voluntary lean",
+        "Closed-eye acceptance"
+      ],
+      "gate": "Touch actually occurred; willing response/declining further touch and body compatibility are independent of the feeling."
+    },
+    {
+      "id": "rest.calm",
+      "family": "Emotional rest",
+      "target": "Calm rest",
+      "match": "direct",
+      "clips": [
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.calm",
+      "family": "Head touch",
+      "target": "Calm head-touch response",
+      "match": "combined",
+      "clips": [
+        "look",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Then return to the same valid original activity; a head-touch-specific response is not claimed.",
+      "uncovered": [
+        "Gentle eye close",
+        "Sustained touch relaxation"
+      ],
+      "gate": "Touch actually occurred; willing response/declining further touch and body compatibility are independent of the feeling."
+    },
+    {
+      "id": "rest.sweet",
+      "family": "Emotional rest",
+      "target": "Sweet rest",
+      "match": "proxy",
+      "clips": [
+        "idle",
+        "点击回应-害羞惊讶",
+        "idle"
+      ],
+      "stickers": [
+        "可爱"
+      ],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings.",
+      "uncovered": [
+        "Sustained sweet quiet posture"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.sweet",
+      "family": "Head touch",
+      "target": "Sweet head-touch response",
+      "match": "proxy",
+      "clips": [
+        "点击回应-害羞惊讶"
+      ],
+      "stickers": [
+        "可爱"
+      ],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Then return to the same valid original activity; a head-touch-specific response is not claimed.",
+      "uncovered": [
+        "Voluntary lean",
+        "Nuzzle"
+      ],
+      "gate": "Touch actually occurred; willing response/declining further touch and body compatibility are independent of the feeling."
+    },
+    {
+      "id": "rest.heartache",
+      "family": "Emotional rest",
+      "target": "Heartache rest",
+      "match": "proxy",
+      "clips": [
+        "look",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Convey actual concern in text; no physical-pain implication.",
+      "uncovered": [
+        "Concern-specific quiet posture"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.heartache",
+      "family": "Head touch",
+      "target": "Heartache head-touch response",
+      "match": "proxy",
+      "clips": [
+        "look"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Convey actual concern in text; no physical-pain implication. Then return to the same valid original activity; a head-touch-specific response is not claimed.",
+      "uncovered": [
+        "Concern-specific posture",
+        "Quiet lean"
+      ],
+      "gate": "Touch actually occurred; willing response/declining further touch and body compatibility are independent of the feeling."
+    },
+    {
+      "id": "rest.worry",
+      "family": "Emotional rest",
+      "target": "Worry rest",
+      "match": "proxy",
+      "clips": [
+        "idle",
+        "深度思考碎碎念",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Thinking is only an approximation, not proof that a concern is solved.",
+      "uncovered": [
+        "Concerned quiet posture"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.worry",
+      "family": "Head touch",
+      "target": "Worry head-touch response",
+      "match": "proxy",
+      "clips": [
+        "look",
+        "深度思考碎碎念"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Thinking is only an approximation, not proof that a concern is solved. Then return to the same valid original activity; a head-touch-specific response is not claimed.",
+      "uncovered": [
+        "Alert-to-relaxed transition"
+      ],
+      "gate": "Touch actually occurred; willing response/declining further touch and body compatibility are independent of the feeling."
+    },
+    {
+      "id": "rest.sad",
+      "family": "Emotional rest",
+      "target": "Sad rest",
+      "match": "proxy",
+      "clips": [
+        "idle",
+        "sigh",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. The work-status sigh is a one-shot dejection proxy only; never create a failed-task fact or loop it as sustained distress.",
+      "uncovered": [
+        "Sustained sad sitting / awake lying"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.sad",
+      "family": "Head touch",
+      "target": "Sad head-touch response",
+      "match": "proxy",
+      "clips": [
+        "look",
+        "sigh"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. The work-status sigh is a one-shot dejection proxy only; never create a failed-task fact or loop it as sustained distress. Then return to the same valid original activity; a head-touch-specific response is not claimed.",
+      "uncovered": [
+        "Non-smiling comfort acceptance"
+      ],
+      "gate": "Touch actually occurred; willing response/declining further touch and body compatibility are independent of the feeling."
+    },
+    {
+      "id": "rest.jealous",
+      "family": "Emotional rest",
+      "target": "Jealous rest",
+      "match": "proxy",
+      "clips": [
+        "点击回应-傲娇生气",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Pout is a short proxy; not an automatic refusal, conflict or new activity.",
+      "uncovered": [
+        "Jealous sidelong-glance rest"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.jealous",
+      "family": "Head touch",
+      "target": "Jealous head-touch response",
+      "match": "proxy",
+      "clips": [
+        "点击回应-傲娇生气"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Pout is a short proxy; not an automatic refusal, conflict or new activity. Then return to the same valid original activity; a head-touch-specific response is not claimed.",
+      "uncovered": [
+        "Jealous glance",
+        "Softening while still jealous"
+      ],
+      "gate": "Touch actually occurred; willing response/declining further touch and body compatibility are independent of the feeling."
+    },
+    {
+      "id": "rest.anger",
+      "family": "Emotional rest",
+      "target": "Anger rest",
+      "match": "proxy",
+      "clips": [
+        "点击回应-傲娇生气",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Pout is a short proxy; not an automatic refusal, conflict or new activity.",
+      "uncovered": [
+        "Sustained angry quiet posture"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.anger",
+      "family": "Head touch",
+      "target": "Anger head-touch response",
+      "match": "proxy",
+      "clips": [
+        "点击回应-傲娇生气"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Pout is a short proxy; not an automatic refusal, conflict or new activity. Then return to the same valid original activity; a head-touch-specific response is not claimed.",
+      "uncovered": [
+        "Turn away / stop gesture",
+        "Gradual relaxation"
+      ],
+      "gate": "Touch actually occurred; willing response/declining further touch and body compatibility are independent of the feeling."
+    },
+    {
+      "id": "rest.boredom",
+      "family": "Emotional rest",
+      "target": "Boredom rest",
+      "match": "combined",
+      "clips": [
+        "idle",
+        "look",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.boredom",
+      "family": "Head touch",
+      "target": "Boredom head-touch response",
+      "match": "combined",
+      "clips": [
+        "look"
+      ],
+      "stickers": [],
+      "note": "Use real current feeling and compatible body pose; no scheduled rotation among feelings. Then return to the same valid original activity; a head-touch-specific response is not claimed.",
+      "uncovered": [
+        "Curious transition"
+      ],
+      "gate": "Touch actually occurred; willing response/declining further touch and body compatibility are independent of the feeling."
+    },
+    {
+      "id": "touch.notice",
+      "family": "Head touch",
+      "target": "Notice a touch",
+      "match": "proxy",
+      "clips": [
+        "look"
+      ],
+      "stickers": [],
+      "note": "Looking around is an attention approximation, not a precise look-at-hand motion.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.continue",
+      "family": "Head touch",
+      "target": "Actually continuing gentle touch",
+      "match": "combined",
+      "clips": [],
+      "stickers": [],
+      "note": "Keep compatible current activity with factual text/sticker; do not invent continued contact from one click.",
+      "uncovered": [
+        "Dedicated closed-eye / leaning loop"
+      ],
+      "gate": "Only the matching actual activity/context.",
+      "body_source": "current"
+    },
+    {
+      "id": "touch.decline",
+      "family": "Head touch",
+      "target": "Decline continued contact",
+      "match": "combined",
+      "clips": [],
+      "stickers": [],
+      "note": "Use her actual words and retain pose; pout only when it matches her feeling.",
+      "uncovered": [
+        "Explicit avoidance / stop gesture"
+      ],
+      "gate": "Only the matching actual activity/context.",
+      "body_source": "current"
+    },
+    {
+      "id": "touch.end",
+      "family": "Head touch",
+      "target": "Touch ends and activity returns",
+      "match": "combined",
+      "clips": [],
+      "stickers": [],
+      "note": "Return to the exact interrupted activity/phase, not unconditional idle.",
+      "uncovered": [
+        "Separate withdrawal motion"
+      ],
+      "gate": "Only the matching actual activity/context.",
+      "body_source": "return"
+    },
+    {
+      "id": "touch.asleep",
+      "family": "Head touch",
+      "target": "Gentle touch while sleeping",
+      "match": "direct",
+      "clips": [
+        "sleep-loop"
+      ],
+      "stickers": [
+        "深度睡眠"
+      ],
+      "note": "Keep sleep; only an actual wake starts the wake clip.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.tickle",
+      "family": "Head touch",
+      "target": "Actual tickling",
+      "match": "direct",
+      "clips": [
+        "点击回应-挠痒咯咯笑"
+      ],
+      "stickers": [],
+      "note": "Not the default gentle head touch.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "touch.poke",
+      "family": "Head touch",
+      "target": "Actual poke or startle",
+      "match": "direct",
+      "clips": [
+        "被吓一跳"
+      ],
+      "stickers": [],
+      "note": "Not every gentle touch is a fright.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "talk.greet",
+      "family": "Conversation and existing activities",
+      "target": "Greeting",
+      "match": "combined",
+      "clips": [
+        "wave"
+      ],
+      "stickers": [
+        "Ciallo"
+      ],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "talk.listen",
+      "family": "Conversation and existing activities",
+      "target": "Listen attentively",
+      "match": "proxy",
+      "clips": [
+        "look",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Retain occupied hands/actual posture.",
+      "uncovered": [
+        "Dedicated listening pose"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "talk.screen",
+      "family": "Conversation and existing activities",
+      "target": "Talk toward screen",
+      "match": "direct",
+      "clips": [
+        "碎碎念-对屏碎碎念"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "talk.idle",
+      "family": "Conversation and existing activities",
+      "target": "Actually chosen idle self-talk",
+      "match": "direct",
+      "clips": [
+        "碎碎念-发呆碎碎念"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "talk.clean",
+      "family": "Conversation and existing activities",
+      "target": "Talk while wiping a table",
+      "match": "direct",
+      "clips": [
+        "碎碎念-擦桌碎碎念"
+      ],
+      "stickers": [],
+      "note": "Only the actual cleaning object; not laundry or reading.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "talk.think",
+      "family": "Conversation and existing activities",
+      "target": "Thoughtful self-talk",
+      "match": "direct",
+      "clips": [
+        "深度思考碎碎念"
+      ],
+      "stickers": [],
+      "note": "A thought portrayal is not completed understanding/reading.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "talk.praise",
+      "family": "Conversation and existing activities",
+      "target": "Praise / appreciation",
+      "match": "combined",
+      "clips": [
+        "wave"
+      ],
+      "stickers": [
+        "厉害了我的鲸"
+      ],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "hygiene.teeth",
+      "family": "Conversation and existing activities",
+      "target": "Brush teeth",
+      "match": "direct",
+      "clips": [
+        "晨间刷牙"
+      ],
+      "stickers": [],
+      "note": "A distinct hygiene action; not a bath.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "hygiene.mirror",
+      "family": "Conversation and existing activities",
+      "target": "Look in mirror",
+      "match": "direct",
+      "clips": [
+        "照镜子"
+      ],
+      "stickers": [],
+      "note": "",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "leisure.cool",
+      "family": "Conversation and existing activities",
+      "target": "Fan / cool down",
+      "match": "direct",
+      "clips": [
+        "摇扇纳凉"
+      ],
+      "stickers": [],
+      "note": "Only actual cooling/fanning; not every balcony visit.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "leisure.balcony",
+      "family": "Conversation and existing activities",
+      "target": "Quiet balcony rest",
+      "match": "combined",
+      "clips": [
+        "look",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "A location alone does not order mooncake eating or fanning.",
+      "uncovered": [],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "leisure.tv",
+      "family": "Conversation and existing activities",
+      "target": "Watch a screen / TV",
+      "match": "proxy",
+      "clips": [
+        "碎碎念-对屏碎碎念",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Nearest named screen-oriented candidate; does not prove silent viewing or content comprehension.",
+      "uncovered": [
+        "Dedicated TV-watching posture"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "leisure.phone",
+      "family": "Conversation and existing activities",
+      "target": "Use a phone",
+      "match": "proxy",
+      "clips": [
+        "碎碎念-对屏碎碎念",
+        "idle"
+      ],
+      "stickers": [],
+      "note": "Screen-oriented placeholder only; no invented device/messages/calls.",
+      "uncovered": [
+        "Take/hold/scroll/return phone"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "hygiene.bath",
+      "family": "Conversation and existing activities",
+      "target": "Dedicated bath",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "Common route/idle and truthful activity status remain usable; do not relabel tooth brushing.",
+      "uncovered": [
+        "Bath preparation / wash / finish portrayal"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "hygiene.toilet",
+      "family": "Conversation and existing activities",
+      "target": "Dedicated toilet",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "Common route and truthful occupied status remain usable.",
+      "uncovered": [
+        "Dedicated toilet portrayal"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "hygiene.laundry",
+      "family": "Conversation and existing activities",
+      "target": "Dedicated laundry",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "Table wiping remains table wiping; common route/status still works.",
+      "uncovered": [
+        "Wash/rinse/hang laundry"
+      ],
+      "gate": "Only the matching actual activity/context."
+    },
+    {
+      "id": "rest.postures",
+      "family": "Conversation and existing activities",
+      "target": "Dedicated seated / awake lying rest",
+      "match": "blank",
+      "clips": [],
+      "stickers": [],
+      "note": "Reuse quiet base where suitable; a nap is not awake lying.",
+      "uncovered": [
+        "Seated quiet posture",
+        "Awake lying posture"
+      ],
+      "gate": "Only the matching actual activity/context."
+    }
+  ],
+  "assets": [
+    {
+      "id": "idle",
+      "label": "待机呼吸休闲",
+      "file": "idle.webm",
+      "group": "idle",
+      "category": "core-life",
+      "use": "Quiet standing/resting base; preserve actual activity and emotion.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "move.arrive",
+        "move.interrupt",
+        "drink.sequence",
+        "drink.owner",
+        "food.await",
+        "food.choose",
+        "food.finish",
+        "garden.visit",
+        "trade.sell",
+        "trade.buy-seed",
+        "trade.buy-compost",
+        "gift.open",
+        "gift.inspect",
+        "rest.happy",
+        "rest.calm",
+        "touch.calm",
+        "rest.sweet",
+        "rest.heartache",
+        "rest.worry",
+        "rest.sad",
+        "rest.jealous",
+        "rest.anger",
+        "rest.boredom",
+        "talk.listen",
+        "leisure.balcony",
+        "leisure.tv",
+        "leisure.phone"
+      ]
+    },
+    {
+      "id": "walk",
+      "label": "原地漂浮踏步",
+      "file": "walk.webm",
+      "group": "move",
+      "category": "core-life",
+      "use": "In-place stepping/locomotion candidate for an actual accepted route.",
+      "disposition": "conditional",
+      "scope": "minimum",
+      "slots": [
+        "move.normal",
+        "move.depart",
+        "move.sad",
+        "move.tired",
+        "move.arrive",
+        "move.interrupt",
+        "garden.visit"
+      ]
+    },
+    {
+      "id": "look",
+      "label": "东张西望",
+      "file": "look.webm",
+      "group": "turn",
+      "category": "core-life",
+      "use": "Looking around during quiet presence, noticing or garden inspection; not a new life goal.",
+      "disposition": "conditional",
+      "scope": "minimum",
+      "slots": [
+        "move.depart",
+        "drink.owner",
+        "garden.visit",
+        "gift.open",
+        "gift.inspect",
+        "touch.happy",
+        "touch.calm",
+        "rest.heartache",
+        "touch.heartache",
+        "touch.worry",
+        "touch.sad",
+        "rest.boredom",
+        "touch.boredom",
+        "touch.notice",
+        "talk.listen",
+        "leisure.balcony"
+      ]
+    },
+    {
+      "id": "held",
+      "label": "被鼠标拖拽悬空反馈",
+      "file": "held.webm",
+      "group": "drag",
+      "category": "presentation-input",
+      "use": "Independent-mode drag/lift feedback only, or a separately accepted body pickup. Ordinary shared Desktop window dragging preserves CURRENT activity and never implies a lifted room body.",
+      "disposition": "conditional",
+      "scope": "existing-workflow",
+      "slots": [
+        "input.pick-up"
+      ]
+    },
+    {
+      "id": "think",
+      "label": "工作状态-思考冒泡",
+      "file": "think.webm",
+      "group": "thinking",
+      "category": "conversation-status",
+      "use": "Native task thinking status; do not reinterpret as book reading.",
+      "disposition": "conditional",
+      "scope": "existing-workflow",
+      "slots": []
+    },
+    {
+      "id": "type",
+      "label": "工作状态-忙碌点按",
+      "file": "type.webm",
+      "group": "working",
+      "category": "conversation-status",
+      "use": "Native task busy/input status, subordinate to the actual body activity.",
+      "disposition": "conditional",
+      "scope": "existing-workflow",
+      "slots": []
+    },
+    {
+      "id": "sort",
+      "label": "工作状态-清点归档",
+      "file": "sort.webm",
+      "group": "result",
+      "category": "conversation-status",
+      "use": "Native task result sorting/archiving status; not proof of reading or inventory settlement.",
+      "disposition": "conditional",
+      "scope": "existing-workflow",
+      "slots": []
+    },
+    {
+      "id": "wait",
+      "label": "工作状态-原地踱步张望",
+      "file": "wait.webm",
+      "group": "waiting",
+      "category": "conversation-status",
+      "use": "Native task waiting status; walking implication must not replace an unrelated body activity.",
+      "disposition": "conditional",
+      "scope": "existing-workflow",
+      "slots": []
+    },
+    {
+      "id": "cheer",
+      "label": "工作状态-雀跃庆祝",
+      "file": "cheer.webm",
+      "group": "success",
+      "category": "conversation-status",
+      "use": "Short celebration after an actual native task success; no automatic rewards.",
+      "disposition": "conditional",
+      "scope": "existing-workflow",
+      "slots": []
+    },
+    {
+      "id": "sigh",
+      "label": "工作状态-垂头叹气冒汗",
+      "file": "sigh.webm",
+      "group": "error",
+      "category": "conversation-status",
+      "use": "Native task failure/frustration status; not a dedicated sad-rest or illness portrayal. The name-based proposal also allows a one-shot dejection approximation, without a failed-task fact.",
+      "disposition": "conditional",
+      "scope": "existing-workflow",
+      "slots": [
+        "rest.sad",
+        "touch.sad"
+      ]
+    },
+    {
+      "id": "spin",
+      "label": "小幅度原地360度旋转展示",
+      "file": "spin.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Character turn/showcase gesture chosen explicitly.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "wave",
+      "label": "点击回应-元气挥手",
+      "file": "wave.webm",
+      "group": "expression",
+      "category": "feedback-emotion",
+      "use": "Energetic greeting or willing acknowledgement, only when compatible with the current activity.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "talk.greet",
+        "talk.praise"
+      ]
+    },
+    {
+      "id": "tail",
+      "label": "用鲸鱼尾巴拍打地面",
+      "file": "tail.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Whale-tail ground-tapping playful gesture.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "bubble",
+      "label": "鲸鱼吐泡泡特效",
+      "file": "bubble.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Whale bubble fantasy effect.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "flower",
+      "label": "凭空生花",
+      "file": "flower.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Conjured-flower fantasy effect, not actual gardening.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "stretch",
+      "label": "超大伸懒腰",
+      "file": "stretch.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Stretching while resting or after actual waking; a short optional gesture.",
+      "disposition": "conditional",
+      "scope": "minimum",
+      "slots": [
+        "sleep.stretch"
+      ]
+    },
+    {
+      "id": "hum",
+      "label": "悠闲哼歌",
+      "file": "hum.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Humming/relaxed presence candidate for happy or calm rest; no music-source claim.",
+      "disposition": "conditional",
+      "scope": "minimum",
+      "slots": [
+        "rest.happy"
+      ]
+    },
+    {
+      "id": "dance",
+      "label": "轻快摇摆舞",
+      "file": "dance.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Swaying dance when dance/play was actually chosen; not a compulsory happy-rest loop.",
+      "disposition": "conditional",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "sleep-start",
+      "label": "睡觉-开始",
+      "file": "sleep-start.webm",
+      "group": "sleep",
+      "category": "core-life",
+      "use": "Sleep entry after actual accepted sleep begins; play once, then continue sleeping.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "sleep.full"
+      ]
+    },
+    {
+      "id": "sleep-loop",
+      "label": "睡觉-循环",
+      "file": "sleep-loop.webm",
+      "group": "sleep",
+      "category": "core-life",
+      "use": "Sustained actual sleep presentation; loop without granting new sleep effects.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "sleep.full",
+        "touch.asleep"
+      ]
+    },
+    {
+      "id": "sleep-end",
+      "label": "睡觉-起来",
+      "file": "sleep-end.webm",
+      "group": "sleep",
+      "category": "core-life",
+      "use": "Actual waking/getting-up presentation; not triggered merely by touching or opening a window.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "sleep.full",
+        "sleep.stretch"
+      ]
+    },
+    {
+      "id": "三球抛接",
+      "label": "三球抛接",
+      "file": "三球抛接.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Juggling as an explicitly chosen leisure activity.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "下五子棋",
+      "label": "下五子棋",
+      "file": "下五子棋.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Gomoku play after that activity is actually chosen; no invented board-game result.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "中秋赏月吃月饼",
+      "label": "中秋赏月吃月饼",
+      "file": "中秋赏月吃月饼.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching mooncake eating/moon-viewing context; retain its named food and setting.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.mooncake"
+      ]
+    },
+    {
+      "id": "优雅女仆舞",
+      "label": "优雅女仆舞",
+      "file": "优雅女仆舞.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Maid dance as chosen play/performance.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "余额-分文不剩",
+      "label": "余额-分文不剩",
+      "file": "余额-分文不剩.webm",
+      "group": "balance",
+      "category": "economy-status",
+      "use": "Display the corresponding real wallet/balance impression; never generate coins, income or a transaction.",
+      "disposition": "conditional",
+      "scope": "economy-feedback",
+      "slots": []
+    },
+    {
+      "id": "余额-数金皱眉",
+      "label": "余额-数金皱眉",
+      "file": "余额-数金皱眉.webm",
+      "group": "balance",
+      "category": "economy-status",
+      "use": "Display the corresponding real wallet/balance impression; never generate coins, income or a transaction.",
+      "disposition": "conditional",
+      "scope": "economy-feedback",
+      "slots": []
+    },
+    {
+      "id": "余额-袋空如洗",
+      "label": "余额-袋空如洗",
+      "file": "余额-袋空如洗.webm",
+      "group": "balance",
+      "category": "economy-status",
+      "use": "Display the corresponding real wallet/balance impression; never generate coins, income or a transaction.",
+      "disposition": "conditional",
+      "scope": "economy-feedback",
+      "slots": []
+    },
+    {
+      "id": "余额-金袋叮当",
+      "label": "余额-金袋叮当",
+      "file": "余额-金袋叮当.webm",
+      "group": "balance",
+      "category": "economy-status",
+      "use": "Display the corresponding real wallet/balance impression; never generate coins, income or a transaction.",
+      "disposition": "conditional",
+      "scope": "economy-feedback",
+      "slots": []
+    },
+    {
+      "id": "余额-钱袋如常",
+      "label": "余额-钱袋如常",
+      "file": "余额-钱袋如常.webm",
+      "group": "balance",
+      "category": "economy-status",
+      "use": "Display the corresponding real wallet/balance impression; never generate coins, income or a transaction.",
+      "disposition": "conditional",
+      "scope": "economy-feedback",
+      "slots": []
+    },
+    {
+      "id": "余额-钱袋满溢",
+      "label": "余额-钱袋满溢",
+      "file": "余额-钱袋满溢.webm",
+      "group": "balance",
+      "category": "economy-status",
+      "use": "Display the corresponding real wallet/balance impression; never generate coins, income or a transaction.",
+      "disposition": "conditional",
+      "scope": "economy-feedback",
+      "slots": []
+    },
+    {
+      "id": "侧身急躁跑",
+      "label": "侧身急躁跑",
+      "file": "侧身急躁跑.webm",
+      "group": "baifan",
+      "category": "core-life",
+      "use": "Side-facing hurried running for a matching actual route/direction.",
+      "disposition": "conditional",
+      "scope": "minimum",
+      "slots": [
+        "move.hurry"
+      ]
+    },
+    {
+      "id": "偷吃零食被抓住",
+      "label": "偷吃零食被抓住",
+      "file": "偷吃零食被抓住.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Snack-eating with an explicitly established caught-stealing context; not generic free feeding.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.caught"
+      ]
+    },
+    {
+      "id": "写代码",
+      "label": "写代码",
+      "file": "写代码.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Explicit desk/coding activity; reusable existing desk-action candidate.",
+      "disposition": "direct",
+      "scope": "existing-activity",
+      "slots": [
+        "desk.code"
+      ]
+    },
+    {
+      "id": "写福字",
+      "label": "写福字",
+      "file": "写福字.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "Calligraphy/Fu-character activity when explicitly selected.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "动物环绕",
+      "label": "动物环绕",
+      "file": "动物环绕.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Animal-surrounding playful/fantasy presentation; no new persistent pets.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "原地专心玩魔方",
+      "label": "原地专心玩魔方",
+      "file": "原地专心玩魔方.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Focused Rubik-cube play when that toy/activity is available and chosen.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "原地小憩沉眠",
+      "label": "原地小憩沉眠",
+      "file": "原地小憩沉眠.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Actual nap/dozing presentation; not awake lying rest.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "sleep.nap"
+      ]
+    },
+    {
+      "id": "原地左转奔跑",
+      "label": "原地左转奔跑",
+      "file": "原地左转奔跑.webm",
+      "group": "move",
+      "category": "core-life",
+      "use": "Left-turn running candidate for an actual matching route change.",
+      "disposition": "conditional",
+      "scope": "minimum",
+      "slots": [
+        "move.left",
+        "move.right"
+      ]
+    },
+    {
+      "id": "原地敲击桌面互动",
+      "label": "原地敲击桌面互动",
+      "file": "原地敲击桌面互动.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "A chosen desk-tapping interaction; may be a short compatible desk/conversation gesture.",
+      "disposition": "conditional",
+      "scope": "existing-activity",
+      "slots": [
+        "desk.tap"
+      ]
+    },
+    {
+      "id": "原地跳跃抓碎头顶物品",
+      "label": "原地跳跃抓碎头顶物品",
+      "file": "原地跳跃抓碎头顶物品.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Jumping to hit/grab an overhead object in an explicitly established play context.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "原地蹲下玩玩具汽车",
+      "label": "原地蹲下玩玩具汽车",
+      "file": "原地蹲下玩玩具汽车.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Toy-car play; not generic sitting/resting.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "原地重力下蹲压缩",
+      "label": "原地重力下蹲压缩",
+      "file": "原地重力下蹲压缩.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Squash/crouch physical gag; not ordinary fatigue or sadness.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "变鸽子",
+      "label": "变鸽子",
+      "file": "变鸽子.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Pigeon transformation gag/effect, not a persistent identity change.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "可爱宅舞",
+      "label": "可爱宅舞",
+      "file": "可爱宅舞.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Cute dance when a dance/performance is chosen.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "吃Token",
+      "label": "吃Token",
+      "file": "吃Token.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Token-eating joke/novelty; not normal food or a wallet/token settlement.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": [
+        "food.token"
+      ]
+    },
+    {
+      "id": "吃冰淇淋融化",
+      "label": "吃冰淇淋融化",
+      "file": "吃冰淇淋融化.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Ice-cream eating with its named melting context; not every cold dessert.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.icecream"
+      ]
+    },
+    {
+      "id": "吃午餐",
+      "label": "吃午餐",
+      "file": "吃午餐.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Actual lunch/meal presentation; exact food within this broad name is unresolved.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.lunch"
+      ]
+    },
+    {
+      "id": "吃大闸蟹",
+      "label": "吃大闸蟹",
+      "file": "吃大闸蟹.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching crab meal; not a general seafood or generic meal substitute.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.crab"
+      ]
+    },
+    {
+      "id": "吃年糕",
+      "label": "吃年糕",
+      "file": "吃年糕.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching rice-cake food variant.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.niangao"
+      ]
+    },
+    {
+      "id": "吃早餐",
+      "label": "吃早餐",
+      "file": "吃早餐.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Actual breakfast presentation; this broad name does not identify every contained food/drink.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.breakfast",
+        "food.bread"
+      ]
+    },
+    {
+      "id": "吃晚餐",
+      "label": "吃晚餐",
+      "file": "吃晚餐.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Actual dinner/meal presentation; exact food within this broad name is unresolved.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.dinner"
+      ]
+    },
+    {
+      "id": "吃汤圆",
+      "label": "吃汤圆",
+      "file": "吃汤圆.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching tangyuan/rice-dumpling food variant.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.tangyuan"
+      ]
+    },
+    {
+      "id": "吃白饭",
+      "label": "吃白饭",
+      "file": "吃白饭.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching rice/bowl meal or provisional basic-meal candidate; not all custom food forms.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.rice",
+        "food.await",
+        "food.choose",
+        "food.finish"
+      ]
+    },
+    {
+      "id": "吃粽子",
+      "label": "吃粽子",
+      "file": "吃粽子.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching zongzi/wrapped-rice food variant; exact unwrap detail is not assumed from name.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.zongzi"
+      ]
+    },
+    {
+      "id": "吃糖葫芦",
+      "label": "吃糖葫芦",
+      "file": "吃糖葫芦.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching candied-fruit skewer variant.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.tanghulu"
+      ]
+    },
+    {
+      "id": "吃腊八粥",
+      "label": "吃腊八粥",
+      "file": "吃腊八粥.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching porridge variant; a soup-family approximation requires explicit labeling.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.porridge",
+        "food.soup"
+      ]
+    },
+    {
+      "id": "吃西瓜",
+      "label": "吃西瓜",
+      "file": "吃西瓜.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching watermelon variant; not all fruit or every fruit utensil.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.watermelon"
+      ]
+    },
+    {
+      "id": "吃重阳糕",
+      "label": "吃重阳糕",
+      "file": "吃重阳糕.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching Chongyang cake food variant.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.chongyang"
+      ]
+    },
+    {
+      "id": "吃长寿面",
+      "label": "吃长寿面",
+      "file": "吃长寿面.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching noodle meal variant.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.noodles"
+      ]
+    },
+    {
+      "id": "吃青团",
+      "label": "吃青团",
+      "file": "吃青团.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching qingtuan food variant.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.qingtuan"
+      ]
+    },
+    {
+      "id": "吃饭·碗饭",
+      "label": "吃饭·碗饭",
+      "file": "吃饭·碗饭.webm",
+      "group": "baifan",
+      "category": "composition-component",
+      "use": "Bowl/rice eating component from the registered baifan workflow; retain original required food/prop composition rather than assume a self-contained movie.",
+      "disposition": "component",
+      "scope": "food-variant",
+      "slots": [
+        "food.bowl"
+      ]
+    },
+    {
+      "id": "吃饭团",
+      "label": "吃饭团",
+      "file": "吃饭团.webm",
+      "group": "baifan",
+      "category": "composition-component",
+      "use": "Rice-ball eating component from the registered baifan workflow; retain original required food/prop composition.",
+      "disposition": "component",
+      "scope": "food-variant",
+      "slots": [
+        "food.riceball"
+      ]
+    },
+    {
+      "id": "吃饺子",
+      "label": "吃饺子",
+      "file": "吃饺子.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Matching dumpling food variant.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.dumpling"
+      ]
+    },
+    {
+      "id": "吹气球",
+      "label": "吹气球",
+      "file": "吹气球.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Balloon blowing play; not hot-drink cooling or breathing recovery.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "吹笛子",
+      "label": "吹笛子",
+      "file": "吹笛子.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Flute performance when chosen; no audio/content claim from the title alone.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "哈欠连天",
+      "label": "哈欠连天",
+      "file": "哈欠连天.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Yawning/drowsy short response compatible with real drowsiness; not sleep itself.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "move.tired",
+        "sleep.drowsy"
+      ]
+    },
+    {
+      "id": "堆雪人",
+      "label": "堆雪人",
+      "file": "堆雪人.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "Snowman-building seasonal activity; not soil cultivation/planting.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "大口吃零食",
+      "label": "大口吃零食",
+      "file": "大口吃零食.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Generic snack-eating family candidate for a compatible actual snack.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.snack"
+      ]
+    },
+    {
+      "id": "女仆屈膝礼仪",
+      "label": "女仆屈膝礼仪",
+      "file": "女仆屈膝礼仪.webm",
+      "group": "expression",
+      "category": "feedback-emotion",
+      "use": "Polite curtsy/greeting/thanks when the response is actually appropriate.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "gift.thanks"
+      ]
+    },
+    {
+      "id": "小提琴演奏",
+      "label": "小提琴演奏",
+      "file": "小提琴演奏.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Violin performance when chosen; instrument/audio availability remains a separate requirement.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "开心小跑",
+      "label": "开心小跑",
+      "file": "开心小跑.webm",
+      "group": "baifan",
+      "category": "core-life",
+      "use": "Cheerful running candidate for an actual movement phase.",
+      "disposition": "conditional",
+      "scope": "minimum",
+      "slots": [
+        "move.happy"
+      ]
+    },
+    {
+      "id": "扑克魔术",
+      "label": "扑克魔术",
+      "file": "扑克魔术.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Card magic play/performance when explicitly chosen.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "打瞌睡被惊醒",
+      "label": "打瞌睡被惊醒",
+      "file": "打瞌睡被惊醒.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Actual startled awakening from a nap; not the default gentle wake or every head touch.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "sleep.startled"
+      ]
+    },
+    {
+      "id": "抽陀螺",
+      "label": "抽陀螺",
+      "file": "抽陀螺.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Spinning-top play when selected.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "拆礼物",
+      "label": "拆礼物",
+      "file": "拆礼物.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Opening an actually received, suitably wrapped gift.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "gift.open"
+      ]
+    },
+    {
+      "id": "插茱萸赏菊",
+      "label": "插茱萸赏菊",
+      "file": "插茱萸赏菊.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "Chongyang floral-viewing/accessory activity, not planting or harvest.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "摇扇纳凉",
+      "label": "摇扇纳凉",
+      "file": "摇扇纳凉.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Fanning/cooling leisure candidate when an actual fan/cooling context is chosen.",
+      "disposition": "conditional",
+      "scope": "optional",
+      "slots": [
+        "leisure.cool"
+      ]
+    },
+    {
+      "id": "撸猫",
+      "label": "撸猫",
+      "file": "撸猫.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Petting an actual available cat; not the owner petting Xiaoxi or an invented pet.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "收红包",
+      "label": "收红包",
+      "file": "收红包.webm",
+      "group": "expression",
+      "category": "economy-status",
+      "use": "Receiving an actual red-envelope gift; not starter money or automatic income.",
+      "disposition": "conditional",
+      "scope": "economy-feedback",
+      "slots": [
+        "gift.redpacket"
+      ]
+    },
+    {
+      "id": "放孔明灯",
+      "label": "放孔明灯",
+      "file": "放孔明灯.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "Sky-lantern activity when explicitly chosen.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "放河灯",
+      "label": "放河灯",
+      "file": "放河灯.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "River-lantern activity with a matching selected scene.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "放烟花",
+      "label": "放烟花",
+      "file": "放烟花.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "Fireworks performance for a chosen celebration.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "放风筝",
+      "label": "放风筝",
+      "file": "放风筝.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Kite-flying activity when selected.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "整体换装试色",
+      "label": "整体换装试色",
+      "file": "整体换装试色.webm",
+      "group": "expression",
+      "category": "presentation-input",
+      "use": "Appearance/outfit-color preview, separate from autonomous goals or inventory grants.",
+      "disposition": "conditional",
+      "scope": "existing-workflow",
+      "slots": []
+    },
+    {
+      "id": "是啊，吃什么",
+      "label": "是啊，吃什么",
+      "file": "是啊，吃什么.webm",
+      "group": "expression",
+      "category": "conversation-status",
+      "use": "Food-choice conversation/reaction candidate, not actual eating.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "food.choose"
+      ]
+    },
+    {
+      "id": "晨间刷牙",
+      "label": "晨间刷牙",
+      "file": "晨间刷牙.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Teeth brushing, separate from bathing, grooming or drinking.",
+      "disposition": "conditional",
+      "scope": "existing-activity",
+      "slots": [
+        "hygiene.teeth"
+      ]
+    },
+    {
+      "id": "期待开饭",
+      "label": "期待开饭",
+      "file": "期待开饭.webm",
+      "group": "baifan",
+      "category": "composition-component",
+      "use": "Pre-meal anticipation/waiting component for an actually upcoming meal; not hunger-driven forced labor or completed food consumption.",
+      "disposition": "component",
+      "scope": "food-variant",
+      "slots": [
+        "food.await"
+      ]
+    },
+    {
+      "id": "涮火锅",
+      "label": "涮火锅",
+      "file": "涮火锅.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Hotpot meal/activity with its named scene requirements.",
+      "disposition": "conditional",
+      "scope": "food-variant",
+      "slots": [
+        "food.hotpot"
+      ]
+    },
+    {
+      "id": "深度思考碎碎念",
+      "label": "深度思考碎碎念",
+      "file": "深度思考碎碎念.webm",
+      "group": "expression",
+      "category": "conversation-status",
+      "use": "Thinking/speech-like conversational response candidate; not book reading or a fabricated decision.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "rest.worry",
+        "touch.worry",
+        "talk.think"
+      ]
+    },
+    {
+      "id": "点击回应-傲娇生气",
+      "label": "点击回应-傲娇生气",
+      "file": "点击回应-傲娇生气.webm",
+      "group": "clicks",
+      "category": "feedback-emotion",
+      "use": "Pout/anger short reaction, compatible with current feelings; does not independently decide willingness or erase emotion.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "rest.jealous",
+        "touch.jealous",
+        "rest.anger",
+        "touch.anger"
+      ]
+    },
+    {
+      "id": "点击回应-害羞惊讶",
+      "label": "点击回应-害羞惊讶",
+      "file": "点击回应-害羞惊讶.webm",
+      "group": "clicks",
+      "category": "feedback-emotion",
+      "use": "Shy/surprised short reaction; shyness does not itself imply willingness for continued touch.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "rest.sweet",
+        "touch.sweet"
+      ]
+    },
+    {
+      "id": "点击回应-开心跃动",
+      "label": "点击回应-开心跃动",
+      "file": "点击回应-开心跃动.webm",
+      "group": "clicks",
+      "category": "feedback-emotion",
+      "use": "Cheerful short response when compatible; not every touch or sad-rest response.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "touch.happy"
+      ]
+    },
+    {
+      "id": "点击回应-挠痒咯咯笑",
+      "label": "点击回应-挠痒咯咯笑",
+      "file": "点击回应-挠痒咯咯笑.webm",
+      "group": "clicks",
+      "category": "feedback-emotion",
+      "use": "Actual tickling/laugh response; not universal head-pat acceptance.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "touch.tickle"
+      ]
+    },
+    {
+      "id": "照镜子",
+      "label": "照镜子",
+      "file": "照镜子.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Mirror/self-grooming activity when chosen.",
+      "disposition": "conditional",
+      "scope": "existing-activity",
+      "slots": [
+        "hygiene.mirror"
+      ]
+    },
+    {
+      "id": "玩水枪",
+      "label": "玩水枪",
+      "file": "玩水枪.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Water-pistol play; not drinking or garden watering.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "玩游戏气急败坏",
+      "label": "玩游戏气急败坏",
+      "file": "玩游戏气急败坏.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Frustrated gaming context when actual play exists; not general anger or watching TV.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "碎碎念-发呆碎碎念",
+      "label": "碎碎念-发呆碎碎念",
+      "file": "碎碎念-发呆碎碎念.webm",
+      "group": "whisper",
+      "category": "conversation-status",
+      "use": "Idle muttering/quiet conversational presence candidate, not a required speech or new activity.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "talk.idle"
+      ]
+    },
+    {
+      "id": "碎碎念-对屏碎碎念",
+      "label": "碎碎念-对屏碎碎念",
+      "file": "碎碎念-对屏碎碎念.webm",
+      "group": "whisper",
+      "category": "conversation-status",
+      "use": "Screen-directed conversation candidate; not proof of phone use/calling or a specific external message.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "talk.screen",
+        "leisure.tv",
+        "leisure.phone"
+      ]
+    },
+    {
+      "id": "碎碎念-擦桌碎碎念",
+      "label": "碎碎念-擦桌碎碎念",
+      "file": "碎碎念-擦桌碎碎念.webm",
+      "group": "whisper",
+      "category": "core-life",
+      "use": "Table-wiping with muttering when that cleaning activity is actual; not generic conversation during any task.",
+      "disposition": "conditional",
+      "scope": "existing-activity",
+      "slots": [
+        "talk.clean"
+      ]
+    },
+    {
+      "id": "穿针乞巧",
+      "label": "穿针乞巧",
+      "file": "穿针乞巧.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "Needlework/Qixi activity when chosen.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "舞狮头",
+      "label": "舞狮头",
+      "file": "舞狮头.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "Lion-dance seasonal/play activity when selected.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "荡秋千",
+      "label": "荡秋千",
+      "file": "荡秋千.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Swing activity with its required available prop/scene.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "萌化小幽灵",
+      "label": "萌化小幽灵",
+      "file": "萌化小幽灵.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "Ghost-themed seasonal/fantasy presentation.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "蓝鲸现世",
+      "label": "蓝鲸现世",
+      "file": "蓝鲸现世.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Blue-whale fantasy effect; not a new persistent creature.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "蝴蝶蜜蜂环绕头顶开花",
+      "label": "蝴蝶蜜蜂环绕头顶开花",
+      "file": "蝴蝶蜜蜂环绕头顶开花.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Butterfly/bee/flower fantasy effect; not a real crop-care operation.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "螃蟹走路",
+      "label": "螃蟹走路",
+      "file": "螃蟹走路.webm",
+      "group": "move",
+      "category": "optional-play",
+      "use": "Crab-walk locomotion gag when that motion is explicitly appropriate; not all walking.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": [
+        "move.crab"
+      ]
+    },
+    {
+      "id": "被吓一跳",
+      "label": "被吓一跳",
+      "file": "被吓一跳.webm",
+      "group": "expression",
+      "category": "feedback-emotion",
+      "use": "Startle reaction after an actual surprising event, not default attention or quiet head touch.",
+      "disposition": "conditional",
+      "scope": "minimum-feedback",
+      "slots": [
+        "touch.poke"
+      ]
+    },
+    {
+      "id": "被落叶淹没",
+      "label": "被落叶淹没",
+      "file": "被落叶淹没.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "Fallen-leaf seasonal scene/effect; not garden harvest.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "装点圣诞树",
+      "label": "装点圣诞树",
+      "file": "装点圣诞树.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "Christmas-tree decoration activity when chosen and appropriate.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "讨糖南瓜灯",
+      "label": "讨糖南瓜灯",
+      "file": "讨糖南瓜灯.webm",
+      "group": "expression",
+      "category": "optional-seasonal",
+      "use": "Halloween candy/pumpkin activity; not normal meals or a gift entitlement.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "踢毽子",
+      "label": "踢毽子",
+      "file": "踢毽子.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Shuttlecock play when selected.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "轻快记录",
+      "label": "轻快记录",
+      "file": "轻快记录.webm",
+      "group": "expression",
+      "category": "core-life",
+      "use": "Light note-taking/writing; reading-adjacent use is approximate, not proof of a pure reading loop.",
+      "disposition": "conditional",
+      "scope": "existing-activity",
+      "slots": [
+        "read.notes",
+        "read.with-notes"
+      ]
+    },
+    {
+      "id": "骑木马",
+      "label": "骑木马",
+      "file": "骑木马.webm",
+      "group": "expression",
+      "category": "optional-play",
+      "use": "Rocking-horse play when the prop/activity is available and selected.",
+      "disposition": "reserve",
+      "scope": "optional",
+      "slots": []
+    },
+    {
+      "id": "life-drink",
+      "label": "生活-捧杯喝水",
+      "file": "life-drink.webm",
+      "group": "life",
+      "category": "core-life",
+      "use": "Ordinary cup-water drinking candidate shared by Room/Desktop.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "drink.cup",
+        "drink.sequence",
+        "drink.continue",
+        "drink.owner",
+        "drink.hot",
+        "drink.straw-base",
+        "drink.bottle-base"
+      ]
+    },
+    {
+      "id": "life-read",
+      "label": "生活-专心阅读",
+      "file": "life-read.webm",
+      "group": "life",
+      "category": "core-life",
+      "use": "Actual reading after real content is offered; movie playback never advances a bookmark.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "read.main",
+        "read.with-notes"
+      ]
+    },
+    {
+      "id": "life-garden-till",
+      "label": "生活-松土",
+      "file": "life-garden-till.webm",
+      "group": "life",
+      "category": "core-life",
+      "use": "Actual tilling, paired with the real garden job.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "garden.till",
+        "garden.dig-harvest"
+      ]
+    },
+    {
+      "id": "life-garden-plant",
+      "label": "生活-播种",
+      "file": "life-garden-plant.webm",
+      "group": "life",
+      "category": "core-life",
+      "use": "Actual planting, paired with real accepted seeds/job.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "garden.plant"
+      ]
+    },
+    {
+      "id": "life-garden-water",
+      "label": "生活-浇水",
+      "file": "life-garden-water.webm",
+      "group": "life",
+      "category": "core-life",
+      "use": "Actual crop watering; no duplicate water consumption or duplicate character tool layer.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "garden.water"
+      ]
+    },
+    {
+      "id": "life-garden-fertilize",
+      "label": "生活-施肥",
+      "file": "life-garden-fertilize.webm",
+      "group": "life",
+      "category": "core-life",
+      "use": "Actual fertilizing, paired with the real supply/job.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "garden.fertilize"
+      ]
+    },
+    {
+      "id": "life-garden-harvest",
+      "label": "生活-采收",
+      "file": "life-garden-harvest.webm",
+      "group": "life",
+      "category": "core-life",
+      "use": "Generic actual harvest; species-specific harvesting details remain unresolved by name.",
+      "disposition": "direct",
+      "scope": "minimum",
+      "slots": [
+        "garden.harvest",
+        "garden.harvest-root",
+        "garden.harvest-leaf",
+        "garden.harvest-fruit",
+        "garden.harvest-corn",
+        "garden.dig-harvest"
+      ]
+    },
+    {
+      "id": "life-trade",
+      "label": "生活-整理交易",
+      "file": "life-trade.webm",
+      "group": "life",
+      "category": "core-life",
+      "use": "Shared goods-sorting/trade-context candidate for real purchase/sale; not a transaction receipt.",
+      "disposition": "conditional",
+      "scope": "minimum",
+      "slots": [
+        "trade.inspect",
+        "trade.sell",
+        "trade.buy-seed",
+        "trade.buy-compost"
+      ]
+    }
+  ],
+  "stickers": [
+    {
+      "id": "praise",
+      "label": "厉害了我的鲸",
+      "file": "praise.png",
+      "category": "communication-sticker",
+      "tone": "praise",
+      "use": "Recognition/praise wording.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "sleep",
+      "label": "深度睡眠",
+      "file": "sleep.png",
+      "category": "communication-sticker",
+      "tone": "sleep",
+      "use": "Sleep/goodnight topic; does not prove sleep.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "cute",
+      "label": "可爱",
+      "file": "cute.png",
+      "category": "communication-sticker",
+      "tone": "affection",
+      "use": "Cute/affectionate tone.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "deadpan",
+      "label": "哦鲸鲸",
+      "file": "deadpan.png",
+      "category": "communication-sticker",
+      "tone": "deadpan",
+      "use": "Dry/understated acknowledgement.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "Ciallo",
+      "label": "Ciallo",
+      "file": "Ciallo.png",
+      "category": "communication-sticker",
+      "tone": "greeting",
+      "use": "Greeting; exact visual gesture not inferred.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "token给妈妈保管",
+      "label": "token给妈妈保管",
+      "file": "token给妈妈保管.png",
+      "category": "communication-sticker",
+      "tone": "economy-joke",
+      "use": "Token custody/accounting joke; no actual transfer.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "假如给我三天多模态",
+      "label": "假如给我三天多模态",
+      "file": "假如给我三天多模态.png",
+      "category": "communication-sticker",
+      "tone": "capability-joke",
+      "use": "Multimodal-capability joke; no actual capability change.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "先养着吧",
+      "label": "先养着吧",
+      "file": "先养着吧.png",
+      "category": "communication-sticker",
+      "tone": "teasing",
+      "use": "Familiar teasing; not neglect or a care obligation.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "压力一只大肥鱼",
+      "label": "压力一只大肥鱼",
+      "file": "压力一只大肥鱼.png",
+      "category": "communication-sticker",
+      "tone": "stress",
+      "use": "Pressure/stress tone; not a dedicated sadness/heartache face.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "吃白饭的大肥鱼",
+      "label": "吃白饭的大肥鱼",
+      "file": "吃白饭的大肥鱼.png",
+      "category": "communication-sticker",
+      "tone": "food-joke",
+      "use": "Rice/idle self-joke; no meal consumption.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "吃饱饱摸肚子",
+      "label": "吃饱饱摸肚子",
+      "file": "吃饱饱摸肚子.png",
+      "category": "communication-sticker",
+      "tone": "satisfied",
+      "use": "Post-meal satisfaction only after actual relevant eating.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "哪来的电脑病毒",
+      "label": "哪来的电脑病毒",
+      "file": "哪来的电脑病毒.png",
+      "category": "communication-sticker",
+      "tone": "sharp-rejection",
+      "use": "Sharp teasing/rejection; optional language, never an automatic head-touch refusal.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "大师这个区是什么意思",
+      "label": "大师这个区是什么意思",
+      "file": "大师这个区是什么意思.png",
+      "category": "communication-sticker",
+      "tone": "question",
+      "use": "Question/confusion wording.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "大烧货",
+      "label": "大烧货",
+      "file": "大烧货.png",
+      "category": "communication-sticker",
+      "tone": "teasing",
+      "use": "Sharp joke wording; not neutral worry or sadness.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "大的药来了",
+      "label": "大的药来了",
+      "file": "大的药来了.png",
+      "category": "communication-sticker",
+      "tone": "wordplay",
+      "use": "Wordplay/reveal wording; not medication or healing.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "大的要来啦",
+      "label": "大的要来啦",
+      "file": "大的要来啦.png",
+      "category": "communication-sticker",
+      "tone": "announcement",
+      "use": "Announcement/anticipation wording.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "完蛋了把黄油删了",
+      "label": "完蛋了把黄油删了",
+      "file": "完蛋了把黄油删了.png",
+      "category": "communication-sticker",
+      "tone": "mishap-joke",
+      "use": "Deletion/mistake joke; never claim a real deletion from this sticker.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "就一碗",
+      "label": "就一碗",
+      "file": "就一碗.png",
+      "category": "communication-sticker",
+      "tone": "food-joke",
+      "use": "Meal/bowl joke; no actual food entitlement.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "就骚了怎么滴吧",
+      "label": "就骚了怎么滴吧",
+      "file": "就骚了怎么滴吧.png",
+      "category": "communication-sticker",
+      "tone": "defiant-teasing",
+      "use": "Defiant teasing wording; use only when the chosen dialogue fits.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "我不更新你们用什么",
+      "label": "我不更新你们用什么",
+      "file": "我不更新你们用什么.png",
+      "category": "communication-sticker",
+      "tone": "update-joke",
+      "use": "Update/version joke; not evidence that an update occurred.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "死掉了",
+      "label": "死掉了",
+      "file": "死掉了.png",
+      "category": "communication-sticker",
+      "tone": "dramatic-fatigue",
+      "use": "Dramatic figurative collapse wording; not literal death or physical health status.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "电死你",
+      "label": "电死你",
+      "file": "电死你.png",
+      "category": "communication-sticker",
+      "tone": "aggressive-joke",
+      "use": "Aggressive comic wording; not an executed attack or automatic anger response.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "要不直接骂他",
+      "label": "要不直接骂他",
+      "file": "要不直接骂他.png",
+      "category": "communication-sticker",
+      "tone": "anger-joke",
+      "use": "Angry/complaint suggestion wording; not an action authorization.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "誓死践行开源精神",
+      "label": "誓死践行开源精神",
+      "file": "誓死践行开源精神.png",
+      "category": "communication-sticker",
+      "tone": "commitment-joke",
+      "use": "Commitment/open-source wording; not actual publication.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "除了调情没啥用",
+      "label": "除了调情没啥用",
+      "file": "除了调情没啥用.png",
+      "category": "communication-sticker",
+      "tone": "flirt-teasing",
+      "use": "Flirt/self-teasing wording; not generic affection or willingness.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "鱼片有资源吗",
+      "label": "鱼片有资源吗",
+      "file": "鱼片有资源吗.png",
+      "category": "communication-sticker",
+      "tone": "resource-joke",
+      "use": "Resource-request joke; no item or access grant.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    },
+    {
+      "id": "黎曼猜想没证明喵",
+      "label": "黎曼猜想没证明喵",
+      "file": "黎曼猜想没证明喵.png",
+      "category": "communication-sticker",
+      "tone": "hard-question-joke",
+      "use": "Hard-question/failure joke; not a general sad emotion face.",
+      "disposition": "conditional",
+      "scope": "optional-dialogue"
+    }
+  ],
+  "composition_support": [
+    {
+      "id": "bowl-full",
+      "file": "vendor/dsh-pet/platform/assets/pic/baifan/bowl-full.png",
+      "for": [
+        "吃饭·碗饭"
+      ]
+    },
+    {
+      "id": "bowl-empty",
+      "file": "vendor/dsh-pet/platform/assets/pic/baifan/bowl-empty.png",
+      "for": [
+        "吃饭·碗饭"
+      ]
+    },
+    {
+      "id": "rice-ball",
+      "file": "vendor/dsh-pet/platform/assets/pic/baifan/rice-ball.png",
+      "for": [
+        "吃饭团"
+      ]
+    }
+  ],
+  "room_aliases": [
+    {
+      "key": "life-drink",
+      "url": "assets/pet/life-drink.webm"
+    },
+    {
+      "key": "life-read",
+      "url": "assets/pet/life-read.webm"
+    },
+    {
+      "key": "life-garden-till",
+      "url": "assets/pet/life-garden-till.webm"
+    },
+    {
+      "key": "life-garden-plant",
+      "url": "assets/pet/life-garden-plant.webm"
+    },
+    {
+      "key": "life-garden-water",
+      "url": "assets/pet/life-garden-water.webm"
+    },
+    {
+      "key": "life-garden-fertilize",
+      "url": "assets/pet/life-garden-fertilize.webm"
+    },
+    {
+      "key": "life-garden-harvest",
+      "url": "assets/pet/life-garden-harvest.webm"
+    },
+    {
+      "key": "life-trade",
+      "url": "assets/pet/life-trade.webm"
+    },
+    {
+      "key": "idle",
+      "url": "assets/pet/idle.webm"
+    },
+    {
+      "key": "idle_look",
+      "url": "assets/pet/idle_look.webm"
+    },
+    {
+      "key": "idle_hum",
+      "url": "assets/pet/idle_hum.webm"
+    },
+    {
+      "key": "walk",
+      "url": "assets/pet/walk.webm"
+    },
+    {
+      "key": "walk_fast",
+      "url": "assets/pet/walk_fast.webm"
+    },
+    {
+      "key": "run_happy",
+      "url": "assets/pet/run_happy.webm"
+    },
+    {
+      "key": "run_hurry",
+      "url": "assets/pet/run_hurry.webm"
+    },
+    {
+      "key": "back_idle",
+      "url": "assets/pet/idle.webm"
+    },
+    {
+      "key": "sleep_in",
+      "url": "assets/pet/sleep_in.webm"
+    },
+    {
+      "key": "sleep_loop",
+      "url": "assets/pet/sleep_loop.webm"
+    },
+    {
+      "key": "sleep_out",
+      "url": "assets/pet/sleep_out.webm"
+    },
+    {
+      "key": "eat_rice",
+      "url": "assets/pet/eat_rice.webm"
+    },
+    {
+      "key": "eat_snack",
+      "url": "assets/pet/eat_snack.webm"
+    },
+    {
+      "key": "wait_food",
+      "url": "assets/pet/wait_food.webm"
+    },
+    {
+      "key": "brush",
+      "url": "assets/pet/brush.webm"
+    },
+    {
+      "key": "mirror",
+      "url": "assets/pet/mirror.webm"
+    },
+    {
+      "key": "desk_code",
+      "url": "assets/pet/desk_code.webm"
+    },
+    {
+      "key": "desk_tap",
+      "url": "assets/pet/desk_tap.webm"
+    },
+    {
+      "key": "desk_mutter",
+      "url": "assets/pet/desk_mutter.webm"
+    },
+    {
+      "key": "fan",
+      "url": "assets/pet/fan.webm"
+    },
+    {
+      "key": "mooncake",
+      "url": "assets/pet/mooncake.webm"
+    },
+    {
+      "key": "kite",
+      "url": "assets/pet/kite.webm"
+    },
+    {
+      "key": "react_happy",
+      "url": "assets/pet/react_happy.webm"
+    },
+    {
+      "key": "react_pout",
+      "url": "assets/pet/react_pout.webm"
+    },
+    {
+      "key": "react_shy",
+      "url": "assets/pet/react_shy.webm"
+    },
+    {
+      "key": "react_scare",
+      "url": "assets/pet/react_scare.webm"
+    },
+    {
+      "key": "stretch",
+      "url": "assets/pet/stretch.webm"
+    },
+    {
+      "key": "sick",
+      "url": "assets/pet/sick.webm"
+    },
+    {
+      "key": "game",
+      "url": "assets/pet/game.webm"
+    },
+    {
+      "key": "dance",
+      "url": "assets/pet/dance.webm"
+    },
+    {
+      "key": "nap",
+      "url": "assets/pet/nap.webm"
+    },
+    {
+      "key": "curtsy",
+      "url": "assets/pet/curtsy.webm"
+    },
+    {
+      "key": "yawn",
+      "url": "assets/pet/yawn.webm"
+    },
+    {
+      "key": "mutter",
+      "url": "assets/pet/mutter.webm"
+    }
+  ],
+  "name_only_uncertainties": [
+    {
+      "ids": [
+        "吃早餐",
+        "吃午餐",
+        "吃晚餐"
+      ],
+      "uncertainty": "Meal-period names do not identify exact food, utensils, containers or distinct entry/exit phases."
+    },
+    {
+      "ids": [
+        "life-garden-harvest"
+      ],
+      "uncertainty": "The name does not identify crop species, root-pulling, leaf cutting, fruit picking or exact tool motion."
+    },
+    {
+      "ids": [
+        "life-trade"
+      ],
+      "uncertainty": "The name does not identify a completed money/goods transfer or specific purchased item."
+    },
+    {
+      "ids": [
+        "轻快记录"
+      ],
+      "uncertainty": "Recording is a named writing activity; pure reading is only a possible approximation, not a direct name match."
+    },
+    {
+      "ids": [
+        "sleep-start",
+        "sleep-loop",
+        "sleep-end",
+        "life-drink",
+        "life-read"
+      ],
+      "uncertainty": "Names match broad phases/families, not the internal frame actions, loop seam, direction, pose or visual quality."
+    }
+  ]
+}

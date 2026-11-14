@@ -2,9 +2,9 @@
 // Offline backup/restore only. This command never launches DSH or a model.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import { dirname, resolve } from 'node:path';
 import { assertDshStopped, backupPlan, createOfflineBackup, restoreOfflineBackup, verifyOfflineBackup } from './lib/offline-backup.mjs';
+import { inspectRepoBinding } from './lib/repo-storage.mjs';
 
 const args = process.argv.slice(2), command = args.shift();
 function option(name, required = false) {
@@ -27,23 +27,14 @@ packages are excluded; restore requires the same installed code.`);
 }
 assert.ok(['plan', 'create', 'verify', 'restore'].includes(command), 'Unknown backup command');
 const receipt = JSON.parse(readFileSync(resolve(option('--installation', true)), 'utf8'));
+assert.ok(receipt.status === 'installed' && receipt.packageInstalled === true,
+  'Use a completed installed receipt; reconcile the current installation and Repo binding before backup');
 assert.ok(receipt.config?.dataDir && receipt.profileDir, 'Installation receipt lacks trusted data/profile bindings');
 if (command === 'create' || command === 'restore') assertDshStopped();
-const db = new DatabaseSync(join(receipt.config.dataDir, 'core.sqlite'), { readOnly: true });
-let workspace, storageId;
-try {
-  const row = db.prepare("SELECT value FROM records WHERE kind='preferences' AND id='current'").get();
-  workspace = row && JSON.parse(row.value).workspace;
-  const stored = db.prepare("SELECT value FROM meta WHERE key='workspace.storage-id'").get();
-  const local=workspace?.path ? relative(workspace.path,receipt.config.dataDir) : '..';
-  const portable=!isAbsolute(local)&&local!=='..'&&!local.startsWith('..'+sep);
-  storageId = portable && stored ? JSON.parse(stored.value) : workspace?.id;
-  const rowIdentity = db.prepare("SELECT value FROM records WHERE kind='identity' AND id='current'").get();
-  assert.equal(JSON.parse(rowIdentity.value).companionId, receipt.config.companionId, 'Receipt companion differs from live Core identity');
-} finally { db.close(); }
-assert.ok(workspace?.path, 'Bind and initialize the companion Repo before creating a backup');
+const binding = inspectRepoBinding(receipt.config);
+assert.equal(binding.state, 'ready', 'Bind and initialize the companion Repo before backup: ' + binding.reason);
 const bindings = option('--bindings');
-const plan = backupPlan({ repo: workspace.path, workspaceId: workspace.id, storageId, profileDir: receipt.profileDir,
+const plan = backupPlan({ repo: binding.root, workspaceId: binding.target.id, storageId: binding.storageId, profileDir: receipt.profileDir,
   dshHome: dirname(dirname(receipt.profileDir)), config: receipt.config,
   directories: bindings ? JSON.parse(readFileSync(resolve(bindings), 'utf8')) : {} });
 let result;

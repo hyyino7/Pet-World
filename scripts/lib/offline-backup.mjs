@@ -7,7 +7,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
 import { spawnSync } from 'node:child_process';
-import { assertStopped, fileHashes } from './repo-storage.mjs';
+import { assertStopped, boundMemoryDirectory, fileHashes, inspectRepoBinding } from './repo-storage.mjs';
 
 const format = 'codex-pet.offline-data-backup';
 const inside = (parent, child) => child === parent || child.startsWith(parent + sep);
@@ -33,10 +33,15 @@ function projectKey(path) {
   const readable = path.replace(/[\\/:]+/g, '-').split('').map(ch => /^[A-Za-z0-9._-]$/.test(ch) ? ch : '~' + ch.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')).join('');
   return '--' + (readable.replace(/^-+/, '') || 'root').slice(0, 251) + '--';
 }
+function channelWorkspace(plan, path) {
+  if(inside(plan.channelsDirectory,path))return true;
+  const portable=join(plan.repo,'.chatpet','data','channels','conversations');
+  return inside(portable,path) && /^[a-f0-9]{64}$/.test(relative(portable,path));
+}
 function scopedWorkspaces(plan, registry = json(plan.registryFile)) {
   assert.ok(registry.unit && registry.global && registry.tables?.workspaces, 'Unsupported native workspace storage');
   const selected = Object.entries(registry.tables.workspaces).filter(([id, value]) =>
-    id === plan.workspaceId || inside(plan.channelsDirectory, value.path));
+    id === plan.workspaceId || channelWorkspace(plan,value.path));
   assert.ok(selected.some(([id, value]) => id === plan.workspaceId && value.path === plan.repo), 'Native bound workspace is absent or changed');
   for (const [, value] of selected) assert.ok(Array.isArray(value.sessionIds) && value.sessionIds.every(id => typeof id === 'string'), 'Invalid native session membership');
   const ids = new Set(selected.flatMap(([, value]) => value.sessionIds));
@@ -52,7 +57,7 @@ function mergeWorkspaces(plan, saved, registry) {
   for (const [id, entry] of Object.entries(saved.entries)) {
     assert.ok(/^[A-Za-z0-9_-]+$/.test(id) && !['__proto__','constructor','prototype'].includes(id), 'Invalid native workspace ID');
     assert.equal(entry.path,absolute(entry.path),'Saved native workspace path is not canonical');
-    assert.ok((id === plan.workspaceId && entry.path === plan.repo) || (id !== plan.workspaceId && inside(plan.channelsDirectory, entry.path)), 'Saved workspace is outside companion scope');
+    assert.ok((id === plan.workspaceId && entry.path === plan.repo) || (id !== plan.workspaceId && channelWorkspace(plan,entry.path)), 'Saved workspace is outside companion scope');
     assert.ok(!registry.tables.workspaces[id] || current.entries[id], 'Saved workspace ID now belongs to an unrelated workspace');
     assert.ok(Array.isArray(entry.sessionIds) && entry.sessionIds.every(id => typeof id === 'string'), 'Invalid saved session membership');
     const others = Object.entries(registry.tables.workspaces).filter(([key]) => !current.entries[key]);
@@ -77,25 +82,33 @@ function mergeWorkspaces(plan, saved, registry) {
 
 /** Trusted installation bindings plus the current native registry select the
  * companion's own storage. Other workspaces/profile state is never replaced. */
-export function backupPlan({ repo, workspaceId, profileDir, dshHome, config, storageId = workspaceId, directories = {} }) {
+export function backupPlan({ repo, workspaceId, profileDir, dshHome, config, storageId, directories = {} }) {
   const managed = join(absolute(repo), '.chatpet');
   profileDir = absolute(profileDir); dshHome = absolute(dshHome);
   assert.equal(dirname(profileDir), join(dshHome, 'profiles'), 'Profile does not belong to this DSH home');
   const manifest = json(join(managed, 'manifest.json'));
   assert.equal(manifest.companionId, config.companionId, 'Repo and configured companion identities differ');
-  assert.ok(config.scopeId && config.ownerActorId && workspaceId && storageId, 'Incomplete companion binding');
+  assert.ok(config.scopeId && config.ownerActorId && workspaceId, 'Incomplete companion binding');
+  const binding = backupBinding(config, dirname(managed), workspaceId);
+  if (storageId !== undefined) assert.equal(storageId, binding.storageId, 'Core storage binding changed');
+  storageId = binding.storageId;
+  // A stale external receipt path is only input to the existing runtime Bank
+  // selector; it is never promoted to this companion's data root.
+  const configuredMemoryDirectory = config.memory?.dataDir;
+  if (config.memory) assert.ok(typeof configuredMemoryDirectory === 'string' && isAbsolute(configuredMemoryDirectory), 'Memory binding must be an absolute path');
+  const memoryDirectory = boundMemoryDirectory(config, binding) ?? undefined;
   const channelsDirectory = absolute(directories.channels ?? join(profileDir, 'chatpet-channels', 'sha256:' + sha(JSON.stringify(storageId))));
   const voiceDirectory = absolute(directories.voice ?? join(profileDir, 'chatpet-voice', 'sha256:' + sha(JSON.stringify(storageId))));
-  const plan = { repo: dirname(managed), workspaceId, profileDir, dshHome, channelsDirectory,
+  const plan = { repo: dirname(managed), workspaceId, storageId, profileDir, dshHome, channelsDirectory,
     registryFile: absolute(directories.registry ?? join(dshHome, 'storages', 'workspace.json')),
     sessionsDirectory: absolute(directories.sessions ?? join(dshHome, 'sessions')),
     cacheDirectory: absolute(directories.projectionCache ?? join(dshHome, 'storages', 'session_projcache', 'sessions')),
     attachmentsDirectory: absolute(directories.attachments ?? join(dshHome, 'attachments')),
     companionId: config.companionId, scopeId: config.scopeId, ownerActorId: config.ownerActorId,
-    coreDirectory: absolute(config.dataDir), memoryDirectory: config.memory ? absolute(config.memory.dataDir) : undefined,
+    coreDirectory: absolute(config.dataDir), configuredMemoryDirectory, memoryDirectory,
     installedPackage: join(profileDir, 'node_modules', 'dsh-Chatpet') };
   const workspaces = scopedWorkspaces(plan), roots = [{ id: 'companion', path: managed, mode: 'replace' }, {id:'workspace-instructions',path:join(dirname(managed),'AGENTS.md'),mode:'replace'}];
-  for (const [id, path] of [['core', config.dataDir], ['memory', config.memory?.dataDir]]) {
+  for (const [id, path] of [['core', plan.coreDirectory], ['memory', memoryDirectory]]) {
     if (path && !inside(managed, absolute(path))) roots.push({ id, path: absolute(path), mode: 'replace' });
   }
   roots.push({ id: 'channels', path: channelsDirectory, mode: 'replace' }, { id: 'voice', path: voiceDirectory, mode: 'replace' });
@@ -116,6 +129,17 @@ export function backupPlan({ repo, workspaceId, profileDir, dshHome, config, sto
     roots.push({ id, path, mode: 'reference' });
   for (const [index, root] of roots.entries()) assert.ok(!roots.slice(0, index).some(other => inside(other.path, root.path) || inside(root.path, other.path)), 'Overlapping backup roots');
   return { ...plan, roots };
+}
+
+function backupBinding(config, repo, workspaceId) {
+  const binding = inspectRepoBinding(config);
+  assert.equal(binding.state, 'ready', 'Initialize the companion Repo before backup: ' + binding.reason);
+  assert.equal(binding.root, repo, 'Core Repo binding changed');
+  assert.equal(binding.target.id, workspaceId, 'Core workspace binding changed');
+  assert.ok(typeof binding.storageId === 'string' && binding.storageId, 'Invalid Core storage binding');
+  const owner = binding.configuredMemoryOwner;
+  assert.ok(owner === null || (owner && typeof owner.id === 'string' && owner.id), 'Invalid Memory directory ownership metadata');
+  return binding;
 }
 
 export function assertDshStopped(plan) {
@@ -139,7 +163,48 @@ export function assertDshStopped(plan) {
 function offline(plan, probe) {
   probe(plan);
   assertStopped(plan.coreDirectory, 'core');
+  assertStopped(join(plan.repo,'.chatpet','data','economy'), 'economy');
+  const config = {dataDir:plan.coreDirectory,companionId:plan.companionId,scopeId:plan.scopeId,ownerActorId:plan.ownerActorId,
+    ...(plan.configuredMemoryDirectory === undefined ? {} : {memory:{dataDir:plan.configuredMemoryDirectory}})};
+  const binding = backupBinding(config, plan.repo, plan.workspaceId);
+  assert.equal(binding.storageId, plan.storageId, 'Core storage binding changed after backup planning');
+  assert.equal(boundMemoryDirectory(config, binding) ?? undefined, plan.memoryDirectory, 'Memory binding changed after backup planning');
   if (plan.memoryDirectory) assertStopped(plan.memoryDirectory, 'memory');
+  assertRetainedMemoryStopped(plan);
+}
+
+// Disabled/retained Banks are still replaced with their containing data tree.
+// Recognize only the Memory namespace, Bank layout or upstream owner signature;
+// an arbitrary package's runtime/service.json remains ordinary backed-up data.
+function assertRetainedMemoryStopped(plan) {
+  const managed = join(plan.repo,'.chatpet');
+  const known = new Set([join(managed,'data','memory'), plan.memoryDirectory].filter(Boolean));
+  for (const name of json(join(managed,'manifest.json')).files) {
+    if (name.endsWith('/data/memory.db')) known.add(dirname(dirname(join(managed,name))));
+  }
+  function visit(path) {
+    const stat = lstatSync(path,{throwIfNoEntry:false});
+    if (!stat) return;
+    assert.ok(!stat.isSymbolicLink(), 'Symlink is not supported during backup: ' + path);
+    if (!stat.isDirectory()) return;
+    if (path.endsWith(sep+'runtime')) {
+      const owner = join(path,'service.json'), ownerStat = lstatSync(owner,{throwIfNoEntry:false});
+      if (ownerStat) {
+        const directory = dirname(path);
+        let memory = known.has(directory) || existsSync(join(directory,'data','memory.db'));
+        if (!memory && ownerStat.isFile() && !ownerStat.isSymbolicLink()) {
+          try {memory = json(owner)?.token_env === 'DSH_MEMORY_TOKEN';}
+          catch (error) {if (!(error instanceof SyntaxError)) throw error;}
+        }
+        if (memory) {
+          assert.ok(ownerStat.isFile() && !ownerStat.isSymbolicLink(), 'Invalid Memory owner file: ' + owner);
+          assertStopped(directory,'memory');
+        }
+      }
+    }
+    for (const name of readdirSync(path)) visit(join(path,name));
+  }
+  for (const root of plan.roots) if (root.mode === 'replace') visit(root.path);
 }
 function packageFingerprint(directory) {
   if (!existsSync(directory)) return null;
@@ -221,7 +286,7 @@ export function verifyOfflineBackup(directory, plan) {
     }
     if (!known.has(root.id) && root.id.startsWith('sessions-')) {
       const id = Object.keys(manifest.workspace.entries).find(id => 'sessions-' + segment(id) === root.id);
-      assert.ok(id && (id === plan.workspaceId || inside(plan.channelsDirectory, manifest.workspace.entries[id].path)), 'Backup native workspace is outside this companion');
+      assert.ok(id && (id === plan.workspaceId || channelWorkspace(plan,manifest.workspace.entries[id].path)), 'Backup native workspace is outside this companion');
       known.set(root.id, {id: root.id, path: join(plan.sessionsDirectory, projectKey(manifest.workspace.entries[id].path)), mode: 'replace'});
     }
     assert.deepEqual({id:root.id,path:root.path,mode:root.mode}, known.get(root.id), 'Backup paths differ from current trusted bindings');
@@ -249,9 +314,12 @@ const slash = name => name.split(sep).join('/');
 function reconcileRequired(path) {
   throw new Error(`Current external outcome/quota journal is missing: ${path}. Reconcile actual deliveries and spent quota before recovery; backup-only queues will not be re-enabled.`);
 }
-function preserveChannelJournals(current, staged, saved) {
+function preserveChannelJournals(current, staged, saved, prefix='', label='channels/') {
   const currentFiles = fileHashes(current), savedFiles = saved.hashes;
-  const names = [...new Set([...Object.keys(currentFiles),...Object.keys(savedFiles)].filter(name => protectedChannelFile(slash(name))))];
+  const names = [...new Set([...Object.keys(currentFiles),...Object.keys(savedFiles)].filter(name => {
+    const normalized=slash(name);
+    return normalized.startsWith(prefix) && protectedChannelFile(normalized.slice(prefix.length));
+  }))];
   // A checkpoint can remove WAL/SHM, but never substitute an older outbox base.
   for (const name of names.filter(name => Object.hasOwn(savedFiles,name))) {
     const base = name.replace(/-(wal|shm|journal)$/,'');
@@ -265,7 +333,7 @@ function preserveChannelJournals(current, staged, saved) {
       cpSync(join(current,name),target,{errorOnExist:true,force:false});
     }
   }
-  return names.filter(name => Object.hasOwn(currentFiles,name)).map(name => 'channels/'+slash(name));
+  return names.filter(name => Object.hasOwn(currentFiles,name)).map(name => label+slash(name));
 }
 function readCoreJournals(file) {
   if (!existsSync(file)) return [];
@@ -341,6 +409,12 @@ export function restoreOfflineBackup(plan, directory, beforeDirectory, { probe =
     const channels=staged.find(({root})=>root.id==='channels');
     if(channels)preservedJournals.push(...preserveChannelJournals(
       backupFile(safety.manifest,safety.directory,plan.channelsDirectory),channels.path,channels.root));
+    // Portable channel journals now live inside the companion root, so the
+    // old device-only root scan cannot protect them from being rewound.
+    const companion=staged.find(({root})=>root.id==='companion');
+    if(companion)preservedJournals.push(...preserveChannelJournals(
+      backupFile(safety.manifest,safety.directory,join(plan.repo,'.chatpet')),companion.path,companion.root,
+      'data/channels/','companion/'));
     const core=join(plan.coreDirectory,'core.sqlite'), life=join(plan.repo,'.chatpet','data','life','life.json');
     preservedJournals.push(...preserveCoreJournals(backupFile(safety.manifest,safety.directory,core),stagedFile(staged,core)));
     preservedJournals.push(...preserveSpend(backupFile(safety.manifest,safety.directory,life),stagedFile(staged,life)));

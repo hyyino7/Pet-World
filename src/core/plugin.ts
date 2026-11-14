@@ -2,48 +2,48 @@ import { installNativeTranscripts } from './native-transcripts.js';
 import { createWorldService, type PetWorld } from '../world/service.js';
 import { CONTRACT_VERSION } from '../contracts/version.js';
 import type { Context } from '@deepseek-ai/cordis';
-import { DshDriver } from './dsh-driver.js';
 import { createCore, type CoreConfig, type PetCoreHost } from './index.js';
 import { apply as installNativeAdapter } from './agent.js';
+import { registerAlbumTools } from '../life/album-tools.js';
 
 export const name = '00-Core';
 export const inject = ['agents', 'agentLoop', 'sessions', 'sessionPersistence', 'systemPrompt', 'tools'];
-export interface Config extends CoreConfig { cwd: string; provider?: string; model?: string; maxOutputTokens?: number }
+export type Config = CoreConfig;
 declare module '@deepseek-ai/cordis' {
   interface Context { petCore: PetCoreHost; petWorld: PetWorld }
   interface Events {
     /** Advisory invalidation after commit; query the owner service for actual state. */
     'pet/core.changed'(operation: string, observation: unknown): void;
-    /** Fresh current-boot result only. History must use Core/Memory eligibility. */
-    'pet/conversation.presented'(message: import('../contracts/core.js').ConversationMessage): void;
-    'pet/matter.progress'(progress: import('../contracts/core.js').CommitmentProgress): void;
   }
 }
 export async function apply(ctx: Context, config: Config): Promise<void> {
   // No profile/account discovery or implicit installation. Paths and model route are host config.
-  const host = createCore(config, new DshDriver(ctx, config));
+  const host = createCore(config);
   host.native.memoryEnabledForNewSessions = false;
-  // Reconcile the saved target on trusted plugin startup. Library construction
-  // alone never creates repository files. Invalid existing content is preserved.
+  // Startup only inspects the saved binding. Missing documents are prepared by
+  // the owner's explicit initialization action, never restored by a restart.
   const prefs = await host.services.preferences.read(host.operator.request('startup.preferences'), {});
   if (prefs.ok && prefs.value.workspace) {
-    const initialized = await host.services.workspace.initialize(host.operator.request(`startup.workspace.v2:${prefs.value.revision}`), {
-      expectedPreferencesRevision: prefs.value.revision,
-    });
-    if (!initialized.ok) ctx.logger(name).warn('Managed workspace is unavailable; inspect the binding and repository files');
+    const inspected = await host.services.workspace.inspect(host.operator.request('startup.workspace.inspect'), {});
+    if (!inspected.ok || inspected.value.state !== 'ready')
+      ctx.logger(name).warn('Managed workspace needs initialization; use the workspace settings to prepare it explicitly');
   }
-  host.observeFreshReplies(message => ctx.emit('pet/conversation.presented', message));
-  host.observeProgress(progress => ctx.emit('pet/matter.progress', progress));
   host.observe((operation, observation) => {
     ctx.emit('pet/core.changed', operation, observation);
-    if (operation === 'receiveMessage' || operation === 'resumeFromQuiescence')
-      void host.drain().catch(error => ctx.logger(name).warn('Core drain failed', error));
   });
   ctx.effect(() => {
     ctx.provide('petCore', host);
     const registry = ctx as unknown as { get(name: 'workspaceRegistry'): Parameters<PetCoreHost['workspace']['sessionStatus']>[1] };
     const world = createWorldService(host, () => registry.get('workspaceRegistry'));
     ctx.provide('petWorld', world);
+    host.records.connect(id => registry.get('workspaceRegistry')?.get(id));
+    registerAlbumTools(ctx,host,agent => {
+      const status = host.workspace.status();
+      if (status.state !== 'ready' || !status.target ||
+        agent.session.header.agentPreset === 'chatpet-channel-guest' || ctx.get('petRoom')?.watching(agent.id) ||
+        world.sessionStatus(agent.session)?.state !== 'ready' || ctx.get('petLife')?.isHome(agent.id)) return;
+      return host.records.getLibrary(status.target.id);
+    });
     const transcripts=installNativeTranscripts(ctx, host);
     const stopAdapter=installNativeAdapter(ctx, host, world);
     const stopBatch=world.modules.compaction.installMemoryBatch(ctx, host);
@@ -52,6 +52,8 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
     runtime.capabilities = () => {
       const rows = coreCapabilities();
       const bound = host.workspace.status().state === 'ready';
+      const conversation=rows.find(row=>row.id==='core.conversation');
+      if(conversation)Object.assign(conversation,{state:bound?'ready':'unavailable',reason:bound?'Native DSH owns ordinary conversation execution':'Bind a workspace to use the companion',supportedOperations:bound?['native-chat']:[]});
       const running = ctx.get('petDesktop')?.status().running ?? false;
       for (const row of rows) {
         if (row.id !== 'desktop.presentation' && row.id !== 'desktop.body') continue;
@@ -87,7 +89,7 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
           reason: !bound ? 'Bind a workspace to use speech' : hear ? null : 'Speech recognition provider is unavailable',
           supportedOperations: !bound ? [] : hear ? ['speak', 'hear'] : ['speak']});
       }
-      if(memory && host.native.memory && !ctx.get('petMemory')) Object.assign(memory,{state:'disabled',reason:'Memory is off for new conversations; existing conversations retain their original mode'});
+      if(memory && host.native.memory && !ctx.get('petMemory')) Object.assign(memory,{state:'disabled',reason:'Memory is off for the next turn in every conversation; retained Bank and native logs remain'});
       const expression = bound && (ctx.get('petEmotion')?.catalog.actions.length ?? 0) > 0;
       rows.push({ id: 'emotion.expression', owner: 'emotion', contractVersion: CONTRACT_VERSION,
         state: expression ? 'ready' : 'unavailable', reason: expression ? null : 'Requires a bound workspace and expression assets',

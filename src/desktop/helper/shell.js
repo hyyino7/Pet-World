@@ -4,7 +4,7 @@
 // The host owns native chat, work eligibility and Emotion intent.
 void (async () => {
   const bridge = window.pet;
-  const [catalog, geometry, preferences, defaults] = await Promise.all([bridge.call('catalog'), bridge.call('geometry'), bridge.call('preferences'), fetch('../assets/interaction.json').then(r=>r.json())]);
+  const [catalog, geometry, preferences, defaults, identity] = await Promise.all([bridge.call('catalog'), bridge.call('geometry'), bridge.call('preferences'), fetch('../assets/interaction.json').then(r=>r.json()), bridge.call('identity')]);
   let settings = preferences;
   const notify = error => sprite.showWhisper(String(error.message ?? error), undefined, undefined, settings.desktopBubbleSeconds*1000, false);
   applyDeskGeometry(geometry);
@@ -25,7 +25,7 @@ void (async () => {
   const pool = group => catalog.actions.filter(asset => asset.group === group).map(asset => asset.id);
   const pet = {
     ...interaction,
-    id: 'dafeiyu', name: '大肥鱼', size: settings.desktopSize ?? 232,
+    id: 'dafeiyu', name: identity.displayName || '伙伴', size: settings.desktopSize ?? 232,
     fixedEnabled: settings.desktopFixed, balanceEnabled: true, whisperEnabled: true,
     workStatusEnabled: settings.desktopWorkStatusEnabled !== false,
   };
@@ -133,6 +133,7 @@ void (async () => {
     if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); void bridge.call('toggle'); }
   });
   bridge.listen((type, value) => {
+    if (type === 'identity') sprite.pet.name = value.displayName || '伙伴';
     if (type === 'preferences') {
       const appearanceChanged = JSON.stringify(settings.desktopAppearance) !== JSON.stringify(value.desktopAppearance);
       settings = value;

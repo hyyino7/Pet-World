@@ -144,6 +144,7 @@ export function migratePresentation(directory:string,prefs:CompanionSettings,inp
   const bodyId=primary?String(primary.id):'main',p=(key:string)=>['pets',bodyId,key];
   const candidates:Candidate[]=[];
   const add=(path:string[],value:unknown,legacyDefault:unknown,platformDefault:unknown,knownDefault?:unknown)=>{
+    if (pets.length === 0) return;
     if(value!==undefined)candidates.push({path,value,legacyDefault,platformDefault,knownDefault});
   };
   for(const [legacy,target] of [['desktopSize','size'],['desktopFixed','fixedEnabled'],['desktopWorkStatusEnabled','workStatusEnabled'],['desktopWhisperEnabled','whisperEnabled'],['desktopBalanceEnabled','balanceEnabled']] as const)

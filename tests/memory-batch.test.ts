@@ -6,15 +6,16 @@ import { join } from 'node:path';
 import type { Context } from '@deepseek-ai/cordis';
 import { createCore } from '../src/core/index.js';
 import { installMemoryBatch } from '../src/memory/batch.js';
+import { NativeMemory } from '../src/core/native-memory.js';
 
 test('idle batching retains a committed native summary for retry without a second inference', async t => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'pet-batch-'))), repo = join(root, 'repo'); mkdirSync(repo);
-  const host = createCore({dataDir:join(root,'core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fish',character:'Fixture'});
+  const host = createCore({dataDir:join(repo,'.chatpet/data/core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fish',character:'Fixture'});
   const unwrap = <T>(r: {ok:true;value:T}|{ok:false;error:unknown}) => { if(!r.ok) throw Error(JSON.stringify(r.error)); return r.value; };
   const prefs = unwrap(await host.services.preferences.read(host.operator.request('prefs'),{}));
   const saved = unwrap(await host.services.preferences.save(host.operator.request('bind'),{expectedRevision:prefs.revision,workspace:{id:'repo',path:repo,title:'Repo'},conversation:prefs.conversation}));
   unwrap(await host.services.workspace.initialize(host.operator.request('init'),{expectedPreferencesRevision:saved.revision}));
-  const previous = host.workspace.companionSettings();
+  const previous = host.workspace.companionConfiguration();
   unwrap(await host.services.workspace.saveCompanion(host.operator.request('settings'),{workspaceId:'repo',expectedSettings:previous,
     settings:{...previous,memorySummaryTurns:10,memorySummaryIdleMinutes:1,memorySummaryMinimumMinutes:0}}));
   let event!: (session: unknown, event: unknown) => void, dispose!: () => Promise<void>;
@@ -27,14 +28,19 @@ test('idle batching retains a committed native summary for retry without a secon
     if(name==='agentPresets') return {serviceFor:()=>engine};
   }, agents:{get:()=>agent}, on(_name:string,fn:typeof event) {event=fn;},effect(fn:()=>typeof dispose) {dispose=fn();},logger:()=>({warn(){}})};
   host.native.resolveScope=()=>({workspaceId:'repo',path:repo,storageId:host.workspace.storageId(),guest:false});
-  host.native.memory = {prepare:async()=>{},capture:async()=>{},close:async()=>{},connection:{validate:async()=>'eligible',call:async()=>{
+  const memory=new NativeMemory(host.workspace.runtime,{dataDir:join(repo,'.chatpet/data/memory'),python:'/unused/python'});
+  memory.connection.start=async()=>{};
+  memory.connection.validate=async()=>'eligible';
+  memory.connection.call=async<T>()=>{
     if(++writes===1) throw Error('Temporary provider outage');
-    return {id:'summary-42'};
-  }}} as unknown as NonNullable<typeof host.native.memory>;
+    return {id:'summary-42'} as T;
+  };
+  host.native.memory=memory;
   try {
     t.mock.timers.enable({apis:['Date','setInterval'],now:1_800_000_000_000});
     host.workspace.runtime.store.put('native-session-sources','session',['owner-source']);
     host.workspace.runtime.store.put('memory-source-work','owner-source',{workspaceId:host.workspace.storageId(),state:'acknowledged'});
+    host.workspace.runtime.store.put('memory-ack','owner-source',{sourceId:'owner-source',observationId:'already-observed'});
     installMemoryBatch(ctx as unknown as Context,host);
     event(session,{type:'turn/end',time:Date.now(),data:{turn:1,reason:{kind:'completed'}}});
     t.mock.timers.tick(59_000); await new Promise(resolve=>setImmediate(resolve));

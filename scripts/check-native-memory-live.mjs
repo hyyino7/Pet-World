@@ -33,7 +33,7 @@ assert.equal(configured?.model, 'deepseek-flash');
 assert.ok(existsSync(join(packageRoot, 'src/memory/main.py')), 'Install/review the current candidate before this live check');
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 for (const name of ['dist/src/core/native-memory.js', 'dist/src/core/native.js', 'dist/src/core/agent.js',
-  'dist/src/core/execution.js', 'dist/src/memory/client.js', 'src/memory/provider.py', 'src/memory/main.py',
+  'dist/src/core/runtime.js', 'dist/src/memory/client.js', 'src/memory/provider.py', 'src/memory/main.py',
   'vendor/mnemosyne/service/src/cognitive_memory/domain/models.py',
   'vendor/mnemosyne/service/src/cognitive_memory/core/service.py', 'vendor/mnemosyne/service/src/cognitive_memory/evidence/derivation.py'])
   assert.equal(hash(join(packageRoot, name)), hash(join(repoRoot, name)), `Installed/source drift: ${name}`);
@@ -217,7 +217,7 @@ const { PluginPackages, createRuntimeResolution } = await load('dsh-app-boot');
 await ctx.plugin(PluginPackages, { resolution: await createRuntimeResolution({
   installAnchor: join(app, 'Resources/app.asar/dsh/package.json'), home,
 }) });
-const { nativeResult } = await import(pathToFileURL(join(packageRoot, 'dist/src/core/dsh-driver.js')).href);
+const { nativeResult } = await import(pathToFileURL(join(packageRoot, 'dist/src/core/native-result.js')).href);
 const { DEFAULT_CONVERSATION } = await import(pathToFileURL(join(packageRoot, 'dist/src/core/options.js')).href);
 async function open() {
   const handle = await ctx.agents.create({ sessionId: `live-${randomUUID()}`, meta: { cwd: root, agentPreset: 'standard' },
@@ -338,7 +338,6 @@ try {
       const greeting = await send(await open(), 'greeting-only-cross-session-continuity', '你好');
       assert.ok(/青铜望远镜/.test(greeting), 'Greeting-only continuation lost the recent cross-session agreement');
       report.memoryRepairEvidence.greetingOnlyContinuation = true;
-      assert.equal(unwrap(await host.services.core.listCommitments(request(), { limit: 20 })).items.length, 0);
       report.status = 'pass-live';
     } else if (presentationCheck) {
       ctx.tools.guard(exec => guardContinuationReads(root, exec));
@@ -350,7 +349,6 @@ try {
         const chat = await open();
         await send(chat, 'ordinary-chat-without-no-task-hint', '今天事情特别多，有点烦，想歇一会儿。');
         assert.ok(!chat.agent.session.snapshotEvents().some(event => event.type === 'tool/call' && event.data.name === 'pet_matter_create'), 'Ordinary chat attempted to create a matter without an assigned outcome');
-        assert.equal(unwrap(await host.services.core.listCommitments(request(), { limit: 20 })).items.length, 0);
       }
       report.status = 'pass-live';
     } else if (experienceCheck) {
@@ -384,7 +382,6 @@ try {
       const after = (await host.native.memory.connection.call('recall', { query: '', limit: 50 })).records;
       assert.ok(after.some(r => r.memory.type === 'semantic' && cityPattern.test(r.memory.content)));
       await send(await open(), 'after-forget-natural-recall', '我现在住哪？你还知道我偏好哪种货币做报价比较吗？不知道就直接说不知道。');
-      assert.equal(unwrap(await host.services.core.listCommitments(request(), { limit: 20 })).items.length, 0);
       report.status = 'pass-live';
       report.experienceEvidence.noMattersCreated = true;
     } else if (resumeCaptureRepair || recheckReuse) {
@@ -392,9 +389,6 @@ try {
       const completed = previousReport.cases.find(c => c.label === 'supplied-material-help' && c.outcome.state === 'completed');
       const source = host.native.runtime.store.all('source').find(source => source.origin === 'model_interpretation' && source.text === completed.outcome.text);
       assert.ok(source?.sourceId.startsWith('result:native:'), 'Only the observed completed native result may be reconciled');
-      const execution = host.native.runtime.store.require('execution', source.sourceId.slice('result:'.length));
-      const activity = host.native.runtime.store.require('activity', execution.activityId);
-      assert.equal(activity.receipt.state, 'completed');
       // Explicit repair of this approved synthetic scene only. General startup
       // continues to refuse backfill of pre-install personal history.
       host.native.runtime.store.put('memory-source-work', source.sourceId, { sourceId: source.sourceId,
@@ -404,7 +398,6 @@ try {
       const conclusion = await send(continued, recheckReuse ? 'upstream-reuse-help-continuation' : 'repaired-help-continuation', '继续之前的方案比较，哪个更便宜、哪个交期更短，各差多少？请给出文件来源，不建立事项。');
       assert.ok(conclusion.includes('青杉') && conclusion.includes('白鹭') && conclusion.includes('3'));
       assert.ok(!conclusion.includes('绿茶') && !conclusion.includes('咖啡'), 'Forgotten preference revived');
-      assert.equal(unwrap(await host.services.core.listCommitments(request(), { limit: 20 })).items.length, 0);
       report.status = 'pass-live';
     } else {
     const first = await open();
@@ -433,7 +426,6 @@ try {
     const continued = await open();
     const conclusion = await send(continued, 'new-session-help-continuation', '继续之前的方案比较，哪个更便宜、哪个交期更短，各差多少？请给出文件来源。');
     assert.ok(conclusion.includes('青杉') && conclusion.includes('白鹭') && conclusion.includes('3'));
-    assert.equal(unwrap(await host.services.core.listCommitments(request(), { limit: 20 })).items.length, 0);
     report.status = 'pass-live';
     }
   }

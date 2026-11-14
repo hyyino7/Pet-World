@@ -1,6 +1,6 @@
 'use strict';
 // Isolated framed presentation process, following the existing Desktop helper.
-const {app,BrowserWindow,ipcMain,desktopCapturer,dialog}=require('electron');
+const {app,BrowserWindow,ipcMain,desktopCapturer,dialog,powerMonitor}=require('electron');
 const {createInterface}=require('node:readline');
 const {mkdtempSync,rmSync}=require('node:fs');
 const {join}=require('node:path');
@@ -10,10 +10,16 @@ const parsed=new URL(url);
 if(!['http:','https:'].includes(parsed.protocol)||!['localhost','127.0.0.1','[::1]'].includes(parsed.hostname)||parsed.pathname!=='/chatpet-room/index.html')throw Error('Invalid Room origin');
 const endpoints=new Set(['roomState','roomAction','roomGarden','roomPlant','roomCare','roomChat','roomTelevision','roomHistory','roomVoice']);
 const profile=mkdtempSync(join(tmpdir(),'chatpet-room-window-'));app.setPath('userData',profile);
-let win,sequence=0,quitting=false;
+let win,sequence=0,quitting=false,locked=false,suspended=false,visibilityRevision=0;
 const pending=new Map();
 const out=value=>process.stdout.write(JSON.stringify(value)+'\n');
 function owned(event){return !quitting&&win&&!win.isDestroyed()&&event.sender===win.webContents&&event.senderFrame===event.sender.mainFrame&&event.senderFrame.url===url;}
+function visibility(){return {visible:Boolean(!quitting&&!locked&&!suspended&&win&&!win.isDestroyed()&&win.isVisible()&&!win.isMinimized()),revision:visibilityRevision};}
+function publishVisibility(){
+  visibilityRevision++;
+  if(win&&!win.isDestroyed())win.webContents.send('chatpet-room:visibility',visibility());
+}
+ipcMain.handle('chatpet-room:visibility',event=>{if(!owned(event))throw Error('Invalid Room window');return visibility();});
 ipcMain.handle('chatpet-room:request',(event,endpoint,data,requestId)=>{
   if(!owned(event)||!endpoints.has(endpoint)||!data||typeof data!=='object'||Array.isArray(data)||typeof requestId!=='string'||!requestId||requestId.length>160)throw Error('Invalid Room request');
   const id=++sequence;
@@ -43,8 +49,14 @@ app.on('quit',()=>{try{rmSync(profile,{recursive:true,force:true});}catch{}});
 app.on('window-all-closed',()=>app.quit());
 app.whenReady().then(async()=>{
   app.dock?.hide();
-  win=new BrowserWindow({title:'大肥鱼的房间',width:1280,height:900,minWidth:800,minHeight:560,show:false,
+  locked=powerMonitor.getSystemIdleState?.(1)==='locked';
+  win=new BrowserWindow({title:'伙伴的房间',width:1280,height:900,minWidth:800,minHeight:560,show:false,
     webPreferences:{preload:join(__dirname,'window-preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,spellcheck:false}});
+  for(const event of ['show','hide','minimize','restore'])win.on(event,publishVisibility);
+  powerMonitor.on('lock-screen',()=>{locked=true;publishVisibility();});
+  powerMonitor.on('unlock-screen',()=>{locked=false;publishVisibility();});
+  powerMonitor.on('suspend',()=>{suspended=true;publishVisibility();});
+  powerMonitor.on('resume',()=>{suspended=false;publishVisibility();});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',event=>event.preventDefault());
   const session=win.webContents.session;

@@ -19,9 +19,10 @@ import { worldPath } from "../worldRoutes.js";
 export function createWechatModule(deps) {
     const path = worldPath(deps.worldId ?? 'default') + '/wechat/ask';
     const token = randomBytes(32).toString('hex');
-    const stickerDir = join(dirname(deps.file), 'stickers');
+    const dataDirectory = deps.dataDirectory ?? dirname(deps.file);
+    const stickerDir = join(dataDirectory, 'stickers');
     const stickers = createStickerLibrary(stickerDir);
-    const sending = createWechatSending({ ...deps, file: join(dirname(deps.file), 'wechat-outbox.sqlite'), worldId: deps.worldId ?? 'default', hasSticker: id => stickers.has(id) });
+    const sending = createWechatSending({ ...deps, file: join(dataDirectory, 'wechat-outbox.sqlite'), worldId: deps.worldId ?? 'default', hasSticker: id => stickers.has(id) });
     const reading = createWechatReading({ target: sending.target, images: (identity, context) => {
             if (!deps.incomingDir)
                 throw new Error('Group image directory is unavailable');

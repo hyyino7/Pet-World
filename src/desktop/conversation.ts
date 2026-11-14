@@ -33,7 +33,10 @@ export interface NativeDesktopHost {
     archiveSession(id: string): Promise<unknown>;
   };
 }
-export interface Binding { id: string; path: string }
+export interface Binding { id: string; path: string; storageId?: string }
+export function sameBinding(a: Binding, b: Binding) {
+  return a.id === b.id && a.path === b.path && a.storageId === b.storageId;
+}
 interface DesktopCommand {
   sessionId?: string; workspaceId?: string; turn?: number; text?: string; requestId?: string; image?: {data:string;mediaType:string};
 }
@@ -66,6 +69,7 @@ export class Conversation {
   private attempt?: { id: string; turn?: number; step?: number; text: string; next: number };
   private tail: Promise<unknown> = Promise.resolve();
   private pending = false;
+  private revision = 0;
   // Native cancellation may abandon the stream before appending an assistant message.
   // Preserve the last visible text in this window session without changing DSH history.
   private readonly stoppedText = new Map<number, { text: string; step?: number }>();
@@ -74,6 +78,11 @@ export class Conversation {
     private changed: () => void) {}
 
   get id() { return this.active?.id; }
+  /** Closing a view revokes its queued/in-flight commands, not the native chat. */
+  invalidate() {
+    this.revision++; this.active = undefined; this.attempt = undefined;
+    this.pending = false; this.stoppedText.clear();
+  }
   frame(session: NativeSession, frame: StreamFrame) {
     if (session.id !== this.id) return;
     if (frame.type === 'start') this.attempt = { id: frame.attemptId, turn: frame.turn, step: frame.step, text: '', next: 0 };
@@ -94,7 +103,7 @@ export class Conversation {
   }
   snapshot() {
     const binding = this.binding(), active = this.active;
-    if (!active || active.binding.id !== binding.id || active.binding.path !== binding.path) return { workspaceId: binding.id, sessionId: null, messages: [], turn: null, generating: false, live: '' };
+    if (!active || !sameBinding(active.binding, binding)) return { workspaceId: binding.id, sessionId: null, messages: [], turn: null, generating: false, live: '' };
     const events = active.session.snapshotEvents();
     const state = project(events);
     for (const [turn, entry] of this.stoppedText) {
@@ -108,37 +117,54 @@ export class Conversation {
       live: state.turn !== null && this.attempt?.turn === state.turn ? this.attempt.text : '' };
   }
   run(action: DesktopAction, input: DesktopCommand) {
-    const job = this.tail.then(() => this.execute(action, input));
+    let binding: Binding;
+    try { binding = {...this.binding()}; } catch (error) { return Promise.reject(error); }
+    const revision = this.revision;
+    const job = this.tail.then(() => this.execute(action, input, binding, revision));
     this.tail = job.catch(() => {});
     return job;
   }
-  private async execute(action: DesktopAction, input: DesktopCommand) {
+  private current(binding: Binding, revision: number, id?: string) {
+    if (revision !== this.revision) throw Error('小窗已关闭，操作已取消');
+    if (!sameBinding(binding, this.binding())) throw Error('工作区已切换，操作已取消');
+    const ws = this.native.workspaceRegistry.get(binding.id);
+    if (!ws || ws.path !== binding.path) throw Error('工作区已切换，请重新打开小窗');
+    if (id && (!ws.sessionIds.includes(id) || this.native.workspaceRegistry.archivedSessionIds.includes(id))) throw Error('该会话不属于当前工作区或已归档');
+    return ws;
+  }
+  private async execute(action: DesktopAction, input: DesktopCommand, binding: Binding, revision: number) {
+    this.current(binding, revision);
     await this.native.prepareWorkspace?.();
-    const binding = this.binding(), n = this.native;
-    const ws = n.workspaceRegistry.get(binding.id);
-    if (!ws || ws.path !== binding.path || (input.workspaceId && input.workspaceId !== binding.id)) throw Error('工作区已切换，请重新打开小窗');
-    let id = this.saved(binding.id);
+    const ws = this.current(binding, revision), n = this.native, key = binding.storageId ?? binding.id;
+    if (input.workspaceId && input.workspaceId !== binding.id) throw Error('工作区已切换，请重新打开小窗');
+    let id = this.saved(key), associate = false;
     if (id && (!ws.sessionIds.includes(id) || n.workspaceRegistry.archivedSessionIds.includes(id))) id = undefined;
     if (action === 'open' && input.sessionId) {
       if (!ws.sessionIds.includes(input.sessionId) || n.workspaceRegistry.archivedSessionIds.includes(input.sessionId)) throw Error('该会话不属于当前工作区或已归档');
-      id = input.sessionId; this.save(binding.id, id);
+      id = input.sessionId; associate = true;
     }
     if (action !== 'open' && (!id || id !== input.sessionId)) throw Error('会话已改变，请重新打开小窗');
     if (action === 'new' && id) {
       if (this.snapshot().generating || n.agents.get(id)?.status === 'running') throw Error('请先停止或等回复完成');
       const session = n.agents.get(id)?.session;
-      if (session && await n.sessions.flush(session) === false) throw Error('会话记录暂未保存，请稍后再新建会话');
-      await n.workspaceRegistry.archiveSession(id); id = undefined;
+      if (session) {
+        const saved = await n.sessions.flush(session);
+        this.current(binding, revision, id);
+        if (saved === false) throw Error('会话记录暂未保存，请稍后再新建会话');
+      }
+      await n.workspaceRegistry.archiveSession(id);
+      this.current(binding, revision); id = undefined;
     }
     if (!id) {
       id = (await n.sessionController.create({ workspaceId: binding.id, sessionId: 'chatpet-' + randomUUID() })).sessionId;
-      this.save(binding.id, id);
+      this.current(binding, revision, id); associate = true;
     }
     const { agent, error } = await n.sessionController.resolveAgent(id);
+    this.current(binding, revision, id);
     if (error) throw error;
-    const now = this.binding();
-    if (!agent || agent.session.header.cwd !== now.path || binding.id !== now.id || binding.path !== now.path)
+    if (!agent || agent.session.id !== id || agent.session.header.cwd !== binding.path)
       throw Error('当前会话不属于绑定工作区');
+    if (associate) this.save(key, id);
     if (this.active?.id !== id) { this.attempt = undefined; this.pending = false; this.stoppedText.clear(); }
     this.active = { id, binding, session: agent.session };
     if (action === 'send') {
@@ -151,8 +177,7 @@ export class Conversation {
         try {
           const content = input.image ? await n.admitImage?.(input.image) : [];
           if (input.image && !content) throw Error('原生图片附件服务暂不可用');
-          const current = this.binding();
-          if (current.id !== binding.id || current.path !== binding.path) throw Error('工作区已切换');
+          this.current(binding, revision, id);
           agent.followup(createUserMessage({ content: [...(text ? [{ type: 'text' as const, text }] : []), ...(content ?? [])], source: { kind: 'user', rpcId: input.requestId } })); }
         catch (cause) { this.pending = false; throw cause; }
       }

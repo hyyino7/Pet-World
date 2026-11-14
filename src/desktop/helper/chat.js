@@ -1,10 +1,19 @@
 'use strict';
 // Compact native send, IME composition and reopen behavior adapted from dsh-chatbot (MIT).
 const bridge = window.pet, $ = id => document.getElementById(id);
+function showIdentity(value) {
+    const name = typeof value?.displayName === 'string' && value.displayName ? value.displayName : '伙伴';
+    $('companion-name').textContent = name;
+    document.title = name + '聊天';
+    $('input').setAttribute('aria-label', '给' + name + '发消息');
+}
+void bridge.call('identity').then(showIdentity).catch(() => {});
 let state, pending = false, composition = false, compositionEnded = -Infinity, catalog, draftRequest;
 const stickers = new Map();
 let image = null, encoding = false;
 let reading = 0;
+let microphone;
+const releaseVoice = () => { microphone?.dispose(); stopReading(); };
 function readReply(text, button) {
     const id = ++reading, session = state?.sessionId;
     let remaining = text;
@@ -41,7 +50,7 @@ function controls() {
 function row(text, cls) { const p = document.createElement('p'); p.className = cls; p.textContent = text; return p; }
 function render(next) {
     const history = $('history'), tail = history.scrollHeight - history.scrollTop - history.clientHeight < 48;
-    if (next.sessionId !== state?.sessionId) { stickers.clear(); stopReading(); }
+    if (next.sessionId !== state?.sessionId || next.workspaceId !== state?.workspaceId) { stickers.clear(); releaseVoice(); }
     state = next;
     const messages = state.messages || [], nodes = [];
     for (let i = 0; i < messages.length; i++) {
@@ -73,6 +82,7 @@ function render(next) {
 async function act(action, fields = {}) {
     if (pending)
         return;
+    if (action === 'new' || action === 'open' || action === 'send') releaseVoice();
     pending = true;
     controls();
     errors('');
@@ -96,6 +106,7 @@ async function act(action, fields = {}) {
     }
 }
 bridge.listen((type, value) => {
+    if (type === 'identity') {showIdentity(value);return;}
     if (type === 'attachment') {setImage(value);return;}
     if (type === 'open')
         void act('open');
@@ -133,17 +144,18 @@ $('composer').addEventListener('submit', e => {
 $('input').addEventListener('input', controls);
 $('stop').onclick = () => act('stop', { turn: state?.turn });
 $('fresh').onclick = () => act('new');
-$('hide').onclick = () => bridge.call('hide');
+$('hide').onclick = () => { releaseVoice(); return bridge.call('hide'); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !composition && !e.isComposing)
-    void bridge.call('hide'); });
+    { releaseVoice(); void bridge.call('hide'); } });
 controls();
 
 const voiceBase = 'dsh-pet-bridge://dsh-pet/dsh-pet-7340';
 window.PetShared.setVoiceBase(voiceBase);
-const microphone = window.PetShared.createHearControl({micBtn:$('mic'), input:$('input'), hearUrl:voiceBase + '/voice/hear',
+microphone = window.PetShared.createHearControl({micBtn:$('mic'), input:$('input'), hearUrl:voiceBase + '/voice/hear',
+    active:() => !document.hidden && !!state?.sessionId && !pending,
     hint:{show:errors, flash:errors, hide:() => errors('')}, resizeInput:controls});
-document.addEventListener('visibilitychange', () => { if (document.hidden) { microphone.dispose(); stopReading(); } });
-window.addEventListener('pagehide', () => microphone.dispose(), {once:true});
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseVoice(); });
+window.addEventListener('pagehide', releaseVoice, {once:true});
 $('pick-image').onclick=()=>{if(!state?.generating)$('image-file').click();};
 $('image-file').onchange=()=>{void imageFile($('image-file').files[0]);$('image-file').value='';};
 $('remove-image').onclick=()=>setImage(null);

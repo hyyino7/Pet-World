@@ -2,12 +2,21 @@
 //
 // 只做表现：切片段、交叉淡入、脚下阴影、朝向相机。行为由 home-state.js 决定。
 import * as THREE from './vendor/three.module.js';
+import { animationAssets } from './animation-map.js';
 
 // 有些原始走路片段开头是站立/起步前摇。循环时从 trim 点开始，
 // 避免角色已经在移动、画面却还站着滑一段。
 const LOOP_TRIM = Object.freeze({ run_happy: 0.90 });
 
 export const CLIPS = Object.freeze({
+  'life-drink':'assets/pet/life-drink.webm',
+  'life-read':'assets/pet/life-read.webm',
+  'life-garden-till':'assets/pet/life-garden-till.webm',
+  'life-garden-plant':'assets/pet/life-garden-plant.webm',
+  'life-garden-water':'assets/pet/life-garden-water.webm',
+  'life-garden-fertilize':'assets/pet/life-garden-fertilize.webm',
+  'life-garden-harvest':'assets/pet/life-garden-harvest.webm',
+  'life-trade':'assets/pet/life-trade.webm',
   idle: 'assets/pet/idle.webm',
   idle_look: 'assets/pet/idle_look.webm',
   idle_hum: 'assets/pet/idle_hum.webm',
@@ -32,6 +41,7 @@ export const CLIPS = Object.freeze({
   mooncake: 'assets/pet/mooncake.webm',
   kite: 'assets/pet/kite.webm',
   react_happy: 'assets/pet/react_happy.webm',
+  react_pout: 'assets/pet/react_pout.webm',
   react_shy: 'assets/pet/react_shy.webm',
   react_scare: 'assets/pet/react_scare.webm',
   stretch: 'assets/pet/stretch.webm',
@@ -41,10 +51,16 @@ export const CLIPS = Object.freeze({
   nap: 'assets/pet/nap.webm',
   curtsy: 'assets/pet/curtsy.webm',
   yawn: 'assets/pet/yawn.webm',
-  mutter: 'assets/pet/mutter.webm'
+  mutter: 'assets/pet/mutter.webm',
+  ...Object.fromEntries(Object.values(animationAssets).map(asset => [asset.roomClip, 'assets/pet/' + asset.roomClip + '.webm']))
 });
 
-const POSTER = Object.fromEntries(Object.keys(CLIPS).map((k) => [k, `assets/pet/${k}.png`]));
+const POSTER = Object.freeze({
+  ...Object.fromEntries(Object.keys(CLIPS).filter(key => !key.startsWith('mapped-')).map(key => [key, `assets/pet/${key}.png`])),
+  ...Object.fromEntries(Object.values(animationAssets).filter(asset => asset.posterFile).map(asset => [asset.roomClip, 'assets/pet/' + asset.roomClip + '.png'])),
+  back_idle: 'assets/pet/idle.png',
+  react_pout: 'assets/pet/idle.png'
+});
 const PLANE_W = 1.422;
 const PLANE_H = 1.6;
 const FEET_CENTER_Y = 0.667; // 角色脚底在画面 91.7% 高度处，保证脚踩在地面
@@ -99,6 +115,7 @@ class Layer {
     this.loadLog = [];
     this.fade = 0;
     this.target = 0;
+    this.suspended = false;
     scene.add(this.mesh);
   }
   load(src) {
@@ -115,26 +132,42 @@ class Layer {
     }
     this.src = src;
     this.mesh.visible = true;
-    const pending = new Promise((resolve) => {
-      let done = false;
-      const finish = () => { if (!done) { done = true; this.loadLog.push({ s: src, p: 'finish', rs: this.video.readyState }); resolve(); } };
+    const pending = new Promise((resolve, reject) => {
+      let done = false, timer;
+      const cleanup = () => {
+        this.video.removeEventListener('loadeddata', finish);
+        this.video.removeEventListener('canplay', finish);
+        this.video.removeEventListener('error', finish);
+        if (timer !== undefined) clearTimeout(timer);
+      };
+      const finish = () => { if (!done) {
+        done = true; cleanup();
+        this.loadLog.push({ s: src, p: 'finish', rs: this.video.readyState });
+        if (this.loadLog.length > 12) this.loadLog.shift();
+        resolve();
+      } };
       this.video.addEventListener('loadeddata', finish, { once: true });
       this.video.addEventListener('canplay', finish, { once: true });
       this.video.addEventListener('error', finish, { once: true });
-      this.video.src = src;
-      this.video.load();
-      // 离屏 video 不主动 play 时，部分 Chromium 会停在 readyState=0；
-      // muted 的 play 只是催加载，真正淡入仍等 setClip。
-      this.video.play().catch(() => {});
-      if (this.video.readyState >= 2) finish();
-      setTimeout(finish, 4500);
+      try {
+        this.video.src = src;
+        this.video.load();
+        // 离屏 video 不主动 play 时，部分 Chromium 会停在 readyState=0；
+        // muted 的 play 只是催加载，真正淡入仍等 setClip。
+        this.play();
+        if (this.video.readyState >= 2) finish();
+        if (!done) timer = setTimeout(finish, 4500);
+      } catch (error) {
+        if (!done) { done = true; cleanup(); reject(error); }
+      }
     });
     this._pendingLoad = pending;
-    pending.finally(() => { if (this._pendingLoad === pending) this._pendingLoad = null; });
+    const clear = () => { if (this._pendingLoad === pending) this._pendingLoad = null; };
+    pending.then(clear, clear);
     return pending;
   }
   play() {
-    this.video.play().catch(() => {});
+    if (!this.suspended) this.video.play().catch(() => {});
   }
   setTarget(v) { this.target = v; }
   tick(dt) {
@@ -142,11 +175,13 @@ class Layer {
       const step = dt * 1000 / FADE_MS;
       this.fade += Math.sign(this.target - this.fade) * Math.min(step, Math.abs(this.target - this.fade));
       this.material.opacity = this.fade;
-      if (this.fade <= 0.001) {
-        this.mesh.visible = false;
-        try { this.video.pause(); } catch { /* 忽略 */ }
-      } else this.mesh.visible = true;
     }
+    // Priming a pending load still needs play; a settled transparent layer
+    // must stop even when it was superseded before its fade ever began.
+    if (this.target === 0 && this.fade <= 0.001 && !this._pendingLoad) {
+      this.mesh.visible = false;
+      if (!this.video.paused) try { this.video.pause(); } catch { /* 忽略 */ }
+    } else if (this.fade > 0.001) this.mesh.visible = true;
   }
 }
 
@@ -165,6 +200,7 @@ export class SpriteActor {
     this.flip = false;
     this.ready = false;
     this.visible = true;
+    this.suspended = false;
     this.clipLog = [];
 
     // 脚下阴影：地面一份；坐/躺时再给接触面一份
@@ -216,15 +252,109 @@ export class SpriteActor {
     }
   }
 
-  async setClip(name, { once = false, fade = true, onEnded = null } = {}) {
+  /** Join the shared presentation timeline without choosing life goals. */
+  setPlayback(playback, sample, now = () => Date.now()) {
+    this.playback = playback;
+    this.playbackSampler = sample;
+    this.playbackNow = now;
+    this.refreshPlayback();
+  }
+
+  clearPlayback() {
+    this.clearPlaybackTimer();
+    this.playback = null;
+    this.playbackSampler = null;
+    this.clipPlaybackKey = null;
+    for (const layer of this.layers) { layer.playbackEndedKey = null; layer.playbackEndedVideo = null; }
+  }
+
+  clearPlaybackTimer() {
+    if (this.playbackTimer !== undefined) clearTimeout(this.playbackTimer);
+    this.playbackTimer = undefined;
+  }
+
+  playbackSample() {
+    return this.playback && this.playbackSampler?.(this.playback, this.playbackNow());
+  }
+
+  alignPlayback(layer, sample) {
+    layer.playbackMirror = sample.mirror === true;
+    if (layer.posterTexture) { layer.video.pause(); return; }
+    if (layer.playbackEndedKey && layer.playbackEndedKey === sample.key && sample.mode === 'once') {
+      layer.video.pause();
+      if (layer.video.readyState < 2) { layer.playbackEndedVideo = null; return; }
+      if (layer.playbackEndedVideo !== layer.video) {
+        const duration = Number(layer.video.duration);
+        if (Number.isFinite(duration)) try { layer.video.currentTime = Math.max(0,duration - .001); } catch { /* Metadata can still be pending. */ }
+        layer.playbackEndedVideo = layer.video;
+      }
+      return;
+    }
+    layer.playbackEndedKey = null;
+    layer.playbackEndedVideo = null;
+    const duration = Number(layer.video.duration);
+    const end = Number.isFinite(duration) ? Math.max(0, duration - 0.001) : Infinity;
+    try { layer.video.currentTime = Math.max(0, Math.min(end, sample.offsetMs / 1000)); } catch { /* Metadata can still be pending. */ }
+    if (sample.mode === 'static' || sample.complete) layer.video.pause();
+    else layer.play();
+  }
+
+  refreshPlayback(force = false) {
+    this.clearPlaybackTimer();
+    if (!this.playback || this.suspended || !this.visible) return;
+    const sample = this.playbackSample();
+    if (!sample) return;
+    if (this.clipPlaybackKey !== sample.key || this.current !== sample.roomClip) {
+      this.setClip(sample.roomClip, { once: sample.mode !== 'loop', playbackKey: sample.key,
+        sample: () => this.playbackSample(), onEnded: () => this.refreshPlayback(true) });
+    } else if (force || sample.complete || sample.mode === 'static') {
+      this.alignPlayback(this.layers[this.active], sample);
+    }
+    // A single boundary wakeup, never a background animation polling loop.
+    if (Number.isFinite(sample.nextInMs) && sample.nextInMs > 0) {
+      this.playbackTimer = setTimeout(() => this.refreshPlayback(true), Math.min(2147483647, sample.nextInMs));
+    }
+  }
+
+  async showPlaybackFallback(layer, name, generation) {
+    this.playbackFault = 'Animation unavailable: ' + name;
+    layer.playbackEndedKey = null;
+    layer.playbackEndedVideo = null;
+    for (const item of this.layers) item.video.pause();
+    try {
+      const texture = await new THREE.TextureLoader().loadAsync(POSTER[name] || POSTER.idle);
+      if (this.clipGeneration !== generation) { texture.dispose(); return; }
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = false;
+      layer.posterTexture?.dispose();
+      layer.posterTexture = texture;
+      layer.material.map = texture;
+      layer.material.needsUpdate = true;
+      layer.setTarget(1);
+      for (const item of this.layers) if (item !== layer) item.setTarget(0);
+    } catch { /* Keep the last still and factual activity label if the poster also fails. */ }
+  }
+
+  async setClip(name, { once = false, fade = true, onEnded = null, playbackKey = null, sample = null } = {}) {
     if (!CLIPS[name]) name = 'idle';
     this.clipLog.push({ n: name, p: 'start', cur: this.current, a: this.active });
     if (this.clipLog.length > 20) this.clipLog.shift();
-    if (this.current === name && !once) return;
+    if (this.current === name && this.clipPlaybackKey === playbackKey && (!once || playbackKey)) return;
+    const generation = this.clipGeneration = (this.clipGeneration || 0) + 1;
+    this.clipPlaybackKey = playbackKey;
     const nextIndex = 1 - this.active;
     const next = this.layers[nextIndex];
     const prev = this.layers[this.active];
+    next.posterTexture?.dispose();
+    next.posterTexture = null;
+    next.material.map = next.texture;
+    next.material.needsUpdate = true;
     next.mesh.visible = true;
+    next.playbackMirror = sample?.()?.mirror === true;
+    next.playbackEndedKey = null;
+    next.playbackEndedVideo = null;
     // 清掉这个图层上一轮留下的“跳过前摇后手动循环”监听，避免叠监听。
     if (next.video._trimEnded) {
       next.video.removeEventListener('ended', next.video._trimEnded);
@@ -233,14 +363,14 @@ export class SpriteActor {
     // 不在这里 await 视频：轮询/连续 setClip 时，等待会让 current 一直停在 idle。
     // 先把逻辑片段切过去，视频 ready 后再淡入；加载失败也不会卡住移动。
     const loaded = next.load(CLIPS[name]);
-    const trimStart = once ? 0 : (LOOP_TRIM[name] || 0);
+    const trimStart = once || playbackKey ? 0 : (LOOP_TRIM[name] || 0);
     next.video.loop = !once && !trimStart;
     if (trimStart) {
       // 不用 loop 属性：loop 会从 0 重播，前摇每次循环都会出现。
       const onTrimEnded = () => {
         if (this.current !== name) return;
         try { next.video.currentTime = trimStart; } catch { /* 还没元数据 */ }
-        next.video.play().catch(() => {});
+        next.play();
       };
       next.video.addEventListener('ended', onTrimEnded);
       next.video._trimEnded = onTrimEnded;
@@ -249,22 +379,51 @@ export class SpriteActor {
     next.fade = 0;
     next.material.opacity = 0;
     next.setTarget(0);
+    if (next.video._onceEnded) next.video.removeEventListener('ended', next.video._onceEnded);
     if (once) {
-      this.endedHandler = () => {
-        if (this.current === name) {
-          this.onEnded?.(name);
-          onEnded?.();
+      const clipVideo = next.video;
+      const ended = () => {
+        if (this.clipGeneration !== generation || this.current !== name || next.video !== clipVideo) return;
+        // Shared once clips hold or join their next visual segment. They do not
+        // complete a body operation or return to an independent idle chain.
+        if (playbackKey) {
+          const current = sample?.();
+          if (current?.key === playbackKey && current.mode === 'once' && next.playbackEndedKey !== playbackKey) {
+            next.playbackEndedKey = playbackKey; next.playbackEndedVideo = next.video;
+            next.video.pause();
+            const duration = Number(next.video.duration);
+            if (Number.isFinite(duration) && next.video.currentTime < duration - .001)
+              try { next.video.currentTime = Math.max(0,duration - .001); } catch { /* Keep the decoded final frame if seeking is unavailable. */ }
+          }
+          return;
         }
+        this.onEnded?.(name);
+        onEnded?.();
       };
-      next.video.addEventListener('ended', this.endedHandler, { once: true });
+      next.video._onceEnded = ended;
+      next.video.addEventListener('ended', ended, { once: true });
     }
+
     this.active = nextIndex;
     this.current = name;
     this._lastSwap = performance.now();
     loaded.then(() => {
-      if (this.current !== name) return;
-      try { next.video.currentTime = trimStart; } catch { /* 还没元数据 */ }
-      next.play();
+      if (this.clipGeneration !== generation || this.current !== name) return;
+      if (playbackKey && (next.video.readyState < 2 || next.video.error)) {
+        this.showPlaybackFallback(next, name, generation);
+        return;
+      }
+      this.playbackFault = null;
+      const current = sample?.();
+      if (playbackKey && (!current || current.key !== playbackKey || current.roomClip !== name)) {
+        this.refreshPlayback();
+        return;
+      }
+      if (current) this.alignPlayback(next, current);
+      else {
+        try { next.video.currentTime = trimStart; } catch { /* Metadata can still be pending. */ }
+        next.play();
+      }
       next.setTarget(1);
       if (fade) {
         prev.setTarget(0);
@@ -281,23 +440,38 @@ export class SpriteActor {
   }
 
   setVisible(v) {
+    const changed = this.visible !== v;
     this.visible = v;
     this.group.visible = v;
     this.floorShadow.visible = v;
     this.surfaceShadow.visible = v;
+    if (changed) this.setSuspended(this.suspended);
   }
 
-  update(dt, camera, { pos, elev = 0, walking = false, flip = false, faceCamera = true }) {
+  setSuspended(value) {
+    this.suspended = Boolean(value);
+    const suspended = this.suspended || !this.visible;
+    this.clearPlaybackTimer();
+    for (const layer of this.layers) {
+      layer.suspended = suspended;
+      if (suspended) layer.video.pause();
+      else if (!this.playback && (layer.target > 0 || layer.fade > 0)) layer.play();
+    }
+    if (suspended) for (const item of this._prefetch || []) item.el.pause();
+    else if (this.playback) this.refreshPlayback(true);
+  }
+
+  update(dt, camera, { pos, elev = 0, walking = false, flip = false, faceCamera = true, snap = false }) {
     this._time += dt;
     this._target.set(pos[0], pos[1]);
     const d = this._pos.distanceTo(this._target);
-    if (d > 2.2) this._pos.copy(this._target);
+    if (snap || d > 2.2) this._pos.copy(this._target);
     else {
       const k = 1 - Math.pow(0.001, dt);
       this._pos.lerp(this._target, Math.min(1, k * 1.4));
     }
     this._targetElev = elev;
-    this._elev += (this._targetElev - this._elev) * Math.min(1, dt * 7);
+    this._elev = snap ? this._targetElev : this._elev + (this._targetElev - this._elev) * Math.min(1, dt * 7);
     this._walking = walking;
 
     const bob = walking ? Math.abs(Math.sin(this._time * 7.2)) * 0.014 : Math.sin(this._time * 1.7) * 0.006;
@@ -307,9 +481,11 @@ export class SpriteActor {
       const dz = camera.position.z - this._pos.y;
       this.group.rotation.y = Math.atan2(dx, dz);
     }
-    this.flip = flip;
-    const sx = flip ? -1 : 1;
-    for (const l of this.layers) l.mesh.scale.x = sx;
+    this.flip = this.playback ? this.layers[this.active].playbackMirror === true : flip;
+    for (const layer of this.layers) {
+      const mirrored = this.playback ? layer.playbackMirror === true : flip;
+      layer.mesh.scale.x = mirrored ? -1 : 1;
+    }
     for (const l of this.layers) l.tick(dt);
 
     // 阴影
@@ -354,12 +530,19 @@ export class SpriteActor {
     const layer = this.layers[this.active];
     await layer.load(CLIPS[name] || CLIPS.idle);
     layer.video.pause();
-    layer.video.currentTime = seconds;
     await new Promise((resolve) => {
       let done = false;
-      const finish = () => { if (!done) { done = true; this.loadLog.push({ s: src, p: 'finish', rs: this.video.readyState }); resolve(); } };
+      let timer;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        layer.video.removeEventListener('seeked', finish);
+        resolve();
+      };
       layer.video.addEventListener('seeked', finish, { once: true });
-      setTimeout(finish, 1200);
+      timer = setTimeout(finish, 1200);
+      try { layer.video.currentTime = seconds; } catch { finish(); }
     });
     layer.video.pause();
     layer.material.opacity = 1;
@@ -368,8 +551,12 @@ export class SpriteActor {
   }
 
   dispose() {
+    this.clearPlaybackTimer();
+    this.clipGeneration = (this.clipGeneration || 0) + 1;
+    this.playback = null;
     for (const l of this.layers) {
       try { l.video.pause(); l.video.src = ''; } catch { /* 忽略 */ }
+      l.posterTexture?.dispose();
       l.texture.dispose();
       l.material.dispose();
       l.mesh.geometry.dispose();

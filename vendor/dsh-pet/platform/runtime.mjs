@@ -1079,6 +1079,7 @@ function mergeEntry(base, overlay, label, basePets, seenIds) {
 }
 /** pets 数组合并：文件没写/空 → 默认列表；逐实例合并（缺字段 → 内置默认 pets[0]，静默）。 */
 function mergePets(basePets, raw, label, seenIds) {
+	if (Array.isArray(raw) && raw.length === 0) return [];
 	const basePet = basePets[0] ?? {};
 	if (!Array.isArray(raw) || raw.length === 0) {
 		warnOnce(`${label}:pets`, `「${label}」的 pets 缺失或为空，已取默认宠物列表`);
@@ -1242,7 +1243,7 @@ function findPetInstance(merged, petId) {
 function saveUserConfig(raw, existing) {
 	const o = raw && typeof raw === "object" ? raw : {};
 	const arr = Array.isArray(o.pets) ? o.pets : null;
-	if (!arr || !arr.length) return null;
+	if (!arr) return null;
 	const out = [];
 	const seenIds = new Set();
 	for (const p of arr) {
@@ -1281,7 +1282,6 @@ function saveUserConfig(raw, existing) {
 		const persona = typeof rawPersona === "string" ? rawPersona.trim() : "";
 		const pet = {
 			id,
-			name: name$1,
 			size,
 			balanceEnabled,
 			whisperEnabled,
@@ -1294,7 +1294,8 @@ function saveUserConfig(raw, existing) {
 				marginY
 			}
 		};
-		if (persona) pet.whisperPrompt = persona;
+		const legacyIdentity = Array.isArray(existing?.pets) ? existing.pets.find(previous => previous?.id === id) : undefined;
+		for (const field of ["name", "whisperPrompt"]) if (legacyIdentity && Object.hasOwn(legacyIdentity, field)) pet[field] = legacyIdentity[field];
 		if (sizePercent !== void 0 && sizePercent !== null) pet.sizePercent = sizePercent;
 		out.push(pet);
 	}

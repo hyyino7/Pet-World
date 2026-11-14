@@ -1,7 +1,7 @@
 // 海风菜园：纯状态机。浏览器与服务端共享作物目录，时间及存档以服务端为准。
 // advanceGarden 不修改输入；水分只在实际生长时消耗，离线结算与逐次结算等价。
 const MINUTE = 60_000;
-const MAX_STOCK = 1_000_000_000;
+const MAX_STOCK = Number.MAX_SAFE_INTEGER;
 const EPSILON = 1e-10;
 
 export const GARDEN_RULES = Object.freeze({
@@ -25,6 +25,18 @@ export const CROPS = Object.freeze([
 ].map((crop) => Object.freeze(crop)));
 
 const CROP_BY_ID = new Map(CROPS.map((crop) => [crop.id, crop]));
+
+// The host supplies portable economy rules. Existing callers keep upstream defaults.
+export function gardenConfiguration(raw, explicit) {
+  const config = explicit || raw?.economyConfig;
+  if (!config) return {crops:CROPS,rules:GARDEN_RULES};
+  return {crops:config.crops || CROPS,rules:{...GARDEN_RULES,...config.rules,plotCount:8}};
+}
+function cropForPlot(plot, crops) {
+  const crop=crops.find(row=>row.id===plot.cropId);
+  return crop && plot.cropProfile ? {...crop,...plot.cropProfile} : crop;
+}
+
 const object = (value) => !!value && typeof value === 'object' && !Array.isArray(value);
 const finite = (value, fallback = 0) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -36,7 +48,7 @@ const cropStocks = (value, fallback = 0) => Object.fromEntries(CROPS.map((crop) 
 
 // Care metadata travels with every manual transaction. Completion receipts and
 // harvested inventory therefore share one atomic server save.
-export function normalizeGardenCare(raw = {}) {
+export function normalizeGardenCare(raw = {}, retainAllReceipts = false) {
   const clean = (v, n=160) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, '').slice(0,n) : '';
   const action = (v) => {
     if (!object(v) || !['till','plant','water','fertilize','harvest','sell','buySeed','buyCompost','visit'].includes(v.type)) return null;
@@ -48,79 +60,88 @@ export function normalizeGardenCare(raw = {}) {
   };
   const job = (v) => {
     if (!object(v) || !clean(v.id,96) || !action(v.action)) return null;
-    return {id:clean(v.id,96),requestId:clean(v.requestId,96),action:action(v.action),source:v.source==='requested'?'requested':'auto',phase:['queued','walking','working'].includes(v.phase)?v.phase:'queued',createdAt:timestamp(v.createdAt,0),startedAt:timestamp(v.startedAt,0),workUntil:timestamp(v.workUntil,0),fingerprint:clean(v.fingerprint,160),expectedPlot:object(v.expectedPlot)?{cropId:CROP_BY_ID.has(v.expectedPlot.cropId)?v.expectedPlot.cropId:null,plantedAt:v.expectedPlot.plantedAt===null?null:timestamp(v.expectedPlot.plantedAt,0)}:null};
+    return {id:clean(v.id,96),requestId:clean(v.requestId,96),action:action(v.action),source:v.source==='requested'?'requested':'auto',phase:['queued','walking','working','paused'].includes(v.phase)?v.phase:'queued',createdAt:timestamp(v.createdAt,0),startedAt:timestamp(v.startedAt,0),workUntil:timestamp(v.workUntil,0),pausedAt:timestamp(v.pausedAt,0),...(typeof v.remainingWorkMs==='number' && Number.isFinite(v.remainingWorkMs) ? {remainingWorkMs:Math.max(0,v.remainingWorkMs)} : {}),...(v.deferUntilIdle===true?{deferUntilIdle:true}:{}),...(clean(v.deferOperationId,96)?{deferOperationId:clean(v.deferOperationId,96)}:{}),fingerprint:clean(v.fingerprint,160),expectedPlot:object(v.expectedPlot)?{cropId:CROP_BY_ID.has(v.expectedPlot.cropId)?v.expectedPlot.cropId:null,plantedAt:v.expectedPlot.plantedAt===null?null:timestamp(v.expectedPlot.plantedAt,0)}:null};
   };
+  const pendingIds=new Set([raw?.task,...(Array.isArray(raw?.queue)?raw.queue:[])].filter(object).map(value=>clean(value.requestId,96)).filter(Boolean));
+  const pendingJobs=new Set([raw?.task,...(Array.isArray(raw?.queue)?raw.queue:[])].filter(object).map(value=>clean(value.id,96)).filter(Boolean));
+  const receiptRows=(Array.isArray(raw?.receipts)?raw.receipts:[]).filter(value=>object(value)&&clean(value.requestId,96));
+  const retainedReceipts=receiptRows.filter((value,index)=>retainAllReceipts || index>=receiptRows.length-64 || pendingIds.has(clean(value.requestId,96)) || pendingJobs.has(clean(value.jobId,96)));
   return {
-    autoEnabled:raw?.autoEnabled!==false,nextId:stock(raw?.nextId),rotation:stock(raw?.rotation),nextPlanAt:timestamp(raw?.nextPlanAt,0),
+    autoEnabled:raw?.autoEnabled===true,nextId:stock(raw?.nextId),rotation:stock(raw?.rotation),nextPlanAt:timestamp(raw?.nextPlanAt,0),
     forceUntil:timestamp(raw?.forceUntil,0),
-    status:clean(raw?.status)||'小蓝鱼会在空闲时照料菜园',
+    status:clean(raw?.status)||(raw?.autoEnabled===true?'自主照料已开启':'尚未安排照料'),
     pendingConflict:(()=>{
       const c=raw?.pendingConflict;
       if(!object(c)||!clean(c.id,64)||!clean(c.question,260))return null;
-      return {id:clean(c.id,64),question:clean(c.question,260),kind:clean(c.kind,32),createdAt:timestamp(c.createdAt,0),deadline:timestamp(c.deadline,0),defaultDecision:c.defaultDecision==='force'?'force':'defer'};
+      return {id:clean(c.id,64),requestId:clean(c.requestId,96)||clean(c.id,64),...(job(c.job)?{job:job(c.job)}:{}),...(clean(c.deferOperationId,96)?{deferOperationId:clean(c.deferOperationId,96)}:{}),question:clean(c.question,260),kind:clean(c.kind,32),createdAt:timestamp(c.createdAt,0),deadline:timestamp(c.deadline,0),defaultDecision:c.defaultDecision==='force'?'force':'defer'};
     })(),
-    task:job(raw?.task),queue:(Array.isArray(raw?.queue)?raw.queue:[]).map(job).filter(Boolean).slice(0,16),
-    receipts:(Array.isArray(raw?.receipts)?raw.receipts:[]).filter(v=>object(v)&&clean(v.requestId,96)).slice(-64).map(v=>({requestId:clean(v.requestId,96),jobId:clean(v.jobId,96),fingerprint:clean(v.fingerprint,160),status:['queued','completed','failed','cancelled'].includes(v.status)?v.status:'failed',message:clean(v.message),at:timestamp(v.at,0)})),
+    // The existing 16 accepted queued jobs plus a paused formerly-active job
+    // must survive normalization; pausing cannot drop an owner's last request.
+    task:job(raw?.task),queue:(Array.isArray(raw?.queue)?raw.queue:[]).map(job).filter(Boolean).slice(0,17),
+    receipts:retainedReceipts.map(v=>({requestId:clean(v.requestId,96),jobId:clean(v.jobId,96),fingerprint:clean(v.fingerprint,160),status:['queued','paused','completed','failed','cancelled'].includes(v.status)?v.status:'failed',message:clean(v.message),at:timestamp(v.at,0)})),
     recent:(Array.isArray(raw?.recent)?raw.recent:[]).filter(v=>object(v)&&clean(v.id,96)).slice(-16).map(v=>({id:clean(v.id,96),type:clean(v.type,24),ok:v.ok===true,message:clean(v.message),at:timestamp(v.at,0)}))
   };
 }
 
-export function createGarden(now = Date.now()) {
+export function createGarden(now = Date.now(), config) {
+  const {rules} = gardenConfiguration(null,config);
   const at = getNow(now);
-  const plots = Array.from({ length: GARDEN_RULES.plotCount }, (_, id) => emptyPlot(id));
-  plots[0] = { id: 0, tilled: true, cropId: 'radish', progress: 1, moisture: 0.4, fertilized: false, plantedAt: Math.max(0, at - 2 * MINUTE) };
-  plots[1] = { id: 1, tilled: true, cropId: 'lettuce', progress: 0.4, moisture: 0.5, fertilized: false, plantedAt: Math.max(0, at - 1.2 * MINUTE) };
-  plots[2] = { id: 2, tilled: true, cropId: 'tomato', progress: 0.7, moisture: 0.5, fertilized: false, plantedAt: Math.max(0, at - 4.2 * MINUTE) };
-  plots[3] = { id: 3, tilled: true, cropId: 'carrot', progress: 0.25, moisture: 0.65, fertilized: false, plantedAt: Math.max(0, at - MINUTE) };
+  const plots = Array.from({ length: rules.plotCount }, (_, id) => emptyPlot(id));
   return {
-    version: GARDEN_RULES.version, updatedAt: at, coins: 36,
-    seeds: cropStocks(null, 3), inventory: cropStocks(null), compost: 3,
+    ...(config ? {economyConfig:config} : {}), version: rules.version, updatedAt: at, coins: 0,
+    seeds: cropStocks(null), inventory: cropStocks(null), compost: 0,
     plots, care: normalizeGardenCare(), stats: { harvests: 0, totalYield: 0 },
-    log: [{ at, text: '菜园开张了：小萝卜已成熟，生菜、番茄和胡萝卜正在长大；另有四块田等你播种。' }]
+    log: []
   };
 }
 
 // Repair only recognized fields. Existing incomplete saves never gain another
-// starter harvest; the four demonstration crops are created only for a new save.
-export function normalizeGarden(raw, now = Date.now()) {
-  if (!object(raw)) return createGarden(now);
+// starter harvest; new saves also remain empty until actual garden actions.
+export function normalizeGarden(raw, now = Date.now(), config) {
+  if (!object(raw)) return createGarden(now,config);
+  const {crops,rules} = gardenConfiguration(raw,config);
+  const byId=new Map(crops.map(crop=>[crop.id,crop]));
   const at = getNow(now);
   const updatedAt = timestamp(raw.updatedAt, at);
   const candidates = Array.isArray(raw.plots) ? raw.plots : [];
-  const plots = Array.from({ length: GARDEN_RULES.plotCount }, (_, id) => {
+  const plots = Array.from({ length: rules.plotCount }, (_, id) => {
     const saved = candidates.find((p) => object(p) && p.id === id);
     if (!saved) return emptyPlot(id);
-    const crop = CROP_BY_ID.get(saved.cropId);
+    const crop = byId.get(saved.cropId);
     if (!crop) return { ...emptyPlot(id), tilled: saved.tilled === true };
     return {
       id, tilled: true, cropId: crop.id,
       progress: clamp(finite(saved.progress), 0, 1),
       moisture: clamp(finite(saved.moisture), 0, 1),
       fertilized: saved.fertilized === true,
-      plantedAt: timestamp(saved.plantedAt, updatedAt)
+      plantedAt: timestamp(saved.plantedAt, updatedAt),
+      ...(object(saved.cropProfile) ? {cropProfile:{growMs:finite(saved.cropProfile.growMs,crop.growMs),yield:stock(saved.cropProfile.yield,crop.yield),waterDurationFactor:finite(saved.cropProfile.waterDurationFactor,rules.waterDurationFactor),fertilizerGrowth:finite(saved.cropProfile.fertilizerGrowth,rules.fertilizerGrowth),fertilizerYield:stock(saved.cropProfile.fertilizerYield,rules.fertilizerYield)}} : {})
     };
   });
   return {
-    version: GARDEN_RULES.version, updatedAt,
+    ...(Number.isSafeInteger(raw.economyRevision)?{economyRevision:raw.economyRevision}:{}),
+    ...((config || raw.economyConfig)?{economyConfig:config || raw.economyConfig}:{}),
+    version: rules.version, updatedAt,
     coins: stock(raw.coins), seeds: cropStocks(raw.seeds),
     inventory: cropStocks(raw.inventory), compost: stock(raw.compost),
-    plots, care: normalizeGardenCare(raw.care),
+    plots, care: normalizeGardenCare(raw.care,Number.isSafeInteger(raw.economyRevision)),
     stats: { harvests: stock(raw.stats?.harvests), totalYield: stock(raw.stats?.totalYield) },
     log: (Array.isArray(raw.log) ? raw.log : []).filter((entry) => object(entry) && typeof entry.text === 'string')
       .slice(-30).map((entry) => ({ at: timestamp(entry.at, updatedAt), text: entry.text.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 160) }))
   };
 }
 
-export function advanceGarden(raw, now = Date.now()) {
-  const state = normalizeGarden(raw, now);
+export function advanceGarden(raw, now = Date.now(), config) {
+  const {crops,rules}=gardenConfiguration(raw,config);
+  const state = normalizeGarden(raw, now, config);
   const at = Math.max(getNow(now), state.updatedAt);
   const elapsed = at - state.updatedAt;
   if (elapsed > 0) {
     for (const plot of state.plots) {
-      const crop = CROP_BY_ID.get(plot.cropId);
+      const crop = cropForPlot(plot,crops);
       if (!crop || plot.progress >= 1 || plot.moisture <= 0) continue;
-      const rate = plot.fertilized ? GARDEN_RULES.fertilizerGrowth : 1;
-      const waterDuration = crop.growMs * GARDEN_RULES.waterDurationFactor;
+      const rate = plot.fertilized ? (crop.fertilizerGrowth ?? rules.fertilizerGrowth) : 1;
+      const waterDuration = crop.growMs * (crop.waterDurationFactor ?? rules.waterDurationFactor);
       const activeMs = Math.min(elapsed, plot.moisture * waterDuration, (1 - plot.progress) * crop.growMs / rate);
       plot.progress = Math.min(1, plot.progress + activeMs * rate / crop.growMs);
       plot.moisture = Math.max(0, plot.moisture - activeMs / waterDuration);
@@ -139,18 +160,21 @@ function addLog(state, text) {
 
 // Failure settles natural elapsed time but never spends coins, consumes stock,
 // creates rewards, or partially applies an action. Commands cannot supply time.
-export function applyGardenAction(raw, action, now = Date.now()) {
-  const state = advanceGarden(raw, now);
+export function applyGardenAction(raw, action, now = Date.now(), config) {
+  const {crops,rules}=gardenConfiguration(raw,config);
+  const state = advanceGarden(raw, now, config);
   const fail = (message) => ({ state, ok: false, message });
   const done = (message) => { addLog(state, message); return { state, ok: true, message }; };
   if (!object(action) || typeof action.type !== 'string') return fail('没有识别出这个菜园操作。');
   const plotActions = ['till', 'plant', 'water', 'fertilize', 'harvest'];
   let plot;
   if (plotActions.includes(action.type)) {
-    if (!Number.isInteger(action.plotId) || action.plotId < 0 || action.plotId >= GARDEN_RULES.plotCount) return fail('这块田地不存在。');
+    if (!Number.isInteger(action.plotId) || action.plotId < 0 || action.plotId >= rules.plotCount) return fail('这块田地不存在。');
     plot = state.plots[action.plotId];
   }
-  const crop = CROP_BY_ID.get(action.cropId);
+  const crop = crops.find(row=>row.id===action.cropId);
+  const tradeItem=action.type==='buySeed'?`seed:${action.cropId}`:action.type==='sell'?`harvest:${action.cropId}`:action.type==='buyCompost'?'compost':null;
+  if(tradeItem && rules.catalogEnabled?.[tradeItem]===false)return fail('这件商品暂时没有上架。');
   const quantity = action.quantity === undefined ? 1 : action.quantity;
   if (['buySeed', 'sell', 'buyCompost'].includes(action.type) && (!Number.isInteger(quantity) || quantity < 1 || quantity > 99)) return fail('每次数量需要是 1 到 99 的整数。');
 
@@ -166,7 +190,7 @@ export function applyGardenAction(raw, action, now = Date.now()) {
     if (!plot.tilled) return fail('先松土，种子才能住进这块田。');
     if (state.seeds[crop.id] < 1) return fail(`${crop.name}种子用完了，去种子铺补充一些。`);
     state.seeds[crop.id] -= 1;
-    Object.assign(plot, { cropId: crop.id, progress: 0, moisture: 0.8, fertilized: false, plantedAt: state.updatedAt });
+    Object.assign(plot, { cropId: crop.id, progress: 0, moisture: 0.8, fertilized: false, plantedAt: state.updatedAt, ...(state.economyConfig?{cropProfile:{growMs:crop.growMs,yield:crop.yield,waterDurationFactor:rules.waterDurationFactor,fertilizerGrowth:rules.fertilizerGrowth,fertilizerYield:rules.fertilizerYield}}:{}) });
     return done(`${plot.id + 1} 号田种下了${crop.name}，记得留意土壤水分。`);
   }
   if (action.type === 'water') {
@@ -183,23 +207,25 @@ export function applyGardenAction(raw, action, now = Date.now()) {
     if (state.compost < 1) return fail('堆肥用完了，可以到种子铺补充。');
     state.compost -= 1;
     plot.fertilized = true;
-    return done(`${plot.id + 1} 号田用上了堆肥：生长加快，收获时多得 2 份。`);
+    return done(`${plot.id + 1} 号田用上了堆肥：生长加快，收获时增加收获。`);
   }
   if (action.type === 'harvest') {
-    const plantedCrop = CROP_BY_ID.get(plot.cropId);
+    const plantedCrop = cropForPlot(plot,crops);
     if (!plantedCrop) return fail('这块田暂时没有可以收获的作物。');
     if (plot.progress < 1) return fail('还没长熟呢，再照顾它一会儿。');
-    const yieldCount = plantedCrop.yield + (plot.fertilized ? GARDEN_RULES.fertilizerYield : 0);
+    const yieldCount = plantedCrop.yield + (plot.fertilized ? (plantedCrop.fertilizerYield ?? rules.fertilizerYield) : 0);
     if (state.inventory[plantedCrop.id] > MAX_STOCK - yieldCount) return fail('仓库里这种作物太多了，先卖出一些再收获。');
     state.inventory[plantedCrop.id] += yieldCount;
     state.stats.harvests = Math.min(MAX_STOCK, state.stats.harvests + 1);
     state.stats.totalYield = Math.min(MAX_STOCK, state.stats.totalYield + yieldCount);
     Object.assign(plot, { ...emptyPlot(plot.id), tilled: true });
+    delete plot.cropProfile;
     return done(`收获${plantedCrop.name} × ${yieldCount}，已经放进仓库；这块田可以再播种了。`);
   }
   if (action.type === 'buySeed') {
     if (!crop) return fail('种子铺没有这种种子。');
     const cost = crop.seedCost * quantity;
+    if(!Number.isSafeInteger(cost))return fail('交易数值超出安全范围。');
     if (state.coins < cost) return fail('金币不够，可以先卖出仓库里的收成。');
     if (state.seeds[crop.id] > MAX_STOCK - quantity) return fail('这种种子已经很多了，先用掉一些吧。');
     state.coins -= cost; state.seeds[crop.id] += quantity;
@@ -209,12 +235,14 @@ export function applyGardenAction(raw, action, now = Date.now()) {
     if (!crop) return fail('仓库里没有这种作物。');
     if (state.inventory[crop.id] < quantity) return fail(`仓库里的${crop.name}数量不够。`);
     const income = crop.sellPrice * quantity;
+    if(!Number.isSafeInteger(income))return fail('交易数值超出安全范围。');
     if (state.coins > MAX_STOCK - income) return fail('金币存放已满，先到种子铺消费一些吧。');
     state.inventory[crop.id] -= quantity; state.coins += income;
     return done(`卖出${crop.name} × ${quantity}，收入 ${income} 金币。`);
   }
   if (action.type === 'buyCompost') {
-    const cost = GARDEN_RULES.compostCost * quantity;
+    const cost = rules.compostCost * quantity;
+    if(!Number.isSafeInteger(cost))return fail('交易数值超出安全范围。');
     if (state.coins < cost) return fail('金币不够，堆肥可以下次再买。');
     if (state.compost > MAX_STOCK - quantity) return fail('堆肥存放已满，先给作物施肥吧。');
     state.coins -= cost; state.compost += quantity;
@@ -223,21 +251,22 @@ export function applyGardenAction(raw, action, now = Date.now()) {
   return fail('没有识别出这个菜园操作。');
 }
 
-export function gardenView(raw, now = Date.now()) {
-  const state = advanceGarden(raw, now);
+export function gardenView(raw, now = Date.now(), config) {
+  const {crops,rules}=gardenConfiguration(raw,config);
+  const state = advanceGarden(raw, now, config);
   return {
     ...state,
     plots: state.plots.map((plot) => {
-      const crop = CROP_BY_ID.get(plot.cropId);
+      const crop = cropForPlot(plot,crops);
       const mature = !!crop && plot.progress >= 1;
-      const rate = plot.fertilized ? GARDEN_RULES.fertilizerGrowth : 1;
+      const rate = plot.fertilized ? (crop?.fertilizerGrowth ?? rules.fertilizerGrowth) : 1;
       return {
         ...plot, mature,
         stage: mature ? 3 : plot.progress >= 0.45 ? 2 : plot.progress >= 0.15 ? 1 : 0,
         remainingMs: crop ? Math.ceil((1 - plot.progress) * crop.growMs / rate) : 0,
-        waterRemainingMs: crop && !mature ? Math.ceil(plot.moisture * crop.growMs * GARDEN_RULES.waterDurationFactor) : 0,
+        waterRemainingMs: crop && !mature ? Math.ceil(plot.moisture * crop.growMs * (crop?.waterDurationFactor ?? rules.waterDurationFactor)) : 0,
         needsWater: !!crop && !mature && plot.moisture <= 0,
-        expectedYield: crop ? crop.yield + (plot.fertilized ? GARDEN_RULES.fertilizerYield : 0) : 0
+        expectedYield: crop ? crop.yield + (plot.fertilized ? (crop?.fertilizerYield ?? rules.fertilizerYield) : 0) : 0
       };
     })
   };

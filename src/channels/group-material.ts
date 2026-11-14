@@ -25,9 +25,12 @@ export interface Impression {speakerId:string;name:string;traits:string[];intera
 interface Corpus {lines:Observed[]; forwards:string[]; learnedThrough?:string}
 type Source = {url:string;title?:string;snippet?:string;summary?:string};
 interface Options {
-  deviceDirectory:string;
+  dataDirectory?:string;
+  /** Legacy helper alias. Production always supplies the bound Repo root. */
+  deviceDirectory?:string;
   active():boolean;
   allowed(identity:SpeakerIdentity):boolean;
+  companionName?():string;
   search?(query:string):Promise<{sources:readonly Source[]}>;
 }
 const requireValue = (value:unknown, message:string) => {if (!value) throw Error(message);};
@@ -60,7 +63,9 @@ export class GroupGameplay {
   }
   private directory(account:string, group:string) {
     requireValue(!this.disposed && this.options.active() && /^\d{1,24}$/.test(account) && /^\d{1,24}$/.test(group), '群资料已停用或群号无效');
-    const dir = privateDeviceDirectory(this.options.deviceDirectory,'group-material');
+    const root=this.options.dataDirectory ?? this.options.deviceDirectory;
+    requireValue(root,'群资料需要已绑定的伙伴资料目录');
+    const dir = privateDeviceDirectory(root!,'group-material');
     return privateDeviceDirectory(dir,createHash('sha256').update(JSON.stringify([account,group])).digest('hex'));
   }
   private files(identity:SpeakerIdentity) {
@@ -71,7 +76,7 @@ export class GroupGameplay {
     return {settings:readFile(dir,'settings.json'), affinity:readFile(dir,'affinity.json'), slang:readFile(dir,'slang.json'),
       stickers:readFile(dir,'stickers.json'), impressions:readFile(dir,'impressions.json'), corpus:readFile(dir,'recent.json'),social:readFile(dir,'social.json')};
   }
-  private social(file:string) {let room=this.rooms.get(file);if (!room) {room=new GroupSocial(file);this.rooms.set(file,room);}return room;}
+  private social(file:string) {let room=this.rooms.get(file);if (!room) {room=new GroupSocial(file,this.options.companionName);this.rooms.set(file,room);}return room;}
   private corpus(file:string) {return readJson<Corpus>(file,{lines:[],forwards:[]});}
   private write(file:string,data:unknown) {durableWrite(file,JSON.stringify(data));}
   /** Consume structured platform segments only after gateway identity and duplicate checks. */
@@ -101,10 +106,10 @@ export class GroupGameplay {
     scope.forwards = [...new Set([...scope.forwards,...forwards])].slice(-1000);
     this.write(file.corpus,scope);
   }
-  decision(identity:SpeakerIdentity, configuredTrigger=false) {
+  decision(identity:SpeakerIdentity, configuredTrigger=false, recovering=false) {
     if (!this.available(identity)) return {mode:'v1',wake:false} as const;
     const file=this.files(identity), prefs=settings(readJson(file.settings,defaults));
-    return {mode:prefs.roleMode,wake:prefs.roleMode==='v2'?this.social(file.social).wake(identity,configuredTrigger,prefs.wake):configuredTrigger};
+    return {mode:prefs.roleMode,wake:prefs.roleMode==='v2'?this.social(file.social).wake(identity,configuredTrigger,prefs.wake,recovering):configuredTrigger};
   }
   response(identity:SpeakerIdentity, nativeReply:string, admittedMode?:GroupSettings['roleMode']) {
     if (!this.available(identity)) return '';

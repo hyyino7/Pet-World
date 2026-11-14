@@ -424,34 +424,42 @@ function applyMenuLeaf(leaf) {
 /** 跑一拍 /state。返回 true = 按长轮询命中（宿主支持长轮询，可以立刻再请求）。 */
 
 async function refreshCompanionPresentation() {
+  const presentationTicket = companionPresentation.ticket();
   const next = await loadConfig();
+  if (!companionPresentation.accepts(presentationTicket)) return false;
   for (const sprite of sprites) {
     const pet = next.pets.find(pet => pet.id === sprite.pet.id);
     if (!pet) continue;
     sprite.pet = {...sprite.pet, ...pet};
+    if (!Object.hasOwn(pet,'companionPlayback')) delete sprite.pet.companionPlayback;
     sprite.animations = pet.animations;
     sprite.weights = pet.animationWeights;
+    sprite.applyCompanionPlayback?.();
     if (!pet.workStatusEnabled) {
       sprite.workState = null;
       sprite.prevWorkState = null;
     }
   }
   config = next;
+  return true;
 }
 
 async function pollStateOnce() {
+  if(!companionPresentation.wantsVisible())return false;
+  const presentationTicket=companionPresentation.ticket();
   try {
     const s = await S.fetchState(
       STATE_URL,
-      stateLongPoll && stateSince !== undefined ? { since: stateSince, timeoutMs: STATE_WAIT_MS } : undefined,
+      stateLongPoll && stateSince !== undefined ? { since: stateSince, timeoutMs: 10000 } : undefined,
     );
-    if (!s) return false;
+    if (!s || !companionPresentation.accepts(presentationTicket)) return false;
     // 响应带 counter = 宿主支持长轮询；不带 = 老宿主（不认识 since/timeout，会立刻返回全量），
     // 这时必须退回固定间隔轮询，否则这个循环就是忙等。
     stateLongPoll = typeof s.counter === 'number';
     if (stateLongPoll) stateSince = s.counter;
     if (stateBaseline === null) {
       await refreshCompanionPresentation();
+      if(!companionPresentation.accepts(presentationTicket))return false;
       stateBaseline = S.flattenCounters(s); // 首拉：只记基线，不渲染（避免启动/重载时重放旧气泡）
       // 第三方菜单项是状态而不是事件：首拉就要装上，否则 helper 重启后要等下次注册才出现
       applyMenuLeaf(s.sections ? s.sections.menu : null);
@@ -460,11 +468,19 @@ async function pollStateOnce() {
       for (const [petId, entry] of Object.entries((s && s.pets) || {})) {
         if (entry && entry.sleep && entry.sleep.data !== null) applySleepLeaf(petId, entry.sleep);
       }
+      for(const sprite of sprites) {
+        const leaf=s.pets?.[sprite.pet.id]?.lock;
+        const lock=leaf?S.readLock(leaf):null;
+        sprite.setLock(lock ?? {locked:false});
+      }
+      companionPresentation.ready();
+      for(const sprite of sprites)if(!sprite.sleeping)sprite.playIdle();
       return true;
     }
     for (const change of S.takeChanged(s, stateBaseline)) {
+      if(!companionPresentation.accepts(presentationTicket))return false;
       if (change.leaf.data === null) continue;
-      if (change.path === 'sections.config') await refreshCompanionPresentation();
+      if (change.path === 'sections.config') { if (!await refreshCompanionPresentation()) return false; }
       else if (change.path === 'sections.balance') applyBalanceLeaf(change.leaf);
       else if (change.path === 'sections.workStatus') applyWorkStatusLeaf(change.leaf);
       else if (change.path === 'sections.menu') applyMenuLeaf(change.leaf);
@@ -516,12 +532,462 @@ function startLoops() {
   // 统一轮询是自调度的长轮询（请求 → 处理 → 立刻再请求）：宿主在版本没变时挂起，空闲时
   // 1 请求/秒，叶子一变立刻收到。本窗口只装一只宠物，所以每个窗口各跑一份；全局计数器意味着
   // 任意写入会唤醒所有窗口（有意为之）。
+  let stateTimer,inFlight=false;
   const stateLoop = async () => {
-    const hit = await pollStateOnce();
-    setTimeout(() => void stateLoop(), hit && stateLongPoll ? 0 : 1000);
+    stateTimer=undefined;
+    if(!companionPresentation.wantsVisible()||inFlight)return;
+    inFlight=true;
+    try {
+      const hit=await pollStateOnce();
+      if(companionPresentation.wantsVisible())stateTimer=setTimeout(()=>void stateLoop(),hit&&stateLongPoll?0:1000);
+    } finally {inFlight=false;}
   };
-  void stateLoop();
+  companionWake=()=>{
+    if(stateTimer!==undefined){clearTimeout(stateTimer);stateTimer=undefined;}
+    if(companionPresentation.wantsVisible())void stateLoop();
+  };
+  companionWake();
 }
+
+// Adapt the pinned renderer's display lifetime without owning its body or Life.
+function createDesktopPresentationLifecycle({document, sprites, wake, reset,
+  subscribe, frames, onDispose = () => {}}) {
+  let nativeVisible = !subscribe, ready = false, disposed = false, generation = 0;
+  const paused = new Set();
+  const wantsVisible = () => !disposed && nativeVisible && !document.hidden;
+  const canPresent = () => wantsVisible() && ready;
+  const pause = video => { if (!video.paused) paused.add(video); video.pause(); };
+  function suspend() {
+    frames?.setVisible(false);
+    for (const sprite of sprites()) {
+      sprite.companionPlaybackController?.suspend();
+      sprite.stopMove(); sprite.stopThrow(); sprite.stopDragFollow(); sprite.stopSquash();
+      if (sprite.dragState) sprite.dragState.active = false;
+      sprite.pendingSquash = false;
+      sprite.syncInputBusy();
+    }
+    for (const video of document.querySelectorAll('video')) pause(video);
+  }
+  function changed() {
+    if (disposed) return;
+    generation++; ready = false; reset(); suspend(); wake();
+  }
+  const onPlay = event => { if (!canPresent() && event.target?.tagName === 'VIDEO') pause(event.target); };
+  document.addEventListener('play',onPlay,true);
+  document.addEventListener('visibilitychange',changed);
+  const unsubscribe = subscribe?.(value => {
+    if (nativeVisible === value.visible) return;
+    nativeVisible = value.visible; changed();
+  });
+  return {
+    wantsVisible, canPresent, ticket: () => generation,
+    accepts: ticket => wantsVisible() && ticket === generation,
+    ready() {
+      if (!wantsVisible()) return;
+      ready = true;
+      frames?.setVisible(true);
+      const resume=Array.from(paused);paused.clear();
+      for (const video of resume) {
+        const owner=sprites().find(sprite=>sprite.videoA===video || sprite.videoB===video);
+        if(owner && (owner.frozen || (owner.front===0?owner.videoA:owner.videoB)!==video))continue;
+        if(video.isConnected !== false && !video.ended)video.play()?.catch?.(() => {});
+      }
+      for (const sprite of sprites()) sprite.applyCompanionPlayback?.(true);
+    },
+    dispose() {
+      if(disposed)return;
+      disposed=true;generation++;ready=false;suspend();paused.clear();wake();unsubscribe?.();
+      document.removeEventListener('play',onPlay,true);
+      document.removeEventListener('visibilitychange',changed);onDispose();
+    },
+  };
+}
+
+/** Batch cosmetic motion callbacks into at most 30 frames/s, with no hidden pump. */
+function createPresentationFrames({request, cancel, now = () => performance.now(),
+  set = (fn,ms) => setTimeout(fn,ms), clear = handle => clearTimeout(handle)}) {
+  const callbacks=new Map();let sequence=0,visible=false,timer,frame,last=-Infinity;
+  function stop(){if(timer!==undefined){clear(timer);timer=undefined;}if(frame!==undefined){cancel(frame);frame=undefined;}}
+  function schedule(){
+    if(!visible||!callbacks.size||timer!==undefined||frame!==undefined)return;
+    timer=set(()=>{timer=undefined;if(!visible)return;frame=request(at=>{
+      frame=undefined;if(!visible)return;last=at;
+      const pending=Array.from(callbacks.values());callbacks.clear();
+      for(const callback of pending)callback(at);
+      schedule();
+    });},Math.max(0,1000/30-(now()-last)));
+  }
+  return {
+    request(callback){const id=++sequence;if(visible){callbacks.set(id,callback);schedule();}return id;},
+    cancel(id){callbacks.delete(id);if(!callbacks.size)stop();},
+    setVisible(value){if(visible===Boolean(value))return;visible=Boolean(value);stop();if(!visible)callbacks.clear();else{last=-Infinity;schedule();}},
+  };
+}
+
+let companionWake=()=>{};
+const companionFrames=createPresentationFrames({request:window.requestAnimationFrame.bind(window),cancel:window.cancelAnimationFrame.bind(window)});
+window.requestAnimationFrame=companionFrames.request;
+window.cancelAnimationFrame=companionFrames.cancel;
+const companionPresentation=createDesktopPresentationLifecycle({document,sprites:()=>sprites,wake:()=>companionWake(),
+  frames:companionFrames,reset:()=>{stateBaseline=null;stateSince=undefined;},subscribe:window.petBridge?.onPresentationVisibility?.bind(window.petBridge)});
+const companionIdle=PetSprite.prototype.playIdle;
+PetSprite.prototype.playIdle=function(...args){if(companionPresentation.canPresent())return companionIdle.apply(this,args);};
+window.addEventListener('pagehide',()=>companionPresentation.dispose(),{once:true});
+
+function sampleActivityPlayback(playback, now = Date.now()) {
+    if (!playback || playback.version !== 1 || !Array.isArray(playback.segments) || !playback.segments.length)
+        return;
+    const pausedMs = typeof playback.pausedMs === 'number' && Number.isSafeInteger(playback.pausedMs) && playback.pausedMs > 0 ? playback.pausedMs : 0;
+    let index = 0, elapsed = playback.startedAt > 0 ? Math.max(0, now - playback.startedAt - pausedMs) : Math.max(0, now);
+    if (!playback.startedAt)
+        index = playback.segments.length - 1;
+    while (index < playback.segments.length - 1 && elapsed >= playback.segments[index].durationMs) {
+        elapsed -= playback.segments[index].durationMs;
+        index++;
+    }
+    const part = playback.segments[index], duration = Math.max(1, part.durationMs);
+    const complete = part.mode !== 'loop' && (!playback.startedAt || elapsed >= duration);
+    const offsetMs = part.mode === 'static' ? 0 : part.mode === 'loop' ? elapsed % duration : complete ? Math.max(0, duration - 1) : elapsed;
+    return { ...part, key: playback.key + ':' + index, offsetMs, complete, ...(index < playback.segments.length - 1 ? { nextInMs: Math.max(1, duration - elapsed) } : {}) };
+}
+
+function createActivityPlaybackController({ sample, play, visible = () => !document.hidden, now = () => Date.now(), set = (fn, ms) => setTimeout(fn, ms), clear = id => clearTimeout(id), failure = () => { }, invalidate = () => { }, present = () => { } }) {
+    let descriptor, current, video, timer, endedBinding, endedKey, endedVideo, disposed = false, suspended = false, generation = 0;
+    const stopTimer = () => { if (timer !== undefined) {
+        clear(timer);
+        timer = undefined;
+    } };
+    const pause = () => { try {
+        video?.pause();
+    }
+    catch { } };
+    const detach = () => {
+        if (endedBinding && endedBinding.video.onended === endedBinding.listener)
+            endedBinding.video.onended = null;
+        if (endedBinding?.error)
+            endedBinding.video.removeEventListener('error', endedBinding.error);
+        endedBinding = undefined;
+    };
+    function schedule(part) {
+        stopTimer();
+        const wait = part.nextInMs ?? (part.mode === 'once' && !part.complete ? part.durationMs - part.offsetMs : undefined);
+        if (!disposed && wait !== undefined && Number.isFinite(wait) && wait > 0 && visible() && !suspended)
+            timer = set(() => { timer = undefined; update(descriptor, true); }, Math.max(1, wait));
+    }
+    function update(next, force = false) {
+        if (disposed)
+            return;
+        descriptor = next;
+        const part = descriptor && sample(descriptor, now());
+        if (!part) {
+            endedKey = undefined;
+            endedVideo = undefined;
+            if (current || video) {
+                stopTimer();
+                pause();
+                detach();
+                current = undefined;
+                video = undefined;
+                generation++;
+                invalidate();
+            }
+            return;
+        }
+        if (endedKey !== part.key) {
+            endedKey = undefined;
+            endedVideo = undefined;
+        }
+        if (!visible()) {
+            suspend();
+            return;
+        }
+        suspended = false;
+        if (!force && current?.key === part.key && current.complete === part.complete)
+            return;
+        const same = current?.key === part.key;
+        current = part;
+        generation++;
+        const ticket = generation;
+        if (same && video && video.readyState >= 2)
+            ready(video, part.key);
+        else {
+            pause();
+            video = undefined;
+            endedVideo = undefined;
+            play(part, generation);
+        }
+        if (ticket === generation)
+            schedule(part);
+    }
+    function isCurrent(key, ticket) {
+        return !disposed && !suspended && visible() && descriptor && current?.key === key
+            && (ticket === undefined || ticket === generation) && sample(descriptor, now())?.key === key;
+    }
+    function ready(element, key, ticket) {
+        if (!isCurrent(key, ticket)) {
+            try {
+                element.pause();
+            }
+            catch { }
+            return false;
+        }
+        const part = sample(descriptor, now());
+        if (!part)
+            return false;
+        detach();
+        video = element;
+        current = part;
+        element.loop = part.mode === 'loop';
+        const duration = Number.isFinite(element.duration) && element.duration > 0 ? element.duration : part.durationMs / 1000;
+        const at = Math.max(0, Math.min(part.offsetMs / 1000, Math.max(0, duration - .001)));
+        const playbackGeneration = generation;
+        const held = endedKey === key && part.mode === 'once';
+        if (!held || endedVideo !== element) {
+            try {
+                element.currentTime = held ? Math.max(0, duration - .001) : at;
+            }
+            catch {
+                fail(key, playbackGeneration);
+                return false;
+            }
+            if (held)
+                endedVideo = element;
+        }
+        element.onended = () => {
+            if (video !== element || !isCurrent(key, playbackGeneration))
+                return;
+            if (part.mode === 'once') {
+                if (endedKey !== key) {
+                    endedKey = key;
+                    endedVideo = element;
+                    element.pause();
+                    // A decoder may finish before the shared segment boundary. Hold the
+                    // real last frame, without playing a tail repeatedly until that wake.
+                    const endedDuration = Number(element.duration);
+                    if (Number.isFinite(endedDuration) && endedDuration > 0 && element.currentTime < endedDuration - .001)
+                        try {
+                            element.currentTime = Math.max(0, endedDuration - .001);
+                        }
+                        catch {
+                            fail(key, playbackGeneration);
+                        }
+                }
+                return;
+            }
+            update(descriptor, true);
+        };
+        const error = () => fail(key, playbackGeneration);
+        element.addEventListener('error', error);
+        endedBinding = { video: element, listener: element.onended, error };
+        if (held || part.mode === 'static' || part.complete)
+            element.pause();
+        else {
+            try {
+                void element.play()?.catch?.(() => fail(key, playbackGeneration));
+            }
+            catch {
+                fail(key, playbackGeneration);
+                return false;
+            }
+        }
+        if (isCurrent(key, playbackGeneration))
+            present(element, part);
+        schedule(part);
+        return true;
+    }
+    function suspend() {
+        if (disposed)
+            return;
+        suspended = true;
+        generation++;
+        stopTimer();
+        pause();
+        detach();
+        invalidate();
+    }
+    function fail(key, ticket) {
+        if (!isCurrent(key, ticket))
+            return;
+        const part = sample(descriptor, now());
+        endedKey = undefined;
+        endedVideo = undefined;
+        generation++;
+        stopTimer();
+        pause();
+        detach();
+        failure(descriptor, current);
+        // A failed movie does not cancel the next accepted visual stage. Keep only
+        // that real boundary, never a retry timer for a failed final loop/one-shot.
+        if (part?.nextInMs !== undefined)
+            schedule(part);
+    }
+    return {
+        update, ready, isCurrent, suspend,
+        active: () => Boolean(descriptor && !disposed),
+        sample: () => descriptor && sample(descriptor, now()),
+        fail,
+        dispose() { if (disposed)
+            return; suspend(); detach(); disposed = true; descriptor = undefined; current = undefined; video = undefined; endedKey = undefined; endedVideo = undefined; },
+    };
+}
+
+function installNativeActivityPlayback(Sprite, { sample, lifecycle }) {
+    const original = Object.fromEntries(['switchTo', 'playIdle', 'handleEnded', 'restartLoop', 'setSleep', 'dispose', 'onMenuAction', 'applyFreeze']
+        .map(name => [name, Sprite.prototype[name]]));
+    const style = (sprite, video, field, value) => {
+        sprite.companionPlaybackStyles ??= new Map();
+        const owned = sprite.companionPlaybackStyles.get(video) ?? {};
+        owned[field] ??= { before: video.style[field] || '' };
+        owned[field].value = value;
+        sprite.companionPlaybackStyles.set(video, owned);
+        video.style[field] = value;
+    };
+    const clearPending = sprite => {
+        if (sprite.companionLoadTimer !== undefined)
+            window.clearTimeout(sprite.companionLoadTimer);
+        sprite.companionLoadTimer = undefined;
+        sprite.companionLoadFailure = undefined;
+        const native = sprite.companionLoadReady;
+        if (native)
+            native.video.removeEventListener('loadeddata', native.listener);
+        sprite.companionLoadReady = undefined;
+        for (const [video, handlers] of sprite.companionPlaybackBindings ?? []) {
+            video.removeEventListener('loadeddata', handlers.ready);
+            video.removeEventListener('error', handlers.error);
+        }
+        sprite.companionPlaybackBindings?.clear();
+    };
+    Sprite.prototype.applyCompanionPlayback = function (force = false) {
+        if (this.companionPlaybackResuming)
+            return true;
+        const descriptor = this.pet.companionPlayback;
+        if (!descriptor) {
+            this.releaseCompanionPlayback();
+            return false;
+        }
+        this.pendingSquash = false;
+        this.companionPlaybackController ??= createActivityPlaybackController({ sample,
+            visible: () => lifecycle.canPresent() && !this.frozen,
+            present: (video, part) => { style(this, video, 'visibility', ''); style(this, video, 'transform', part.mirror === true ? 'scaleX(-1)' : ''); },
+            invalidate: () => {
+                clearPending(this);
+                this.gen++;
+                this.pending = null;
+            },
+            play: (part, ticket) => {
+                this.stopMove();
+                // A different accepted operation may reuse the same movie. Invalidate
+                // an older pending swap before using the original source loader.
+                clearPending(this);
+                if (this.pending) {
+                    this.gen++;
+                    this.pending = null;
+                }
+                original.switchTo.call(this, part.desktopClip, part.mode !== 'loop');
+                this.companionLoadFailure = { gen: this.gen, fail: () => this.companionPlaybackController.fail(part.key, ticket) };
+                const target = this.front === 0 ? this.videoB : this.videoA;
+                target.autoplay = false;
+                const ready = () => {
+                    target.removeEventListener('loadeddata', ready);
+                    target.removeEventListener('error', error);
+                    if (!this.companionPlaybackController.ready(target, part.key, ticket))
+                        return;
+                };
+                const error = () => this.companionPlaybackController.fail(part.key, ticket);
+                this.companionPlaybackBindings ??= new Map();
+                this.companionPlaybackBindings.set(target, { ready, error });
+                target.addEventListener('loadeddata', ready);
+                target.addEventListener('error', error);
+            },
+            failure: descriptor => {
+                clearPending(this);
+                this.gen++;
+                this.pending = null;
+                for (const video of [this.videoA, this.videoB]) {
+                    video.pause();
+                    style(this, video, 'visibility', 'hidden');
+                }
+                this.showWhisper?.(descriptor.notice || '当前动作暂时无法显示', undefined, undefined, undefined, false);
+            },
+        });
+        this.sleeping = descriptor.kind === 'sleep';
+        this.sleepPhase = this.sleeping ? 'loop' : null;
+        this.companionPlaybackOwnsSleep = true;
+        this.companionPlaybackController.update(descriptor, force);
+        return true;
+    };
+    Sprite.prototype.releaseCompanionPlayback = function () {
+        if (!this.companionPlaybackController)
+            return false;
+        this.pendingSquash = false;
+        this.companionPlaybackController.dispose();
+        this.companionPlaybackController = undefined;
+        for (const [video, owned] of this.companionPlaybackStyles ?? [])
+            for (const [field, value] of Object.entries(owned))
+                if (video.style[field] === value.value)
+                    video.style[field] = value.before;
+        this.companionPlaybackStyles?.clear();
+        if (this.companionPlaybackOwnsSleep) {
+            this.sleeping = false;
+            this.sleepPhase = null;
+            this.sleepSet = null;
+            this.companionPlaybackOwnsSleep = false;
+        }
+        if (!this.sleeping && this.animations?.idle?.length)
+            original.playIdle?.call(this);
+        return true;
+    };
+    if (original.applyFreeze)
+        Sprite.prototype.applyFreeze = function (next) {
+            const managed = Boolean(this.pet.companionPlayback), changed = this.frozen !== next;
+            if (managed && changed && next)
+                this.companionPlaybackController?.suspend();
+            this.companionPlaybackResuming = managed && changed && !next;
+            let result;
+            try {
+                result = original.applyFreeze.call(this, next);
+            }
+            finally {
+                this.companionPlaybackResuming = false;
+            }
+            if (managed && changed && !next)
+                this.applyCompanionPlayback(true);
+            return result;
+        };
+    Sprite.prototype.switchTo = function (...args) {
+        if (this.pet.companionPlayback) {
+            if (args[2])
+                this.reportPlayback(args[2], 'cancelled', 'body-activity');
+            return this.applyCompanionPlayback();
+        }
+        return original.switchTo.apply(this, args);
+    };
+    for (const name of ['playIdle', 'handleEnded', 'restartLoop', 'setSleep']) {
+        if (!original[name])
+            continue;
+        Sprite.prototype[name] = function (...args) {
+            if (this.pet.companionPlayback)
+                return this.applyCompanionPlayback(name === 'restartLoop');
+            return original[name].apply(this, args);
+        };
+    }
+    if (original.onMenuAction)
+        Sprite.prototype.onMenuAction = function (leaf, ...args) {
+            if (this.pet.companionPlayback && leaf?.anim) {
+                this.closeMenu?.();
+                if (leaf.playbackId)
+                    this.reportPlayback(leaf.playbackId, 'cancelled', 'body-activity');
+                return this.applyCompanionPlayback();
+            }
+            return original.onMenuAction.call(this, leaf, ...args);
+        };
+    Sprite.prototype.dispose = function (...args) {
+        this.companionPlaybackController?.dispose();
+        return original.dispose?.apply(this, args);
+    };
+}
+
+installNativeActivityPlayback(PetSprite,{sample:sampleActivityPlayback,lifecycle:companionPresentation});
 
 // Included by the presentation build in both native renderers. This observer
 // never chooses or starts an animation; callers invoke it after actual playback.
@@ -561,6 +1027,6 @@ const observeCompanionRandomPlayback = createCompanionPlaybackObserver(
 document.addEventListener('playing', event => {
   const video = event.target;
   const sprite = sprites.find(sprite => sprite.videoA === video || sprite.videoB === video);
-  if (!sprite || sprite.playback || video !== (sprite.front === 0 ? sprite.videoA : sprite.videoB)) return;
+  if (!sprite || sprite.pet.companionPlayback || sprite.playback || video !== (sprite.front === 0 ? sprite.videoA : sprite.videoB)) return;
   observeCompanionRandomPlayback(video, sprite.anim, sprite.pet.id);
 }, true);

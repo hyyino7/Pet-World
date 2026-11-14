@@ -4,10 +4,12 @@
 
 Source: https://github.com/sh2234113/feiyu-room-template/tree/9df0a6b76b563abc738b6d4b7ae137381c425424
 
-The original `src/home-state.js` is retained unchanged in
-`vendor/feiyu-room-template/home-state.js` (Git blob
-`7fda4d0d16430a861a20d30c88f26a3026030219`). The native Life adapter
-supplies the bound Repo and lifecycle. Room includes the template's room, garden
+`vendor/feiyu-room-template/home-state.js` adapts the pinned upstream
+`src/home-state.js` (upstream Git blob
+`7fda4d0d16430a861a20d30c88f26a3026030219`). The origin record retains that
+upstream identity and separately records the current adapted file digest and
+changes. Body owns its physical execution and durable operation facts; the
+native Life adapter supplies the bound Repo and lifecycle. Room includes the template's room, garden
 and television presentation and the original garden and visitor state. Its web
 page reaches the companion through native DSH and reads native chat history.
 QQ group play reuses the template's affinity scoring, slang library, role-card
@@ -20,7 +22,7 @@ template for personal, noncommercial room display under the author's terms.
 [Model terms](vendor/feiyu-room-template/public/room/assets/models/README.md) ·
 [Origin record](vendor/feiyu-room-template/origin.json)
 
-The following pinned components are reused/adapted in Core and Memory. Whole companion plugins are not activated. Core owns execution; the selected Memory provider owns its Bank and eligibility state.
+The following pinned components are reused/adapted in Core and Memory. Whole companion plugins are not activated. DSH owns ordinary conversation execution; Core supplies configuration/native hooks, and the selected Memory provider owns its Bank and source eligibility state.
 
 ## canyueY/dsh-mnemosyne
 
@@ -45,7 +47,7 @@ Source: https://github.com/Alterssss/dsh-bili-whale.git
 
 Pinned commit: `8b0009f8ce2ebdc421afcb2e727b19ac18912ec6`.
 
-- `lib/session-delivery.js` -> `src/core/upstream/serial-delivery.ts`: Adapted the Promise-tail serialization and failure isolation; product request/receipt persistence remains Core-owned.
+- Historical reference: `lib/session-delivery.js` supplied the former Core serial-delivery adapter. That adapter and its old executor have been removed; no runtime path uses them. Attribution is retained for provenance.
 
 
 MIT License
@@ -81,7 +83,7 @@ Pinned commit: `ff288f57a25becfe195201b02e4fc4726ae71a5b`.
 
 - `lib/session.js` -> `src/core/upstream/messages.ts`: Adapted final non-tool reply projection; removed persona, singing and whole-session presentation coupling.
 
-- `lib/memory-tools.js` -> `src/core/matters.ts`: Adapted the native tool/output registration pattern; no upstream memory extractor or persona rules copied.
+- Historical native tool-registration patterns informed the former Core matters adapter, which is removed. No upstream memory extractor or persona rules are activated.
 
 
 MIT License
@@ -122,7 +124,7 @@ prompt content adapt `src/promptSection.ts`, `src/worldScope.ts` and
 
 Pinned commit: `d0b0ba7116ce1f186eb7f7a31ac849d55214bf7f`.
 
-- `src/life/tools.ts` -> `src/core/matters.ts`: Adapted native scoped tool registration and text-rendered structured receipts; no life scheduling or persona defaults imported.
+- Historical `src/life/tools.ts` patterns informed the removed Core matters adapter. Current Life uses the selected native World runtime and scoped tools; ordinary chat uses DSH.
 
 
 MIT License
@@ -155,7 +157,11 @@ from PC2005-cloud/dsh-pet commit
 `c7ea8b28e2a8b04a495a3b472a871dff6969ccca` (MIT). `origin.json` records their
 hashes. `scripts/build-desktop-animation.mjs` verifies them, copies the runtime
 modules to `src/desktop/helper/upstream/` and compiles the shared TypeScript into
-its classic-script `shared-core.js`. The adapted `body.html` retains upstream
+its classic-script `shared-core.js`. Strict build-time adaptations add compact-chat
+voice lifecycle cancellation and the existing manual-speech stop seam; original
+native speech routing/queues additionally propagate caller cancellation without
+replacing the original queue, cache or provider algorithms. Original
+recording/encoding algorithms and pinned inputs remain unchanged. The adapted `body.html` retains upstream
 layout/styles; `shell.js` connects the original PetSprite to local media and the
 native Core/Emotion bridge. No upstream setup/build hooks are executed. The MIT
 license is retained in the vendor directory and packaged helper. Earlier custom
@@ -216,3 +222,13 @@ Verbatim source files and hashes are recorded under `nativeFiles` in
 companion Repo. The original three sleep clips, click sound, font, cursor images and interaction text
 pools retain the upstream asset terms and attribution above; their origins and
 hashes are recorded in that same file. The 0.4.7 distribution also supplies the speech recorder, recognition and synthesis adapters, voice registry, queue and cache. Its released browser client and presentation runtime are recorded in `vendor/dsh-pet/platform/origin.json`. The native host scopes them to the bound companion.
+
+## Supplementary Xiaoxi life animation media
+
+The first-party `src/desktop/assets/life-*.webm`, matching PNG photo fallbacks and
+`life-animations.json` supplement the existing character with drinking, reading,
+gardening and trade illustrations. The sprite sheets were generated using the
+built-in image-generation tool with the existing `cute.png` identity reference;
+all original dsh-pet attribution above remains. Development-only source sheets
+and prompts live in `art/life-animation-sources/` and are not runtime dependencies.
+No FFmpeg executable or image-generation client is shipped with these assets.

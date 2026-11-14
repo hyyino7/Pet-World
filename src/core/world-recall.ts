@@ -4,15 +4,14 @@ import type { Session, UserMessage } from '@deepseek-ai/dsh-session';
 declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap { 'chatpet-recall': {kind: 'chatpet-recall'; form: 'recall'; bank: string} }
 }
-interface Refresh { bank: string; loaded: boolean; lastRequestAt?: number; replacement?: {id?: string} }
+interface Refresh { bank: string; loaded: boolean; replacement?: {id?: string} }
 
 /** dsh-world 0.7.4 runtime.ts: select once per native turn or after compaction, admit
  * ahead of new input, and retire old recall nodes only inside an open step.
  * The authoritative material here is the existing scoped Mnemosyne projection. */
 export class WorldRecall {
   private readonly sessions = new WeakMap<Session, Refresh>();
-  constructor(private readonly now: () => number = Date.now) {}
-  refresh(session: Session, bank: string, firstStep: boolean, _hours: number): boolean {
+  refresh(session: Session, bank: string, firstStep: boolean): boolean {
     let state = this.sessions.get(session);
     if (!state || state.bank !== bank) {
       state = {bank, loaded: false};
@@ -32,7 +31,6 @@ export class WorldRecall {
   }
   request(session: Session, turn: number, step: number, admitted: boolean) {
     const state = this.sessions.get(session);
-    if (admitted && state) state.lastRequestAt = this.now();
     if (admitted && !state?.replacement) return;
     for (const seq of [...session.surface.nodes]) {
       const event = session.eventAt(seq);

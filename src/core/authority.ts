@@ -1,6 +1,6 @@
 import { CONTRACT_VERSION } from '../contracts/version.js';
 import type { RequestContext, ModuleId } from '../contracts/common.js';
-import { check, reject, text } from './storage.js';
+import { reject, text } from './storage.js';
 
 export interface Principal {
   module: ModuleId; actor: RequestContext['actor']; operations: readonly string[];
@@ -31,11 +31,6 @@ export class CoreAuthority {
   owner(context: RequestContext, operation: string, ownerActorId: string): Principal {
     const grant = this.verify(context, operation);
     if (grant.actor.kind !== 'owner' || grant.actor.id !== ownerActorId) reject('UNAUTHORIZED', 'Owner authority required');
-    return grant;
-  }
-  module(context: RequestContext, operation: string, module: ModuleId): Principal {
-    const grant = this.verify(context, operation);
-    check(grant.module === module, `Operation requires ${module} host binding`);
     return grant;
   }
 }

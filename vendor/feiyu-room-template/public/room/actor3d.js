@@ -609,14 +609,14 @@ export class ChibiActor {
     this.face.material.needsUpdate = true;
   }
 
-  update(dt, camera, { mode = 'overview', lookAtCamera = true } = {}) {
+  update(dt, camera, { mode = 'overview', lookAtCamera = true, snap = false } = {}) {
     if (!this.group.visible) return;
     this.t += dt;
     const target = this._target;
     const d = this._pos.distanceTo(target);
-    if (d > 2.2) this._pos.copy(target);
+    if (snap || d > 2.2) this._pos.copy(target);
     else this._pos.lerp(target, Math.min(1, dt * 4.2));
-    this._elev += (this._targetElev - this._elev) * Math.min(1, dt * 7);
+    this._elev = snap ? this._targetElev : this._elev + (this._targetElev - this._elev) * Math.min(1, dt * 7);
 
     const walking = this._walking;
     const gardening = !walking && !this._asleep && typeof this._kind === 'string' && this._kind.startsWith('garden_');

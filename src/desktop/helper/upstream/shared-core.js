@@ -2099,6 +2099,10 @@ const hear_ts_1 = require("src/shared/hear.ts");
 function createHearControl(opts) {
     const { micBtn, input, hint, resizeInput, hearUrl } = opts;
     let hearState = 'idle';
+    let generation = 0;
+    let controller;
+    const live = (owner) => owner === generation && !controller?.signal.aborted
+        && input.isConnected && !document.hidden && opts.active?.() !== false;
     let recorder = null;
     let hearTimer = 0;
     /** 还没拿到麦克风就松手了：等 startRecording 一返回立刻收尾，避免麦克风一直开着。 */
@@ -2142,6 +2146,7 @@ function createHearControl(opts) {
     };
     /** 收尾：停采集 → 判误触 → 判静音 → 送宿主 → 文字落进输入框。失败只提示，不动已输入的文字。 */
     const stop = async () => {
+        const owner = generation, signal = controller?.signal;
         const current = recorder;
         if (!current)
             return;
@@ -2161,6 +2166,8 @@ function createHearControl(opts) {
         hint.show('识别中…');
         try {
             const clip = await current.stop();
+            if (!live(owner))
+                return;
             if (clip === null) {
                 hint.flash('没录到声音');
                 return;
@@ -2170,10 +2177,10 @@ function createHearControl(opts) {
                 hint.flash('没听到声音，检查一下麦克风');
                 return;
             }
-            if (!input.isConnected)
-                return; // 等结果的这会儿弹窗被关了
-            const outcome = await (0, hear_ts_1.hearAudio)(hearUrl, (0, hear_ts_1.toBase64)(clip.wave));
-            if (!input.isConnected)
+            if (!live(owner))
+                return;
+            const outcome = await (0, hear_ts_1.hearAudio)(hearUrl, (0, hear_ts_1.toBase64)(clip.wave), signal);
+            if (!live(owner))
                 return;
             if (!outcome.ok) {
                 hint.flash(describeFailure(outcome));
@@ -2188,11 +2195,14 @@ function createHearControl(opts) {
             insertText(text);
         }
         catch (e) {
-            hint.flash('录音出错：' + (e instanceof Error ? e.message : String(e)));
+            if (live(owner))
+                hint.flash('录音出错：' + (e instanceof Error ? e.message : String(e)));
         }
         finally {
-            hearState = 'idle';
-            paint();
+            if (live(owner)) {
+                hearState = 'idle';
+                paint();
+            }
         }
     };
     /** 开录：先要麦克风，拿到了才开始计时。 */
@@ -2202,8 +2212,9 @@ function createHearControl(opts) {
             hint.flash(blocked);
             return;
         }
-        if (hearState !== 'idle')
+        if (hearState !== 'idle' || !input.isConnected || document.hidden || opts.active?.() === false)
             return;
+        const owner = ++generation, abort = controller = new AbortController();
         // 焦点交还出去：按住说话不看焦点，可输入框一旦吃着键盘，落进来的 v 就会变成字符。
         // 识别完由 insertText 重新聚焦，回车发送照旧。
         if (document.activeElement === input)
@@ -2213,9 +2224,16 @@ function createHearControl(opts) {
         paint();
         hint.show('正在打开麦克风…');
         try {
-            recorder = await (0, hear_ts_1.startRecording)();
+            const next = await (0, hear_ts_1.startRecording)(abort.signal);
+            if (!live(owner)) {
+                next.cancel();
+                return;
+            }
+            recorder = next;
         }
         catch (e) {
+            if (!live(owner))
+                return;
             hearState = 'idle';
             paint();
             hint.flash('打不开麦克风：' + (e instanceof Error ? e.message : String(e)));
@@ -2268,6 +2286,9 @@ function createHearControl(opts) {
         stop: () => void stop(),
         isHearing: () => hearState === 'recording',
         dispose: () => {
+            generation++;
+            controller?.abort();
+            controller = undefined;
             window.clearInterval(hearTimer);
             // 关弹窗时麦克风必须立刻松手：录音中直接丢弃，不等识别
             if (recorder) {
@@ -2275,6 +2296,8 @@ function createHearControl(opts) {
                 recorder = null;
             }
             hearState = 'idle';
+            wasReleasedEarly = false;
+            paint();
         },
     };
 }
@@ -3278,45 +3301,61 @@ async function hearAudio(url, audio, signal) {
  * @returns 录音句柄。
  * @throws {Error} 拿不到麦克风时（没权限、设备被占、非安全上下文）——原文交给调用方展示。
  */
-async function startRecording() {
+async function startRecording(signal) {
+    signal?.throwIfAborted();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } });
-    const ctx = new AudioContext({ sampleRate: exports.HEAR_SAMPLE_RATE });
-    const source = ctx.createMediaStreamSource(stream);
-    const processor = ctx.createScriptProcessor(BLOCK_SAMPLES, 1, 1);
+    let ctx;
+    let source;
+    let processor;
     const chunks = [];
     const maxSamples = Math.floor((exports.MAX_RECORD_MS / 1000) * exports.HEAR_SAMPLE_RATE);
     let frames = 0;
     let closed = false;
-    processor.onaudioprocess = (event) => {
-        if (frames >= maxSamples)
-            return;
-        const samples = event.inputBuffer.getChannelData(0);
-        const room = maxSamples - frames;
-        const take = samples.length > room ? samples.subarray(0, room) : samples;
-        // 必须复制：inputBuffer 的底层数组每帧复用，直接存引用会得到一堆相同的数据
-        chunks.push(new Float32Array(take));
-        frames += take.length;
-    };
-    source.connect(processor);
-    processor.connect(ctx.destination);
-    // 上下文默认可能是 suspended（没有用户手势时）；调用方就在 pointerdown 里，够格恢复
-    await ctx.resume();
     const teardown = () => {
         if (closed)
             return;
         closed = true;
-        processor.onaudioprocess = null;
+        signal?.removeEventListener('abort', teardown);
+        if (processor)
+            processor.onaudioprocess = null;
         try {
-            source.disconnect();
-            processor.disconnect();
+            source?.disconnect();
         }
-        catch {
-            /* 已经断开：无所谓 */
+        catch { }
+        try {
+            processor?.disconnect();
         }
+        catch { }
         for (const track of stream.getTracks())
             track.stop();
-        void ctx.close();
+        void ctx?.close().catch(() => { });
     };
+    signal?.addEventListener('abort', teardown, { once: true });
+    try {
+        signal?.throwIfAborted();
+        ctx = new AudioContext({ sampleRate: exports.HEAR_SAMPLE_RATE });
+        source = ctx.createMediaStreamSource(stream);
+        processor = ctx.createScriptProcessor(BLOCK_SAMPLES, 1, 1);
+        processor.onaudioprocess = (event) => {
+            if (frames >= maxSamples)
+                return;
+            const samples = event.inputBuffer.getChannelData(0);
+            const room = maxSamples - frames;
+            const take = samples.length > room ? samples.subarray(0, room) : samples;
+            // 必须复制：inputBuffer 的底层数组每帧复用，直接存引用会得到一堆相同的数据
+            chunks.push(new Float32Array(take));
+            frames += take.length;
+        };
+        source.connect(processor);
+        processor.connect(ctx.destination);
+        // 上下文默认可能是 suspended（没有用户手势时）；调用方就在 pointerdown 里，够格恢复
+        await ctx.resume();
+        signal?.throwIfAborted();
+    }
+    catch (error) {
+        teardown();
+        throw error;
+    }
     return {
         elapsedMs: () => (frames / exports.HEAR_SAMPLE_RATE) * 1000,
         async stop() {

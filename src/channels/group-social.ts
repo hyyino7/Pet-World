@@ -37,7 +37,7 @@ export const socialOperations=new Set(['qq_get_unread','qq_mark_read','qq_send_m
 export class GroupSocial {
   private seen=new Set<number>();
   private replies=new Map<string,{text:string;replyTo?:string}>();
-  constructor(private file:string) {}
+  constructor(private file:string, private companionName:()=>string=()=> '') {}
 
   private read():SocialState {
     const stat=lstatSync(this.file,{throwIfNoEntry:false});
@@ -53,17 +53,18 @@ export class GroupSocial {
     const plain=segments.length ? segments.filter(p=>p.type==='text').map(p=>String(p.data?.text??'')).join('') : text;
     const reason=evaluateWakeTriggerV2({wakeConfig:{triggers:settings}}, {
       message:segments,self_id:id.accountId,user_id:id.speakerId.slice(3),sender:{nickname:id.speakerName},
-    },plain,reply,'大肥鱼');
+    },plain,reply,this.companionName());
     state.unread.push({seq:++state.lastUnreadSeq,messageId,speakerId:id.speakerId,
       sender:id.speakerName??id.speakerId,text:text.slice(0,200),reason});
     state.unread=state.unread.slice(-30);
     this.save(state);
   }
 
-  wake(id:SpeakerIdentity, configured:boolean, settings:WakeSettings) {
+  wake(id:SpeakerIdentity, configured:boolean, settings:WakeSettings, recovering=false) {
     const state=this.read();
     const row=state.unread.find(m=>m.messageId===id.platformMessageId && m.speakerId===id.speakerId);
-    if (!row || row.woken) return false;
+    if (!row) return false;
+    if (row.woken) return recovering;
     const reason=row.reason || (configured ? 'accountTrigger' : '');
     if (!reason) return false;
     const now=Date.now();

@@ -2,7 +2,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isAbsolute, join, relative, sep } from 'node:path';
 import { existsSync, lstatSync } from 'node:fs';
 
-export interface MemoryConfig { dataDir: string; python: string; serviceEntry?: string }
+export interface MemoryConfig { dataDir: string; python: string; serviceEntry?: string; runtimeRoot?: string }
+export function memoryDirectory(config: MemoryConfig, workspacePath: string, useConfiguredDirectory: boolean): string {
+  const configured = relative(workspacePath, config.dataDir);
+  return useConfiguredDirectory && configured && configured !== '..' && !configured.startsWith('..' + sep) && !isAbsolute(configured)
+    ? config.dataDir : join(workspacePath, '.chatpet', 'data', 'memory');
+}
 export interface MemoryScope { companionId: string; scopeId: string; workspaceId: string }
 export interface SourceDependency { id: string; revision: string }
 export interface Dependencies { sources: SourceDependency[]; memories: SourceDependency[] }
@@ -22,13 +27,16 @@ export class MemoryConnection {
     if (!isAbsolute(config.dataDir) || !isAbsolute(config.python)) throw new Error('Memory paths must be explicitly configured absolute paths');
     if (config.serviceEntry && !isAbsolute(config.serviceEntry)) throw new Error('Memory service entry must be an absolute trusted host path');
   }
+  private connected(): boolean {
+    const child = this.host?.child;
+    return !!(this.client && this.host?.ready && child && !child.killed
+      && child.exitCode === null && child.signalCode === null);
+  }
   get lifecycle(): 'ready' | 'stopped' | 'unresolved' {
-    return this.host?.ready && this.client ? 'ready' : this.host?.child ? 'unresolved' : 'stopped';
+    return this.connected() ? 'ready' : this.host?.child ? 'unresolved' : 'stopped';
   }
   async start(scope: MemoryScope, workspacePath: string, useConfiguredDirectory: boolean): Promise<void> {
-    const configured = relative(workspacePath, this.config.dataDir);
-    const directory = useConfiguredDirectory && configured && configured !== '..' && !configured.startsWith('..' + sep) && !isAbsolute(configured)
-      ? this.config.dataDir : join(workspacePath, '.chatpet', 'data', 'memory');
+    const directory = memoryDirectory(this.config, workspacePath, useConfiguredDirectory);
     let parent = workspacePath;
     for (const part of relative(workspacePath, directory).split(sep)) {
       parent = join(parent, part);
@@ -39,7 +47,7 @@ export class MemoryConnection {
     return next;
   }
   private async open(scope: MemoryScope, directory: string): Promise<void> {
-    if (this.client && directory === this.directory && JSON.stringify(scope) === JSON.stringify(this.scope)) return;
+    if (this.connected() && directory === this.directory && JSON.stringify(scope) === JSON.stringify(this.scope)) return;
     if (this.host) await this.stop();
     const root = fileURLToPath(new URL('../../../', import.meta.url));
     const { MemoryProcessHost } = await import(pathToFileURL(`${root}vendor/mnemosyne/src/memory-process.js`).href);
@@ -52,10 +60,18 @@ export class MemoryConnection {
     this.client = new MemoryClient(await this.host.start({ timeoutMs: 10000 }));
   }
   async call<T>(operation: string, args: Record<string, unknown>, expectedWorkspaceId?: string): Promise<T> {
-    if (!this.client || !this.scope) throw new Error('Memory provider unavailable');
+    if (!this.connected() || !this.scope) throw new Error('Memory provider unavailable');
     if (expectedWorkspaceId !== undefined && this.scope.workspaceId !== expectedWorkspaceId)
       throw Object.assign(new Error('Memory workspace changed'), { code: 'STALE_BINDING' });
-    try { return await this.client.request('POST', `/pet/v1/${operation}`, { scope: this.scope, ...args }); }
+    const client=this.client,scope=this.scope;
+    try {
+      const result=await client.request('POST', `/pet/v1/${operation}`, { scope, ...args });
+      // A stopped/replaced connection cannot return a late result as the new
+      // Bank, including A→B→A where the logical Bank name is equal again.
+      if(!this.connected() || this.client!==client || this.scope!==scope)
+        throw Object.assign(new Error('Memory connection changed during request'),{code:'STALE_BINDING'});
+      return result;
+    }
     catch (error) {
       const detail = (error as { data?: { detail?: unknown } })?.data?.detail;
       if (error instanceof Error && typeof detail === 'string') error.message = `Memory ${operation}: ${detail}`;

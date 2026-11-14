@@ -108,11 +108,11 @@ window.__ModuleLoader__.load({
       @container(max-width:560px) { .chatpet-settings .cp-grid {grid-template-columns:1fr;}  .chatpet-settings .cp-fields { grid-template-columns: 1fr; } .chatpet-settings .cp-card { padding: 14px; } .chatpet-settings .cp-tab { padding: 9px 8px; } .chatpet-settings .cp-footer { align-items: start; } .chatpet-settings .cp-overview-row { grid-template-columns:minmax(5em,auto) 1fr; } .chatpet-settings .cp-overview-row .cp-save { grid-column:2; justify-self:start; } }
     `;
     const badge = (text = '待接入') => h('span', { className: 'cp-badge' }, text);
-    function Field({ label, note, wide, multiline, value, onChange, type = 'text', min, max, maxLength, disabled }) {
+    function Field({ label, note, wide, multiline, value, onChange, type = 'text', min, max, step, maxLength, disabled }) {
       const id = useId();
       return h('div', { className: `cp-field${wide ? ' cp-wide' : ''}` },
         h('label', { htmlFor: id }, label),
-        h(multiline ? 'textarea' : 'input', { id, type: multiline ? undefined : type, value: value ?? '', min, max, maxLength, disabled,
+        h(multiline ? 'textarea' : 'input', { id, type: multiline ? undefined : type, value: value ?? '', min, max, step, maxLength, disabled,
           onChange: event => onChange(event.target.value), 'aria-describedby': note ? `${id}-note` : undefined }),
         note && h('small', { id: `${id}-note` }, note));
     }
@@ -305,12 +305,23 @@ window.__ModuleLoader__.load({
     function ChannelsPage({workspaceId, request}) {
       const [saved, setSaved] = useState(null), [draft, setDraft] = useState(null), [busy,setBusy] = useState(false);
       const [fault,setFault] = useState(''), lifetime = useRef(null);
-      React.useEffect(() => { const c = new AbortController(); lifetime.current = c; return () => c.abort(); }, []);
+      React.useEffect(() => { const c = new AbortController(); lifetime.current = c; return () => c.abort(); }, [workspaceId,request]);
       async function change(operation, input) {
         setBusy(true); setFault('');
-        const signal = lifetime.current.signal;
+        const signal = lifetime.current.signal,submitted=draft;
         try { const result = await request(operation, {workspaceId,...input}, signal);
-          if (!signal.aborted) { setSaved(result); setDraft({bridge:result.bridge.preferences,...result.messaging.config}); }
+          if (!signal.aborted) {
+            setSaved(result);
+            setDraft(old=>{
+              const received={bridge:result.bridge.preferences,...result.messaging.config};
+              if(!old)return received;
+              const next={...old},groups=operation==='channelStatus'?Object.keys(received):operation==='bridgeSettings'?['bridge']:Object.keys(input.next??{});
+              // Acknowledge only submitted sections that have not been edited
+              // again while the save awaited its native owner.
+              for(const group of groups)if(equal(old[group],submitted?.[group]))next[group]=received[group];
+              return next;
+            });
+          }
         } catch (e) { if (!signal.aborted) setFault(e.message); }
         finally { if (!signal.aborted) setBusy(false); }
       }
@@ -352,7 +363,7 @@ window.__ModuleLoader__.load({
       }
       const updateOutlet = (i,key,value) => set('bridge','outlets',draft.bridge.outlets.map((o,j)=>i===j ? {...o,[key]:value} : o));
       return h(Card, {title:'外部联络'}, fault && h('p',{role:'alert'},fault),
-        button(saved ? '重新读取渠道状态' : '管理渠道', ()=>change('channelStatus',{})),
+        button(saved ? '重新读取渠道状态（放弃未保存修改）' : '管理渠道', ()=>change('channelStatus',{})),
         draft && h(React.Fragment,null,platform('qq','QQ'),platform('wechat','微信'),
           saved.messaging.config.qq.accountId && h(Qzone,{key:saved.messaging.config.qq.accountId,workspaceId,request}),
           ...saved.messaging.config.qq.allowGroups.map(groupId=>h(QQGroup,{key:groupId,groupId,workspaceId,request})),
@@ -367,7 +378,7 @@ window.__ModuleLoader__.load({
             button('添加接收端',()=>set('bridge','outlets',[...draft.bridge.outlets,{name:'',url:'',kinds:['reach','reply','busy']}])),
             button('保存桥接设置',()=>change('bridgeSettings',{expected:saved.bridge.preferences,next:draft.bridge}))))));
     }
-    function LifeArchive({workspaceId, request}) {
+    function CompanionArchive({workspaceId, request, companionName}) {
       const [dates, setDates] = useState(null), [entry, setEntry] = useState(null);
       const [album, setAlbum] = useState(null), [image, setImage] = useState(null);
       const [fault, setFault] = useState(''), [busy, setBusy] = useState(false);
@@ -404,7 +415,7 @@ window.__ModuleLoader__.load({
         h('label', {className:'cp-field'}, '查找聊天原文和日记', h('input', {value:query, maxLength:256, onChange:e => setQuery(e.target.value)})),
         button('查找', search(0)),
         result && h('div', null, ...result.diaries.map(item => h('p', {key:item.date}, item.date + ' · ' + item.excerpt)),
-          ...result.lines.map(line => h('p', {key:line.id}, new Date(line.time).toLocaleString() + ' · ' + (line.role === 'user' ? '伙伴' : '大肥鱼') + ' · ' + line.text)),
+          ...result.lines.map(line => h('p', {key:line.id}, new Date(line.time).toLocaleString() + ' · ' + (line.role === 'user' ? '用户' : companionName || '伙伴') + ' · ' + line.text)),
           !result.diaries.length && !result.lines.length && h('p', null, '没有查到可读取的记录。'),
           result.next !== undefined && button('继续查看聊天原文', search(result.next))),
         button('翻日记和活动', async call => { const days = await call('lifeDates'); return () => setDates(days); }),
@@ -413,7 +424,7 @@ window.__ModuleLoader__.load({
         entry && h('section', null, h('h4', null, entry.day), h('p', {style:{whiteSpace:'pre-wrap'}}, entry.diary || '当天没有可显示的日记。'),
           ...entry.activity.map((event, i) => h('p', {key:i}, new Date(event.time).toLocaleTimeString() + ' · ' + event.summary))),
         button('打开相册', page(0)),
-        album && h('section', null, album.total ? h('p', null, '已收藏 ' + album.total + ' 张') : h('p', null, '相册还没有照片。可以在生活会话中请大肥鱼收藏本轮收到的图片。'),
+        album && h('section', null, album.total ? h('p', null, '已收藏 ' + album.total + ' 张') : h('p', null, '相册还没有照片。可以在普通聊天中请伙伴收藏收到的图片。'),
           ...album.photos.map(photo => h('div', {key:photo.id}, button(photo.description || new Date(photo.savedAt).toLocaleString(), async call => {
             const result = await call('lifePhoto', {id:photo.id});
             return () => setImage({id:photo.id, title:photo.description, src:'data:' + result.mediaType + ';base64,' + result.data});
@@ -426,6 +437,147 @@ window.__ModuleLoader__.load({
             return page(0)(call);
           })));
     }
+    function EconomyPanel({workspaceId, request}) {
+      const [view,setView] = useState(null), [busy,setBusy] = useState(false), [fault,setFault] = useState('');
+      const [feedback,setFeedback] = useState(''), [edit,setEdit] = useState(null), [pending,setPending] = useState(null);
+      const [amount,setAmount] = useState(''), [note,setNote] = useState('');
+      const [giftItem,setGiftItem] = useState(''), [giftQuantity,setGiftQuantity] = useState('1'), [giftNote,setGiftNote] = useState('');
+      const [feedItem,setFeedItem] = useState('');
+      const [imported,setImported] = useState(null), [title,setTitle] = useState('');
+      const [readingFormat,setReadingFormat] = useState('article');
+      const lifetime = useRef(null), locked = useRef(false), unresolved = useRef(null);
+      const storageKey = `chatpet:economy:pending:${workspaceId}`;
+      React.useEffect(() => {
+        const controller = new AbortController(); lifetime.current = controller;
+        setView(null); setEdit(null); setImported(null); setTitle(''); setAmount(''); setNote(''); setFault('');
+        try {
+          const saved = localStorage.getItem(storageKey), value = saved ? JSON.parse(saved) : null;
+          if (value && (typeof value.requestId !== 'string' || !['economyAction','economySettings'].includes(value.endpoint)
+            || value.input?.workspaceId !== workspaceId)) throw Error('待确认经济操作的本机记录无效，请先检查浏览器保存状态。');
+          unresolved.current = value; setPending(value);
+        } catch (error) { unresolved.current = {invalid:true}; setPending({invalid:true}); setFault(error.message); }
+        async function load() {
+          try { const next = await request('economyView',{workspaceId},controller.signal); if (!controller.signal.aborted) setView(next); }
+          catch(error) { if (!controller.signal.aborted) setFault(error.message); }
+        }
+        void load();
+        return () => controller.abort();
+      },[workspaceId,request,storageKey]);
+      const refresh = async () => {
+        const signal=lifetime.current.signal; setFault('');
+        try {const next=await request('economyView',{workspaceId},signal); if(!signal.aborted)setView(next);}
+        catch(error){if(!signal.aborted)setFault(error.message);}
+      };
+      async function send(operation) {
+        if (locked.current || unresolved.current?.invalid) return;
+        const signal=lifetime.current.signal; locked.current=true;setBusy(true);setFault('');setFeedback('');
+        try {
+          if (!unresolved.current) {
+            localStorage.setItem(storageKey,JSON.stringify(operation));
+            unresolved.current=operation;setPending(operation);
+          } else if (unresolved.current.requestId!==operation.requestId) throw Error('有一笔结果待确认的操作，请先重试或核对流水。');
+          const result=await request(operation.endpoint,operation.input,signal,operation.requestId);
+          if(result.execution && !['completed','failed','cancelled'].includes(result.execution.status)) {
+            if(!signal.aborted){setPending(operation);setFeedback('投喂仍在等待核对，请重试原操作或查看使用中的库存。');await refresh();}
+            return;
+          }
+          // Only an acknowledged receipt releases the durable request identity.
+          localStorage.removeItem(storageKey);unresolved.current=null;
+          if(signal.aborted)return;
+          setPending(null);setFeedback(result.execution?.status==='failed'?'投喂未完成，请查看原因与库存。':'已保存，可在流水中核对。');setEdit(null);
+          if(operation.input.action?.kind==='grant'){setAmount('');setNote('');}
+          if(operation.input.action?.kind==='importReading'){setImported(null);setTitle('');}
+          await refresh();
+          if(result.execution?.status==='failed'&&!signal.aborted)setFault(result.execution.reason||'本次投喂未完成。');
+        } catch(error){if(!signal.aborted){
+          // These domain refusals occur before any commit. A transport timeout,
+          // cancellation, binding change or unknown error keeps the original ID.
+          if(['INELIGIBLE','NOT_FOUND','STALE_REVISION'].includes(error.code)) {
+            localStorage.removeItem(storageKey);unresolved.current=null;setPending(null);
+          }
+          setFault(error.message);
+        }}
+        finally{locked.current=false;if(!signal.aborted)setBusy(false);}
+      }
+      const mutate=(endpoint,input)=>send({endpoint,input:{workspaceId,...input},requestId:crypto.randomUUID()});
+      const act=action=>mutate('economyAction',{action});
+      const button=(label,onClick,disabled=false)=>h('button',{type:'button',className:'cp-save',disabled:busy||disabled,onClick},label);
+      const changed=(key,value)=>setEdit(old=>{const {version:_schema,revision:_revision,dailyNetReference:_income,fertilizerYield:_yield,crops,itemPrices,catalogEnabled,...writable}=view.configuration;const saved={...writable,crops:Object.fromEntries(Object.entries(crops).map(([id,value])=>[id,{growMs:value.growMs,seedCost:value.seedCost}])),itemPrices:Object.fromEntries(Object.entries(itemPrices).filter(([id])=>!id.startsWith('harvest:'))),catalogEnabled:Object.fromEntries(Object.entries(catalogEnabled).filter(([id])=>!id.startsWith('harvest:')))};return {expectedVersion:old?.expectedVersion||String(view.configurationVersion),
+        next:{...(old?.next||saved),[key]:value}};});
+      const config=edit?.next||view?.configuration, catalog=view?.catalog||[], inventory=view?.inventory||[];
+      const names=new Map(catalog.map(item=>[item.id,item.name]));
+      const hasPending=Boolean(pending), available=inventory.filter(item=>item.available>0);
+      const foods=available.filter(item=>catalog.find(entry=>entry.id===item.itemId)?.kind==='food');
+      const itemChoice=(label,value,setValue,items)=>h('label',{className:'cp-field'},label,
+        h('select',{value,disabled:busy||hasPending,onChange:event=>setValue(event.target.value)},
+          h('option',{value:''},'请选择'),...items.map(item=>h('option',{key:item.id,value:item.id},item.name))));
+      const integerValue=value=>/^[1-9]\d*$/.test(value)&&Number.isSafeInteger(Number(value));
+      const numeric=(label,value,onChange,min=0,noteText,max)=>field(label,{type:'number',min,max,step:'any',value,onChange:value=>onChange(value===''?null:Number(value)),disabled:busy||hasPending,note:noteText});
+      const updateCrop=(crop,key,value)=>changed('crops',{...Object.fromEntries(Object.entries(config.crops).map(([id,row])=>[id,{growMs:row.growMs,seedCost:row.seedCost}])),[crop]:{growMs:config.crops[crop].growMs,seedCost:config.crops[crop].seedCost,[key]:value}});
+      const updatePrice=(item,key,value)=>{const saved=catalog.find(entry=>entry.id===item);changed('itemPrices',{...config.itemPrices,[item]:{purchasePrice:saved.purchasePrice,sellPrice:saved.sellPrice,...config.itemPrices?.[item],[key]:value}});};
+      const price=(item,key)=>config.itemPrices?.[item.id]&&Object.hasOwn(config.itemPrices[item.id],key)?config.itemPrices[item.id][key]:item[key];
+      const forgetPending=()=>{
+        try {localStorage.removeItem(storageKey);unresolved.current=null;setPending(null);setFault('');}
+        catch(error){setFault(error.message);}
+      };
+      async function chooseFile(event) {
+        const file=event.target.files?.[0];event.target.value='';if(!file)return;
+        const signal=lifetime.current.signal;setFault('');
+        try {
+          if(!/\.(txt|md)$/i.test(file.name)||file.size>2*1024*1024)throw Error('请选择不超过 2 MB 的 .txt 或 .md 文件。');
+          const content=await file.text();if(signal.aborted)return;
+          if(!content.trim())throw Error('所选文件没有可导入的正文。');
+          setImported({content,name:file.name});setTitle(file.name.replace(/\.(txt|md)$/i,''));
+        }catch(error){if(!signal.aborted)setFault(error.message);}
+      }
+      return h(Card,{title:'钱包与物品',status:view?`${view.balance} 虚拟币`:'读取中',note:'钱包和物品由同一份账本管理。收入来自实际生产与自愿交易，没有每日自动发薪。'},
+        fault&&h('p',{role:'alert'},fault),feedback&&h('p',{role:'status'},feedback),
+        button('刷新钱包',refresh,busy),
+        pending&&h('div',null,h('p',{role:'status'},'上次操作的结果尚未确认。重试会使用原请求编号，避免重复记账。'),
+          !pending.invalid&&button('重试原操作',()=>send(pending)),
+          h('p',{className:'cp-muted'},'请先刷新并核对流水；清除本机重试记录不会撤销已经提交的操作。'),
+          button('已核对，清除重试记录',forgetPending)),
+        view&&h(React.Fragment,null,
+          facts([['余额',`${view.balance} 虚拟币`],['账本修订',view.revision],['当前经济配置',`${view.configuration.revision} · ${String(view.configurationVersion).slice(-12)}`]]),
+          details('给零花钱',fields(field('金额',{type:'number',min:1,value:amount,onChange:setAmount,disabled:busy||hasPending}),
+            field('备注',{value:note,onChange:setNote,maxLength:500,disabled:busy||hasPending,note:'金额默认留空，由你填写本次想给的数量。'})),
+            button('给零花钱',()=>act({kind:'grant',amount:Number(amount),note}),hasPending||!integerValue(amount))),
+          details('赠送物品',fields(itemChoice('物品',giftItem,setGiftItem,catalog),field('数量',{type:'number',min:1,value:giftQuantity,onChange:setGiftQuantity,disabled:busy||hasPending}),
+            field('赠送备注',{value:giftNote,onChange:setGiftNote,maxLength:500,disabled:busy||hasPending})),
+            button('赠送',()=>act({kind:'gift',itemId:giftItem,quantity:Number(giftQuantity),note:giftNote}),hasPending||!giftItem||!integerValue(giftQuantity))),
+          details('立即投喂',h('p',{className:'cp-muted'},'从现有库存中扣除所选食物，并执行真实身体动作。'),
+            itemChoice('库存食物',feedItem,setFeedItem,foods.map(item=>({id:item.itemId,name:`${names.get(item.itemId)||item.itemId}（可用 ${item.available}）` }))),
+            button('立即投喂 1 份',()=>act({kind:'feed',itemId:feedItem,quantity:1}),hasPending||!feedItem)),
+          details('商店',h('p',{className:'cp-muted'},'购买会扣除虚拟币，当前实际价格如下。'),
+            ...catalog.map(item=>h('div',{key:item.id},h('h4',null,item.name),h('p',null,item.description),
+              h('p',{className:'cp-muted'},`${item.enabled===false?'已下架 · ':''}购入 ${item.purchasePrice===null?'不可购买':item.purchasePrice+' 币'} · 售出 ${item.sellPrice===null?'不可售卖':item.sellPrice+' 币'}`),
+              item.source&&h('p',{className:'cp-muted'},`来源：${item.source.kind==='owner-import'?'主人导入':'内置原创'} · ${item.source.name}`),
+              button('购买 1 件',()=>act({kind:'buy',itemId:item.id,quantity:1}),hasPending||item.enabled===false||item.purchasePrice===null)))),
+          details('库存',inventory.length?inventory.map(item=>h('div',{key:item.itemId},h('p',null,`${names.get(item.itemId)||item.itemId} · 共 ${item.quantity} · 可用 ${item.available} · 使用中 ${item.reserved}`),
+            button('售出 1 件',()=>act({kind:'sell',itemId:item.itemId,quantity:1}),hasPending||item.available<1||catalog.find(entry=>entry.id===item.itemId)?.sellPrice==null))):h('p',null,'库存还是空的。')),
+          details('导入阅读内容',h('p',{className:'cp-muted'},'选择本机 .txt 或 .md，导入后可在商店中按真实正文分段阅读。只导入你选择的文件。'),
+            h('label',{className:'cp-field'},'选择阅读文件',h('input',{type:'file',accept:'.txt,.md,text/plain,text/markdown',disabled:busy||hasPending,onChange:chooseFile})),
+            imported&&h(React.Fragment,null,field('标题',{value:title,onChange:setTitle,maxLength:200,disabled:busy||hasPending}),
+              h('label',{className:'cp-field'},'读物类型',h('select',{value:readingFormat,disabled:busy||hasPending,onChange:event=>setReadingFormat(event.target.value)},
+                h('option',{value:'article'},'文章'),h('option',{value:'book'},'书籍'))),
+              h('p',null,`来源：主人导入 · ${imported.name} · ${imported.content.length} 字符`),preview('正文预览',imported.content.slice(0,1200)),
+              button('导入阅读内容',()=>act({kind:'importReading',title:title.trim(),format:readingFormat,content:imported.content,source:{kind:'owner-import',name:imported.name}}),hasPending||!title.trim()))),
+          details('经济配置',h('p',{className:'cp-muted'},'可调整商城卖给她的商品和生活节奏。日收益目标、作物产量与回收价不提供自定义。已种批次保留种下时的生长与产量参数。'),
+            fields(...[['articlePrice','文章标准价格'],['bookPrice','书籍标准价格'],['improvedMealPrice','改善伙食价格'],
+              ['compostCost','堆肥费用'],['waterDurationFactor','浇水时长比例'],['fertilizerGrowth','施肥生长调整']].map(([key,label])=>numeric(label,config[key],value=>changed(key,value)))),
+            ...Object.entries(config.crops).map(([crop,value])=>h('div',{key:crop},h('h4',null,(names.get(`seed:${crop}`)||crop)+' · 新种批次'),fields(
+              numeric('生长时间（毫秒）',value.growMs,next=>updateCrop(crop,'growMs',next),1),numeric('种子价格',value.seedCost,next=>updateCrop(crop,'seedCost',next))))),
+            details('商品价格与上架',...catalog.filter(item=>item.kind!=='harvest').map(item=>h('div',{key:item.id},h('h4',null,item.name),fields(
+              numeric('购入价格（留空不可购买）',price(item,'purchasePrice'),value=>updatePrice(item.id,'purchasePrice',value))),
+              h('label',{className:'cp-switch'},h('input',{type:'checkbox',checked:config.catalogEnabled?.[item.id]!==false,disabled:busy||hasPending,
+                onChange:event=>changed('catalogEnabled',{...config.catalogEnabled,[item.id]:event.target.checked})}),'上架')))),
+            config.foodEffects&&details('食物身体效果',...Object.entries(config.foodEffects).map(([item,effects])=>h('div',{key:item},h('h4',null,names.get(item)||item),fields(
+              ...[['hunger','饥饿变化'],['thirst','口渴变化'],['energy','体力变化'],['bladder','如厕需求变化'],['pain','疼痛变化']].map(([effect,label])=>numeric(label,effects[effect]??0,next=>changed('foodEffects',{...config.foodEffects,[item]:{...effects,[effect]:next}}),-1,'范围 -1 至 1；负数降低，正数提高对应状态值。',1)))))),
+            button('保存经济配置',()=>mutate('economySettings',edit),hasPending||!edit||!view.configurationVersion),button('放弃配置修改',()=>setEdit(null),!edit)),
+          details('最近流水',view.ledger?.length?view.ledger.slice().reverse().map(entry=>h('div',{key:entry.id},h('p',null,`${new Date(entry.at).toLocaleString()} · ${entry.note||entry.kind}`),
+            h('p',{className:'cp-muted'},`${entry.moneyDelta>=0?'+':''}${entry.moneyDelta} 币 · 余额 ${entry.balance} · ${Object.entries(entry.itemDeltas).map(([item,quantity])=>`${names.get(item)||item} ${quantity>=0?'+':''}${quantity}`).join('，')||'物品无变化'}`))):h('p',null,'还没有经济流水。'))));
+    }
+
     function LifePage({ workspaceId, request }) {
       const [view, setView] = useState(null), [busy, setBusy] = useState(false);
       const [error, setError] = useState(''), [feedback, setFeedback] = useState('');
@@ -462,36 +614,46 @@ window.__ModuleLoader__.load({
       }
       if (!workspaceId) return h('p', null, '请先绑定并初始化工作区。');
       const button = (label, click, disabled = false) => h('button', {type: 'button', className: 'cp-save', disabled: busy || disabled, onClick: click}, label);
-      const home = view?.home, life = view?.life;
+      const home = view?.home, life = view?.life, plan = life?.currentPlan;
       const prefs = edit?.next || view?.preferences;
       const updatePref = (key, value) => setEdit(old => ({expected:old?.expected || view.preferences,
         next:{...(old?.next || view.preferences), [key]:value}}));
       return h(React.Fragment, null,
-        h(Card, {title: '大肥鱼的日常', status: view ? view.running ? '生活中' : '已暂停' : '读取中',
+        h(Card, {title: '自主生活', status: view ? view.running ? '生活中' : '已暂停' : '读取中',
           note: '开启后，生活会话会使用当前模型安排活动和主动联络。'},
           error && h('p', {role: 'alert'}, error),
           feedback && h('p', {role: 'status'}, feedback),
           view && h('div', {className: 'cp-inline-actions'}, button(view.enabled ? '暂停生活' : '开启生活', () => change('lifeControl', {enabled: !view.enabled}))),
           home && facts([['现在', `${home.her.roomName} · ${home.her.spotLabel}，${home.her.activity}`],
             ['身体状态', Object.values(home.body.words).join('，')], ['生活时区', view.timeZone],
-            ['下次活动', life?.alarm ? `${new Date(life.alarm.at).toLocaleString()} · ${life.alarm.note || '日常唤醒'}` : '尚未安排'],
+            ['下次考虑', life?.alarm ? `${new Date(life.alarm.at).toLocaleString()} · ${life.alarm.note || '生活唤醒'}` : '等待消息或计划条件'],
             ['生活会话', life?.homeSessionId ? '已保存，可在 DSH 会话列表打开' : '开启后创建'],
             ['生活会话用量估算', life?.spend ? life.spend.day + ' · ¥' + Number(life.spend.yuan).toFixed(4) : '暂无记录']]),
           view?.fault && h('p', {role: 'alert'}, view.fault),
           ...(life?.faults || []).map((fault, index) => h('p', {key: index, role: 'alert'}, fault)),
           h('p', {className: 'cp-muted'}, '安静模式暂停主动气泡，生活继续记录。生活运行时，自动碎碎念暂停；手动碎碎念仍可使用。')),
-        prefs && h(Card, {title:'作息与预算'}, h('div', {className:'cp-fields'},
-          ...[['wake','默认起床'],['review','每日回顾']].map(([key,label]) => h('label', {className:'cp-field',key}, label,
+        h(Card, {title:'当前生活计划', note:'不同对话共用同一份计划。可以在对话中让它查看、调整、暂停或继续；没有下一项安排时也可以安心待着。',
+          status:plan ? ({active:'进行中',paused:'已暂停',waiting:'等待中',completed:'已完成',cancelled:'已取消'}[plan.status] || plan.status) : '尚未安排'},
+          plan ? facts([['想做什么',plan.goal],['原因',plan.reason],['当前活动',plan.steps?.[plan.cursor]?.activity || '本轮安排已结束'],
+            ['实际进度',plan.execution ? ({pending:'已接受，等待执行',moving:'正在移动',working:'正在进行',waiting:'等待继续',completed:'已结束'}[plan.execution.phase] || plan.execution.phase) : '尚未开始'],
+            ['未完成安排',(plan.steps || []).slice(plan.cursor+1).map(step=>step.activity).join(' → ') || '没有后续安排'],
+            ['暂停或等待原因',plan.pauseReason || plan.replanReason || '无'],
+            ['下次考虑',plan.nextConsiderAt ? new Date(plan.nextConsiderAt).toLocaleString() : '等待消息或计划条件']]) : h('p',null,'还没有生活计划。开启生活后可以由它决定，也可以先在对话里讨论。')),
+        prefs && h(Card, {title:'可选作息与预算'}, h('div', {className:'cp-fields'},
+          ...[['wake','起床时间'],['review','每日回顾']].map(([key,label]) => h('label', {className:'cp-field',key}, label,
             h('input', {type:'time', value:prefs[key], onChange:e => updatePref(key,e.target.value)}))),
           h('label', {className:'cp-field'}, '每日费用提醒（人民币，留空关闭）', h('input', {type:'number', min:'0.01', step:'any',
             value:prefs.dailyBudget ?? '', onChange:e => updatePref('dailyBudget',e.target.value === '' ? null : Number(e.target.value))})),
-          h('label', {className:'cp-switch'}, h('input', {type:'checkbox', checked:prefs.compactAfterReview,
-            onChange:e => updatePref('compactAfterReview',e.target.checked)}), '晚间回顾后整理生活会话')),
+          h('label', {className:'cp-field'}, '未保存生活决定时自动补救次数（留空一次，0为关闭）', h('input', {type:'number', min:'0', step:'1',
+            value:prefs.planningRepairAttempts ?? '', onChange:e => updatePref('planningRepairAttempts',e.target.value === '' ? null : Number(e.target.value))})),
+          h('label', {className:'cp-field'}, '晚间回顾后整理生活会话', h('select', {value:prefs.compactAfterReview == null ? '' : String(prefs.compactAfterReview),
+            onChange:e => updatePref('compactAfterReview',e.target.value === '' ? null : e.target.value === 'true')},
+            h('option',{value:''},'未配置'),h('option',{value:'true'},'开启'),h('option',{value:'false'},'关闭')))),
           button('保存作息和预算', () => change('lifePreferences', edit), !edit)),
+        h(EconomyPanel, {key:workspaceId, workspaceId, request}),
         view?.roomAvailable && h(RoomView, {workspaceId, request}),
-        view && h(LifeArchive, {key:workspaceId, workspaceId, request}),
         home && h(Card, {title: '陪它一会儿', note: '暂停自主生活时也能照顾它；这些操作不会调用模型。'},
-          h('div', {className: 'cp-inline-actions'}, ...[['feed', '喂小鱼干'], ['water', '倒杯水'], ['pet', '摸摸头'], ['play', '一起玩'], ['sleep', '去睡觉'], ['wake', '叫醒']].map(([action, label]) =>
+          h('div', {className: 'cp-inline-actions'}, ...[['feed', '免费基础餐食'], ['water', '倒杯水'], ['pet', '摸摸头'], ['play', '一起玩'], ['sleep', '去睡觉'], ['wake', '叫醒']].map(([action, label]) =>
             h(React.Fragment, {key: action}, button(label, () => change('lifeAction', {action})))))),
         home && h(Card, {title: '最近的生活', note: '原版保留最近 15 分钟的生活事件。会话工具活动另存于绑定 Repo。'},
           ...(home.events.length ? home.events.map((event, i) => h('p', {key: `${event.at}-${i}`}, `${new Date(event.at).toLocaleTimeString()} · ${event.text}`)) : [h('p', {key: 'empty', className: 'cp-muted'}, '这会儿还没有新活动。')]),
@@ -567,30 +729,31 @@ window.__ModuleLoader__.load({
         error&&h('p',{role:'alert'},error),notice&&h('p',{role:'status'},notice));
     }
     // Drafts live in SettingsPage so changing tabs never discards new file edits.
-    function FoundationEditor({workspaceId, request, value, onChange}) {
+    function FoundationEditor({workspaceId, request, value, onChange, endpoint = 'foundation'}) {
+      const self = endpoint === 'self', title = self ? '我是谁' : '基础说明';
       const [error,setError]=useState(''),[busy,setBusy]=useState(false),[attempt,retry]=useState(0),[notice,setNotice]=useState('');
       const lifetime=useRef(null);
       React.useEffect(()=>{
         const controller=new AbortController();lifetime.current=controller;
-        if(workspaceId&&!value) request('foundation',{workspaceId},controller.signal).then(base=>{
+        if(workspaceId&&!value) request(endpoint,{workspaceId},controller.signal).then(base=>{
           if(!controller.signal.aborted)onChange({base,text:base.text});
         },e=>{if(!controller.signal.aborted)setError(e.message);});
         return()=>controller.abort();
-      },[workspaceId,request,attempt]);
+      },[workspaceId,request,attempt,endpoint]);
       async function save() {
         const signal=lifetime.current.signal;setBusy(true);setError('');setNotice('');
-        try {const base=await request('foundation',{workspaceId,expectedRevision:value.base.revision,text:value.text},signal);
-          if(!signal.aborted){onChange({base,text:base.text});setNotice('基础说明已保存，下一次对话使用新内容。');}
+        try {const base=await request(endpoint,{workspaceId,expectedRevision:value.base.revision,text:value.text},signal);
+          if(!signal.aborted){onChange({base,text:base.text});setNotice(title+'已保存，下一次对话使用新内容。');}
         } catch(e){if(!signal.aborted)setError(e.message);}
         finally {if(!signal.aborted)setBusy(false);}
       }
-      return h(Card,{title:'基础说明',note:'对话规则、关系和能力说明。关闭自主生活后仍会使用；当前未加载的能力不会提供给大肥鱼。',status:value?.base.source==='owner'?'已自定义':'随包默认'},
+      return h(Card,{title,note:self ? '伙伴逐渐形成的自我认识。与主人填写的人设分别保存，关闭自主生活或记忆后仍可使用。' : '对话规则、关系和能力说明。关闭自主生活后仍会使用。',status:value?.base.text?.trim()?'已填写':'未填写'},
         !workspaceId?h('p',null,'请先绑定并初始化工作区。'):value?h(React.Fragment,null,
-          h('label',{className:'cp-field'},'基础说明内容',h('textarea',{className:'cp-foundation',value:value.text,maxLength:64000,
+          h('label',{className:'cp-field'},title+'内容',h('textarea',{className:'cp-foundation',value:value.text,maxLength:64000,
             disabled:busy,onChange:e=>onChange({...value,text:e.target.value})})),
-          h('div',{className:'cp-inline-actions'},h('button',{type:'button',className:'cp-save cp-primary',disabled:busy||value.text===value.base.text,onClick:save},busy?'正在保存…':'保存基础说明')),
-          h('p',{className:'cp-muted'},'保存在 .chatpet/COMPANION.md。未编辑时直接使用随包说明，旧档案无需迁移。')):
-          h('p',{role:'status'},error?'未能读取基础说明。':'正在读取基础说明…'),
+          h('div',{className:'cp-inline-actions'},h('button',{type:'button',className:'cp-save cp-primary',disabled:busy||value.text===value.base.text,onClick:save},busy?'正在保存…':'保存'+title)),
+          h('p',{className:'cp-muted'},self ? '可以留空，也可以在普通聊天中逐渐更新。' : '保存在 .chatpet/COMPANION.md。可以留空，空白时不会加载另一套预设说明。')):
+          h('p',{role:'status'},error?'未能读取'+title+'。':'正在读取'+title+'…'),
         notice&&h('p',{role:'status'},notice),error&&h('p',{role:'alert'},error),error&&!value&&h('button',{type:'button',className:'cp-save',onClick:()=>{setError('');retry(n=>n+1);}},'重试读取'));
     }
     function EmotionEditor({workspaceId,request,value,onChange}) {
@@ -628,7 +791,7 @@ window.__ModuleLoader__.load({
       const [active, setActive] = useState('overview');
       const [documents,setDocuments]=useState({});
       const [appearanceVisited,setAppearanceVisited]=useState(false);
-      const documentDirty=Object.values(documents).some(row=>row.foundation&&row.foundation.text!==row.foundation.base.text||row.emotion&&(row.emotion.mood!==(row.emotion.base.state?.mood||'')||row.emotion.reason!==(row.emotion.base.state?.reason||'')||row.emotion.feelings!==(row.emotion.base.state?.feelings||[]).join('、'))||row.timing&&!equal(row.timing.base,row.timing.next));
+      const documentDirty=Object.values(documents).some(row=>row.foundation&&row.foundation.text!==row.foundation.base.text||row.self&&row.self.text!==row.self.base.text||row.emotion&&(row.emotion.mood!==(row.emotion.base.state?.mood||'')||row.emotion.reason!==(row.emotion.base.state?.reason||'')||row.emotion.feelings!==(row.emotion.base.state?.feelings||[]).join('、'))||row.timing&&!equal(row.timing.base,row.timing.next));
       const [snapshot, setSnapshot] = useState(null);
       const [draft, setDraft] = useState(null);
       const [loading, setLoading] = useState(true);
@@ -780,7 +943,13 @@ window.__ModuleLoader__.load({
           } else if (kind === 'profile') {
             setSnapshot(old => ({ ...old, profile: value })); setDraft(old => ({ ...old, profile: value.text }));
           } else {
-            setSnapshot(old => ({ ...old, preferences: value }));
+            setSnapshot(old => {
+              if(old?.preferences.revision!==input.expectedRevision
+                || old.preferences.workspace?.id!==value.workspace?.id
+                || old.preferences.workspace?.path!==value.workspace?.path)return old;
+              return {...old,preferences:value,editorScope:old.editorScope
+                ? {...old.editorScope,preferencesRevision:value.revision}:old.editorScope};
+            });
           }
           setNotice('设置已保存并生效。');
         } catch (failure) {
@@ -839,12 +1008,14 @@ window.__ModuleLoader__.load({
           return [...new Set(labels)].join(' / ') || '未报告';
         };
         const numberField = (key, label, max, min = 0) => field(label, { type: 'number', min, max,
-          value: draft.companion[key], onChange: value => setDraft(old => ({ ...old, companion: {
-            ...old.companion, [key]: value === '' ? '' : Number(value),
+          value: draft.companion[key] ?? '', placeholder:'未配置', onChange: value => setDraft(old => ({ ...old, companion: {
+            ...old.companion, [key]: value === '' ? null : Number(value),
           } })) });
-        const switchField = (key, label) => h('label', { key, className: 'cp-switch' },
-          h('input', { type: 'checkbox', checked: draft.companion[key],
-            onChange: event => setDraft(old => ({ ...old, companion: { ...old.companion, [key]: event.target.checked } })) }), label);
+        const switchField = (key, label) => h('label', { key, className: 'cp-field' }, label,
+          h('select', { value: draft.companion[key] == null ? '' : String(draft.companion[key]),
+            onChange: event => setDraft(old => ({ ...old, companion: { ...old.companion,
+              [key]: event.target.value === '' ? null : event.target.value === 'true' } })) },
+            h('option',{value:''},'未配置'),h('option',{value:'true'},'开启'),h('option',{value:'false'},'关闭')));
         const saveCompanion = (keys, label) => {
           const edited = keys.some(key => draft.companion[key] !== snapshot.companion[key]);
           const settings = { ...snapshot.companion, ...Object.fromEntries(keys.map(key => [key, draft.companion[key]])) };
@@ -855,7 +1026,7 @@ window.__ModuleLoader__.load({
         if (active === 'overview') {
           return h(React.Fragment,null,
             h('div',{className:'cp-grid'},
-              h(Card,{title:'陪伴',status:desktopState},h('div',{className:'cp-big'},snapshot.identity.displayName),
+              h(Card,{title:'陪伴',status:desktopState},h('div',{className:'cp-big'},snapshot.identity.displayName||'未命名伙伴'),
                 h('p',{className:'cp-muted'},repo?.title||'先为大肥鱼选一个工作区。'),
                 h('div',{className:'cp-inline-actions'},desktopButton(true),jump('编辑角色','role','identity'))),
               h(Card,{title:'对话与记忆',status:snapshot.nativeConversationReady?'已就绪':'待就绪'},
@@ -866,7 +1037,12 @@ window.__ModuleLoader__.load({
             h(Card,{title:'日常',note:'角色、记忆和心情持续保留。自主生活决定是否安排活动和主动联络。'},
               h('div',{className:'cp-inline-actions'},jump('看看心情','emotion'),jump('管理生活','life'),jump('连接聊天渠道','connections'))));
         }
-        if (active === 'life') return h(LifePage, {key: workspaceId || 'unbound', workspaceId, request});
+        if (active === 'life') return h(React.Fragment,null,
+          snapshot.companion&&h(Card,{title:'离线身体变化',note:'初始最多计入4小时新增消耗；关闭或隐藏房间不会暂停后台生活。上限不治疗离线前已有的不适，作物另按真实时间生长。'},
+            fields(numberField('offlineBodyHours','离线新增消耗上限（小时，0为不增加）',168),
+              numberField('offlineNeedCeilingPercent','离线需求温和上限（%）',100),numberField('offlineEnergyFloorPercent','离线精力温和下限（%）',100)),
+            saveCompanion(['offlineBodyHours','offlineNeedCeilingPercent','offlineEnergyFloorPercent'],'保存离线身体设置')),
+          h(LifePage, {key: workspaceId || 'unbound', workspaceId, request}));
         if (active === 'connections') return workspaceId?h(ChannelsPage,{key:workspaceId,workspaceId,request}):needsWorkspace('连接聊天渠道');
         if (active === 'emotion') return h(React.Fragment,null,
           h(EmotionEditor,{key:'emotion-'+(workspaceId||'unbound'),workspaceId,request,value:document.emotion,onChange:editDocument('emotion')}),
@@ -886,9 +1062,9 @@ window.__ModuleLoader__.load({
                 : !workspaceId ? '绑定并初始化工作区后可以检索。' : '此工作区尚未配置长期记忆服务。')),
             h(Card, { title: '近期历史与长期记忆' },
               world.has('history') && h('p', null, '近期历史选择和去重组件已加载。当前续聊沿用 DSH 原生历史，跨会话召回由 Mnemosyne 提供。'),
-              world.has('compaction') && snapshot.companion && h('p', null, '积累 ' + snapshot.companion.memorySummaryTurns + ' 轮或空闲 ' +
-                snapshot.companion.memorySummaryIdleMinutes + ' 分钟后整理，最短间隔 ' + snapshot.companion.memorySummaryMinimumMinutes + ' 分钟。'),
-              world.has('memory') && snapshot.companion && h('p', null, '每次最多召回 ' + snapshot.companion.memoryRecallCount +
+              world.has('compaction') && snapshot.companion?.memorySummaryTurns != null && snapshot.companion?.memorySummaryIdleMinutes != null && h('p', null, '积累 ' + snapshot.companion.memorySummaryTurns + ' 轮或空闲 ' +
+                snapshot.companion.memorySummaryIdleMinutes + ' 分钟后整理，最短间隔 ' + (snapshot.companion.memorySummaryMinimumMinutes ?? 0) + ' 分钟。'),
+              world.has('memory') && snapshot.companion?.memoryRecallCount != null && snapshot.companion?.memoryRecallBlockChars != null && h('p', null, '每次最多召回 ' + snapshot.companion.memoryRecallCount +
                 ' 块，每块最多 ' + snapshot.companion.memoryRecallBlockChars + ' 字符。'),
               !world.has('history') && !world.has('memory') && !world.has('compaction') && sourceAbsent(),
               snapshot.companion && h('p',{className:'cp-muted'},'记忆召回与整理参数见下方。')),
@@ -902,18 +1078,20 @@ window.__ModuleLoader__.load({
               : '角色先保存在本机，初始化工作区时会写入角色文件。' }, fields(
               field('角色名称', { value: draft.identity.displayName, onChange: editIdentity('displayName'), wide: true }),
               field('角色设定', { value: draft.identity.character, onChange: editIdentity('character'), multiline: true, wide: true })),
-              saveButton('identity', identityDirty, () => save('identity', { expectedRevision: snapshot.identity.revision,
+              saveButton('identity', identityDirty, () => save('identity', { expectedScope:snapshot.editorScope,expectedRevision: snapshot.identity.revision,
                 displayName: draft.identity.displayName, character: draft.identity.character }), '保存角色')),
             h(Card, { title: '用户资料', note: ready ? '填写希望大肥鱼了解的称呼、习惯或偏好。内容保存在 .chatpet/USER.md。' : '绑定工作区后可以填写希望大肥鱼了解的资料。' },
               field('用户资料内容', { value: draft.profile, multiline: true, wide: true, disabled: !ready,
                 onChange: value => setDraft(old => ({ ...old, profile: value })) }),
               saveButton('profile', profileDirty && ready, () => save('profile', {
-                expectedRevision: snapshot.profile.revision, text: draft.profile }), '保存用户资料')),
+                expectedScope:snapshot.editorScope,expectedRevision: snapshot.profile.revision, text: draft.profile }), '保存用户资料')),
             h(Card, { id: `${prefix}-prompt`, title: '角色提示预览', note: 'World 的人设提示机制把已保存的角色与用户资料放入当前工作区的对话。' },
               world.has('persona') ? worldView('profile', snapshot.identity.revision + '/' + snapshot.profile.revision, view =>
                 h(React.Fragment, null, preview('角色设定 · SOUL.md', view.profile.identity), preview('用户资料 · USER.md', view.profile.user),
                   h('p', { className: 'cp-muted' }, '人设与用户资料约 ' + view.profile.estimatedTokens + ' tokens。单轮总用量见 DSH 会话。'))) : sourceAbsent()),
-            h(FoundationEditor,{key:'foundation-'+(workspaceId||'unbound'),workspaceId,request,value:document.foundation,onChange:editDocument('foundation')}));
+            h(FoundationEditor,{key:'foundation-'+(workspaceId||'unbound'),workspaceId,request,value:document.foundation,onChange:editDocument('foundation')}),
+            h(FoundationEditor,{key:'self-'+(workspaceId||'unbound'),workspaceId,request,endpoint:'self',value:document.self,onChange:editDocument('self')}),
+            workspaceId && h(CompanionArchive,{key:'records-'+workspaceId,workspaceId,request,companionName:snapshot.identity.displayName}));
         }
         if (active === 'desktop') {
           return h(React.Fragment, null,
@@ -925,13 +1103,13 @@ window.__ModuleLoader__.load({
               h(Card,{title:'动作记录'},fields(numberField('recentActionCount','最近动作数量（次）',500),numberField('recentActionMinutes','动作保留时长（分钟）',10080))),
               saveCompanion(['desktopReplyBubble','desktopBubbleSeconds','stickerProbabilityPercent','recentActionCount','recentActionMinutes'],'保存桌宠互动设置'))
               : needsWorkspace('桌宠偏好'),
-            h(Card, { title: '主动联系', note: '安静模式会暂停自动碎碎念、待办提醒和定时余额查询。你仍然可以主动找蓝鱼聊天。' },
+            h(Card, { title: '主动联系', note: '安静模式会暂停自动碎碎念、待办提醒和定时余额查询。你仍然可以主动找伙伴聊天。' },
               h('label', { className: 'cp-switch' },
                 h('input', { type: 'checkbox', checked: draft.quiet,
                   onChange: event => setDraft(old => ({ ...old, quiet: event.target.checked })) }), '安静模式'),
               saveButton('quiet', quietDirty, () => save('quiet', { expectedRevision: snapshot.policy.revision, quiet: draft.quiet }), '保存安静模式')),
             boundId && snapshot.platformAvailable && h(StandaloneAccess,{key:boundId,workspaceId:boundId,request}),
-            details('桌宠快捷键', h('p', null, '鼠标悬停在蓝鱼上时，按 L 打开对话、S 截图、D 查看待办、Z 睡觉。')));
+            details('桌宠快捷键', h('p', null, '鼠标悬停在桌宠上时，按 L 打开对话、S 截图、D 查看待办、Z 睡觉。')));
         }
         const missing = draft.workspaceId && !snapshot.workspaces.some(row => row.id === draft.workspaceId);
         return h(React.Fragment, null,
@@ -948,16 +1126,26 @@ window.__ModuleLoader__.load({
             otherWorkspaceDrafts && h('p', { className: 'cp-muted' }, '请先保存其他设置草稿，或刷新以放弃修改，再切换工作区。'),
             saveButton('preferences', workspaceDirty && snapshot.workspaceAvailable && !otherWorkspaceDrafts,
               () => savePreferences('workspace'), draft.workspaceId ? '绑定并初始化' : '解除绑定')),
-          h(Card, { title: '资料与会话', status: workspaceLabels[snapshot.workspace.state] },
-            h('p', null, snapshot.workspace.error || (ready
+          h(Card, { title: '资料与会话', status: ready && snapshot.storage && !snapshot.storage.complete ? '存储待迁入工作区' : workspaceLabels[snapshot.workspace.state] },
+            h('p', null, snapshot.workspace.state === 'pending' ? '工作区资料待初始化。点击下方按钮建立缺失文件，不会覆盖已有内容。' : snapshot.workspace.error || (ready
               ? '角色、用户资料和设置已从 .chatpet/ 加载。完整会话随工作区保存，换设备绑定同一个工作区后可以恢复。'
               : '初始化会建立 .chatpet/ 资料目录。若目录已存在，会先校验再加载。')),
             h('p', { className: 'cp-muted' }, snapshot.nativeConversationReady ? 'DSH 原生会话已就绪。' : 'DSH 原生会话尚未就绪。'),
+            ready && snapshot.storage && h('p', {className:'cp-muted'}, snapshot.storage.complete
+              ? '伙伴资料已使用绑定工作区中的持久存储。'
+              : '资料文件已准备，但运行存储尚未全部迁入工作区，初始化尚未完成。'),
+            snapshot.storage && details('实际存储位置', facts([
+              ['Core 当前目录',snapshot.storage.core.current],
+              ['Core 工作区目录',snapshot.storage.core.expected || '尚未绑定'],
+              ['记忆当前目录',snapshot.storage.memory?.current || '未配置'],
+              ['记忆登记目录',snapshot.storage.memory?.configured || '未配置'],
+              ['设备运行环境',snapshot.storage.runtime?.python || '未配置'],
+            ])),
             saveButton('initialize', Boolean(repo) && !workspaceDirty && !otherWorkspaceDrafts,
               () => save('initialize', { expectedPreferencesRevision: snapshot.preferences.revision }), '检查并初始化资料目录')),
           details('高级执行限制', h('p', { className: 'cp-muted' }, '步数、工具次数和时长只限制自主生活、电视等自动轮次，不限制主人主动对话。模型和工具权限由 DSH 原生会话管理。'),
             fields(...[
-              ['maxHistoryMessages', '上下文消息数', 0, 200], ['maxContextChars', '上下文字符数', 2048, 128000],
+              ['maxContextChars', '记忆上下文字符预算', 2048, 128000],
               ['maxSteps', '单次执行步数', 1, 64], ['maxToolCalls', '工具调用次数', 0, 128], ['maxDurationMs', '单次执行时长（毫秒）', 1000, 600000],
             ].map(([key, label, min, max]) => field(label, { type: 'number', min, max, value: draft.conversation[key],
               onChange: value => setDraft(old => ({ ...old, conversation: { ...old.conversation, [key]: value === '' ? '' : Number(value) } })) }))),
@@ -986,7 +1174,7 @@ window.__ModuleLoader__.load({
         if (target === null) return; event.preventDefault(); selectTab(sections[target][0]); tabs.current[target]?.focus();
       }
       return h('div', { className: 'chatpet-settings' }, h('style', null, css),
-        h('header',{className:'cp-heading'},h('div',null,h('small',null,'DAFEIYU · COMPANION'),h('h2',null,(snapshot?.identity.displayName||'大肥鱼')+'的世界'),h('div',{className:'cp-state'},h('i',{className:'cp-dot'}),snapshot?workspaceLabels[snapshot.workspace.state]:'正在连接',snapshot?.preferences.workspace?' · '+snapshot.preferences.workspace.title:'')),dirty&&badge('有未保存修改')),
+        h('header',{className:'cp-heading'},h('div',null,h('small',null,'DAFEIYU · COMPANION'),h('h2',null,(snapshot?.identity.displayName||'未命名伙伴')+'的世界'),h('div',{className:'cp-state'},h('i',{className:'cp-dot'}),snapshot?snapshot.workspace.state==='ready'&&snapshot.storage&&!snapshot.storage.complete?'存储待迁入工作区':workspaceLabels[snapshot.workspace.state]:'正在连接',snapshot?.preferences.workspace?' · '+snapshot.preferences.workspace.title:'')),dirty&&badge('有未保存修改')),
         h('div', { role: 'tablist', 'aria-label': '大肥鱼设置分类', className: 'cp-tabs' }, ...sections.map(([id,title],index) => h('button', {
           key: id, id: `${prefix}-${id}-tab`, type: 'button', role: 'tab', className: 'cp-tab', 'aria-selected': active === id,
           'aria-controls': `${prefix}-${id}-panel`, tabIndex: active === id ? 0 : -1, ref: element => { tabs.current[index] = element; },
@@ -1008,7 +1196,7 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots', 'connection'],
       apply(ctx) {
-        const request = async (endpoint, input, signal) => {
+        const request = async (endpoint, input, signal, requestId) => {
           const controller = new AbortController();
           const abort = () => controller.abort();
           signal?.addEventListener('abort', abort, { once: true });
@@ -1016,7 +1204,7 @@ window.__ModuleLoader__.load({
           const timer = setTimeout(abort, ['roomChat','roomTelevision'].includes(endpoint) ? 300000 : 15000);
           try {
             const answer = await ctx.connection.rpc.call('/api', `chatpetSettings/${endpoint}`,
-              { requestId: crypto.randomUUID(), input }, controller.signal);
+              { requestId: requestId || crypto.randomUUID(), input }, controller.signal);
             if (!answer.ok) throw Object.assign(new Error(answer.error.message), { code: answer.error.code });
             return answer.value;
           } catch (failure) {

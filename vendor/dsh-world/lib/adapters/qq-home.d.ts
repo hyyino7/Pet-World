@@ -4,6 +4,9 @@ import { type SpeakerIdentity } from '../ecosystem/shared/identity.ts';
 import type { LifeTimers } from '../life/alarmTimer.ts';
 import { type ChannelContextMessage } from '../ecosystem/shared/context.ts';
 import { type InWorld } from '../worldScope.ts';
+import type { UserMessage } from '@deepseek-ai/dsh-llm';
+export interface QqSubmission {sessionId: string; message: UserMessage; context?: UserMessage}
+export interface QqDelivery {original?: QqSubmission; checkpoint(submission: QqSubmission): void}
 /** A first turn also gets snapshots, the skill catalog, her persona and recall, and often runs past three minutes. */
 export declare const QQ_REPLY_TIMEOUT_MS: number;
 /**
@@ -12,13 +15,14 @@ export declare const QQ_REPLY_TIMEOUT_MS: number;
  */
 export declare function createQqHome(deps: {
     ctx: Context;
-    home(identity: SpeakerIdentity): Promise<Agent>;
+    home(identity: SpeakerIdentity, expectedSessionId?: string): Promise<Agent>;
+    replyNudge?(agent: Agent, original: UserMessage, message: UserMessage): () => void;
     voiceEnabled?():boolean;
     groupMaterial?(input: {identity: SpeakerIdentity; text: string; sessionId: string}): string | Promise<string>;
     inWorld?: InWorld;
     timers?: LifeTimers;
 }): {
-    ask: (text: string, suppliedIdentity: SpeakerIdentity, suppliedContext?: ChannelContextMessage[], groupMode?: 'v1'|'v2') => Promise<{
+    ask: (text: string, suppliedIdentity: SpeakerIdentity, suppliedContext?: ChannelContextMessage[], groupMode?: 'v1'|'v2', delivery?: QqDelivery) => Promise<{
         id: string;
         text: string;
         nudged: boolean;

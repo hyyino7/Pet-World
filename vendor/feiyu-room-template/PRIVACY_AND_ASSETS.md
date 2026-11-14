@@ -7,7 +7,6 @@
 - `config.json`、`state/`、`audio/`、`assets/` 私人素材；
 - 日志、备份、浏览器 localStorage；
 - API Key、Cookie、扫码令牌、SnowLuma token、DSH token；
-- 原始 3D 工程文件已随模板附带（`da-feiyu.glb`，58.9 MB；页面不加载）；
 - 用户的照片、截图、二维码、语音。
 
 ## 这个模板包含
@@ -16,6 +15,8 @@
 - `public/room/assets/pet/` 的 2D 立绘/动画；
 - 示例角色 `roles/example.md`；
 - 示例配置 `config.example.json`。
+- Both author-provided GLB models: standard by default and source geometry for
+  the optional high-quality view.
 
 ## 角色卡
 
@@ -47,14 +48,15 @@ cp roles/example.md roles/我的角色.md
 
 ## 3D 模型
 
-模板附带作者提供的优化版展示模型和原始工程备份：
+The adapted Room includes two author-provided runtime models:
 
 ```text
-public/room/assets/models/da-feiyu.opt.glb   6.7 MB，页面加载
-public/room/assets/models/da-feiyu.glb       58.9 MB，原始工程，页面不加载
+public/room/assets/models/da-feiyu.opt.glb    7,021,424 bytes; default standard 3D
+public/room/assets/models/da-feiyu.glb       58,885,308 bytes; optional high-quality 3D
 ```
 
-- 原始工程文件也包含在仓库中，因此仓库约 85 MB；
+- The default 2D view loads neither GLB. The high-quality selector explicitly
+  loads the source model; it is not an unused backup in the runtime package.
 - 模型版权归作者，仅随模板用于个人非商业展示；
 - 不可单独提取、转售、商用或批量再分发；
 - 商用/二次创作需作者书面许可；

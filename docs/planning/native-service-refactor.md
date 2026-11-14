@@ -1,11 +1,88 @@
 # Native companion service refactor
 
-Status: implementation authorized on 2026-11-12 (Asia/Ho_Chi_Minh): the owner
-approved proceeding after review of Claude's `大肥鱼重构方案.md`. This record
-owns the amended execution direction; it does not claim implementation or owner
-acceptance. The preceding four-feedback delivery remains the rollback baseline.
+Status: implementation authorized on 2026-11-12 (Asia/Ho_Chi_Minh), amended by
+the owner's explicit Core cleanup on 2026-11-13. This record owns the direction;
+source verification and the current candidate belong to the handover/runtime
+records. Installed acceptance remains owner-run.
+
+The later [owner-confirmed life design](autonomous-life-game.md#owner-confirmed-design-update)
+is now authorized for implementation, with installed acceptance pending: Desktop fully
+mirrors actual Room activity while open and presents the retained plan when
+closed; no starter funds/resources/system gifts; a configurable offline negative-
+body allowance initially four hours plus confirmed configurable gentle defaults
+(70% maximum hunger/thirst/bladder need, 35% minimum energy), without healing
+worse pre-existing states or adding pain penalties; fixed
+income-side settings with customizable shop goods sold to Xiaoxi. Free basic
+care remains. These decisions retain the module owners below and introduce no
+runtime, Memory bank or replacement Core control machinery.
+Known activity-media gaps will be addressed with supplementary desktop animation
+assets through the existing pipeline, as selected by the owner. This does not
+authorize a Room-character renderer replacement or claim visual acceptance.
+
+## Core retirement amendment, 2026-11-13
+
+Keep workspace binding, persona/foundation, editable settings and native Memory
+hooks. Delete the unused Core activity/execution/receipt, whole-chat eligibility
+and dependency scheduler rather than merely leaving it uncalled. Retire its
+matter/workbench tools, contact/delivery/resource/online-maintenance APIs and
+unimplemented draft contracts with their obsolete tests. Ordinary conversations
+already use DSH; body, inventory and real channel transaction receipts retain
+their domain owners. Memory's actual Bank source/withdrawal checks remain.
+
+Thin Core does not replay or reconcile historical scheduler rows at startup;
+leave personal data untouched. Clean build output before emitting so deleted
+source, declarations and source maps cannot survive into a package. The former
+Core history-window and inert recall-cooldown settings are read compatibly from
+old workspaces but are absent from current settings and new saves. Do not use a
+line-count estimate to discard native hooks, portable logs or current records.
 
 ## Selected behavior
+
+The owner authorized repairing all eight findings from the independent package
+audit on 2026-11-13, with code-only tests and another clean package-only review.
+The [repair record](../validation/package-audit-repairs-2026-11-13.md) owns the
+finding-to-test matrix and verification limits. The repairs reuse the bootstrap
+Core and stopped migration, native session persistence and the original QQ
+batch/home/inbox path. Pending transcript exports keep their originating scope;
+QQ admission checkpoints live in the existing channel-received records, discard
+temporary content after native admission and never replace native chat history.
+They do not restore the retired Core executor or add another assistant runtime.
+
+The owner then authorized repair of the second audit's six P2 findings and its
+documentation drift. The [round-two repair record](../validation/package-audit-round2-repairs-2026-11-13.md)
+owns that matrix. Reuse the original Memory host lifecycle and file stores,
+final file-version comparison, Pet audio factories and proactive-output policy.
+Keep continuing Emotion independent of Bank withdrawal; correct the stale
+documentation instead of restoring the removed dependency executor. Declare and
+lock the original Electron download branch's optional dependencies; do not
+download/install Electron during code validation. Fresh package-only review and
+owner-run installed acceptance remain separate steps.
+
+Subsequent package-only reviews identified adjacent Room wiring/photo/wake/cast
+faults, Memory entry migration and signed speech validation. Their minimal
+repairs stay within the existing native/domain owners; the same round-two record
+owns evidence. Delete the confirmed unused Life archive class and fixed-schedule
+validator after moving its test to the actual Core archive. Keep current data,
+legacy canonical paths, domain receipts and the fail-closed recovery boundaries;
+unconfirmed review risks do not authorize a new runtime or access policy.
+The next review's actual-Bank writer gate, paused garden-time admission and
+setup receipt corrections likewise reuse existing selectors, domain checkpoints
+and installation metadata. Offline recovery must not replace a Bank with a live
+owner; planned setup paths must not masquerade as completed installed bindings.
+Keep manual care and explicit admitted offline continuation intact. The repair
+record owns the fixtures and independently reviewed archive, not this plan.
+
+The owner authorized R6-01–R6-05 repair, code regressions, documentation updates,
+repackaging and a new package-only review. The
+[R6 repair record](../validation/package-audit-r6-repairs-2026-11-13.md) owns
+evidence. Reuse the existing preferences revision and explicit workspace/storage
+identity for editor and Memory operation scope, and the existing expected-Bank
+connection guard. These checks constrain data writes/recall; they do not restore
+a whole-chat executor or dependency graph. Emotion's final serialized writes
+must fit its current reader limit. Visible natural garden updates reuse the
+existing single refresh timer; no model wake or second growth authority is added.
+Channel saves confirm only their own section without discarding other drafts.
+No installation or installed acceptance is included.
 
 - DSH owns ordinary conversation execution, streaming, tools and permissions.
   Ordinary owner requests do not allocate Core activities/executions or inherit
@@ -50,8 +127,10 @@ acceptance. The preceding four-feedback delivery remains the rollback baseline.
 - Behavior owns actual activity; Emotion owns feelings and expression intent.
   Desktop and Room consume a versioned projection with surface-specific asset
   mappings. An expression must not cancel eating or wake a sleeping body.
-  Missing media uses an accurate activity label and neutral presentation.
-- Retain existing Life, garden, album, Qzone, matters, speech adapters, custom
+  Missing media may degrade truthfully to an accurate label and neutral pose,
+  but that is a presentation gap, not fulfillment of the confirmed 100% activity,
+  phase and progress mirroring. Room remains usable with Desktop off.
+- Retain existing Life, garden, album, Qzone, speech adapters, custom
   packs and settings. Thin upstream adapters are reuse, not proof of incomplete
   functionality. Verify actual paths before replacing them.
 
@@ -62,7 +141,7 @@ acceptance. The preceding four-feedback delivery remains the rollback baseline.
    installer backup. No commit or publication is implied by this direction.
 2. Refactor ordinary native chat and per-turn Memory together with their
    downstream adapters, so an intermediate delivery does not leave Emotion,
-   album, matters, summary or archives dependent on removed admission records.
+   album, summary or archives dependent on removed admission records.
 3. Complete shared presentation wiring: real playback reports into Emotion,
    saved work-animation delay on the normal host, bounded third-party playback
    queries, event-driven state refresh and consistent activity fallback.

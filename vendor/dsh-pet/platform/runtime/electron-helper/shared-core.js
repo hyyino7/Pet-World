@@ -1895,15 +1895,30 @@ async function hearAudio(url, audio, signal) {
 		};
 	}
 }
-async function startRecording() {
+async function startRecording(signal) {
+	signal?.throwIfAborted();
 	const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } });
-	const ctx = new AudioContext({ sampleRate: HEAR_SAMPLE_RATE });
-	const source = ctx.createMediaStreamSource(stream);
-	const processor = ctx.createScriptProcessor(BLOCK_SAMPLES, 1, 1);
+	let ctx, source, processor;
 	const chunks = [];
 	const maxSamples = Math.floor(MAX_RECORD_MS / 1e3 * HEAR_SAMPLE_RATE);
 	let frames = 0;
 	let closed = false;
+	const teardown = () => {
+		if (closed) return;
+		closed = true;
+		signal?.removeEventListener('abort', teardown);
+		if (processor) processor.onaudioprocess = null;
+		try { source?.disconnect(); } catch {}
+		try { processor?.disconnect(); } catch {}
+		for (const track of stream.getTracks()) { try { track.stop(); } catch {} }
+		try { void Promise.resolve(ctx?.close()).catch(() => {}); } catch {}
+	};
+	signal?.addEventListener('abort', teardown, {once:true});
+	try {
+		signal?.throwIfAborted();
+		ctx = new AudioContext({ sampleRate: HEAR_SAMPLE_RATE });
+		source = ctx.createMediaStreamSource(stream);
+		processor = ctx.createScriptProcessor(BLOCK_SAMPLES, 1, 1);
 	processor.onaudioprocess = (event) => {
 		if (frames >= maxSamples) return;
 		const samples = event.inputBuffer.getChannelData(0);
@@ -1915,17 +1930,12 @@ async function startRecording() {
 	source.connect(processor);
 	processor.connect(ctx.destination);
 	await ctx.resume();
-	const teardown = () => {
-		if (closed) return;
-		closed = true;
-		processor.onaudioprocess = null;
-		try {
-			source.disconnect();
-			processor.disconnect();
-		} catch {}
-		for (const track of stream.getTracks()) track.stop();
-		ctx.close();
-	};
+		signal?.throwIfAborted();
+	} catch (error) {
+		teardown();
+		throw error;
+	}
+
 	return {
 		elapsedMs: () => frames / HEAR_SAMPLE_RATE * 1e3,
 		async stop() {
@@ -1953,6 +1963,10 @@ async function startRecording() {
 function createHearControl(opts) {
 	const { micBtn, input, hint, resizeInput, hearUrl } = opts;
 	let hearState = "idle";
+	let disposed = false;
+	let generation = 0;
+	let controller;
+	const live = owner => !disposed && owner === generation && input.isConnected;
 	let recorder = null;
 	let hearTimer = 0;
 	/** 还没拿到麦克风就松手了：等 startRecording 一返回立刻收尾，避免麦克风一直开着。 */
@@ -1988,6 +2002,8 @@ function createHearControl(opts) {
 	};
 	/** 收尾：停采集 → 判误触 → 判静音 → 送宿主 → 文字落进输入框。失败只提示，不动已输入的文字。 */
 	const stop = async () => {
+		const owner = generation, signal = controller?.signal;
+		if (!live(owner)) return;
 		const current = recorder;
 		if (!current) return;
 		recorder = null;
@@ -2004,6 +2020,7 @@ function createHearControl(opts) {
 		hint.show("识别中…");
 		try {
 			const clip = await current.stop();
+			if (!live(owner)) return;
 			if (clip === null) {
 				hint.flash("没录到声音");
 				return;
@@ -2012,9 +2029,9 @@ function createHearControl(opts) {
 				hint.flash("没听到声音，检查一下麦克风");
 				return;
 			}
-			if (!input.isConnected) return;
-			const outcome = await hearAudio(hearUrl, toBase64(clip.wave));
-			if (!input.isConnected) return;
+			if (!live(owner)) return;
+			const outcome = await hearAudio(hearUrl, toBase64(clip.wave), signal);
+			if (!live(owner)) return;
 			if (!outcome.ok) {
 				hint.flash(describeFailure(outcome));
 				return;
@@ -2027,28 +2044,32 @@ function createHearControl(opts) {
 			hint.hide();
 			insertText(text);
 		} catch (e) {
-			hint.flash("录音出错：" + (e instanceof Error ? e.message : String(e)));
+			if (live(owner)) hint.flash("录音出错：" + (e instanceof Error ? e.message : String(e)));
 		} finally {
-			hearState = "idle";
-			paint();
+			if (live(owner)) { hearState = "idle"; paint(); }
 		}
 	};
 	/** 开录：先要麦克风，拿到了才开始计时。 */
 	const start = async () => {
+		if (disposed || !input.isConnected) return;
 		const blocked = blockedReason();
 		if (blocked !== "") {
 			hint.flash(blocked);
 			return;
 		}
 		if (hearState !== "idle") return;
+		const owner = ++generation, abort = controller = new AbortController();
 		if (document.activeElement === input) input.blur();
 		hearState = "starting";
 		wasReleasedEarly = false;
 		paint();
 		hint.show("正在打开麦克风…");
 		try {
-			recorder = await startRecording();
+			const next = await startRecording(abort.signal);
+			if (!live(owner)) { next.cancel(); return; }
+			recorder = next;
 		} catch (e) {
+			if (!live(owner)) return;
 			hearState = "idle";
 			paint();
 			hint.flash("打不开麦克风：" + (e instanceof Error ? e.message : String(e)));
@@ -2094,6 +2115,10 @@ function createHearControl(opts) {
 		stop: () => void stop(),
 		isHearing: () => hearState === "recording",
 		dispose: () => {
+			disposed = true;
+			generation++;
+			controller?.abort();
+			controller = undefined;
 			window.clearInterval(hearTimer);
 			if (recorder) {
 				recorder.cancel();
@@ -3425,12 +3450,15 @@ function readSay(leaf$1) {
 	const d = leaf$1.data;
 	if (d.clear === true) return { kind: "clear" };
 	if (typeof d.text !== "string" || !d.text) return null;
+	const remaining = typeof d.expiresAt === "number" && Number.isFinite(d.expiresAt) ? d.expiresAt - Date.now() : void 0;
+	if (remaining !== void 0 && remaining <= 0) return null;
+	const duration = typeof d.duration === "number" && Number.isFinite(d.duration) && d.duration >= 0 ? d.duration : void 0;
 	return {
 		kind: "say",
 		text: d.text,
 		image: typeof d.image === "string" ? d.image : void 0,
 		url: typeof d.url === "string" ? d.url : void 0,
-		duration: typeof d.duration === "number" && Number.isFinite(d.duration) && d.duration >= 0 ? d.duration : void 0,
+		duration: remaining === void 0 ? duration : Math.min(duration ?? remaining, remaining),
 		anim: typeof d.anim === "boolean" ? d.anim : void 0,
 		voiceTo: d.voiceTo === "web" || d.voiceTo === "desktop" ? d.voiceTo : void 0
 	};

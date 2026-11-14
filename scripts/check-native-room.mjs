@@ -42,7 +42,7 @@ try {
   await mount('dsh-agent-default-model',{provider:'room-fixture',model:'local'});
   await mount('dsh-api-session-controller',{nativeOpen:false});
   ctx.llm.registerAdapter(['room-fixture'],new Fixture());
-  await ctx.plugin(await import('../dist/src/core/plugin.js'),{dataDir:join(root,'core'),cwd:root,companionId:'fish',scopeId:'fixture',ownerActorId:'owner',displayName:'大肥鱼',character:'测试房间'});
+  await ctx.plugin(await import('../dist/src/core/plugin.js'),{dataDir:join(root,'.chatpet/data/core'),cwd:root,companionId:'fish',scopeId:'fixture',ownerActorId:'owner',displayName:'大肥鱼',character:'测试房间'});
   const host = ctx.petCore, req = id=>host.operator.request('room-check-'+id);
   const ws = await ctx.workspaceRegistry.create(root,'Disposable Room');
   const prefs = unwrap(await host.services.preferences.read(req('read'),{}));
@@ -70,7 +70,7 @@ try {
   await endpoint('roomAction',{action:'pet'},'pet');
   assert.equal((await endpoint('roomState')).room.counts.pet,1);
   const garden=await endpoint('roomPlant',{type:'harvest',plotId:0},'pick');
-  assert.ok(garden.ok,garden.message);
+  assert.equal(garden.ok,false,'Fresh empty garden must reject harvest without inventing crops');
   assert.ok((await endpoint('roomCare',{type:'auto',enabled:false},'pause')).ok);
   let step=0;
   program=async function*(options) {
@@ -93,9 +93,10 @@ try {
   const fed=(await endpoint('roomState')).room.counts.feed;
   const television=await endpoint('roomTelevision',{image:png},'frame');
   assert.equal(television.reply,'电视观后感。');
-  const sources=host.workspace.runtime.store.all('source');
-  assert.ok(sources.some(x=>x.origin==='external_content' && x.actorId==='chatpet-room-tv'));
-  assert.ok(!sources.some(x=>x.origin==='owner_statement' && x.text.includes('【电视画面】')));
+  const tvInput=ctx.agents.get(ws.sessionIds.find(id=>id.startsWith('chatpet-room-'))).session.snapshotEvents()
+    .filter(e=>e.type==='user/message' && e.data.source.kind==='chatpet-room-tv').at(-1);
+  assert.ok(tvInput,'TV content remains an attributed native observation, not an owner statement');
+  assert.ok(tvInput.data.content.some(x=>x.type==='image'));
   assert.deepEqual((await endpoint('roomHistory')).messages.map(x=>x.text),['去喝水吧。','我已经喝了水。']);
   const roomId=ws.sessionIds.find(id=>id.startsWith('chatpet-room-'));
   assert.ok(roomId && roomId!==lifeSession);

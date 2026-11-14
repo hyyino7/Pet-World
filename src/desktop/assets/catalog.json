@@ -797,6 +797,62 @@
       "description": "骑木马",
       "file": "骑木马.webm",
       "group": "expression"
+    },
+    {
+      "id": "life-drink",
+      "label": "生活-捧杯喝水",
+      "description": "捧杯、小口喝水",
+      "group": "life",
+      "file": "life-drink.webm"
+    },
+    {
+      "id": "life-read",
+      "label": "生活-专心阅读",
+      "description": "查看已提供正文，轻轻翻页",
+      "group": "life",
+      "file": "life-read.webm"
+    },
+    {
+      "id": "life-garden-till",
+      "label": "生活-松土",
+      "description": "用小锄松土",
+      "group": "life",
+      "file": "life-garden-till.webm"
+    },
+    {
+      "id": "life-garden-plant",
+      "label": "生活-播种",
+      "description": "把种子放入土中",
+      "group": "life",
+      "file": "life-garden-plant.webm"
+    },
+    {
+      "id": "life-garden-water",
+      "label": "生活-浇水",
+      "description": "用水壶浇灌幼苗",
+      "group": "life",
+      "file": "life-garden-water.webm"
+    },
+    {
+      "id": "life-garden-fertilize",
+      "label": "生活-施肥",
+      "description": "用小勺向土壤添加堆肥",
+      "group": "life",
+      "file": "life-garden-fertilize.webm"
+    },
+    {
+      "id": "life-garden-harvest",
+      "label": "生活-采收",
+      "description": "把成熟蔬菜放入篮中",
+      "group": "life",
+      "file": "life-garden-harvest.webm"
+    },
+    {
+      "id": "life-trade",
+      "label": "生活-整理交易",
+      "description": "查看篮中物品与交易钱袋",
+      "group": "life",
+      "file": "life-trade.webm"
     }
   ],
   "stickers": [

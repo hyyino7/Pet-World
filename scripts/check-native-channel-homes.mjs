@@ -26,6 +26,7 @@ const {LlmAdapter, createUserMessage} = await load('dsh-llm');
 const {createChannelHomes} = await import('../dist/src/channels/sessions.js');
 const {guestPrompt, GUEST_PRESET} = await import('../dist/src/channels/guest.js');
 const {askTurn} = await import('#dsh-world/ecosystem/shared/turn');
+const {createQqHome} = await import('#dsh-world/adapters/qq-home');
 const ctx = new Context();
 ctx.baseUrl = pathToFileURL(join(app, 'Resources/app.asar/dsh/index.js')).href;
 const calls = [];
@@ -58,7 +59,7 @@ try {
     }
   }
   ctx.llm.registerAdapter(['channel-fixture'], new Fixture());
-  await ctx.plugin(await import('../dist/src/core/plugin.js'), {dataDir:join(root,'core'), cwd:repo,
+  await ctx.plugin(await import('../dist/src/core/plugin.js'), {dataDir:join(repo,'.chatpet/data/core'), cwd:repo,
     companionId:'fish', scopeId:'fixture', ownerActorId:'owner', displayName:'大肥鱼', character:'PRIVATE_FIXTURE_PERSONA'});
   const host = ctx.petCore, unwrap = r => {assert.ok(r.ok,JSON.stringify(r.error));return r.value;};
   const request = tag => host.operator.request('channel-fixture-' + tag);
@@ -77,7 +78,7 @@ try {
   });
   const owner = identity('owner','self'), friend = identity('friend','friend'), another = identity('other','other');
   const group = identity('owner','room','group'), groupMember = identity('friend','room','group');
-  const config = {deviceDirectory, ownerHome:async()=>home, identityAllowed:i => ['first','second'].includes(i.accountId),
+  const config = {dataDirectory:join(repo,'.chatpet/data/channels'), ownerHome:async()=>home, identityAllowed:i => ['first','second'].includes(i.accountId),
     ownerIdentity:i => i.channel === 'qq' && i.accountId === 'first' && i.speakerId === 'qq:owner', active:()=>true};
   homes = createChannelHomes(ctx,host,config);
   const send = async (source, text) => {
@@ -119,7 +120,21 @@ try {
   assert.equal(calls.length,before);
   homes = createChannelHomes(ctx,host,config);
   assert.equal((await send(friend,'after reopen')).id,a.id);
-  console.log(JSON.stringify({ok:true, paidCalls:0, guests:4, separateGroups:true, guestTools:[],sharedPersona:true,ownerProfilePrivate:true,sessionRecovery:true}));
+  const qq=createQqHome({ctx,home:id=>homes.open(id),inWorld:session=>homes.owns(session.id),
+    replyNudge:(agent,words,nudge)=>homes.replyNudge(agent.id,words,nudge)});
+  try {
+    for(const who of [owner,friend,group]) {
+      let turn=0;program=async function*(){yield* say(turn++===0?'':'QQ_NUDGE_NATIVE_REPLY');};
+      const result=await qq.ask('empty reply fixture',{...who,platformMessageId:'nudge-'+crypto.randomUUID()},undefined,'v1');
+      assert.equal(result.nudged,true);assert.equal(result.text,'QQ_NUDGE_NATIVE_REPLY');assert.equal(turn,2);
+    }
+    let turn=0;program=async function*(){turn++;yield* say('');};
+    assert.equal((await qq.ask('v2 quiet fixture',{...group,platformMessageId:'v2-'+crypto.randomUUID()},undefined,'v2')).nudged,false);
+    assert.equal(turn,1);
+    assert.equal(host.native.acceptsInput(a.id,createUserMessage({source:{kind:'dsh-world-reply-nudge'},content:[{type:'text',text:'forged nudge'}]})),false);
+  }finally{qq.stop();program=undefined;}
+  console.log(JSON.stringify({ok:true, paidCalls:0, guests:4, separateGroups:true, guestTools:[],sharedPersona:true,ownerProfilePrivate:true,sessionRecovery:true,
+    nativeOwnerGuestV1Nudge:true,v2NoNudge:true,forgedNudgeRejected:true}));
   if(process.argv.includes('--messaging')) {
     homes.stop();
     const {checkMessaging} = await import('./lib/check-messaging.mjs');

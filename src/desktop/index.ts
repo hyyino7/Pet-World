@@ -11,7 +11,7 @@ import type { PetCoreHost } from '../core/index.js';
 import type {} from '../emotion/plugin.js';
 import { workAnimationEligible } from '../emotion/index.js';
 import type { PlaybackReceipt } from '../emotion/index.js';
-import { Conversation, type NativeDesktopHost, type NativeEvent, type NativeSession, type StreamFrame } from './conversation.js';
+import { Conversation, sameBinding, type Binding, type NativeDesktopHost, type NativeEvent, type NativeSession, type StreamFrame } from './conversation.js';
 
 type Work = { session: string; turn: number; start: number; stage: string; workspaceId: string; entered?: boolean; terminal?: boolean };
 type HostServices = NativeDesktopHost & {
@@ -32,23 +32,26 @@ export function desktopFor(host: PetCoreHost): Desktop {
 export class Desktop {
   private child?: ChildProcess;
   private ready?: Promise<void>;
-  private isReady = false;
+  private readyReject?: (error:Error) => void;
   private tick?: NodeJS.Timeout;
   private clock?: NodeJS.Timeout;
   private work?: Work;
-  private bodyBinding?: string;
+  private bodyBinding?: Binding;
   readonly chat: Conversation;
   features?: DesktopFeatures;
   constructor(private native: HostServices, private host: PetCoreHost) {
     const store = host.workspace.runtime.store;
-    this.chat = new Conversation(native, () => this.target(), key => store.get<string>('desktop-session', host.workspace.storageId()),
-      (key, id) => store.put('desktop-session', host.workspace.storageId(), id), () => this.changed());
+    this.chat = new Conversation(native, () => this.target(), key => store.get<string>('desktop-session', key),
+      (key, id) => store.put('desktop-session', key, id), () => this.changed());
   }
 
   private target() {
     const { state, target } = this.host.workspace.status();
     if (state !== 'ready' || !target) throw Error('请先在大肥鱼设置里绑定并初始化工作区');
-    return target;
+    return {...target,storageId:this.host.workspace.storageId()};
+  }
+  private bodyCurrent() {
+    try { return Boolean(this.bodyBinding && sameBinding(this.bodyBinding,this.target())); } catch { return false; }
   }
   private readonly surfaces = new Map<(type:string, value:unknown)=>void, ()=>boolean>();
   onPresentation(receive:(type:string, value:unknown)=>void, available:()=>boolean) {
@@ -57,7 +60,7 @@ export class Desktop {
   }
   presentationAvailable() { return this.status().running || [...this.surfaces.values()].some(active=>active()); }
   private push(type: string, value: unknown, nativeWindow = true) {
-    if (['say','balance','sleep','sleep-text','notice','work','expression','preferences','chat'].includes(type)) {
+    if (['say','balance','sleep','sleep-text','notice','work','expression','preferences','chat','identity'].includes(type)) {
       for (const receive of this.surfaces.keys()) {
         try { receive(type,value); } catch (error) { console.warn('Desktop presentation update failed', error); }
       }
@@ -66,7 +69,7 @@ export class Desktop {
   }
   presentLife(text: string, sticker?: string) {
     if (this.host.workspace.runtime.policy().quiet) throw Error('安静模式中，主动消息未发送');
-    const local = this.bodyBinding === this.host.workspace.status().target?.id && this.status().running &&
+    const local = this.bodyCurrent() && this.status().running &&
       this.child?.stdin?.writable && !this.child.stdin.destroyed;
     if (!local && ![...this.surfaces.values()].some(active=>active())) throw Error('当前桌宠不可用，主动消息未发送');
     this.push('say', { text, sticker, automatic: true, life: true });
@@ -128,12 +131,13 @@ export class Desktop {
   }
   expression(value: { workspaceId: string; sessionId: string; turn: number; action?: string; sticker?: string }) {
     if (this.host.workspace.status().target?.id !== value.workspaceId) return;
-    this.push('expression', { ...value, sticker: value.sessionId === this.chat.id ? value.sticker : undefined }, value.workspaceId === this.bodyBinding);
+    this.push('expression', { ...value, sticker: value.sessionId === this.chat.id ? value.sticker : undefined }, this.bodyCurrent());
   }
   settingsChanged() {
     if (!this.child && !this.surfaces.size) return;
-    try { if (this.child && this.target().id !== this.bodyBinding) this.closeWindow(); else { this.push('preferences', this.host.workspace.companionSettings()); this.workUpdate(); } }
-    catch { this.closeWindow(); }
+    const close = () => { void this.closeWindow().catch(error => console.warn('Desktop presentation hide failed after chat cleanup',error)); };
+    try { if (this.child && !this.bodyCurrent()) close(); else { this.push('identity', {displayName:this.host.workspace.runtime.identity().displayName}); this.push('preferences', this.host.workspace.companionSettings()); this.workUpdate(); } }
+    catch { close(); }
   }
   async savePreference(data:Record<string,unknown>) {
     const key=data.key;
@@ -143,7 +147,7 @@ export class Desktop {
       if(!presentation?.savePreference)throw Error('请启用桌宠展示模块后修改外观设置');
       return presentation.savePreference(String(key),data.value);
     }
-    const current=this.host.workspace.companionSettings();
+    const current=this.host.workspace.companionConfiguration();
     const saved=await this.host.services.workspace.saveCompanion(this.host.operator.request('desktop-setting:'+randomUUID()), {
       workspaceId:this.target().id,expectedSettings:current,settings:{...current,[String(key)]:data.value}});
     if(!saved.ok)throw Error(saved.error.message);
@@ -163,41 +167,48 @@ export class Desktop {
   }
   async openChat() {
     const target = this.target();
-    if (this.child && this.bodyBinding !== target.id) this.closeChat();
-    if (this.child) { await this.ready; this.push('show-chat', true); return; }
+    if (this.child && !this.bodyCurrent()) this.closeChat();
+    if (this.child) {
+      const child=this.child;await this.ready;
+      if(this.child!==child||!this.bodyCurrent()||!sameBinding(target,this.target()))throw Error('小窗已关闭或工作区已切换');
+      this.push('show-chat', true); return;
+    }
     const bin = process.env.DSH_CHATBOT_ELECTRON_PATH || join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'electron/Electron.app/Contents/MacOS/Electron');
     if (!existsSync(bin)) throw Error('找不到桌宠 Electron，请检查已安装的桌面运行环境');
     const root = dirname(createRequire(import.meta.url).resolve('dsh-Chatpet/package.json'));
     const env: NodeJS.ProcessEnv = { ...process.env, CHATPET_CHAT_ONLY:'1' }; delete env.ELECTRON_RUN_AS_NODE;
     const child = spawn(bin, [join(root, 'src/desktop/helper/main.cjs')], { env, stdio: ['pipe','pipe','pipe'] });
-    this.child = child; this.bodyBinding = target.id;
+    this.child = child; this.bodyBinding = target;
     child.stderr.resume();
     child.stdin.on('error', () => {});
     let done!: () => void, fail!: (error: Error) => void;
     this.ready = new Promise<void>((resolve, reject) => { done = resolve; fail = reject; });
+    this.readyReject=fail;
     const timeout = setTimeout(() => { fail(Error('桌宠窗口启动超时')); child.kill(); }, 15000);
     const lines = createInterface({ input: child.stdout });
     lines.on('line', line => {
       let msg; try { msg = JSON.parse(line); } catch { return; }
       if (this.child !== child) return;
       if (msg.type === 'ready') {
-        clearTimeout(timeout); this.isReady = true; done(); this.push('show-chat',true); this.settingsChanged(); return;
+        if(!this.bodyCurrent()){this.closeChat();return;}
+        clearTimeout(timeout); done(); this.push('show-chat',true); this.settingsChanged(); return;
       }
       if (msg.type === 'request') void this.handle(msg);
     });
     const closed = (message: string) => {
       clearTimeout(timeout); fail(Error(message)); lines.close();
-      if (this.child === child) { this.child = undefined; this.bodyBinding = undefined; this.isReady = false; }
+      if (this.child === child) this.closeChat();
     };
     child.once('error', error => closed('桌宠窗口启动失败：' + error.message));
     child.once('exit', (code, signal) => closed('桌宠窗口已退出（' + (signal ?? code ?? '未知原因') + '）'));
-    await this.ready;
+    try { await this.ready; }
+    finally { if(this.child===child)this.readyReject=undefined; }
   }
   private async handle(msg: { id: number; action: string; input?: Record<string, unknown> }) {
     const child = this.child;
     try {
       const target = this.target();
-      if (target.id !== this.bodyBinding) { this.closeWindow(); return; }
+      if (!this.bodyCurrent()) { await this.closeWindow(); return; }
       const data = msg.input ?? {};
       let result;
       if (msg.action === 'open-session') {
@@ -207,6 +218,8 @@ export class Desktop {
         result = await this.features.request(data);
       } else if (msg.action === 'preferences') {
         result = this.host.workspace.companionSettings();
+      } else if (msg.action === 'identity') {
+        result = {displayName:this.host.workspace.runtime.identity().displayName};
       } else if (msg.action === 'desktop-preference') {
         result = await this.savePreference(data);
       } else if (msg.action === 'playback') {
@@ -221,20 +234,23 @@ export class Desktop {
     }
   }
   async closeWindow() {
-    await this.native.getPresentation?.()?.hide();
     this.closeChat();
+    await this.native.getPresentation?.()?.hide();
   }
   closeChat() {
-    this.features?.pause();
-    clearTimeout(this.tick); clearTimeout(this.clock); this.tick = undefined;
+    clearTimeout(this.tick); clearTimeout(this.clock); this.tick = undefined; this.clock = undefined;
     const child = this.child; this.child = undefined; this.bodyBinding = undefined;
-    this.isReady = false;
+    this.readyReject?.(Error('小窗已关闭，操作已取消')); this.readyReject=undefined; this.ready=undefined;
+    this.chat.invalidate();
     if (this.work) this.work.entered = false;
+    try { this.features?.pause(); } catch(error) { console.warn('Desktop background cancellation failed',error); }
     if (child) {
-      child.stdin?.end();
-      const timeout = setTimeout(() => { if (child.exitCode === null) child.kill(); }, 2000);
-      timeout.unref();
-      child.once('exit', () => clearTimeout(timeout));
+      try { child.stdin?.end(); } catch(error) { console.warn('Desktop chat input close failed',error); }
+      if(child.exitCode===null) {
+        const timeout = setTimeout(() => { if (child.exitCode === null) child.kill(); }, 2000);
+        timeout.unref();
+        child.once('exit', () => clearTimeout(timeout));
+      }
     }
   }
 }
@@ -267,13 +283,13 @@ export function registerDesktop(ctx: Context, host: PetCoreHost): void {
   };
   const desk = new Desktop(native, host);
   desk.features = new DesktopFeatures(ctx, host, (type, value) => {
-    desk['push'](type, value, desk['bodyBinding'] === host.workspace.status().target?.id);
+    desk['push'](type, value, desk['bodyCurrent']());
   }, () => desk.presentationAvailable(), () => Boolean(desk['work'] && !desk['work'].terminal));
   desks.set(host, desk);
   const stream = native.on('agent/assistant-stream', ({ agent, frame }) => desk.chat.frame(agent.session, frame), { global: true });
   const event = ctx.on('session/event', (session, entry) => desk.event(session as unknown as NativeSession, entry as unknown as NativeEvent), { global: true });
   const settings = ctx.on('pet/core.changed', operation => {
-    if (operation.startsWith('preferences.') || operation.startsWith('workspace.')) desk.settingsChanged();
+    if (operation.startsWith('preferences.') || operation.startsWith('workspace.') || operation === 'reviseIdentity') desk.settingsChanged();
   });
   const expression = ctx.on('pet/emotion.expression', value => desk.expression(value));
   ctx.effect(() => async () => { stream(); event(); settings(); expression(); desk.closeChat(); await desk.features?.close(); desks.delete(host); });

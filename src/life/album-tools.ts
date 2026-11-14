@@ -3,14 +3,14 @@ import type {Agent} from '@deepseek-ai/dsh-agent';
 import type {ToolDefinition} from '@deepseek-ai/dsh-tools';
 import {createRequire} from 'node:module';
 import type {PetCoreHost} from '../core/index.js';
-import type {LifeLibrary} from './library.js';
+import type {CompanionRecordLibrary} from '../core/records.js';
 
 const {photoTools} = createRequire(import.meta.url)('#dsh-world/life/photoTools') as {
-  photoTools(deps:{agent?:Agent;store?:()=>ReturnType<LifeLibrary['album']>;attachments?:()=>unknown;inside?:()=>boolean}):ToolDefinition[];
+  photoTools(deps:{agent?:Agent;store?:()=>ReturnType<CompanionRecordLibrary['album']>;attachments?:()=>unknown;inside?:()=>boolean}):ToolDefinition[];
 };
 
 /** Use the upstream tools against the admitted message and the same bound album in ordinary chats. */
-export function registerAlbumTools(ctx:Context, host:PetCoreHost, library:(agent:Agent)=>LifeLibrary|undefined) {
+export function registerAlbumTools(ctx:Context, host:PetCoreHost, library:(agent:Agent)=>CompanionRecordLibrary|undefined) {
   const catalog = photoTools({});
   const scopedTools = ctx.tools as unknown as {register(tool:ToolDefinition,options:{when(context:{agent?:Agent}):boolean}):()=>void};
   for (const [index,definition] of catalog.entries()) {

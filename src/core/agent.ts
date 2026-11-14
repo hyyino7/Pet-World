@@ -5,17 +5,20 @@ import type {} from './plugin.js';
 import type {} from '@deepseek-ai/dsh-system-prompt';
 import type {} from '@deepseek-ai/dsh-tools';
 import type { LlmCallConfig } from '@deepseek-ai/dsh-llm';
-import { nativeResult } from './dsh-driver.js';
+import { nativeResult } from './native-result.js';
 import type { PetCoreHost } from './index.js';
 import { registerWorldPrompt, retireLegacyPrompt } from './world-prompt.js';
 import { WorldRecall } from './world-recall.js';
 import type { PetWorld } from '../world/service.js';
 import type { NativeScope } from './native.js';
-import { installCompanionFoundation } from './companion-foundation.js';
+import { installCompanionFoundation,companionWritingScope } from './companion-foundation.js';
+import { lifeToolAllowed, restrictLifeTools } from './life-tool-policy.js';
+import {installLifeReviewFileGuard} from './life-review-files.js';
 
 export const name = 'chatpet-agent';
 export const inject = ['petCore', 'petWorld', 'agents', 'systemPrompt', 'tools'];
 interface WorkspaceView { id: string; path: string; sessionIds: readonly string[] }
+interface LifeTurnToolPolicy {review:boolean;reviewDay?:string}
 interface NativeServices {
   get(name: 'workspaceRegistry'): { get(id: string): WorkspaceView | undefined; archivedSessionIds: readonly string[] } | undefined;
   sessionPersistence: { open(id: SessionId, access: 'read'): Promise<{read(): Promise<{events: readonly SessionEvent[]}>; close(): Promise<void>}> };
@@ -26,7 +29,8 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   const native = ctx as unknown as NativeServices;
   const agents = new Map<string, Agent>();
   const inputs = new Map<string, string>();
-  const turns = new Map<string, {turn:number;scope:NativeScope;background:boolean}>();
+  const turns = new Map<string, {turn:number;scope:NativeScope;background:boolean;lifePolicy?:LifeTurnToolPolicy}>();
+  const lifePolicies = new Map<Agent,{release:()=>void;review:boolean;reviewDay?:string}>();
   const pending = new Set<Promise<unknown>>();
   const recall = new WorldRecall();
   const scopeFor = (id:string):NativeScope|undefined => {
@@ -39,6 +43,37 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   };
   host.native.resolveScope=scopeFor;
   const sameScope=(id:string,expected:NativeScope)=>{const current=scopeFor(id);return !!current && current.workspaceId===expected.workspaceId && current.path===expected.path && current.storageId===expected.storageId && current.guest===expected.guest;};
+  const releaseLifePolicy=(agent:Agent)=>{
+    const policy=lifePolicies.get(agent);lifePolicies.delete(agent);policy?.release();
+  };
+  const constrainLife=(agent:Agent,message:UserMessage)=>{
+    if(message.source.kind!=='dsh-world-life' || !host.native.acceptsInput(agent.id,message))return;
+    // New inbox facts do not replace capabilities already admitted for the
+    // running native turn. Owner input lifts its mask before the next assembly.
+    if(turns.get(agent.id)?.lifePolicy&&agent.status==='running')return;
+    const review='purpose' in message.source && message.source.purpose==='review';
+    const reviewDay=review&&'reviewDay' in message.source&&typeof message.source.reviewDay==='string'?message.source.reviewDay:undefined;
+    if(lifePolicies.get(agent)?.review===review&&lifePolicies.get(agent)?.reviewDay===reviewDay)return;
+    releaseLifePolicy(agent);
+    const globalNames=ctx.tools.definitions().map(tool=>tool.name);
+    lifePolicies.set(agent,{review,reviewDay,release:restrictLifeTools(agent.ctx.tools,globalNames,review)});
+  };
+  // A capability-admitted QQ retry continues an actual conversation; its
+  // internal source remains a system observation, not autonomous owner work.
+  const interactiveInput=(message:UserMessage)=>message.source.kind==='user' || message.source.kind==='dsh-world-reply-nudge';
+  // DSH resolves schemas before pre-step. Install the native mask while its
+  // trusted inbox input is queued, and recheck at step admission below.
+  const stopLifeInbox=ctx.on('agent/inbox/inserted',({agent,message})=>{
+    if(!scopeFor(agent.id))return;
+    if(interactiveInput(message) && host.native.acceptsInput(agent.id,message))releaseLifePolicy(agent);
+    else if(turns.get(agent.id)?.background!==false)constrainLife(agent,message);
+  });
+  const stopReviewFiles=installLifeReviewFileGuard(ctx,host,agent=>{
+    const turn=turns.get(agent.id),policy=turn?.lifePolicy;
+    if(!turn?.background||!policy?.review)return;
+    return {workspaceId:turn.scope.workspaceId,root:turn.scope.path,storageId:turn.scope.storageId,
+      sessionId:agent.id,guest:turn.scope.guest,reviewDay:policy.reviewDay,writing:companionWritingScope(ctx,host)};
+  });
   const watch=(work:Promise<unknown>)=>{
     pending.add(work);void work.finally(()=>pending.delete(work)).catch(()=>{});
     return work;
@@ -96,6 +131,8 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     if(!exec.agent || !turns.has(exec.agent.id))return;
     const saved=turns.get(exec.agent.id)!;
     if(!sameScope(exec.agent.id,saved.scope))return '会话已离开原绑定工作区';
+    if(saved.background && saved.lifePolicy && !lifeToolAllowed(exec.name,saved.lifePolicy.review))
+      return '自主生活仅使用当前生活能力；普通主人对话仍沿用原生工具权限';
     if(saved.background)try{host.native.guardTool(exec.agent.id);}catch{return '自主轮次已结束或超过限额';}
   });
   const onStep=async(payload:{agent:Agent;turn:number;step:number;messages:UserMessage[];signal:AbortSignal},next:()=>Promise<PreStepDecision>):Promise<PreStepDecision>=>{
@@ -108,11 +145,14 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     let saved=turns.get(payload.agent.id);
     const first=!saved || saved.turn!==payload.turn;
     if(first) {
-      if(payload.messages.some(message=>message.source.kind==='user' && !host.native.acceptsInput(payload.agent.id,message)))return {kind:'reject'};
+      if(payload.messages.some(message=>interactiveInput(message) && !host.native.acceptsInput(payload.agent.id,message)))return {kind:'reject'};
       const accepted=payload.messages.filter(message=>host.native.acceptsInput(payload.agent.id,message));
-      const user=accepted.some(message=>message.source.kind==='user');
+      const user=accepted.some(interactiveInput);
       if(!accepted.length)return {kind:'reject'};
       saved={turn:payload.turn,scope,background:!user};turns.set(payload.agent.id,saved);
+      if(user)releaseLifePolicy(payload.agent);else for(const message of accepted)constrainLife(payload.agent,message);
+      const policy=lifePolicies.get(payload.agent);
+      if(!user&&policy)saved.lifePolicy={review:policy.review,reviewDay:policy.reviewDay};
       const input=accepted[0];if(input)inputs.set(payload.agent.id,input.id);
       if(!scope.guest) {
         await ctx.get('petDesktop')?.features?.restoreImages();
@@ -123,42 +163,45 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     }
     if(!sameScope(payload.agent.id,saved!.scope))return {kind:'reject'};
     if(!first) {
-      if(payload.messages.some(message=>message.source.kind==='user' && !host.native.acceptsInput(payload.agent.id,message)))return {kind:'reject'};
+      if(payload.messages.some(message=>interactiveInput(message) && !host.native.acceptsInput(payload.agent.id,message)))return {kind:'reject'};
       const admitted=payload.messages.filter(message=>host.native.acceptsInput(payload.agent.id,message));
       if(admitted.length)host.native.observeInputs(payload.agent.id,payload.turn,admitted,saved!.scope);
-      if(saved!.background && admitted.some(message=>message.source.kind==='user')) {
+      if(saved!.background && admitted.some(interactiveInput)) {
         // A real owner input takes over this native turn; autonomous limits do
         // not become a hidden cap on the owner's subsequent tool work.
-        host.native.finish(payload.agent.id,{state:'cancelled',text:'',hostTurnIds:[],reason:'Owner input took over the autonomous native turn'});
+        host.native.finish(payload.agent.id);
         saved!.background=false;
+        releaseLifePolicy(payload.agent);
       }
     }
     if(saved!.background)await host.native.begin(payload.agent.id,payload.turn,payload.messages,payload.signal,{
-      cancel:()=>payload.agent.cancel({kind:'user'}),inspect:async()=>{
-        await payload.agent.whenIdle();await ctx.sessions.flush(payload.agent.session);
-        return nativeResult(payload.agent.session.snapshotEvents(),inputs.get(payload.agent.id) ?? '');
-      },
-    },false);
+      cancel:()=>payload.agent.cancel({kind:'user'}),
+    });
     let text='';
+    let checkMemory: (()=>void)|undefined;
     if(first) {
       const memory=host.native.memoryFor(payload.agent.id);
       if(memory)try {
-        await memory.prepare(payload.agent.id,saved!.scope);
+        const binding=await memory.prepare(payload.agent.id,saved!.scope);
         await syncArchives();
         if(!sameScope(payload.agent.id,saved!.scope))return {kind:'reject'};
         host.native.useTranscript(payload.agent.id,[...payload.agent.session.surface.nodes],payload.agent.session.snapshotEvents());
         const query=payload.messages.flatMap(message=>message.content.flatMap(part=>part.type==='text'?[part.text]:[])).join('\n');
-        await memory.recall(payload.agent.id,query,true);
+        await memory.recall(payload.agent.id,query,true,binding);
         if(!sameScope(payload.agent.id,saved!.scope))return {kind:'reject'};
         text=memory.context(payload.agent.id);
+        checkMemory=()=>memory.assertBinding(binding);
       }catch(error){memory.clear(payload.agent.id);memory.unavailable(error);ctx.logger('chatpet-memory').warn('Memory unavailable; native chat continues',error);}
       else host.native.memory?.clear(payload.agent.id);
     }
     const decision=await next();
     if(decision.kind!=='enter' || !sameScope(payload.agent.id,saved!.scope))return decision.kind==='enter'?{kind:'reject'}:decision;
     if(!first)return decision;
+    if(checkMemory)try{checkMemory();}catch(error){
+      text='';host.native.memory?.clear(payload.agent.id);host.native.memory?.unavailable(error);
+    }
     // An empty replacement explicitly retires the prior recall after toggle or failure.
-    recall.refresh(payload.agent.session,saved!.scope.storageId,true,0);
+    recall.refresh(payload.agent.session,saved!.scope.storageId,true);
     const message=recall.prepare(payload.agent.session,text);
     return {...decision,startsRequestSeries:true,messages:message?[message,...decision.messages]:decision.messages};
   };
@@ -169,7 +212,8 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     if(event.type!=='turn/end')return;
     const saved=turns.get(session.id);if(!saved)return;
     const result=nativeResult(session.snapshotEvents(),inputs.get(session.id) ?? '');
-    if(saved.background)host.native.finish(session.id,result);
+    if(saved.background)host.native.finish(session.id);
+    const agent=agents.get(session.id);if(agent)releaseLifePolicy(agent);
     const done=host.native.finishTurn(session.id,saved.turn,result).catch(error=>{
       host.native.memory?.unavailable(error);ctx.logger('chatpet-memory').warn('Conversation retained; Memory write pending',error);
     }).finally(()=>{if(turns.get(session.id)===saved){turns.delete(session.id);inputs.delete(session.id);}if(native.get('workspaceRegistry')?.archivedSessionIds?.includes(session.id))void syncArchives([session.id]).catch(()=>{});});
@@ -179,11 +223,13 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     void host.native.end(agent.id).catch(()=>{});
     host.native.memory?.clear(agent.id);
     agents.delete(agent.id);turns.delete(agent.id);inputs.delete(agent.id);
+    releaseLifePolicy(agent);
   },{global:true});
   let stopped:Promise<void>|undefined;
   const stop=()=>stopped ??= (async()=>{
     await Promise.allSettled([...pending]);await archiveTail;
     disposePrompt();disposeFoundation();
+    stopLifeInbox();stopReviewFiles();for(const agent of [...lifePolicies.keys()])releaseLifePolicy(agent);
     if(host.native.resolveScope===scopeFor){host.native.resolveScope=undefined;host.native.attachGuest=undefined;}
     agents.clear();turns.clear();inputs.clear();
   })();

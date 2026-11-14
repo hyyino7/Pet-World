@@ -270,6 +270,17 @@
         "commit": "c7ea8b28e2a8b04a495a3b472a871dff6969ccca",
         "retained_native_commit": "0e6465f29bb89b386390ba0f14fb86fa1bc656d0",
         "origin": "vendor/dsh-pet/origin.json"
+      },
+      "autonomous_life_integration": {
+        "plan": "docs/planning/autonomous-life-game.md",
+        "treatment": "Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run.",
+        "verification": "Isolated code tests; no installed app, personal data or real model acceptance."
+      },
+      "distribution_cleanup": {
+        "date": "2026-11-13",
+        "treatment": "Exclude pinned build inputs and test/preview material from the installable package; generated helper omits upstream screenshot-and-exit smoke branch. Source origins, licenses, supported runtime assets and the original files remain retained in the repository.",
+        "generator": "scripts/build-pet-platform.mjs",
+        "origin": "vendor/dsh-pet/platform/origin.json"
       }
     },
     {
@@ -609,8 +620,23 @@
             "src/core/matters.ts"
           ],
           "treatment": "Adapted native scoped tool registration and text-rendered structured receipts; no life scheduling or persona defaults imported."
+        },
+        {
+          "source": "src/life/runtime.ts + src/life/lifeStore.ts",
+          "targets": [
+            "vendor/dsh-world/lib/life/runtime.js",
+            "vendor/dsh-world/lib/life/lifeStore.js",
+            "src/life/plan.ts",
+            "src/life/plan-tools.ts"
+          ],
+          "treatment": "Reuse native alarm delivery, scoped home sessions and restart receipts. Approved extension adds a persistent plan in existing life.json, merge-safe state updates and revision-fenced cross-conversation control. Autonomous continuation reuses native greeting/turn receipts with a separate saved-decision revision and durable bounded missing-decision correction; explicit quiet plans and owner timing/cancellation are preserved. No second Agent, Memory store, periodic planner or automatic body goal generator."
         }
-      ]
+      ],
+      "autonomous_life_integration": {
+        "plan": "docs/planning/autonomous-life-game.md",
+        "treatment": "Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run.",
+        "verification": "Isolated code tests; no installed app, personal data or real model acceptance."
+      }
     },
     {
       "repository": "chenluQwQ/astrbot_plugin_bilibili_ai_bot",
@@ -891,26 +917,26 @@
       "archive_url": "https://codeload.github.com/sh2234113/feiyu-room-template/tar.gz/9df0a6b76b563abc738b6d4b7ae137381c425424",
       "adaptations": {
         "vendor/feiyu-room-template/home-state.js": {
-          "sha256": "003dec6b1697a145ce297e09547f50001fdbc117e3a7c14cd68c1dbc030094b0",
-          "treatment": "Expose explicit host autonomy/passive policy while preserving the original default workflow; advance requested routes and care while autonomy is paused, and project structured Emotion feelings without changing actual behavior or inventing numeric mood.",
+          "sha256": "b9c4d541cee68ea766fa079f3357c8a546bf9253c184a5eb952bdddb8381ad5b",
+          "treatment": "Apply catalog food need deltas through the shared Body effect/receipt protocol, keeping free basic meals and water. Never change wallet or inventory from presentation. Approved four-hour configurable offline deterioration window; real accepted recovery and paused/crop clocks remain separate.",
           "source": "src/home-state.js",
           "upstream_sha256": "cd304d35a61e0fdb5f3cebb684b40f092bb1f57698727f848311c96c7fbf7488"
         },
         "vendor/feiyu-room-template/src/garden-autonomy.js": {
-          "sha256": "e61367d2ad408e1437d284cefd13e6a07a6ba3b250de857dc31e2ca2cdaa0ef5",
-          "treatment": "Honor the shared host autonomy/passive policy; cancel automatic work when paused, preserve requested work and idempotent one-shot care through the original planner, route, dwell and receipt flow.",
+          "sha256": "c64b1c91a0f10eafe24eb23069ce13afe521f3ebe41177011fdffe3d16ea0825",
+          "treatment": "Retain the original route/dwell/job executor with the Economy storage adapter. A requested generic visit does not implicitly choose harvest, sale or sowing in economic mode; preserved accepted jobs retain their receipts.",
           "source": "src/garden-autonomy.js",
           "upstream_sha256": "51fde1095ff49415d25dede2178746ca4d583e854a988ae32169427f00e56dd0"
         },
         "vendor/feiyu-room-template/public/room/actor3d.js": {
-          "sha256": "b3754a993b5225410ecfed79c7e0e2d5cf86b25b4a46f628eea0a287fb93de86",
-          "treatment": "Render structured anger, boredom and happiness using the original Chibi skeleton and motion parameters; actual sleep, eating and movement take precedence. No new image assets.",
+          "sha256": "35040ff21067c8281669177ec3c4708feaf011b7e5e70d4b3d583fd0fe4ef438",
+          "treatment": "Render structured anger, boredom and happiness using the original Chibi skeleton and motion parameters; actual sleep, eating and movement take precedence. No new image assets. Allow explicit one-shot position/elevation alignment while retaining the original regular-frame smoothing, Chibi pose and motion algorithms.",
           "source": "public/room/actor3d.js",
           "upstream_sha256": "7dd52b02cfbc0338553b2b3a48f36109c0c3a9db9fbc4fd8d2fd0569fe670881"
         },
         "vendor/feiyu-room-template/public/room/app.js": {
-          "sha256": "ad3970169c5cf2b04be5bed2cbc207542d760ef7bd5827176338617b9e84ee22",
-          "treatment": "Retain the native Connection/chat adapters and source-backed Room state; render shared structured feelings with original idle clips and static-model root motion, preserving actual behavior and the settings-independent Room carrier.",
+          "sha256": "74d7629bfde1aee95f780aca22e28ffeada88baa8ad0e2316674abb055d3f1f3",
+          "treatment": "Retain the native Connection/chat adapters and source-backed Room state; render shared structured feelings with original idle clips and static-model root motion, preserving actual behavior and the settings-independent Room carrier. Preserve the monotonic clock of an unchanged walking route across delayed snapshots and use ETA to locate ordered route progress, including overlapping legs. Compensate delivery age using the native Room/host shared device clock and let the eyes camera consume continuous display coordinates. Register the original model-quality callback and initial status once during startup, outside character-mode click handlers. Align all three actors to the actual Body position and elevation only for the initial one-shot photograph; retain regular frame smoothing. Scope TV opinion requests to their originating cast and native caller AbortSignal, cancel them when the cast or following intent ends, and reject stale replies/errors/finalizers without changing the original opinion cadence or manual toast.",
           "source": "public/room/app.js",
           "upstream_sha256": "13125c572839773c45809319bb5c4bb01d4209e17bad2071cf4f67b0a1fe1f18"
         },
@@ -918,7 +944,69 @@
           "sha256": "17171311a4673252b20558bedf5898586edeb98ca24b3326f311531a6c36e4bc",
           "treatment": "Local DSH transport adapter: accept the narrow authenticated independent-window preload bridge, preserve the owner-frame MessageChannel route, and retain bounded timeout/cancellation without a separate assistant or state writer.",
           "local": true
+        },
+        "vendor/feiyu-room-template/public/room/garden-state.js": {
+          "sha256": "0244be48ae6ce6f093f7c8faaa4167e361f1a39d8be79922c1f32df7d1f5f69f",
+          "treatment": "Accept portable economy rules, preserve crop-cohort growth profiles and economy revisions, retain receipt projections supplied by the durable archive, check safe-integer trades and catalog availability. New gardens remain empty.",
+          "source": "public/room/garden-state.js",
+          "upstream_sha256": "77ba933ca4f54a74d3ffcb49f6176337aa7ce9d7537d0818f7a9e56eb33e7a78"
+        },
+        "vendor/feiyu-room-template/public/room/garden-ui.js": {
+          "source": "public/room/garden-ui.js",
+          "upstream_sha256": "8d2959e1d117bf4fbdde38ff73a47313a8f9e74e41b02fbec701f6f7615d009c",
+          "sha256": "8f594cde1767140019f22aae69a572966a29bff674481de08ea341834bb5d178",
+          "treatment": "Read actual growth times, yields, prices and availability from the same server economy configuration as transactions; remove misleading starter-crop copy."
+        },
+        "vendor/feiyu-room-template/public/room/garden-client.js": {
+          "source": "public/room/garden-client.js",
+          "upstream_sha256": "5004f469caa1515888a7ddf771b830461a925b7b2ed96b30937791c0bd15b828",
+          "sha256": "52ced1f6657bc7d37c8af9c2b80a6c8e8fda29a110e7b4471c1deffd3dffe329",
+          "treatment": "Reuse the existing home-action callback and RPC for all seven companion controls. One visibility-scoped refresh timer reads the authoritative garden projection for natural crop changes and after manual transitions; coalesce native events, retain the original retry cadence, and reject stale read/write presentation without reversing accepted work. No client growth authority, model wake or automatic goal/harvest is introduced."
+        },
+        "vendor/feiyu-room-template/public/room/actor.js": {
+          "source": "public/room/actor.js",
+          "sha256": "ea128c3f6b5f98aca732cc879e5909f4463b1cee95455c89541b4ddd7df03455",
+          "treatment": "Allow explicit one-shot position/elevation alignment while retaining regular frame smoothing. Keep the original PNG/video photo fallback, settle seek completion once, and clean its timer/listener without invalid SpriteActor diagnostics."
+        },
+        "vendor/feiyu-room-template/public/room/model-actor.js": {
+          "source": "public/room/model-actor.js",
+          "sha256": "2883e3c6c6c93bf154a51a8119d216bc78715569e79ccd6e4768dcdaf2847fe8",
+          "treatment": "Allow explicit one-shot position/elevation alignment while retaining the original regular-frame smoothing, model pose and motion algorithms."
+        },
+        "vendor/feiyu-room-template/public/room/assets/models/README.md": {
+          "source": "public/room/assets/models/README.md",
+          "upstream_sha256": "0079c4d16bbb25292b5dd92c30e1628a0caff4d2d713903ad6cec1e101a14e2b",
+          "sha256": "6be2e38d378022cb458d6e21c6fecb62f10cd507c737c82a020ce58164bf0035",
+          "treatment": "Correct adapted-distribution documentation: the optimized GLB is the initial standard 3D model and the larger source GLB is selected explicitly by the existing high-quality control. Default 2D loads neither. Preserve all author attribution and license terms; no runtime or media changes. Document replacement through the app MODEL_URLS that supplies the actor URL, keeping actor defaults aligned for direct callers."
+        },
+        "vendor/feiyu-room-template/PRIVACY_AND_ASSETS.md": {
+          "source": "PRIVACY_AND_ASSETS.md",
+          "upstream_sha256": "d70bc2ae93911f7b4abc06d049da36fd17f49b5eba38628899aada7d8c0a4161",
+          "sha256": "4e3e939fbbc75d86df7deeb86cdaa6a06f39d2f9101183c80c7aff4158eed37e",
+          "treatment": "Correct adapted-distribution documentation: the optimized GLB is the initial standard 3D model and the larger source GLB is selected explicitly by the existing high-quality control. Default 2D loads neither. Preserve all author attribution and license terms; no runtime or media changes."
+        },
+        "vendor/feiyu-room-template/THIRD_PARTY_NOTICES.md": {
+          "source": "THIRD_PARTY_NOTICES.md",
+          "upstream_sha256": "9ce03b8a90ce8b074e1a11514133605cebeb2f6912e6a352c5e8e4bf40521a54",
+          "sha256": "c330d28a613938e642bd0b28b11e160f691d1e3586e14641bf9629cd4684fa8b",
+          "treatment": "Correct adapted-distribution documentation: the optimized GLB is the initial standard 3D model and the larger source GLB is selected explicitly by the existing high-quality control. Default 2D loads neither. Preserve all author attribution and license terms; no runtime or media changes."
         }
+      },
+      "reused_in_core": [
+        {
+          "source": "src/home-state.js + src/garden-autonomy.js",
+          "targets": [
+            "src/behavior/room.ts",
+            "vendor/feiyu-room-template/home-state.js",
+            "vendor/feiyu-room-template/src/garden-autonomy.js"
+          ],
+          "treatment": "Reuse physical routing, explicit garden work and atomic transaction receipts. Approved planned-goal policy retires automatic goal generation, adds durable semantic operation receipts and pause/resume without expanding economy."
+        }
+      ],
+      "autonomous_life_integration": {
+        "plan": "docs/planning/autonomous-life-game.md",
+        "treatment": "Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run.",
+        "verification": "Isolated code tests; no installed app, personal data or real model acceptance."
       }
     }
   ]

@@ -120,8 +120,8 @@
   "adaptations": {
     "lib/adapters/wechat-scoped.js": {
       "upstream": "lib/ecosystem/wechat/index.js",
-      "changes": "Scope accounts and tool targets, deduplicate inbound delivery, queue ordinary native replies and await the owner outreach receipt.",
-      "sha256": "47180194b029644ca7ea375983081fbbfe34e09daec49455eade131bfae9e930"
+      "changes": "Scope accounts and tool targets, deduplicate inbound delivery, queue ordinary native replies and await the owner outreach receipt. Accept a separate companion data directory for outbox and received/sticker media while discovery tokens stay device-local; preserve the existing sending and receipt workflow.",
+      "sha256": "e2d4bf39e14ded04949f54f516fe637de5b2182c07be2ab3e352e559060db7e5"
     },
     "lib/adapters/qq-sdk.js": {
       "upstream": "lib/ecosystem/qq-native/snowluma.js",
@@ -138,29 +138,80 @@
     "lib/adapters/qq-home.js": {
       "upstream": "lib/ecosystem/qq-native/home.js",
       "upstreamSha256": "1997d020932f87039a72d4fdb86e4425696ba92e43354e9eff0222600475c529",
-      "changes": "Source-tag group material and audio guidance, bound group history, and honor a V2 decision to remain silent.",
-      "sha256": "4f5d8b75b1ac9f8bc89a15f23b16b5cb2a77c68a411bad3858671f7e0c249e62"
+      "changes": "Source-tag group material and audio guidance, bound group history, and honor a V2 decision to remain silent. Accept an optional original native message/session and a pre-followup receipt checkpoint; retain the upstream channel queue, turn execution and native inbox/log reconciliation workflow. Bind the existing one-shot empty-reply nudge to an adapter-issued original-input/session capability with finally revocation and preserved speaker attribution; reject stopped queues before dispatch.",
+      "sha256": "5ef5cd7736b5f005f0ae29b99fcd0ec75edc0dbd5686876c103ed45a978ca03f"
     },
     "lib/adapters/qq-home.d.ts": {
       "upstream": "lib/ecosystem/qq-native/home.d.ts",
       "upstreamSha256": "e04503a1cf72451b7c0aa512c6b6d803adc4201e559dd5def9b45f30a975aa77",
-      "changes": "Source-tag group material and audio guidance, bound group history, and honor a V2 decision to remain silent.",
-      "sha256": "1a2f231c4638aaabf913a33a96c933080b9dfeacfdcb08547ff21c9c9e1d6ed1"
+      "changes": "Source-tag group material and audio guidance, bound group history, and honor a V2 decision to remain silent. Accept an optional original native message/session and a pre-followup receipt checkpoint; retain the upstream channel queue, turn execution and native inbox/log reconciliation workflow. Bind the existing one-shot empty-reply nudge to an adapter-issued original-input/session capability with finally revocation and preserved speaker attribution; reject stopped queues before dispatch.",
+      "sha256": "9d020035fbeaff297f75e9e98def46c1a694a56395dba0915eefa43d47791377"
     },
     "lib/ecosystem/wechat/sending.js": {
       "upstream": "lib/ecosystem/wechat/sending.js",
       "upstreamSha256": "81439e385c9bdf53ab318d1b7bedc3ac150ca850b2b44b48b242c2f7b4d36951",
-      "changes": "Queue native replies and authorized Life reach; track their original WeChat receipts."
+      "changes": "Queue native replies and authorized Life reach; track their original WeChat receipts.",
+      "sha256": "462995142ecbb18cd5a9323369cafaa436de88bef63f5499c62a30f7749e6a6f"
     },
     "lib/ecosystem/wechat/home.js": {
       "upstream": "lib/ecosystem/wechat/home.js",
       "upstreamSha256": "9534d2296f06d561ab17650f40ce73bcf0deaa55849f11a807d6d6bf0998fef2",
-      "changes": "Keep quoted content outside speaker evidence and report whether the same account and chat already received an explicit reply."
+      "changes": "Keep quoted content outside speaker evidence and report whether the same account and chat already received an explicit reply.",
+      "sha256": "f9df728c4975535244020e6dbf1e761db06e72159c6aa10d68d7d3303c3d29e1"
     },
     "lib/life/tools.js": {
       "upstream": "lib/life/tools.js",
       "upstreamSha256": "ec03b9301aa8d4c92d6ca7e8afe58fbbc92362c871c1877ef2f078fd5f79d823",
-      "changes": "Attach the native reach_out call ID for idempotent device-channel submissions."
+      "changes": "Attach the native reach_out call ID for idempotent device-channel submissions. Read the shared companion name at reach delivery time rather than caching a separate sender name. Serialize native plan_next, cancel_alarm and failed-planning retry intent changes through the owning Life queue, with queue-time caller/wake/revision validation and nonblocking session-event callbacks.",
+      "sha256": "4bf0a1cf7c2fa9edf16ba80166feda41ba1fb9084507bb95d3b63428631481ff"
+    },
+    "lib/life/runtime.js": {
+      "upstream": "lib/life/runtime.js",
+      "upstreamSha256": "64f3f5041b4fe50b1d288f95c5ae1ed31e80aeddaf7c24c7802c28b020961cf5",
+      "changes": "Allow the shared Core identity projection and read current home titles without restarting Life. Use the same pending-arrival transition for Life-created homes and Core foreground homes; preserve World greeting delivery and retry handling. Extend the existing Life record with merge-safe updates and durable plan/wake receipts; preserve native sessions, scoped scheduling, retry and restart reconciliation while decoupling plans from home context. Suppress legacy early-stop/fallback scheduling for persistent plans and accept optional owner schedules. Serialize native plan_next, cancel_alarm and failed-planning retry intent changes through the owning Life queue, with queue-time caller/wake/revision validation and nonblocking session-event callbacks. Reuse native wake delivery for no-plan autonomous bootstrap and one finite-plan completion event. Track explicit saved decisions separately from alarm revisions; persist bounded missing-decision recovery and its prepared retry projection across restart, preserve explicit quiet choices and owner intent, and serialize native planning receipts without polling or a second runtime. Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run.",
+      "sha256": "bb8d6656dc5a9221a92f3441f08bd16f4c5aecfd358bf9d34975cfb55825defd"
+    },
+    "lib/life/runtime.d.ts": {
+      "upstream": "lib/life/runtime.d.ts",
+      "upstreamSha256": "65d32f1d28459469fa5de6200d05055e2cadaac5832b49243f3248b3334077ca",
+      "changes": "Declare the optional shared identity object whose properties may be getters. Extend the existing Life record with merge-safe updates and durable plan/wake receipts; preserve native sessions, scoped scheduling, retry and restart reconciliation while decoupling plans from home context. Suppress legacy early-stop/fallback scheduling for persistent plans and accept optional owner schedules. Serialize native plan_next, cancel_alarm and failed-planning retry intent changes through the owning Life queue, with queue-time caller/wake/revision validation and nonblocking session-event callbacks. Reuse native wake delivery for no-plan autonomous bootstrap and one finite-plan completion event. Track explicit saved decisions separately from alarm revisions; persist bounded missing-decision recovery and its prepared retry projection across restart, preserve explicit quiet choices and owner intent, and serialize native planning receipts without polling or a second runtime. Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run.",
+      "sha256": "845452ce2ce339cdb44f02ee00c236ede275cba75631e950c980ea53b5a0bddb"
+    },
+    "lib/life/home.js": {
+      "upstream": "lib/life/home.js",
+      "upstreamSha256": "0f472a4dca310044103625fba9f74df3f3933c863ac98eb2a141ace8bcf90989",
+      "changes": "Expose the existing homeSessionId/arrival greeting transition for foreground Core openers, without delivering a turn; reusing a home leaves its first-arrival state unchanged.",
+      "sha256": "08056377be018ea28af05bbcd3f73d61e0cea35c25b960cbde68c70797e1be46"
+    },
+    "lib/life/home.d.ts": {
+      "upstream": "lib/life/home.d.ts",
+      "upstreamSha256": "3824ea6922f8742f739be071b1936399b95b092faa3c742996d07d53641b974e",
+      "changes": "Declare the shared existing first-home arrival transition using the original LifeState schema.",
+      "sha256": "c1df80104eab2f5ab9471c5d67f5e7a0c6a05505e7469f316353cda5ba42aa54"
+    },
+    "lib/life/lifeStore.js": {
+      "upstream": "lib/life/lifeStore.js",
+      "upstreamSha256": "aceae83cc889a0c9101cb60f382bc0cb4eb7266b470273d11edb6df4d464a9d2",
+      "sha256": "f61cf0b2165f46df18784a33ffb830602d4f76c37530adde5381af929460250f",
+      "changes": "Extend the existing Life record with merge-safe updates and durable plan/wake receipts; preserve native sessions, scoped scheduling, retry and restart reconciliation while decoupling plans from home context. Suppress legacy early-stop/fallback scheduling for persistent plans and accept optional owner schedules. Owner-authorized R2-3 package audit repair: enforce regular non-linked files with no-follow descriptor checks for state/JSONL reads and appends, retain original directory identities, and use exclusively owned random temporary files with ownership-safe cleanup and existing transient rename retry."
+    },
+    "lib/life/lifeStore.d.ts": {
+      "upstream": "lib/life/lifeStore.d.ts",
+      "upstreamSha256": "b66e478a5652c0cbf331ea6a1bbbb95554e7d941a6006466a0fc6cd9b76af60f",
+      "sha256": "4f48b735da7a31ce834f5083df874762c3d6e0aa677b45dbd376af6f315477df",
+      "changes": "Extend the existing Life record with merge-safe updates and durable plan/wake receipts; preserve native sessions, scoped scheduling, retry and restart reconciliation while decoupling plans from home context. Suppress legacy early-stop/fallback scheduling for persistent plans and accept optional owner schedules."
+    },
+    "lib/life/types.d.ts": {
+      "upstream": "lib/life/types.d.ts",
+      "upstreamSha256": "abcd729a0934bc6343880091cd2cac454b037d82bbba8886c85fcc3b6862850d",
+      "sha256": "58178bfd4672fecf966b8dd77c8d7cd2afb20c928999d9b7b9268bd9825267e3",
+      "changes": "Extend the existing Life record with merge-safe updates and durable plan/wake receipts; preserve native sessions, scoped scheduling, retry and restart reconciliation while decoupling plans from home context. Suppress legacy early-stop/fallback scheduling for persistent plans and accept optional owner schedules. Reuse native wake delivery for no-plan autonomous bootstrap and one finite-plan completion event. Track explicit saved decisions separately from alarm revisions; persist bounded missing-decision recovery and its prepared retry projection across restart, preserve explicit quiet choices and owner intent, and serialize native planning receipts without polling or a second runtime. Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run."
+    },
+    "lib/hostContract.d.ts": {
+      "upstream": "lib/hostContract.d.ts",
+      "upstreamSha256": "b90d6af78f56ab53a6057f2f467233cb2a0fbeb64e8442d2dacc4cff732af065",
+      "changes": "Extend native Life input metadata with committed fact provenance and explicit review day while retaining native message roles and the single host runtime.",
+      "sha256": "6980d9f751e5fdecdd262b570a758439e08d3e7033e174f0a06d4e32b21e9f45"
     }
   }
 }

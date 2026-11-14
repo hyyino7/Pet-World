@@ -16,6 +16,7 @@ const geometry = () => buildDeskGeometry(screen.getAllDisplays(),screen.getPrima
 const {createTray} = require('./upstream/main/tray.js');
 const {trayPlatform} = require('./upstream/tray-platform.js');
 let tray, trayEnabled = false, desktopVisible = true, trayUpdate = Promise.resolve();
+let companionName = '';
 function refreshTray(enabled) {
     trayEnabled = enabled;
     trayUpdate = trayUpdate.then(async () => {
@@ -36,7 +37,7 @@ function setDesktopVisible(visible) {
 async function trayRequest(method, path, payload) {
     if (method === 'GET' && path === '/quit') return {body: '{"canQuit":false}'};
     if (method === 'GET' && path === '/config') {
-        const pet = {id: 'dafeiyu', name: '大肥鱼', display: desktopVisible ? 'desktop' : 'none'};
+        const pet = {id: 'dafeiyu', name: companionName || '伙伴', display: desktopVisible ? 'desktop' : 'none'};
         return {body: JSON.stringify({main: {pets: [pet], trayEnabled}})};
     }
     if (method === 'POST' && path === '/pet-display') {
@@ -77,6 +78,12 @@ createInterface({ input: process.stdin }).on('line', line => {
             return;
         pending.delete(value.id);
         value.ok ? waiter.resolve(value.result) : waiter.reject(Error(value.error));
+    }
+    else if (type === 'identity') {
+        companionName = typeof value?.displayName === 'string' ? value.displayName : '';
+        body?.setTitle(companionName || '伙伴');chat?.setTitle((companionName || '伙伴') + '聊天');
+        emit(body,type,value);emit(chat,type,value);
+        if (!chatOnly) refreshTray(trayEnabled);
     }
     else if (type === 'chat') {
         lastChat = value;
@@ -146,6 +153,8 @@ ipcMain.handle('pet:command', async (event, action, input) => {
         throw Error('无效窗口');
     if (action === 'catalog' && [body?.webContents, chat.webContents].includes(event.sender))
         return catalog;
+    if (action === 'identity' && [body?.webContents, chat.webContents].includes(event.sender))
+        return request(action, input);
     if (event.sender === chat.webContents) {
         if (action === 'hide')
             return chat.hide();
@@ -222,15 +231,15 @@ app.whenReady().then(() => {
     app.dock?.hide();
     const a = screen.getPrimaryDisplay().workArea;
     if (chatOnly) {
-        chat=createWindow('chat',{frame:true,alwaysOnTop:false,skipTaskbar:false,resizable:true,width:420,height:480,backgroundColor:'#f6f8f8',title:'大肥鱼聊天'});
+        chat=createWindow('chat',{frame:true,alwaysOnTop:false,skipTaskbar:false,resizable:true,width:420,height:480,backgroundColor:'#f6f8f8',title:'伙伴聊天'});
         chat.webContents.once('did-finish-load',()=>{loaded=true;out({type:'ready'});});
         chat.on('close',e=>{if(!quitting){e.preventDefault();chat.hide();}});
         return;
     }
     // Upstream main/windows.js permits bubble/menu margins above the menu bar.
-    body = createWindow('body', { hasShadow: false, useContentSize: true, enableLargerThanScreen: true, transparent: true, width: 146, height: 132, x: a.x + a.width - 195, y: a.y + a.height - 195, title: '大肥鱼' });
+    body = createWindow('body', { hasShadow: false, useContentSize: true, enableLargerThanScreen: true, transparent: true, width: 146, height: 132, x: a.x + a.width - 195, y: a.y + a.height - 195, title: '伙伴' });
     body.webContents.setBackgroundThrottling(false);
-    chat = createWindow('chat', { width: 386, height: 310, backgroundColor: '#f6f8f8', title: '大肥鱼聊天' });
+    chat = createWindow('chat', { width: 386, height: 310, backgroundColor: '#f6f8f8', title: '伙伴聊天' });
     tray = createTray({
         app, Tray, Menu, nativeImage, hostRequest: trayRequest, callbackUrl: () => true,
         isBridge: true, appMode: false, petRoute: '', platform: trayPlatform(process.platform),

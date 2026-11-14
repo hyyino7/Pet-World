@@ -28,34 +28,62 @@ export const DEFAULT_COMPANION_SETTINGS = Object.freeze({
   memorySummaryMinimumMinutes: 5,
   memoryRecallCount: 8,
   memoryRecallBlockChars: 600,
-  memoryColdHours: 24,
+  offlineBodyHours: 4,
+  offlineNeedCeilingPercent: 70,
+  offlineEnergyFloorPercent: 35,
 });
 export type CompanionSettings = { -readonly [K in keyof typeof DEFAULT_COMPANION_SETTINGS]: K extends 'desktopAppearance' ? Record<string, unknown> : (typeof DEFAULT_COMPANION_SETTINGS)[K] extends boolean ? boolean : number };
 
+/** Saved choices stay distinct from runtime mechanics. Null means unconfigured,
+ * including when an older document omitted the field entirely. */
+export type CompanionConfiguration = { [K in keyof CompanionSettings]: CompanionSettings[K] | null };
+export const EMPTY_COMPANION_CONFIGURATION: Readonly<CompanionConfiguration> = Object.freeze(
+  Object.fromEntries(Object.keys(DEFAULT_COMPANION_SETTINGS).map(key => [key, null])) as CompanionConfiguration,
+);
+
+const BOOLEAN_KEYS = ['desktopClickSound', 'desktopReplyBubble', 'desktopWhisperEnabled', 'desktopWhisperImageEnabled',
+  'desktopWorkStatusEnabled', 'desktopTrayEnabled', 'desktopBalanceEnabled', 'desktopFixed', 'desktopConfineToScreen'] as const;
+const RANGES = {
+  desktopSleepTalkSeconds: [1, 86400], desktopSize: [96, 512], desktopBalanceMinutes: [1, 1440],
+  desktopWhisperMinutes: [1, 1440], desktopBubbleSeconds: [1, 300], workAnimationDelaySeconds: [0, 3600],
+  stickerProbabilityPercent: [0, 100], recentActionCount: [0, 500], recentActionMinutes: [0, 10080],
+  recentMoodCount: [0, 100], recentMoodHours: [0, 720], memorySummaryTurns: [1, 200],
+  memorySummaryIdleMinutes: [1, 1440], memorySummaryMinimumMinutes: [0, 1440], memoryRecallCount: [1, 50],
+  memoryRecallBlockChars: [128, 4000],
+  offlineBodyHours: [0, 168], offlineNeedCeilingPercent: [0, 100], offlineEnergyFloorPercent: [0, 100],
+} as const;
+
+export function parseCompanionConfiguration(raw: unknown): CompanionConfiguration {
+  check(raw !== null && typeof raw === 'object' && !Array.isArray(raw), 'Invalid companion settings');
+  check(Object.keys(raw).every(key => Object.hasOwn(DEFAULT_COMPANION_SETTINGS, key)||key==='memoryColdHours'), 'Unexpected companion setting');
+  const {memoryColdHours,...current}=raw as Record<string,unknown>;
+  // A retired, previously inert recall option is tolerated in old workspaces.
+  if(memoryColdHours!==undefined&&memoryColdHours!==null)integer(memoryColdHours,'legacy memoryColdHours',1,720);
+  const result = { ...EMPTY_COMPANION_CONFIGURATION, ...current } as CompanionConfiguration;
+  for (const key of BOOLEAN_KEYS) check(result[key] === null || typeof result[key] === 'boolean', 'Invalid Desktop switch');
+  for (const [key, range] of Object.entries(RANGES)) {
+    const value = result[key as keyof CompanionConfiguration];
+    if (value !== null) integer(value, key, range[0], range[1]);
+  }
+  if (result.desktopAppearance !== null) result.desktopAppearance = parseDesktopAppearance(result.desktopAppearance);
+  return result;
+}
+
+/** These values make native consumers type-safe; they are never persisted as
+ * owner choices. Unconfigured optional effects stay inactive. */
+const UNCONFIGURED_RUNTIME: CompanionSettings = {
+  ...DEFAULT_COMPANION_SETTINGS,
+  desktopClickSound: false, desktopReplyBubble: false, desktopWhisperEnabled: false,
+  desktopWhisperImageEnabled: false, desktopWorkStatusEnabled: false, desktopTrayEnabled: false,
+  desktopBalanceEnabled: false, stickerProbabilityPercent: 0,
+  recentActionCount: 0, recentActionMinutes: 0, recentMoodCount: 0, recentMoodHours: 0,
+};
+export function resolveCompanionSettings(configuration: CompanionConfiguration): CompanionSettings {
+  return Object.fromEntries(Object.entries(UNCONFIGURED_RUNTIME).map(([key, fallback]) =>
+    [key, configuration[key as keyof CompanionConfiguration] ?? fallback])) as CompanionSettings;
+}
+
+/** Compatibility entry for native consumers that require complete mechanics. */
 export function parseCompanionSettings(raw: unknown): CompanionSettings {
-  check(raw && typeof raw === 'object' && !Array.isArray(raw), 'Invalid companion settings');
-  check(['workAnimationDelaySeconds','stickerProbabilityPercent','recentActionCount','recentActionMinutes','recentMoodCount','recentMoodHours']
-    .every(key => Object.hasOwn(raw, key)), 'Missing companion setting');
-  check(Object.keys(raw).every(key => Object.hasOwn(DEFAULT_COMPANION_SETTINGS, key)), 'Unexpected companion setting');
-  const settings = { ...DEFAULT_COMPANION_SETTINGS, ...raw } as CompanionSettings;
-  settings.desktopAppearance = parseDesktopAppearance(settings.desktopAppearance);
-  for (const key of ['desktopClickSound', 'desktopReplyBubble', 'desktopWhisperEnabled', 'desktopWhisperImageEnabled', 'desktopWorkStatusEnabled', 'desktopTrayEnabled', 'desktopBalanceEnabled', 'desktopFixed', 'desktopConfineToScreen'] as const) check(typeof settings[key] === 'boolean', 'Invalid Desktop switch');
-  integer(settings.desktopSleepTalkSeconds, 'Sleep talk interval', 1, 86400);
-  integer(settings.desktopSize, 'Desktop size', 96, 512);
-  integer(settings.desktopBalanceMinutes, 'Balance interval', 1, 1440);
-  integer(settings.desktopWhisperMinutes, 'Whisper interval', 1, 1440);
-  integer(settings.desktopBubbleSeconds, 'Bubble duration', 1, 300);
-  integer(settings.workAnimationDelaySeconds, 'Work animation delay', 0, 3600);
-  integer(settings.stickerProbabilityPercent, 'Sticker probability', 0, 100);
-  integer(settings.recentActionCount, 'Recent action count', 0, 500);
-  integer(settings.recentActionMinutes, 'Recent action age', 0, 10080);
-  integer(settings.recentMoodCount, 'Recent mood count', 0, 100);
-  integer(settings.recentMoodHours, 'Recent mood age', 0, 720);
-  integer(settings.memorySummaryTurns, 'Summary turns', 1, 200);
-  integer(settings.memorySummaryIdleMinutes, 'Summary idle minutes', 1, 1440);
-  integer(settings.memorySummaryMinimumMinutes, 'Minimum summary interval', 0, 1440);
-  integer(settings.memoryRecallCount, 'Recall count', 1, 50);
-  integer(settings.memoryRecallBlockChars, 'Recall block characters', 128, 4000);
-  integer(settings.memoryColdHours, 'Cold session hours', 1, 720);
-  return { ...settings };
+  return resolveCompanionSettings(parseCompanionConfiguration(raw));
 }

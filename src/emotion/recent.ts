@@ -5,6 +5,26 @@ import type { CompanionSettings } from '../core/companion-settings.js';
 import type { PlaybackReceipt, ReplyIntent } from './index.js';
 
 export type Retention = Pick<CompanionSettings, 'recentActionCount' | 'recentActionMinutes' | 'recentMoodCount' | 'recentMoodHours'>;
+/** Create only the ledger schema; no synthetic experience is inserted. */
+export function initializeRecentStorage(root: string): void {
+  let directory = root;
+  for (const component of ['.chatpet', 'data', 'memory']) {
+    directory = join(directory, component);
+    if (!existsSync(directory)) mkdirSync(directory, {mode:0o700});
+    const stat = lstatSync(directory);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw Error('Invalid recent experience directory');
+  }
+  const file = join(directory, 'recent-interactions.sqlite');
+  for (const suffix of ['', '-wal', '-shm', '-journal']) {
+    const stat = lstatSync(file + suffix, {throwIfNoEntry:false});
+    if (stat && (!stat.isFile() || stat.nlink !== 1)) throw Error('Invalid recent experience store');
+  }
+  const db = new DatabaseSync(file);
+  try {
+    chmodSync(file, 0o600);
+    db.exec('PRAGMA busy_timeout=2000; CREATE TABLE IF NOT EXISTS recent (workspace TEXT PRIMARY KEY, body TEXT NOT NULL)');
+  } finally { db.close(); }
+}
 interface Feedback { quote: string; at: number; sourceId: string; memories: string[] }
 interface Action { id: string; name: string; at: number; status: PlaybackReceipt['status']; feedback: Feedback[] }
 interface Mood { mood: string; reason: string; at: number; memories: string[]; action?: string }

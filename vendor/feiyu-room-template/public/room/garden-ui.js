@@ -1,6 +1,6 @@
-import { CROPS, GARDEN_RULES } from './garden-state.js';
+import { CROPS as DEFAULT_CROPS, GARDEN_RULES as DEFAULT_RULES } from './garden-state.js';
 
-const byId = new Map(CROPS.map((crop) => [crop.id, crop]));
+
 const clamp01 = (v) => Math.max(0, Math.min(1, Number(v) || 0));
 const count = (v) => Math.max(0, Math.floor(Number(v) || 0));
 const duration = (ms) => {
@@ -27,6 +27,8 @@ function button(className, text, handler, label) {
 
 /** Garden presentation only. Actions and saved progression belong to the server. */
 export function mountGardenUI({ onAction, onControl, onSelectPlot, onClose, onHomeAction } = {}) {
+  let CROPS=DEFAULT_CROPS, GARDEN_RULES=DEFAULT_RULES;
+  let byId=new Map(CROPS.map(crop=>[crop.id,crop]));
   let view = null;
   let open = false;
   let collapsed = false;
@@ -41,11 +43,11 @@ export function mountGardenUI({ onAction, onControl, onSelectPlot, onClose, onHo
   const panel = el('section', 'garden-panel');
   panel.id = 'garden-panel';
   panel.hidden = true;
-  panel.setAttribute('aria-label', '小蓝鱼的菜园');
+  panel.setAttribute('aria-label', '伙伴的菜园');
   const header = el('header', 'garden-header');
   const heading = el('div', 'garden-heading');
   heading.append(el('p', 'garden-eyebrow', '后院小日子 · 从一粒种子开始'));
-  heading.append(el('h2', '', '小蓝鱼的菜园'));
+  heading.append(el('h2', '', '伙伴的菜园'));
   const headerTools = el('div', 'garden-header-tools');
   const collapse = button('garden-icon-button', '−', () => {
     collapsed = !collapsed;
@@ -244,7 +246,7 @@ export function mountGardenUI({ onAction, onControl, onSelectPlot, onClose, onHo
   storageLead.append(el('span', 'garden-kicker', '把今天的收成好好收起来'), storageCount, el('span', 'garden-storage-unit', '份果蔬在仓库'));
   store.append(storageLead);
   const storageRows = new Map();
-  const emptyStorage = el('p', 'garden-empty', '还没有收成。第 1 畦的萝卜已经成熟，去摘下第一份快乐吧。');
+  const emptyStorage = el('p', 'garden-empty', '还没有收成。实际采收后的作物会留在这里。');
   store.append(emptyStorage);
   const inventoryList = el('div', 'garden-inventory-list');
   for (const crop of CROPS) {
@@ -288,7 +290,7 @@ export function mountGardenUI({ onAction, onControl, onSelectPlot, onClose, onHo
     const buy = button('garden-small-button', `${crop.seedCost} 金币`, () => invoke({ type: 'buySeed', cropId: crop.id, quantity: 1 }), `购买一份${crop.name}种子，${crop.seedCost}金币`);
     row.append(icon, copy, buy);
     shopList.append(row);
-    shopRows.set(crop.id, { held, buy });
+    shopRows.set(crop.id, { held, buy, meta });
   }
   const compostRow = el('div', 'garden-compost-card');
   const compostCopy = el('div', 'garden-list-copy');
@@ -526,13 +528,16 @@ export function mountGardenUI({ onAction, onControl, onSelectPlot, onClose, onHo
       row.stock.textContent = `${stock} 份 · 共值 ${stock * crop.sellPrice} 金币`;
       row.sell.textContent = stock > 99 ? '出售 99 份' : '出售全部';
       row.sell.setAttribute('aria-label', stock > 99 ? `出售 99 份${crop.name}` : `出售全部${crop.name}`);
-      row.sell.disabled = busy || !stock;
+      row.sell.disabled = busy || !stock || GARDEN_RULES.catalogEnabled?.[`harvest:${crop.id}`]===false;
       const shopRow = shopRows.get(crop.id);
       shopRow.held.textContent = `已有 ${quantity} 份种子`;
-      shopRow.buy.disabled = busy || count(view.coins) < crop.seedCost;
+      shopRow.buy.disabled = busy || count(view.coins) < crop.seedCost || GARDEN_RULES.catalogEnabled?.[`seed:${crop.id}`]===false;
+      shopRow.buy.textContent=`${crop.seedCost} 金币`;
+      shopRow.buy.setAttribute('aria-label',`购买一份${crop.name}种子，${crop.seedCost}金币`);
+      shopRow.meta.textContent=`约 ${duration(crop.growMs)} · 收获 ${crop.yield} 份`;
     }
     const compostCost = GARDEN_RULES.compostCost;
-    buyCompost.disabled = busy || count(view.coins) < compostCost;
+    buyCompost.disabled = busy || count(view.coins) < compostCost || GARDEN_RULES.catalogEnabled?.compost===false;
     buyCompost.textContent = `${compostCost} 金币`;
     buyCompost.setAttribute('aria-label', `购买一份堆肥，${compostCost}金币`);
     const stockTotal = CROPS.reduce((sum, crop) => sum + count(view.inventory?.[crop.id]), 0);
@@ -559,6 +564,9 @@ export function mountGardenUI({ onAction, onControl, onSelectPlot, onClose, onHo
   function setView(nextView) {
     if (disposed || !nextView || !Array.isArray(nextView.plots)) return;
     view = nextView;
+    CROPS=Array.isArray(view.economyConfig?.crops)?view.economyConfig.crops:DEFAULT_CROPS;
+    GARDEN_RULES={...DEFAULT_RULES,...view.economyConfig?.rules};
+    byId=new Map(CROPS.map(crop=>[crop.id,crop]));
     render();
   }
   function setOpen(value) {

@@ -24,7 +24,7 @@ export function apply(ctx: Context) {
     if (agent.session.header.agentPreset !== GUEST_PRESET) return next();
     const boundary = ctx.get('petCore')?.native.channelBoundary;
     if (!boundary?.guest(agent.id)) return {kind: 'reject'};
-    const speakers = messages.filter(message => message.source.kind === 'user');
+    const speakers = messages.filter(message => message.source.kind === 'user' || message.source.kind === 'dsh-world-reply-nudge');
     if ((step === 1 && !speakers.length) || speakers.some(message => !boundary.admit(agent.id, message))) return {kind: 'reject'};
     return next();
   });

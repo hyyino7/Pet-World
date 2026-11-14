@@ -54,7 +54,7 @@ try {
   await mount('dsh-agent-default-model', {provider:'life-fixture', model:'local'});
   await mount('dsh-api-session-controller', {nativeOpen:false});
   ctx.llm.registerAdapter(['life-fixture'], new Fixture());
-  await ctx.plugin(await import('../dist/src/core/plugin.js'), {dataDir:join(root,'core'), cwd:root,
+  await ctx.plugin(await import('../dist/src/core/plugin.js'), {dataDir:join(root,'.chatpet/data/core'), cwd:root,
     companionId:'fish', scopeId:'fixture', ownerActorId:'owner', displayName:'大肥鱼', character:'生活测试',
     memory:{dataDir:join(root,'.chatpet/data/memory'), python:resolve('.venv/bin/python')}});
   await ctx.plugin(await import('../dist/src/memory/plugin.js'));

@@ -8,19 +8,20 @@ import {createWechatModule} from '#dsh-world/adapters/wechat-scoped';
 import {createQqHome} from '#dsh-world/adapters/qq-home';
 import type {Push} from '#dsh-world/ecosystem/shared/outlets';
 import {conversationKey, speakerIdentity, type SpeakerIdentity} from '#dsh-world/ecosystem/shared/identity';
-import {durableWrite} from '#dsh-world/life/lifeStore';
 import type {PetCoreHost} from '../core/index.js';
 import {check, digest} from '../core/storage.js';
 import {privateDeviceDirectory} from './bridge.js';
 import {channelUsage} from './usage.js';
 import {createChannelHomes} from './sessions.js';
-import {allowedIdentity, defaults, messagingPreferences, ownerIdentity} from './messaging-settings.js';
+import {allowedIdentity, messagingPreferences, ownerIdentity} from './messaging-settings.js';
 import {createQzoneLedger} from './group-qzone.js';
 import {createGroupGameplay} from './group-material.js';
 import {openQQ, type QQOptions, type QQTransport} from './qq.js';
+import {messagingStorage} from './messaging-storage.js';
+import {createQQInbox,probeQQAdmission} from './qq-inbox.js';
 
 interface Options {
-  deviceDirectory:string; workspaceId:string; storageId:string; ownerHome():Promise<Agent>; active():boolean;
+  deviceDirectory:string; dataDirectory:string; workspaceId:string; storageId:string; ownerHome():Promise<Agent>; active():boolean;
   qqTransport?(opts:QQOptions):QQTransport;
 }
 interface Server {getOrigin():string; register(route:ReturnType<typeof createWechatModule>['route']):()=>void}
@@ -53,8 +54,8 @@ function acceptsVisitorSend(incoming:string, id:SpeakerIdentity, args:unknown) {
 }
 const visitorTools=new Set(['wechat_send','wechat_history','wechat_image']);
 export async function createMessaging(ctx:Context, host:PetCoreHost, options:Options) {
-  const file=join(options.deviceDirectory,'messaging.json'), store=host.workspace.runtime.store;
-  let config=safeFile(file)?messagingPreferences(defaults,JSON.parse(readFileSync(file,'utf8'))):structuredClone(defaults);
+  const persistence=messagingStorage(options.deviceDirectory,options.dataDirectory), store=host.workspace.runtime.store;
+  let config=persistence.current;
   let closed=false;
   const active=()=>!closed&&options.active();
   const allowed=(id:SpeakerIdentity)=>active()&&allowedIdentity(config,id);
@@ -62,7 +63,8 @@ export async function createMessaging(ctx:Context, host:PetCoreHost, options:Opt
   const homes=createChannelHomes(ctx,host,{...options,active,identityAllowed:allowed,ownerIdentity:owner});
   const usage=channelUsage(ctx,host,options.storageId,homes.allowsReply);
   const web=(ctx as unknown as {get(name:'web'):{search(input:{query:string;maxResults:number}):Promise<{sources:{url:string;title?:string;snippet?:string}[]}>}|undefined}).get('web');
-  const groups=createGroupGameplay({deviceDirectory:options.deviceDirectory,active,allowed,
+  const groups=createGroupGameplay({dataDirectory:options.dataDirectory,active,allowed,
+    companionName:()=>host.workspace.runtime.identity().displayName,
     search:web?query=>web.search({query,maxResults:5}):undefined});
   const receipt=(id:SpeakerIdentity)=>digest([options.storageId,id.channel,id.accountId,id.conversationType,id.conversationId,id.speakerId,id.platformMessageId]);
   let qq:ReturnType<typeof openQQ>|undefined, qqHome:ReturnType<typeof createQqHome>|undefined, qqError:string|null=null;
@@ -73,28 +75,29 @@ export async function createMessaging(ctx:Context, host:PetCoreHost, options:Opt
     try {
       const transport=options.qqTransport??(await import('#dsh-world/adapters/qq-sdk')).createBridge;
       if(!active())return;
-      qqHome=createQqHome({ctx,voiceEnabled:()=>config.qq.voiceEnabled,groupMaterial:input=>groups.material(input),home:async id=>{
-        const agent=await homes.open(id);
+      qqHome=createQqHome({ctx,voiceEnabled:()=>config.qq.voiceEnabled,groupMaterial:input=>groups.material(input),home:async (id,expected)=>{
+        const agent=await homes.open(id,expected);
         if(id.conversationType==='group') groups.bind(agent,id,()=>homes.allowsReply(agent.id,id),{
           forward:messageId=>{check(qq,'QQ 已停用');return qq.forward(id,messageId);},
           sendSticker:(target,stickerId)=>{check(qq && target.accountId===id.accountId && target.conversationId===id.conversationId,'群目标已变更');return qq.sendSticker(id,stickerId);}
         });
         return agent;
-      },inWorld:session=>active() &&
+      },replyNudge:(agent,original,message)=>homes.replyNudge(agent.id,original,message),inWorld:session=>active() &&
         homes.owns(session.id)});
       const home=qqHome;
       const qqAccount=config.qq.accountId;
-      qq=openQQ({settings:config.qq,qzone:createQzoneLedger(options.deviceDirectory,qqAccount),
-        active:()=>active() && config.qq.enabled && config.qq.accountId===qqAccount,allowed,owner,transport,async speak(text) {
+      const qqActive=()=>active() && config.qq.enabled && config.qq.accountId===qqAccount;
+      const inbox=createQQInbox({store,storageId:options.storageId,active:qqActive,allowed,owner,
+        probe:submission=>probeQQAdmission(ctx as unknown as Parameters<typeof probeQQAdmission>[0],submission,qqActive)});
+      qq=openQQ({settings:config.qq,qzone:createQzoneLedger(options.dataDirectory,qqAccount),
+        active:qqActive,allowed,owner,inbox,transport,async speak(text) {
         const voice=ctx.get('petVoice');check(voice && active(),'语音未启用');
         const response=await voice.handle({rest:'voice/speak',method:'POST',body:JSON.stringify({text})});
         check(response.kind==='file' && response.contentType==='audio/mpeg' && safeFile(response.file)
           && lstatSync(response.file).size<=4*1024*1024 && active(),'合成音频不可用');
         return readFileSync(response.file);
-      },groupQuote:id=>groups.quoteTarget(id),decideGroup:(id,trigger)=>groups.decision(id,trigger),groupResponse:(id,text,mode)=>groups.response(id,text,mode),
-        observeGroup:(id,message,flags)=>groups.receive(id,message,flags),ask:(text,id,history,mode)=>home.ask(text,id,history,mode),
-        take(id){const key=receipt(id);if(store.get('channel-received',key))return false;
-          store.put('channel-received',key,{receivedAt:Date.now()});return true;}});
+      },groupQuote:id=>groups.quoteTarget(id),decideGroup:(id,trigger,recovering)=>groups.decision(id,trigger,recovering),groupResponse:(id,text,mode)=>groups.response(id,text,mode),
+        observeGroup:(id,message,flags)=>groups.receive(id,message,flags),ask:(text,id,history,mode,delivery)=>home.ask(text,id,history,mode,delivery)});
       qqError=null;
     } catch(error) {
       qqHome?.stop();qqHome=undefined;
@@ -107,11 +110,13 @@ export async function createMessaging(ctx:Context, host:PetCoreHost, options:Opt
     try {
       const accountKey=digest([options.storageId,settings.accountId]).slice(7,31);
       const dir=privateDeviceDirectory(options.deviceDirectory,'wechat-'+accountKey), discovery=join(dir,'wechat.json');
-      for(const name of ['wechat.json','wechat-outbox.sqlite','wechat-outbox.sqlite-shm','wechat-outbox.sqlite-wal'])safeFile(join(dir,name));
-      const incoming=privateDeviceDirectory(dir,'incoming'), stickers=privateDeviceDirectory(dir,'stickers');
+      const dataDirectory=privateDeviceDirectory(options.dataDirectory,'wechat-'+accountKey);
+      safeFile(discovery);
+      for(const name of ['wechat-outbox.sqlite','wechat-outbox.sqlite-shm','wechat-outbox.sqlite-wal'])safeFile(join(dataDirectory,name));
+      const incoming=privateDeviceDirectory(dataDirectory,'incoming'), stickers=privateDeviceDirectory(dataDirectory,'stickers');
       privateDeviceDirectory(stickers,'incoming');
       const server=(ctx as unknown as {webServer:Server}).webServer;
-      const module=createWechatModule({ctx,file:discovery,worldId:'chatpet-'+accountKey,incomingDir:incoming,allowedHosts:[],
+      const module=createWechatModule({ctx,file:discovery,dataDirectory,worldId:'chatpet-'+accountKey,incomingDir:incoming,allowedHosts:[],
         origin:()=>server.getOrigin(),settings:()=>({contextMessages:settings.contextMessages,bufferSeconds:settings.bufferSeconds}),
         home:async id=>{check(allowed(id),'WeChat identity unavailable');return homes.open(id);},
         inWorld:session=>active() && homes.owns(session.id),
@@ -183,7 +188,7 @@ export async function createMessaging(ctx:Context, host:PetCoreHost, options:Opt
       const next=messagingPreferences(config,patch);check(active(),'Channel workspace changed');
       const updateQQ=!isDeepStrictEqual(next.qq,config.qq)||Boolean(qqError);
       const updateWX=!isDeepStrictEqual(next.wechat,config.wechat)||Boolean(wxError);
-      safeFile(file);durableWrite(file,JSON.stringify(next,null,2));chmodSync(file,0o600);
+      persistence.save(next);
       config=next;
       if(updateQQ){await stopQQ();qqError=null;await qqStart();}
       if(updateWX){await stopWechat();wxError=null;wxStart();}
@@ -213,7 +218,7 @@ export async function createMessaging(ctx:Context, host:PetCoreHost, options:Opt
       });
       return Promise.allSettled(senders);
     },
-    group:(operation:string,input:Record<string,unknown>)=>operation.startsWith('qzone')?createQzoneLedger(options.deviceDirectory,config.qq.accountId).manage(operation,input):groups.manage(config.qq.accountId,config.qq.allowGroups,operation,input),
+    group:(operation:string,input:Record<string,unknown>)=>operation.startsWith('qzone')?createQzoneLedger(options.dataDirectory,config.qq.accountId).manage(operation,input):groups.manage(config.qq.accountId,config.qq.allowGroups,operation,input),
     async close(){closed=true;usage.stop();groups.stop();homes.stop();await Promise.all([stopQQ(),stopWechat()]);},
   };
 }

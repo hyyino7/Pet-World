@@ -16,6 +16,7 @@
     "./00-Core/locale/*.json": "./locale/core/*.json",
     "./client": "./src/desktop/platform/client.js",
     "./20-Emotion": "./dist/src/emotion/plugin.js",
+    "./22-Economy": "./dist/src/economy/plugin.js",
     "./25-Behavior": "./dist/src/behavior/plugin.js",
     "./30-Desktop": "./dist/src/desktop/plugin.js",
     "./35-PetPlatform": "./dist/src/desktop/platform/plugin.js",
@@ -28,6 +29,7 @@
   },
   "types": "./dist/src/console/plugin.d.ts",
   "bin": {
+    "dafeiyu-setup": "scripts/install-dsh.mjs",
     "dafeiyu-standalone": "src/desktop/standalone.mjs",
     "dafeiyu-backup": "scripts/companion-backup.mjs"
   },
@@ -39,8 +41,6 @@
   },
   "files": [
     "dist/src",
-    "docs/core-runtime.md",
-    "docs/core-conversation.md",
     "THIRD_PARTY_NOTICES.md",
     "cordis.patch.yml",
     "locale/",
@@ -52,6 +52,7 @@
     "src/desktop/helper/",
     "src/room/shot-browser.cjs",
     "src/room/voice-client.js",
+    "src/room/identity-client.js",
     "src/room/window*.cjs",
     "src/memory/*.py",
     "vendor/mnemosyne/",
@@ -59,25 +60,36 @@
     "docs/settings.md",
     "docs/portability.md",
     "scripts/companion-backup.mjs",
+    "scripts/install-dsh.mjs",
+    "scripts/lib/portable-repo.mjs",
+    "scripts/lib/device-runtime.mjs",
     "scripts/lib/offline-backup.mjs",
     "scripts/lib/repo-storage.mjs",
+    "scripts/lib/core-config.mjs",
     "vendor/dsh-pet/LICENSE",
     "vendor/dsh-pet/origin.json",
-    "vendor/feiyu-room-template/"
+    "vendor/feiyu-room-template/",
+    "!dist/src/**/*.js.map",
+    "!vendor/dsh-pet/platform/upstream/**",
+    "!vendor/dsh-pet/platform/runtime/electron-helper/main/smoke.js",
+    "!src/desktop/helper/upstream/index.html",
+    "!vendor/feiyu-room-template/public/room/garden-showcase.html",
+    "!vendor/mnemosyne/requirements-test.lock",
+    "!vendor/mnemosyne/service/README.md",
+    "!vendor/mnemosyne/service/pyproject.toml",
+    "!vendor/feiyu-room-template/public/room/assets/pet/*.webm"
   ],
   "engines": {
     "node": ">=24.9 <25",
-    "dsh": "0.2.2-rc.1"
+    "dsh": ">=0.2.2-rc.1 <0.3.0-0"
   },
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "check:env": "node scripts/doctor.mjs",
     "check:types": "tsc --noEmit",
-    "build": "node scripts/build-desktop-animation.mjs && node scripts/build-pet-platform.mjs && tsc -p tsconfig.build.json",
+    "build": "node scripts/clean-build.mjs && node scripts/build-desktop-animation.mjs && node scripts/build-animation-map.mjs && node scripts/build-pet-platform.mjs && tsc -p tsconfig.build.json",
     "test": "pnpm run build && node --test dist/tests/*.test.js tests/world-*.test.mjs",
-    "test:native": "pnpm run build && node scripts/check-native.mjs",
     "test:native-workspace": "pnpm run build && node scripts/check-native-workspace.mjs",
-    "test:live": "pnpm run build && node scripts/check-core-live.mjs",
     "test:memory": "pnpm run build && python tests/memory_provider_test.py && node --test tests/memory-process.test.mjs",
     "test:native-memory": "pnpm run build && node scripts/check-native-memory.mjs",
     "test:native-desktop": "pnpm run build && node scripts/check-native-desktop.mjs",
@@ -94,20 +106,31 @@
     "test:native-services": "pnpm run build && node scripts/check-native-services.mjs",
     "test:room-voice": "pnpm run build && node scripts/check-room-voice.mjs",
     "test:backup": "node --test tests/offline-backup.test.mjs",
-    "test:room-refresh": "pnpm run build && node tests/room-refresh-window.mjs"
+    "test:room-refresh": "pnpm run build && node tests/room-refresh-window.mjs",
+    "test:autonomous-life": "pnpm run build && node --test dist/tests/autonomous-life.test.js dist/tests/behavior-scheduling.test.js dist/tests/interaction-context.test.js dist/tests/economy-recovery.test.js dist/tests/life-fact-read.test.js dist/tests/life-clock-intent.test.js dist/tests/life-tool-policy.test.js dist/tests/life-review-files.test.js dist/tests/life-body.test.js dist/tests/desktop-features.test.js dist/tests/room-garden-json.test.js dist/tests/room-motion.test.js dist/tests/room-voice.test.js dist/tests/voice-and-life-library.test.js tests/life-fact-runtime.test.mjs tests/presentation-lifecycle.test.mjs tests/offline-backup.test.mjs tests/repo-storage.test.mjs",
+    "test:life-integration": "pnpm run test:autonomous-life && node --test --test-timeout=30000 dist/tests/life-core-integration.test.js dist/tests/life-memory-integration.test.js dist/tests/life-domain-integration.test.js dist/tests/life-desktop-integration.test.js dist/tests/desktop-settings.test.js tests/standalone-code.test.mjs tests/core-install-config.test.mjs dist/tests/core.test.js dist/tests/settings.test.js dist/tests/companion-foundation.test.js dist/tests/world-recall.test.js dist/tests/workspace.test.js dist/tests/memory-batch.test.js dist/tests/emotion-state.test.js dist/tests/audit-transcripts.test.js dist/tests/audit-desktop.test.js dist/tests/audit-garden-ui.test.js tests/first-install.test.mjs tests/audit-qq-recovery.test.mjs dist/tests/desktop-work.test.js tests/audit-r2-memory-self.test.mjs tests/audit-r2-life-files.test.mjs tests/audit-r2-desktop-voice.test.mjs tests/audit-r2-electron-dependencies.test.mjs dist/tests/audit-r2-desktop-policy.test.js tests/audit-r3-portable-memory.test.mjs tests/audit-r3-body-voice.test.mjs tests/audit-r4-room-wiring.test.mjs tests/audit-r4-room-photo.test.mjs tests/audit-r4-cast-lifetime.test.mjs tests/audit-r4-memory-entry.test.mjs tests/audit-r4-wake-route.test.mjs tests/audit-r4-voice-rate.test.mjs tests/audit-r5-backup-memory.test.mjs tests/audit-r5-garden-clock.test.mjs tests/audit-r5-install-receipt.test.mjs dist/tests/audit-r6-binding.test.js tests/audit-r6-channel-drafts.test.mjs tests/audit-r6-memory-scope.test.mjs tests/audit-r6-emotion-size.test.mjs tests/audit-r6-garden-refresh.test.mjs dist/tests/offline-body-policy.test.js dist/tests/audit-r7-channel-nudge.test.js tests/audit-r7-pet-hear.test.mjs tests/pet-activity-mirroring.test.mjs tests/life-media.test.mjs dist/tests/activity-playback.test.js tests/activity-playback-room.test.mjs tests/activity-playback-carriers.test.mjs tests/activity-playback-web-state.test.mjs dist/tests/mapped-playback.test.js dist/tests/mapped-playback-context.test.js tests/mapped-playback-carriers.test.mjs tests/mapped-playback-feedback.test.mjs tests/mapped-feedback-expiry.test.mjs tests/mapped-playback-tap.test.mjs tests/retired-baifan.test.mjs dist/tests/paused-playback-progress.test.js tests/mapped-platform-admission.test.mjs tests/webm-metadata.test.mjs tests/animation-media-timing.test.mjs tests/mapped-ended-hold.test.mjs tests/mapped-refresh-convergence.test.mjs tests/mapped-room-layer-lifetime.test.mjs tests/mapped-channel-path-binding.test.mjs tests/mapped-sleeping-inventory.test.mjs tests/mapped-refused-movement.test.mjs tests/mapped-group-name-wake.test.mjs",
+    "check:package": "node scripts/check-runtime-package.mjs",
+    "test:audit-repairs": "pnpm run build && node --test --test-timeout=30000 dist/tests/audit-transcripts.test.js dist/tests/audit-desktop.test.js dist/tests/audit-garden-ui.test.js tests/first-install.test.mjs tests/audit-qq-recovery.test.mjs",
+    "test:audit-r2": "pnpm run build && node --test --test-timeout=30000 tests/audit-r2-memory-self.test.mjs tests/audit-r2-life-files.test.mjs tests/audit-r2-desktop-voice.test.mjs tests/audit-r2-electron-dependencies.test.mjs dist/tests/audit-r2-desktop-policy.test.js",
+    "test:audit-r3": "pnpm run build && node --test --test-timeout=30000 tests/audit-r3-portable-memory.test.mjs tests/audit-r3-body-voice.test.mjs",
+    "test:audit-r4": "pnpm run build && node --test --test-timeout=30000 tests/audit-r4-room-wiring.test.mjs tests/audit-r4-room-photo.test.mjs tests/audit-r4-cast-lifetime.test.mjs tests/audit-r4-memory-entry.test.mjs tests/audit-r4-wake-route.test.mjs tests/audit-r4-voice-rate.test.mjs",
+    "test:audit-r5": "pnpm run build && node --test --test-timeout=30000 tests/audit-r5-backup-memory.test.mjs tests/audit-r5-garden-clock.test.mjs tests/audit-r5-install-receipt.test.mjs",
+    "test:audit-r6": "pnpm run build && node --test --test-timeout=30000 dist/tests/audit-r6-binding.test.js tests/audit-r6-channel-drafts.test.mjs tests/audit-r6-memory-scope.test.mjs tests/audit-r6-emotion-size.test.mjs tests/audit-r6-garden-refresh.test.mjs"
   },
   "optionalDependencies": {
     "@andresaya/edge-tts": "1.9.1",
     "@snowluma/sdk": "1.14.20",
-    "ws": "8.22.2"
+    "ws": "8.22.2",
+    "@electron/get": "5.0.0",
+    "@electron-internal/extract-zip": "1.0.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "~4.1.0",
-    "@deepseek-ai/dsh-agent": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-llm": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-session": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-system-prompt": "0.2.2-rc.1",
-    "@deepseek-ai/dsh-tools": "0.2.2-rc.1"
+    "@deepseek-ai/cordis": "^4.1.0",
+    "@deepseek-ai/dsh-agent": ">=0.2.2-rc.1 <0.3.0-0",
+    "@deepseek-ai/dsh-llm": ">=0.2.2-rc.1 <0.3.0-0",
+    "@deepseek-ai/dsh-session": ">=0.2.2-rc.1 <0.3.0-0",
+    "@deepseek-ai/dsh-system-prompt": ">=0.2.2-rc.1 <0.3.0-0",
+    "@deepseek-ai/dsh-tools": ">=0.2.2-rc.1 <0.3.0-0"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.1.0",

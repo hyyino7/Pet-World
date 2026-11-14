@@ -18,6 +18,8 @@ const EVENT_TTL = 15 * MIN;
 const MAX_EVENT_LOG = 80;
 const MAX_ELAPSED_HOURS = 8; // 桥接停了一整天，也不让需求一口气爆表
 
+export const HOME_TOUCH_REACTION_MS = Object.freeze({pet: 9_000, poke: 6_000});
+
 export const HOME_ACTIONS = Object.freeze([
   'visit', 'pet', 'poke', 'feed', 'water', 'play', 'talk', 'sleep', 'wake', 'lamp', 'command', 'go', 'place', 'sick', 'heal'
 ]);
@@ -110,13 +112,16 @@ export function roomAtPoint(pos) {
 }
 
 /** 点击落点：限制在家里、房间内、离墙留 0.22m；不在任何房间返回 null。 */
-export function normalizeFreePoint(raw, { preserveOutdoor = false } = {}) {
+export function normalizeFreePoint(raw, { preserveOutdoor = false, preservePosition = false } = {}) {
   if (!Array.isArray(raw) || raw.length < 2) return null;
   const x = Number(raw[0]);
   const z = Number(raw[1]);
   if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
   const room = roomAtPoint([x, z]);
   if (!room) return null;
+  // A retained physical position is a fact, not a new clicked destination.
+  // Route interruption may land near a doorway; do not reapply target padding.
+  if (preservePosition) return [x, z];
   // 点击移动仍吸附到菜园安全路点；鼠标拖拽（preserveOutdoor）保留连续落点，
   // 否则从鼠标抬起的位置跳到最近菜畦，观感会一顿一顿的。
   if (room.id === 'garden' || room.id === 'yard') {
@@ -409,6 +414,7 @@ export function emptyHomeState(now = Date.now()) {
     seed: hash(`home:${dayKey(now)}`),
     needs: { hunger: 0.3, thirst: 0.32, energy: 0.7, bladder: 0.2, pain: 0 },
     asleep: false,
+    sleepStartedAt: 0,
     sleepPending: false,
     freePos: null,
     freeTarget: null,
@@ -500,7 +506,7 @@ export function normalizeHomeState(raw, now = Date.now()) {
   };
   out.asleep = raw.asleep === true;
   // 已经落地的自由点必须保留，否则拖拽放下后一读档就又吸回菜畦。
-  out.freePos = normalizeFreePoint(raw.freePos, { preserveOutdoor: true });
+  out.freePos = normalizeFreePoint(raw.freePos, { preserveOutdoor: true, preservePosition: true });
   if (out.spot === 'free' && out.freePos) {
     const r = roomAtPoint(out.freePos);
     if (r) out.room = r.id;
@@ -594,6 +600,10 @@ export function normalizeHomeState(raw, now = Date.now()) {
       if (Number(v) > 0 && now - Number(v) < 7 * 24 * HOUR) out.lastEventAt[k] = Number(v);
     }
   }
+  // Phase onset is independent of the event log's cooldown. Old saves without
+  // a witnessed sleep transition stay unknown; loading never starts a phase.
+  out.sleepStartedAt = out.asleep && Number.isFinite(raw.sleepStartedAt)
+    && raw.sleepStartedAt > 0 && raw.sleepStartedAt <= now ? raw.sleepStartedAt : 0;
   return out;
 }
 
@@ -610,7 +620,7 @@ export function saveHomeState(filePath, state, now = Date.now()) {
   normalized.updatedAt = now;
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const tmp = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tmp, `${JSON.stringify(normalized, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+  fs.writeFileSync(tmp, `${JSON.stringify(normalized, null, 2)}\n`, { encoding: 'utf8', mode: 0o600, flush: true });
   fs.renameSync(tmp, filePath);
   return normalized;
 }
@@ -902,6 +912,17 @@ function setActivity(state, kind, activity, pose, elev, facing) {
   state.walking = false;
 }
 
+/** Record only the existing physical transition, without selecting any goal. */
+function enterSleep(state, now, activity = '睡着了') {
+  const entering = !state.asleep;
+  state.sleepPending = false;
+  state.asleep = true;
+  state.lamp = false;
+  if (entering) state.sleepStartedAt = now;
+  setActivity(state, 'sleep', activity, 'lie', 0.52, 180);
+  if (entering) emit(state, 'sleep', '关了灯，钻进被窝', now, {room: 'her_room', spot: 'bed'});
+}
+
 function beginRoute(state, target, now, env = {}) {
   const speed = target.urgent ? 1.45 : 1.05;
   const fromPos = currentPosition(state, now);
@@ -914,6 +935,7 @@ function beginRoute(state, target, now, env = {}) {
     if (target.spot === 'free' && Array.isArray(target.pos)) state.freePos = target.pos.slice();
     setActivity(state, target.kind, target.actText, target.pose, target.elev, target.facing);
     state.dwell = { until: now + Math.max(1, target.dwellMs || 0), target };
+    if (target.plannedOperationId) state.dwell.until = target.plannedUntil ?? Number.MAX_SAFE_INTEGER;
     return;
   }
   state.route = route;
@@ -939,16 +961,59 @@ function arrive(state, now) {
   state.arrivedAt = now;
   // 睡眠只在「已经到床」这一帧生效；路上 sleeping=false，客户端不会播睡眠动画。
   if (t.effect === 'sleep' && t.room === 'her_room' && t.spot === 'bed') {
-    state.sleepPending = false;
-    state.asleep = true;
-    state.lamp = false;
-    setActivity(state, 'sleep', t.actText || '钻进被窝，闭上眼', 'lie', 0.52, 180);
-    emit(state, 'sleep', '关了灯，钻进被窝', now, { room: 'her_room', spot: 'bed' });
+    enterSleep(state, now, t.actText || '钻进被窝，闭上眼');
     state.dwell = null;
     return;
   }
   setActivity(state, t.kind, t.actText, t.pose, t.elev, t.facing);
   state.dwell = { until: now + Math.max(0, Number(t.dwellMs) || 0), target: t };
+  if (t.plannedOperationId) state.dwell.until = t.plannedUntil ?? Number.MAX_SAFE_INTEGER;
+}
+
+/** Reuse the real route/pose executor without selecting a scripted life goal. */
+export function beginPlannedHomeActivity(input, activity, now = Date.now()) {
+  const state = normalizeHomeState(input, now);
+  if (state.route || state.dwell || state.command || state.freeTarget || state.sleepPending)
+    throw new Error('The body is already executing an accepted activity');
+  const room = activity.room ?? state.room, spot = activity.spot ?? state.spot;
+  const sp = spotOf(room, spot) || (room === state.room && spot === 'free' && state.freePos
+    ? {pos:state.freePos, pose:state.pose, elev:state.elev, facing:state.facing} : null);
+  if (!sp) throw new Error('Unknown planned room position');
+  if ((room !== state.room || spot !== state.spot) && (state.asleep || state.needs.pain >= .7))
+    throw new Error('The body cannot move in its current state');
+  const preserveSleep = state.asleep && state.room === 'her_room' && state.spot === 'bed'
+    && room === state.room && spot === state.spot && ['hold', 'room'].includes(activity.kind);
+  const target = {room, spot, ...(spot === 'free' ? {pos:sp.pos} : {}),
+    pose:sp.pose, elev:sp.elev || 0, facing:sp.facing ?? state.facing,
+    kind:'planned', walkText:`正在前往${sp.label || room}`, actText:activity.activity,
+    dwellMs:0, effect:null, eventType:null, eventText:null,
+    plannedOperationId:activity.operationId, plannedUntil:activity.until ? Date.parse(activity.until) : Number.MAX_SAFE_INTEGER,
+    ...(preserveSleep ? {preserveSleep:true} : {})};
+  if (room === state.room && spot === state.spot) {
+    if (!preserveSleep) setActivity(state, target.kind, target.actText, target.pose, target.elev, target.facing);
+    state.dwell = {until:target.plannedUntil,target};
+  } else beginRoute(state, target, now);
+  return state;
+}
+
+/** Stop at the actual interpolated position, retaining progress in the host receipt. */
+export function pausePlannedHomeActivity(input, operationId, now = Date.now()) {
+  const state = normalizeHomeState(input, now);
+  const owned = target => target?.plannedOperationId === operationId || target?.gardenJobId === operationId;
+  if (owned(state.route?.target)) {
+    const pos = currentPosition(state, now), room = roomAtPoint(pos);
+    state.route = null; state.walking = false;
+    state.room = room?.id || state.room; state.spot = 'free'; state.freePos = pos;
+    state.pose = 'stand'; state.elev = 0;
+  }
+  if (owned(state.dwell?.target)) state.dwell = null;
+  if (state.companionAction?.id===operationId && state.companionAction.action==='sleep') state.sleepPending=false;
+  if (!state.route && !state.dwell) setActivity(state, state.asleep ? 'sleep' : 'idle', state.asleep ? state.activity : '当前活动已暂停', state.pose, state.elev, state.facing);
+  return state;
+}
+
+export function resumePlannedHomeActivity(input, activity, now = Date.now()) {
+  return beginPlannedHomeActivity(input, activity, now);
 }
 
 function applyEffect(state, target, now, env) {
@@ -989,11 +1054,7 @@ function decideTarget(state, now, env) {
 
   if (!state.asleep && state.sleepPending) {
     if (inBed) {
-      state.sleepPending = false;
-      state.asleep = true;
-      state.lamp = false;
-      setActivity(state, 'sleep', '钻进被窝，闭眼', 'lie', 0.52, 180);
-      emit(state, 'sleep', '关了灯，钻进被窝', now, { room: 'her_room', spot: 'bed' });
+      enterSleep(state, now, '钻进被窝，闭眼');
       return null;
     }
     return { ...TRIPS.sickBed(now), room: 'her_room', spot: 'bed', kind: 'walk', walkText: '困得迷迷糊糊，摸回卧室', actText: '钻进被窝，闭眼', dwellMs: 0, effect: 'sleep', pose: 'lie', elev: 0.52, urgent: false };
@@ -1042,10 +1103,7 @@ function decideTarget(state, now, env) {
   // 昼夜节律：夜里准备睡；白天按时间段轮换。
   if (night) {
     if (inBed) {
-      state.asleep = true;
-      state.lamp = false;
-      setActivity(state, 'sleep', '钻进被窝，闭眼', 'lie', 0.52, 180);
-      emit(state, 'sleep', '关了灯，钻进被窝', now, { room: 'her_room', spot: 'bed' });
+      enterSleep(state, now, '钻进被窝，闭眼');
       return null;
     }
     return { ...TRIPS.sickBed(now), room: 'her_room', spot: 'bed', kind: 'walk', walkText: '打了个哈欠，关了客厅的灯往卧室走', actText: '钻进被窝，闭眼', dwellMs: 0, effect: 'sleep', pose: 'lie', elev: 0.52 };
@@ -1110,6 +1168,52 @@ function commandTarget(command, now) {
  * 纯函数（会返回新对象）；调用方决定什么时候落盘。
  */
 export function advanceHomeState(input, now = Date.now(), env = {}) {
+  if (env.goalPolicy !== 'planned') return advanceHomeFrame(input, now, env);
+  let state = normalizeHomeState(input, now), changed = false;
+  // Reconcile only accepted phases. Live time is real elapsed time; a restored
+  // offline window bounds negative change separately without truncating sleep.
+  const seen = new Set();
+  while (true) {
+    const at = state.route ? Number(state.route.arriveAt)
+      : state.dwell && !state.dwell.target?.gardenJobId ? Number(state.dwell.until) : NaN;
+    const key = `${state.route ? 'route' : 'dwell'}:${at}`;
+    if (!Number.isFinite(at) || at > now || seen.has(key)) break;
+    seen.add(key);
+    const phase = advanceHomeFrame(state, at, env);
+    state = phase.state; changed ||= phase.changed;
+  }
+  const final = advanceHomeFrame(state, now, env);
+  if (final.state.offlineBodyWindow && final.state.lastTickAt >= final.state.offlineBodyWindow.endAt) {
+    delete final.state.offlineBodyWindow; final.changed = true;
+  }
+  return {state:final.state, changed:changed || final.changed};
+}
+
+/** The next physical boundary uses the same rates as passive progression. */
+export function nextHomeBoundary(input, now = Date.now(), conditions = [], passive = true) {
+  const state = normalizeHomeState(input, now), candidates = [];
+  for (const value of [state.route?.arriveAt,state.dwell?.until,state.reactionUntil,state.command?.until,state.freeTarget?.until])
+    if (Number.isFinite(value) && value > now && value < Number.MAX_SAFE_INTEGER) candidates.push(value);
+  if (!passive) return candidates.length ? Math.min(...candidates) : null;
+  // Needs are sampled at lastTickAt. Read-only queue work can ask again later
+  // without advancing physics; its caller clock must not postpone that deadline.
+  const sampledAt = state.lastTickAt;
+  const rates = {hunger:.055,thirst:.085,bladder:.095,energy:state.asleep ? .12 : -.042,pain:state.needs.pain > 0 ? -.055 : 0};
+  // Exhaustion has an existing discrete pain effect. A pain-only plan condition
+  // must still be reconsidered when energy crosses that physical boundary.
+  if (!state.asleep && state.needs.energy >= .05 && state.needs.pain < .28)
+    candidates.push(sampledAt + Math.max(1, Math.ceil((state.needs.energy - .05) / .042 * HOUR) + 1));
+  if (!state.asleep && state.needs.energy < .05 && state.needs.pain <= .28) rates.pain = 0;
+  for (const condition of conditions) {
+    const rate=rates[condition.metric],value=state.needs[condition.metric],target=condition.value;
+    if (!Number.isFinite(rate) || !Number.isFinite(value) || !Number.isFinite(target)) continue;
+    if (condition.comparison === 'gte' && value < target && rate > 0 || condition.comparison === 'lte' && value > target && rate < 0)
+      candidates.push(sampledAt + Math.max(1, Math.ceil((target - value) / rate * HOUR)));
+  }
+  return candidates.length ? Math.min(...candidates) : null;
+}
+
+function advanceHomeFrame(input, now = Date.now(), env = {}) {
   const state = normalizeHomeState(input, now);
   let changed = false;
   // Optional host policy: explicit routes/dwells keep their real task clock,
@@ -1117,18 +1221,28 @@ export function advanceHomeState(input, now = Date.now(), env = {}) {
   // Defaults preserve the original reference workflow.
   const autonomous = env.autonomy !== false;
 
-  const elapsed = env.passive === false ? 0 : Math.max(0, Math.min(now - state.lastTickAt, MAX_ELAPSED_HOURS * HOUR));
+  const window = env.goalPolicy === 'planned' ? state.offlineBodyWindow : null;
+  const elapsed = env.passive === false ? 0 : Math.max(0, env.goalPolicy === 'planned' ? now-state.lastTickAt : Math.min(now - state.lastTickAt, MAX_ELAPSED_HOURS * HOUR));
   if (env.passive === false) state.lastTickAt = now;
   if (elapsed > 0) {
     const h = elapsed / HOUR;
+    const overlap = window ? Math.max(0,Math.min(now,window.endAt)-Math.max(state.lastTickAt,window.startAt)) : 0;
+    const offlineNegative = window ? Math.max(0,Math.min(now,window.endAt,window.negativeUntil)-Math.max(state.lastTickAt,window.startAt)) : 0;
+    const onlineHours = (elapsed-overlap)/HOUR;
+    const negativeHours = offlineNegative/HOUR;
     const n = state.needs;
-    n.hunger = clamp01(n.hunger + 0.055 * h);
-    n.thirst = clamp01(n.thirst + 0.085 * h);
-    n.bladder = clamp01(n.bladder + 0.095 * h);
+    for(const [key,rate] of [['hunger',.055],['thirst',.085],['bladder',.095]]) {
+      const offlineValue=window ? Math.min(Math.max(n[key],window.needCeilings[key]),n[key]+rate*negativeHours) : n[key];
+      n[key]=clamp01(offlineValue+rate*onlineHours);
+    }
     if (state.asleep) n.energy = clamp01(n.energy + 0.12 * h);
-    else n.energy = clamp01(n.energy - 0.042 * h);
-    if (n.pain > 0) n.pain = clamp01(n.pain - 0.055 * h);
-    if (n.energy < 0.05 && n.pain < 0.28) n.pain = 0.28;
+    else {
+      const offlineValue=window ? Math.max(Math.min(n.energy,window.energyFloor),n.energy-.042*negativeHours) : n.energy;
+      n.energy=clamp01(offlineValue-.042*onlineHours);
+    }
+    // Absence alone neither heals old pain nor adds exhaustion penalties.
+    if (n.pain > 0) n.pain = clamp01(n.pain - 0.055 * onlineHours);
+    if (onlineHours>0 && n.energy < 0.05 && n.pain < 0.28) n.pain = 0.28;
     state.lastTickAt = now;
     changed = true;
   }
@@ -1145,11 +1259,7 @@ export function advanceHomeState(input, now = Date.now(), env = {}) {
       state.nextDecisionAt = 0;
       changed = true;
       if (state.room === 'her_room' && state.spot === 'bed' && !state.route) {
-        state.sleepPending = false;
-        state.asleep = true;
-        state.lamp = false;
-        setActivity(state, 'sleep', '钻进被窝，闭眼', 'lie', 0.52, 180);
-        emit(state, 'sleep', '关了灯，钻进被窝', now, { room: 'her_room', spot: 'bed' });
+        enterSleep(state, now, '钻进被窝，闭眼');
       } else {
         // 只是困了，先走回床；asleep 必须等到 arrive() 到 bed 才置 true。
         state.sleepPending = true;
@@ -1161,6 +1271,7 @@ export function advanceHomeState(input, now = Date.now(), env = {}) {
     const inBed = state.room === 'her_room' && state.spot === 'bed';
     if (hour >= 6.8 && hour < 10 && n.energy >= 0.5) {
       state.asleep = false;
+      state.sleepStartedAt = 0;
       state.lamp = true;
       state.nextDecisionAt = now + 2 * MIN;
       state.reactionUntil = now + 12_000;
@@ -1211,12 +1322,14 @@ export function advanceHomeState(input, now = Date.now(), env = {}) {
     const target = state.dwell.target;
     const doneAt = state.dwell.until;
     state.dwell = null;
-    applyEffect(state, target, doneAt, env);
+    if (!target?.plannedOperationId) applyEffect(state, target, doneAt, env);
+    else {
+      const keepSleep = target.preserveSleep === true && state.asleep && state.room === 'her_room' && state.spot === 'bed';
+      if (!keepSleep) {state.asleep = false;state.sleepStartedAt = 0;}
+      setActivity(state, keepSleep ? 'sleep' : 'idle', keepSleep ? state.activity : `已结束：${target.actText}`, state.pose, state.elev, state.facing);
+    }
     if (target?.effect === 'sleep') {
-      state.asleep = true;
-      state.lamp = false;
-      setActivity(state, 'sleep', '睡着了', 'lie', 0.52, 180);
-      emit(state, 'sleep', '关了灯，钻进被窝', doneAt, { room: 'her_room', spot: 'bed' });
+      enterSleep(state, doneAt);
     }
     state.nextDecisionAt = now + idleMinutesFor(state.seed, target?.kind || state.kind);
     changed = true;
@@ -1225,7 +1338,8 @@ export function advanceHomeState(input, now = Date.now(), env = {}) {
   // 正在反应/发呆：不打断。
   if (state.reactionUntil && now >= state.reactionUntil) {
     state.reactionUntil = 0;
-    if (/^react_|^wake$/.test(state.kind)) setActivity(state, 'idle', '安静下来，继续做自己的事', state.pose, state.elev, state.facing);
+    if (/^react_|^wake$/.test(state.kind) || !state.route && !state.dwell && ['eat', 'drink', 'play'].includes(state.kind))
+      setActivity(state, 'idle', '安静下来，继续做自己的事', state.pose, state.elev, state.facing);
     changed = true;
   }
   if (now < state.reactionUntil) return { state, changed };
@@ -1343,13 +1457,31 @@ function choosePetReaction(s, emotion) {
   return { kind: 'react_shy', texts: ['被摸了摸头，耳朵尖红了一下', '被摸了摸头，小声嗯了一声', '侧过脸，用尾巴轻轻碰了碰你的手'] };
 }
 
+function sleepingCareRefusal(state, action) {
+  if (!state.asleep || !['feed', 'water'].includes(action)) return null;
+  return {state, changed: false, event: {type: action, reason: 'sleeping',
+    text: `她正在睡觉，请先叫醒，再${action === 'water' ? '喂水' : '喂饭'}；本次未执行。`}};
+}
+
 export function applyHomeAction(state, input = {}) {
   const now = Number(input.at) || Date.now();
   const s = normalizeHomeState(state, now);
   const action = String(input.action || '').trim();
   if (!HOME_ACTIONS.includes(action)) return { state: s, changed: false, event: null };
+  const refusal = sleepingCareRefusal(s, action);
+  if (refusal) return refusal;
   const text = sanitizeText(input.text, 120);
   const inBed = s.room === 'her_room' && s.spot === 'bed' && !s.route && !s.walking;
+  // Touch is incidental to real bounded care, not a replacement activity. The
+  // existing reaction clock is also the direct feed/drink/play/wake deadline;
+  // retain it rather than starting another clock or inferring a historical
+  // onset. A normal idle/reaction still receives its usual visible response.
+  const shortKind = ['eat', 'drink', 'play', 'wake'].includes(s.kind);
+  const shortUntil = shortKind && !s.route && !s.dwell && s.reactionUntil > now ? s.reactionUntil : 0;
+  const dwellUntil = (shortKind || s.kind === 'nap') && s.dwell?.until > now ? s.dwell.until : 0;
+  const touch = action === 'pet' || action === 'poke';
+  const preserveActivity = touch && Boolean(s.asleep || s.walking || s.dwell?.target?.plannedOperationId
+    || s.dwell?.target?.gardenJobId || shortUntil || dwellUntil);
   let event = null;
 
   if (action === 'visit') {
@@ -1361,14 +1493,14 @@ export function applyHomeAction(state, input = {}) {
   } else if (action === 'pet') {
     s.counts.pet += 1;
     s.lastInteractionAt = now;
-    s.reactionUntil = now + 9_000;
+    s.reactionUntil = shortUntil || Math.min(now + HOME_TOUCH_REACTION_MS.pet, dwellUntil || Infinity);
     s.needs.energy = clamp01(s.needs.energy + 0.01);
     const reaction = choosePetReaction(s, input.emotion);
     const reactionText = pickText(`${s.seed}:pet:${reaction.kind}`, reaction.texts);
     if (s.asleep) {
       // 睡着时不换姿势/动画，只让气泡回一句睡梦里的反应。
       s.activity = reactionText;
-    } else if (!s.walking) {
+    } else if (!preserveActivity) {
       // 点击优先打断「到了之后坐着」的 dwell，让心情动画真的播出来；
       // 正在走路则不打断路线，只让 response 里的 reaction 气泡回应。
       s.dwell = null;
@@ -1378,25 +1510,29 @@ export function applyHomeAction(state, input = {}) {
   } else if (action === 'poke') {
     s.counts.poke += 1;
     s.lastInteractionAt = now;
-    s.reactionUntil = now + 6_000;
-    if (!s.walking && !s.dwell) setActivity(s, 'react_scare', '被戳了一下，吓了一跳', s.pose, s.elev, s.facing);
+    s.reactionUntil = shortUntil || Math.min(now + HOME_TOUCH_REACTION_MS.poke, dwellUntil || Infinity);
+    if (!preserveActivity && !s.dwell) setActivity(s, 'react_scare', '被戳了一下，吓了一跳', s.pose, s.elev, s.facing);
     event = { type: 'poke', text: '有人戳了你一下' };
   } else if (action === 'feed') {
     s.counts.feed += 1;
     s.needs.hunger = clamp01(s.needs.hunger - 0.36);
     s.lastInteractionAt = now;
     s.reactionUntil = now + 12_000;
-    if (!s.walking && !s.dwell) setActivity(s, 'eat', '叼着小鱼干，嚼得很认真', s.pose, s.elev, s.facing);
-    emit(s, 'feed', '有人喂了你一块小鱼干', now);
-    event = { type: 'feed', text: '有人喂你吃了一块小鱼干' };
+    if (!s.walking && !s.dwell) setActivity(s, 'eat', '吃着免费基础餐食', s.pose, s.elev, s.facing);
+    const actorText = input.by === '当前计划' || input.by === '大肥鱼' ? '自己吃了一份免费基础餐食'
+      : input.by === '主人' ? '主人给予的免费基础餐食已吃下' : '吃了一份免费基础餐食';
+    emit(s, 'feed', actorText, now);
+    event = { type: 'feed', text: actorText };
   } else if (action === 'water') {
     s.counts.water += 1;
     s.needs.thirst = clamp01(s.needs.thirst - 0.4);
     s.lastInteractionAt = now;
     s.reactionUntil = now + 8_000;
     if (!s.walking && !s.dwell) setActivity(s, 'drink', '捧着杯子，小口小口喝水', s.pose, s.elev, s.facing);
-    emit(s, 'water', '有人给你倒了杯水', now);
-    event = { type: 'water', text: '有人给你倒了杯水' };
+    const actorText = input.by === '当前计划' || input.by === '大肥鱼' ? '自己喝了水'
+      : input.by === '主人' ? '主人刚给你喂了水' : '有人给你倒了杯水';
+    emit(s, 'water', actorText, now);
+    event = { type: 'water', text: actorText };
   } else if (action === 'play') {
     s.counts.play += 1;
     s.needs.energy = clamp01(s.needs.energy + 0.02);
@@ -1462,28 +1598,32 @@ export function applyHomeAction(state, input = {}) {
     s.sleepPending = true;
     s.dwell = null;
     if (inBed) {
-      s.asleep = true;
-      s.sleepPending = false;
-      s.lamp = false;
-      setActivity(s, 'sleep', '睡着了', 'lie', 0.52, 180);
+      enterSleep(s, now);
     } else {
       s.asleep = false;
+      s.sleepStartedAt = 0;
       setActivity(s, 'walk', '困了，往卧室走', 'stand', 0, s.facing);
     }
-    emit(s, 'sleep', '关了灯，钻进被窝', now);
-    event = { type: 'sleep', text: '有人哄你睡觉' };
+    event = { type: 'sleep', text: s.asleep ? '已在床上入睡' : '睡觉安排已接收，正在前往床，尚未入睡' };
   } else if (action === 'wake') {
     const wasSleepPending = s.sleepPending && !s.asleep;
     if (!s.asleep && !wasSleepPending) return { state: s, changed: false, event: null };
     s.asleep = false;
+    s.sleepStartedAt = 0;
     s.sleepPending = false;
     s.lamp = true;
     s.reactionUntil = now + 10_000;
     if (wasSleepPending) {
       // 她还在去床的路上：叫住她，不要继续走到床上然后自动睡着。
+      const pos = currentPosition(s, now), room = roomAtPoint(pos);
+      const facing = currentFacing(s, now), elev = s.elev;
       s.route = null;
       s.dwell = null;
-      setActivity(s, 'idle', '被叫住，停在原地', 'stand', 0, s.facing);
+      s.freeTarget = null;
+      s.room = room?.id || s.room;
+      s.spot = 'free';
+      s.freePos = pos;
+      setActivity(s, 'idle', '被叫住，停在原地', 'stand', elev, facing);
     } else {
       setActivity(s, 'wake', '被叫醒，揉着眼睛赖床', 'lie', 0.52, 180);
     }
@@ -1523,6 +1663,9 @@ export function applyHomeAction(state, input = {}) {
   }
 
   s.updatedAt = now;
+  // The host adds interaction attribution after this result. Keep the already
+  // accepted physical action's identity when this touch only adds feedback.
+  if (preserveActivity) event = {...event, activityPreserved: true};
   return { state: s, changed: true, event };
 }
 
@@ -1613,7 +1756,7 @@ export function homeView(state, now = Date.now(), env = {}) {
       asleep,
       immobile: s.needs.pain >= 0.7,
       busy: !!s.dwell,
-      gardenWork: s.dwell?.target?.gardenJobId ? { id: s.dwell.target.gardenJobId, type: s.dwell.target.gardenAction, plotId: s.dwell.target.gardenPlotId, phase: 'working', workUntil: s.dwell.until } : null,
+      gardenWork: s.dwell?.target?.gardenJobId ? { id: s.dwell.target.gardenJobId, type: s.dwell.target.gardenAction, plotId: s.dwell.target.gardenPlotId ?? null, phase: 'working', workUntil: s.dwell.until } : null,
       bedsideWater: s.bedsideWater,
       affection: null
     },
@@ -1709,9 +1852,10 @@ export function beginGardenWork(input, job, now = Date.now()) {
   const spot = spotOf('garden', spotId);
   if (!spot || state.route || state.dwell || state.asleep || state.sleepPending) return state;
   const labels = {till:'松土',plant:'播种',water:'浇水',fertilize:'施肥',harvest:'采收',sell:'整理并出售收成',buySeed:'挑选种子',buyCompost:'补充堆肥',visit:'巡视菜园'};
-  const duration = {till:7000,plant:6500,water:6500,fertilize:6000,harvest:8000,sell:6000,buySeed:5000,buyCompost:6000,visit:4500}[action.type] || 6000;
+  const duration = Number.isFinite(job.remainingWorkMs) ? Math.max(1,job.remainingWorkMs)
+    : {till:7000,plant:6500,water:6500,fertilize:6000,harvest:8000,sell:6000,buySeed:5000,buyCompost:6000,visit:4500}[action.type] || 6000;
   const label = labels[action.type] || '照料菜园';
-  const target = {room:'garden',spot:spotId,kind:`garden_${action.type}`,walkText:`去${spot.label}${label}`,actText:`正在${spot.label}${label}`,dwellMs:duration,pose:'stand',elev:0,facing:spot.facing,effect:null,eventType:null,eventText:null,gardenJobId:job.id,gardenAction:action.type,gardenPlotId:action.plotId};
+  const target = {room:'garden',spot:spotId,kind:`garden_${action.type}`,walkText:`去${spot.label}${label}`,actText:`正在${spot.label}${label}`,dwellMs:duration,pose:'stand',elev:0,facing:spot.facing,effect:null,eventType:null,eventText:null,gardenJobId:job.id,gardenAction:action.type,gardenPlotId:action.plotId ?? null};
   state.nextDecisionAt = now + 60_000;
   beginRoute(state, target, now);
   return state;
@@ -1737,4 +1881,26 @@ export function endGardenWork(input, job, now, message, completed = false) {
     state.eventLog = state.eventLog.slice(-MAX_EVENT_LOG);
   }
   return state;
+}
+
+
+/** Catalog effects are applied by the shared Body once, beside its durable receipt.
+ * The caller owns reservation/settlement; this function never changes inventory. */
+export function applyCatalogFood(state, input = {}) {
+  const now=Number(input.at)||Date.now(), s=normalizeHomeState(state,now);
+  const refusal=sleepingCareRefusal(s,'feed');
+  if(refusal)return refusal;
+  const effects=input.effects || {};
+  for(const key of ['hunger','thirst','energy','bladder','pain']) {
+    if(typeof effects[key]==='number' && Number.isFinite(effects[key]))
+      s.needs[key]=clamp01(s.needs[key]+effects[key]);
+  }
+  // This Body has no stress/social gauges. Unsupported effects are rejected
+  // by the catalog, rather than creating parallel needs or changing personality.
+  const label=sanitizeText(input.label,80)||'餐食';
+  s.counts.feed+=1;s.lastInteractionAt=now;s.reactionUntil=now+12_000;
+  if(!s.walking && !s.dwell)setActivity(s,'eat',`吃着${label}`,s.pose,s.elev,s.facing);
+  const event={type:'feed',text:`吃了一份${label}`};
+  emit(s,'feed',event.text,now);
+  return {state:s,changed:true,event};
 }

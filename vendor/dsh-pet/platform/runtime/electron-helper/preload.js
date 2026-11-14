@@ -7,8 +7,24 @@
  * @module dsh-pet/runtime/electron-helper/preload
  */
 const { contextBridge, ipcRenderer } = require('electron');
+const presentationListeners=new Set();
+let presentationState;
+const presentationChanged=(_event,value)=>{
+  if(!value||typeof value.visible!=='boolean'||!Number.isSafeInteger(value.revision)||value.revision<0||presentationState?.revision>value.revision)return;
+  presentationState={visible:value.visible,revision:value.revision};
+  for(const listener of presentationListeners)listener({...presentationState});
+};
+ipcRenderer.on('pet:presentation-visibility',presentationChanged);
+window.addEventListener('unload',()=>{presentationListeners.clear();ipcRenderer.removeListener('pet:presentation-visibility',presentationChanged);},{once:true});
 
 contextBridge.exposeInMainWorld('petBridge', {
+  onPresentationVisibility(listener) {
+    if(typeof listener!=='function')throw Error('Invalid presentation listener');
+    presentationListeners.add(listener);
+    if(presentationState)queueMicrotask(()=>{if(presentationListeners.has(listener))listener({...presentationState});});
+    else void ipcRenderer.invoke('pet:presentation-state').then(value=>presentationChanged(null,value)).catch(()=>{});
+    return()=>presentationListeners.delete(listener);
+  },
   // 宠物窗口逐帧跟随：x/y/width/height 是窗口内容区坐标（用于移动窗口），
   // boxX/boxY 是宠物包围盒左上角的工作区坐标——碰撞站场必须用包围盒，窗口坐标差半只宠物宽。
   // size/bottomPad 让静止宠物也登记进碰撞站场，vx/vy 是当前速度（静止/拖拽为 0）。
