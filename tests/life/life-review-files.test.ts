@@ -24,6 +24,10 @@ const today=new Date('2026-11-13T05:00:00Z');
 
 test('review reads its existing materials and Core records but writes only self and open diary days',t=>{
   const f=fixture(t);
+  for(const name of ['diary','self.history']) {
+    assert.doesNotThrow(()=>assertLifeReviewFile(f.host,f.access,'read',join(f.records,name),today));
+    assert.throws(()=>assertLifeReviewFile(f.host,f.access,'write',join(f.records,name),today));
+  }
   for(const name of ['self.md','diary/2026-11-12.md','diary/2026-11-13.md','self.history/2026-11-12.md'])
     assert.doesNotThrow(()=>assertLifeReviewFile(f.host,f.access,'read',join(f.records,name),today));
   for(const kind of ['activity','conversations'])assert.doesNotThrow(()=>assertLifeReviewFile(f.host,f.access,'read',join(f.life,kind,'2026-11-12.jsonl'),today));
@@ -39,6 +43,9 @@ test('review rejects traversal, symlinks, hard links, guests and stale workspace
   assert.throws(()=>assertLifeReviewFile(f.host,f.access,'write',resolve(f.records,'diary/../../escape.md'),today));
   unlinkSync(self);symlinkSync(join(f.life,'life.json'),self);assert.throws(()=>assertLifeReviewFile(f.host,f.access,'write',self,today));
   unlinkSync(self);linkSync(join(f.life,'life.json'),self);assert.throws(()=>assertLifeReviewFile(f.host,f.access,'write',self,today));
+  renameSync(join(f.records,'diary'),join(f.records,'old-diary'));
+  symlinkSync(join(f.records,'old-diary'),join(f.records,'diary'));
+  assert.throws(()=>assertLifeReviewFile(f.host,f.access,'read',join(f.records,'diary'),today));
   assert.throws(()=>assertLifeReviewFile(f.host,{...f.access,guest:true},'read',join(f.life,'activity/2026-11-12.jsonl'),today));
   f.rebind();assert.throws(()=>assertLifeReviewFile(f.host,f.access,'read',join(f.life,'activity/2026-11-12.jsonl'),today));
 });

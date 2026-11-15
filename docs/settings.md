@@ -408,6 +408,14 @@ to each turn; no aggregate daily spending cap has been added.
 
 **设置 → 大肥鱼 → 生活** configures the shared ongoing life; the interactive Room itself opens in a separate window. The clock controls use the displayed Life time zone. The budget is a reminder based on usage reported by the home session. The activity view shows the estimate. The evening-review switch puts a completed review on the existing Memory batch queue.
 
+Daily review uses native `read` and `write` for its own self-description and
+diary, including read-only listings of its diary and self-history directories.
+If a review turn is interrupted, its scoped file access follows the next Life
+turn in the same live home and workspace until that turn completes. Owner input,
+rebinding or home disposal ends this continuation. This is an in-memory permission
+continuation, not a persisted review retry or proof that a diary was written.
+Other autonomous turns retain their existing file restrictions.
+
 - **概览 → 打开房间**, **生活 → 房间与菜园 → 打开房间**, or the pet menu's **进入房间** opens the same independent window. Repeating the command focuses it. Wake, rest, feeding, touch, movement and requested garden actions share Behavior's saved body with Desktop and remain usable while Life is paused. Closing Room releases its renderer/request lifetime; it does not reset the body or start another Agent. The TV asks the operating system to select a shared source and uses the existing native Room conversation for frame commentary. Actual physical source sharing remains a separate owner trial.
 - A visible native garden with a moist, immature crop also reads its current
   natural projection at a low frequency when no body/care event occurs. Static

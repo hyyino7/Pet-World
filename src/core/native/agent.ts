@@ -31,6 +31,8 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   const inputs = new Map<string, string>();
   const turns = new Map<string, {turn:number;scope:NativeScope;background:boolean;lifePolicy?:LifeTurnToolPolicy}>();
   const lifePolicies = new Map<Agent,{release:()=>void;review:boolean;reviewDay?:string}>();
+  // A native interruption ends a turn, not its unfinished review capability.
+  const interruptedReviews = new Map<string,{scope:NativeScope;reviewDay:string}>();
   const pending = new Set<Promise<unknown>>();
   const recall = new WorldRecall();
   const scopeFor = (id:string):NativeScope|undefined => {
@@ -51,8 +53,12 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     // New inbox facts do not replace capabilities already admitted for the
     // running native turn. Owner input lifts its mask before the next assembly.
     if(turns.get(agent.id)?.lifePolicy&&agent.status==='running')return;
-    const review='purpose' in message.source && message.source.purpose==='review';
-    const reviewDay=review&&'reviewDay' in message.source&&typeof message.source.reviewDay==='string'?message.source.reviewDay:undefined;
+    const interrupted=interruptedReviews.get(agent.id);
+    if(interrupted&&!sameScope(agent.id,interrupted.scope))interruptedReviews.delete(agent.id);
+    const resumed=interruptedReviews.get(agent.id);
+    const review=('purpose' in message.source && message.source.purpose==='review')||!!resumed;
+    const reviewDay='purpose' in message.source&&message.source.purpose==='review'
+      &&'reviewDay' in message.source&&typeof message.source.reviewDay==='string'?message.source.reviewDay:resumed?.reviewDay;
     if(lifePolicies.get(agent)?.review===review&&lifePolicies.get(agent)?.reviewDay===reviewDay)return;
     releaseLifePolicy(agent);
     const globalNames=ctx.tools.definitions().map(tool=>tool.name);
@@ -65,7 +71,9 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   // trusted inbox input is queued, and recheck at step admission below.
   const stopLifeInbox=ctx.on('agent/inbox/inserted',({agent,message})=>{
     if(!scopeFor(agent.id))return;
-    if(interactiveInput(message) && host.native.acceptsInput(agent.id,message))releaseLifePolicy(agent);
+    if(interactiveInput(message) && host.native.acceptsInput(agent.id,message)) {
+      interruptedReviews.delete(agent.id);releaseLifePolicy(agent);
+    }
     else if(turns.get(agent.id)?.background!==false)constrainLife(agent,message);
   });
   const stopReviewFiles=installLifeReviewFileGuard(ctx,host,agent=>{
@@ -150,7 +158,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
       const user=accepted.some(interactiveInput);
       if(!accepted.length)return {kind:'reject'};
       saved={turn:payload.turn,scope,background:!user};turns.set(payload.agent.id,saved);
-      if(user)releaseLifePolicy(payload.agent);else for(const message of accepted)constrainLife(payload.agent,message);
+      if(user){interruptedReviews.delete(payload.agent.id);releaseLifePolicy(payload.agent);}else for(const message of accepted)constrainLife(payload.agent,message);
       const policy=lifePolicies.get(payload.agent);
       if(!user&&policy)saved.lifePolicy={review:policy.review,reviewDay:policy.reviewDay};
       const input=accepted[0];if(input)inputs.set(payload.agent.id,input.id);
@@ -171,6 +179,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
         // not become a hidden cap on the owner's subsequent tool work.
         host.native.finish(payload.agent.id);
         saved!.background=false;
+        interruptedReviews.delete(payload.agent.id);
         releaseLifePolicy(payload.agent);
       }
     }
@@ -212,6 +221,9 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     if(event.type!=='turn/end')return;
     const saved=turns.get(session.id);if(!saved)return;
     const result=nativeResult(session.snapshotEvents(),inputs.get(session.id) ?? '');
+    if(saved.background&&saved.lifePolicy?.review&&saved.lifePolicy.reviewDay&&result.state!=='completed')
+      interruptedReviews.set(session.id,{scope:saved.scope,reviewDay:saved.lifePolicy.reviewDay});
+    else interruptedReviews.delete(session.id);
     if(saved.background)host.native.finish(session.id);
     const agent=agents.get(session.id);if(agent)releaseLifePolicy(agent);
     const done=host.native.finishTurn(session.id,saved.turn,result).catch(error=>{
@@ -223,6 +235,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     void host.native.end(agent.id).catch(()=>{});
     host.native.memory?.clear(agent.id);
     agents.delete(agent.id);turns.delete(agent.id);inputs.delete(agent.id);
+    interruptedReviews.delete(agent.id);
     releaseLifePolicy(agent);
   },{global:true});
   let stopped:Promise<void>|undefined;
@@ -231,7 +244,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     disposePrompt();disposeFoundation();
     stopLifeInbox();stopReviewFiles();for(const agent of [...lifePolicies.keys()])releaseLifePolicy(agent);
     if(host.native.resolveScope===scopeFor){host.native.resolveScope=undefined;host.native.attachGuest=undefined;}
-    agents.clear();turns.clear();inputs.clear();
+    agents.clear();turns.clear();inputs.clear();interruptedReviews.clear();
   })();
   ctx.effect(()=>stop);return stop;
 }

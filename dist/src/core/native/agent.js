@@ -13,6 +13,8 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
     const inputs = new Map();
     const turns = new Map();
     const lifePolicies = new Map();
+    // A native interruption ends a turn, not its unfinished review capability.
+    const interruptedReviews = new Map();
     const pending = new Set();
     const recall = new WorldRecall();
     const scopeFor = (id) => {
@@ -39,8 +41,13 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         // running native turn. Owner input lifts its mask before the next assembly.
         if (turns.get(agent.id)?.lifePolicy && agent.status === 'running')
             return;
-        const review = 'purpose' in message.source && message.source.purpose === 'review';
-        const reviewDay = review && 'reviewDay' in message.source && typeof message.source.reviewDay === 'string' ? message.source.reviewDay : undefined;
+        const interrupted = interruptedReviews.get(agent.id);
+        if (interrupted && !sameScope(agent.id, interrupted.scope))
+            interruptedReviews.delete(agent.id);
+        const resumed = interruptedReviews.get(agent.id);
+        const review = ('purpose' in message.source && message.source.purpose === 'review') || !!resumed;
+        const reviewDay = 'purpose' in message.source && message.source.purpose === 'review'
+            && 'reviewDay' in message.source && typeof message.source.reviewDay === 'string' ? message.source.reviewDay : resumed?.reviewDay;
         if (lifePolicies.get(agent)?.review === review && lifePolicies.get(agent)?.reviewDay === reviewDay)
             return;
         releaseLifePolicy(agent);
@@ -55,8 +62,10 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
     const stopLifeInbox = ctx.on('agent/inbox/inserted', ({ agent, message }) => {
         if (!scopeFor(agent.id))
             return;
-        if (interactiveInput(message) && host.native.acceptsInput(agent.id, message))
+        if (interactiveInput(message) && host.native.acceptsInput(agent.id, message)) {
+            interruptedReviews.delete(agent.id);
             releaseLifePolicy(agent);
+        }
         else if (turns.get(agent.id)?.background !== false)
             constrainLife(agent, message);
     });
@@ -176,8 +185,10 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
                 return { kind: 'reject' };
             saved = { turn: payload.turn, scope, background: !user };
             turns.set(payload.agent.id, saved);
-            if (user)
+            if (user) {
+                interruptedReviews.delete(payload.agent.id);
                 releaseLifePolicy(payload.agent);
+            }
             else
                 for (const message of accepted)
                     constrainLife(payload.agent, message);
@@ -208,6 +219,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
                 // not become a hidden cap on the owner's subsequent tool work.
                 host.native.finish(payload.agent.id);
                 saved.background = false;
+                interruptedReviews.delete(payload.agent.id);
                 releaseLifePolicy(payload.agent);
             }
         }
@@ -271,6 +283,10 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         if (!saved)
             return;
         const result = nativeResult(session.snapshotEvents(), inputs.get(session.id) ?? '');
+        if (saved.background && saved.lifePolicy?.review && saved.lifePolicy.reviewDay && result.state !== 'completed')
+            interruptedReviews.set(session.id, { scope: saved.scope, reviewDay: saved.lifePolicy.reviewDay });
+        else
+            interruptedReviews.delete(session.id);
         if (saved.background)
             host.native.finish(session.id);
         const agent = agents.get(session.id);
@@ -292,6 +308,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         agents.delete(agent.id);
         turns.delete(agent.id);
         inputs.delete(agent.id);
+        interruptedReviews.delete(agent.id);
         releaseLifePolicy(agent);
     }, { global: true });
     let stopped;
@@ -311,6 +328,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         agents.clear();
         turns.clear();
         inputs.clear();
+        interruptedReviews.clear();
     })();
     ctx.effect(() => stop);
     return stop;

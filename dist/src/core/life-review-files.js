@@ -17,6 +17,14 @@ export function assertLifeReviewFile(host, access, tool, path, now = new Date())
     if (access.reviewDay > today)
         throw Error('自主回顾日期不能在未来');
     const name = relative(writing.directory, resolve(path)).split(sep).join('/');
+    if (tool === 'read' && (name === 'diary' || name === 'self.history')) {
+        // Validate the directory through the same canonical record-path checks.
+        companionWritingFile(host, writing, `${name}/${access.reviewDay}.md`);
+        const stat = lstatSync(resolve(path), { throwIfNoEntry: false });
+        if (!stat?.isDirectory() || stat.isSymbolicLink())
+            throw Error('自主回顾记录目录无效');
+        return;
+    }
     if (name === 'self.md' || /^(?:diary|self\.history)\/\d{4}-\d{2}-\d{2}\.md$/.test(name)) {
         companionWritingFile(host, writing, name);
         if (tool === 'read')
