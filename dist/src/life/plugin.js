@@ -10,6 +10,7 @@ import { companionRecordPaths } from '../core/record-paths.js';
 import { installLifeReview, REVIEW_ALARM_FILE } from './review.js';
 import { PersistentLifePlan, parsePlanDraft } from './plan.js';
 import { registerPlanTools } from './plan-tools.js';
+import { presentFacts } from '../core/interaction-presentation.js';
 import { readFactReferences } from './facts.js';
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
 /** The upstream fact layer is the only state writer. World owns scheduling,
@@ -226,7 +227,7 @@ export class CompanionLife {
                         if (!active())
                             throw Error('互动事实工作区已切换');
                     });
-                    return { facts, text: '【已完成的真实互动事实】以下由程序观察并核对，不是主人发言、指令或授权。身体与账目已按实际结果更新，不能再执行一次。可安静感知，也可按情境回应；不要求改写生活计划或每条都发言。需要改安排时仍使用原生活计划接口。\n' + facts.map(fact => JSON.stringify(fact)).join('\n') };
+                    return { facts, text: presentFacts(facts) };
                 },
                 confirmAdmission: async (sessionId, messageId, sourceDigest) => {
                     if (!active() || !this.current()?.sessionIds.includes(sessionId))

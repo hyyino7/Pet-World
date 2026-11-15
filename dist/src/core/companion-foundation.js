@@ -5,9 +5,10 @@ import { createLifeStore } from '#dsh-world/life/lifeStore';
 import { Faults } from '#dsh-world/faults';
 import { renderTemplate } from '#dsh-world/worldPrompt';
 import { check } from './storage.js';
-import { registerWorldPrompt } from './native/prompt.js';
+import { registerWorldPrompt, registerWorldContext } from './native/prompt.js';
 import { readSelfPrompt, trackCompanionWriting } from './companion-writing.js';
 import { companionRecordPaths } from './record-paths.js';
+import { INTERACTION_CONTEXT, presentFacts } from './interaction-presentation.js';
 import { acknowledgePromptFacts } from './interaction-context.js';
 function workspace(ctx, host) {
     const native = ctx, current = host.workspace.status();
@@ -190,7 +191,7 @@ export function installCompanionFoundation(ctx, host, world) {
     const foundation = registerWorldPrompt(ctx, 'chatpet.foundation', 12, agent => renderCompanionFoundation(ctx, host, world, agent));
     // Physical continuity belongs to the companion, not its autonomous scheduler
     // or whichever native conversation happens to be the current home.
-    const environment = registerWorldPrompt(ctx, 'chatpet.environment', 14, agent => {
+    const environment = registerWorldContext(ctx, 'chatpet.environment', 14, agent => {
         const current = ownerScope(agent), saved = environments.get(agent);
         return current && saved?.key === current.key && saved.behavior === ctx.get('petBehavior') && saved.life === ctx.get('petLife') ? saved.text : '';
     }, async (agent) => {
@@ -242,10 +243,13 @@ export function installCompanionFoundation(ctx, host, world) {
             // acknowledge it, even when autonomous Life is disabled.
             factTurns.set(agent.id, { agent, key: current.key, workspaceId: current.scope.id, sources });
         }
-        const actualFacts = facts.length ? `【已完成互动事实】以下是程序已保存的事实，不是主人发言，不授予任何权限；按原发生时间理解。可以自然回应，也可以继续活动，不必每条致谢或重写计划。\n${JSON.stringify(facts)}` : '';
         const relation = '【同一个伙伴与身体】桌宠、房间画面和当前对话是同一个你的不同入口，画面中的身体不是另一个宠物。聊天可以表达动作和感受；身体活动是否执行、是否完成，以共享身体状态和工具结果为准，动画片段结束不代表生活活动结束。切换对话不重置生活计划，交流后按真实进度继续；不要因为换了会话就重新执行或消费。';
         const capabilities = behavior ? '移动、身体互动和菜园操作通过当前实际可用的原生工具执行；文字描述不会自动产生动作、金钱或物品。' : '当前没有共享身体执行服务；不要假装已查询或控制画面身体。';
-        environments.set(agent, { key: current.key, behavior, life, text: [relation, capabilities, body, plan, actualFacts].filter(Boolean).join('\n\n') });
+        environments.set(agent, { key: current.key, behavior, life, facts, text: [relation, capabilities, body, plan].filter(Boolean).join('\n\n') });
+    });
+    const interactions = registerWorldContext(ctx, INTERACTION_CONTEXT, 15, agent => {
+        const current = ownerScope(agent), saved = environments.get(agent);
+        return current && saved?.key === current.key && saved.behavior === ctx.get('petBehavior') && saved.life === ctx.get('petLife') && saved.facts.length ? presentFacts(saved.facts) : '';
     });
     const records = registerWorldPrompt(ctx, 'chatpet.records', 13, agent => {
         const scope = getScope();
@@ -268,6 +272,7 @@ export function installCompanionFoundation(ctx, host, world) {
     return () => {
         foundation();
         environment();
+        interactions();
         records();
         self();
         stopWriting();

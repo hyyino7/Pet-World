@@ -1,3 +1,4 @@
+import {presentFacts} from '../../src/core/interaction-presentation.js';
 import test, {type TestContext} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync} from 'node:fs';
@@ -43,7 +44,7 @@ function fixture(t:TestContext) {
 }
 
 const ownerMessage=(id:string,text='What just happened?'):UserMessage=>({role:'user',id:id as UserMessage['id'],source:{kind:'user'},content:[{type:'text',text}]});
-const lifeMessage=(id:string,facts:CompanionFact[]):UserMessage=>({role:'user',id,source:{kind:'dsh-world-life',facts},content:[{type:'text',text:JSON.stringify(facts)}]} as unknown as UserMessage);
+const lifeMessage=(id:string,facts:CompanionFact[]):UserMessage=>({role:'user',id,source:{kind:'dsh-world-life',facts},content:[{type:'text',text:presentFacts(facts)}]} as unknown as UserMessage);
 const replyId=(session:string,turn:number)=>'result:native:'+digest([session,turn]);
 const completed=(text:string)=>({state:'completed' as const,text,hostTurnIds:[]});
 

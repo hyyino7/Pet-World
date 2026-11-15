@@ -7,13 +7,14 @@ import type {} from '@deepseek-ai/dsh-tools';
 import type { LlmCallConfig } from '@deepseek-ai/dsh-llm';
 import { nativeResult } from './result.js';
 import type { PetCoreHost } from '../index.js';
-import { registerWorldPrompt, retireLegacyPrompt } from './prompt.js';
+import { registerWorldPrompt, retireLegacyPrompt, retireDynamicContext } from './prompt.js';
 import { WorldRecall } from './recall.js';
 import type { PetWorld } from '../../world/service.js';
 import type { NativeScope } from './conversation.js';
 import { installCompanionFoundation,companionWritingScope } from '../companion-foundation.js';
-import { lifeToolAllowed, restrictLifeTools } from '../life-tool-policy.js';
+import { lifeToolAllowed, lifeInheritedToolNames, restrictLifeTools } from '../life-tool-policy.js';
 import {installLifeReviewFileGuard} from '../life-review-files.js';
+import {prepareLifeHistory,applyLifeHistory,type HistoryProjection} from './history-maintenance.js';
 
 export const name = 'chatpet-agent';
 export const inject = ['petCore', 'petWorld', 'agents', 'systemPrompt', 'tools'];
@@ -34,6 +35,9 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   // A native interruption ends a turn, not its unfinished review capability.
   const interruptedReviews = new Map<string,{scope:NativeScope;reviewDay:string}>();
   const pending = new Set<Promise<unknown>>();
+  const historyReady=new Map<Agent,NativeScope>();
+  const historyPrepared=new Map<Agent,{scope:NativeScope;changes:HistoryProjection[]}>();
+  let historyClosing=false;
   const recall = new WorldRecall();
   const scopeFor = (id:string):NativeScope|undefined => {
     const status=host.workspace.status();
@@ -61,8 +65,8 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
       &&'reviewDay' in message.source&&typeof message.source.reviewDay==='string'?message.source.reviewDay:resumed?.reviewDay;
     if(lifePolicies.get(agent)?.review===review&&lifePolicies.get(agent)?.reviewDay===reviewDay)return;
     releaseLifePolicy(agent);
-    const globalNames=ctx.tools.definitions().map(tool=>tool.name);
-    lifePolicies.set(agent,{review,reviewDay,release:restrictLifeTools(agent.ctx.tools,globalNames,review)});
+    const inheritedNames=lifeInheritedToolNames(ctx.tools,agent,review);
+    lifePolicies.set(agent,{review,reviewDay,release:restrictLifeTools(agent.ctx.tools,inheritedNames,review)});
   };
   // A capability-admitted QQ retry continues an actual conversation; its
   // internal source remains a system observation, not autonomous owner work.
@@ -86,6 +90,20 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     pending.add(work);void work.finally(()=>pending.delete(work)).catch(()=>{});
     return work;
   };
+  const drainHistory=(agent:Agent)=>{
+    const scope=historyReady.get(agent);
+    if(historyClosing||!scope||agent.status!=='idle')return;
+    historyReady.delete(agent);
+    if(!sameScope(agent.id,scope)||scope.guest)return;
+    void watch(prepareLifeHistory(agent,()=>!historyClosing&&sameScope(agent.id,scope)).then(changes=>{
+      if(changes.length&&!historyClosing&&sameScope(agent.id,scope))historyPrepared.set(agent,{scope,changes});
+    }).catch(error=>{
+      ctx.logger('chatpet-context').warn('History maintenance pending; original events retained',error);
+    }));
+  };
+  const stopHistoryStatus=ctx.on('agent/status',({agent,status})=>{
+    if(status==='idle')queueMicrotask(()=>drainHistory(agent));
+  },{global:true});
   let archiveTail: Promise<void> = Promise.resolve();
   function syncArchives(publishedIds?: readonly string[]): Promise<void> {
     const memory=host.native.memoryFor('');if(!memory)return Promise.resolve();
@@ -122,6 +140,12 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   const onRequest = ({agent,turn,step}: {agent:Agent;turn:number;step:number},next:()=>Promise<LlmCallConfig>)=>{
     const bound=!!scopeFor(agent.id);
     if(scanned.get(agent)!==bound){retireLegacyPrompt(agent.session,turn,step,bound);scanned.set(agent,bound);}
+    const prepared=historyPrepared.get(agent);historyPrepared.delete(agent);
+    if(prepared&&sameScope(agent.id,prepared.scope)) {
+      const meter=(ctx as unknown as {get(name:string):unknown}).get('tokenMeter') as {estimateMessage(message:import('@deepseek-ai/dsh-llm').Message):number}|undefined;
+      if(meter)applyLifeHistory(agent,prepared.changes,meter);
+    }
+    retireDynamicContext(agent,turn,step);
     recall.request(agent.session,turn,step,bound && !!host.native.memoryFor(agent.id));
     return next();
   };
@@ -226,7 +250,11 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     else interruptedReviews.delete(session.id);
     if(saved.background)host.native.finish(session.id);
     const agent=agents.get(session.id);if(agent)releaseLifePolicy(agent);
-    const done=host.native.finishTurn(session.id,saved.turn,result).catch(error=>{
+    const done=host.native.finishTurn(session.id,saved.turn,result).then(()=>{
+      if(agent&&saved.background&&saved.lifePolicy&&!saved.lifePolicy.review&&result.state==='completed'&&!historyClosing) {
+        historyReady.set(agent,saved.scope);queueMicrotask(()=>drainHistory(agent));
+      }
+    }).catch(error=>{
       host.native.memory?.unavailable(error);ctx.logger('chatpet-memory').warn('Conversation retained; Memory write pending',error);
     }).finally(()=>{if(turns.get(session.id)===saved){turns.delete(session.id);inputs.delete(session.id);}if(native.get('workspaceRegistry')?.archivedSessionIds?.includes(session.id))void syncArchives([session.id]).catch(()=>{});});
     return watch(done);
@@ -236,10 +264,12 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     host.native.memory?.clear(agent.id);
     agents.delete(agent.id);turns.delete(agent.id);inputs.delete(agent.id);
     interruptedReviews.delete(agent.id);
+    historyReady.delete(agent);historyPrepared.delete(agent);
     releaseLifePolicy(agent);
   },{global:true});
   let stopped:Promise<void>|undefined;
   const stop=()=>stopped ??= (async()=>{
+    historyClosing=true;historyReady.clear();historyPrepared.clear();stopHistoryStatus();
     await Promise.allSettled([...pending]);await archiveTail;
     disposePrompt();disposeFoundation();
     stopLifeInbox();stopReviewFiles();for(const agent of [...lifePolicies.keys()])releaseLifePolicy(agent);

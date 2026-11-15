@@ -5,11 +5,10 @@ import {pathToFileURL} from 'node:url';
 import {Context} from '@deepseek-ai/cordis';
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt';
 import Tools from '@deepseek-ai/dsh-tools';
-import {lifeToolAllowed,restrictLifeTools} from '../../src/core/life-tool-policy.js';
+import {lifeToolAllowed,lifeInheritedToolNames,restrictLifeTools} from '../../src/core/life-tool-policy.js';
 
 test('native step schemas exclude programming capabilities and exact disposal restores owner tools',async t=>{
-  const require=createRequire(import.meta.url);
-  const toolRequire=createRequire(require.resolve('@deepseek-ai/dsh-tools'));
+  const toolRequire=createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh-tools'));
   const {createScope}=await import(pathToFileURL(toolRequire.resolve('@deepseek-ai/dsh-scope')).href);
   const ctx=new Context();
   const prompt=await ctx.plugin(SystemPrompt),tools=await ctx.plugin(Tools);
@@ -17,14 +16,19 @@ test('native step schemas exclude programming capabilities and exact disposal re
   const component=await ctx.plugin({inject:['tools'],async apply(owner:Context){
   const names=['life_plan_read','life_plan_update','room_state','pet_economy_state','pet_memory_recall','pet_emotion_update',
     'bash','write','read','edit','apply_patch','web_search','spawn_agent'];
-  for(const name of names)owner.tools.register({name,description:name,parameters:{type:'object'},
+  for(const name of names.filter(name=>!['read','write','edit'].includes(name)))owner.tools.register({name,description:name,parameters:{type:'object'},
     output:{schema:{type:'string'},render:()=>[]},execute:async()=>''});
+  const preset={id:'standard-preset'};
+  const presetScope=createScope(owner,preset);t.after(()=>presetScope.dispose());
+  for(const name of ['read','write','edit'])presetScope.ctx.tools.register({name,description:name,parameters:{type:'object'},
+    output:{schema:{type:'string'},render:()=>[]},execute:async()=>''});
+  assert.ok(!owner.tools.definitions().some(tool=>tool.name==='write'),'File tools are inherited from a preset, not global');
   const agent={id:'disposable-agent'};
-  const scope=createScope(owner,agent);t.after(()=>scope.dispose());
+  const scope=createScope(owner,agent,{parent:preset});t.after(()=>scope.dispose());
   // Native Life attaches these directly to the existing agent's scope.
   scope.ctx.tools.register({name:'plan_next',description:'native Life alarm',parameters:{type:'object'},
     output:{schema:{type:'string'},render:()=>[]},execute:async()=>''});
-  const release=restrictLifeTools(scope.ctx.tools,names);
+  const release=restrictLifeTools(scope.ctx.tools,lifeInheritedToolNames(owner.tools,agent));
   const step=await owner.tools.resolve({agent,signal:new AbortController().signal} as any);
   const schemaNames=owner.tools.schemas(agent,step).map(tool=>tool.name);
   assert.deepEqual(schemaNames,['life_plan_read','life_plan_update','room_state','pet_economy_state','pet_memory_recall','pet_emotion_update','plan_next']);
@@ -32,9 +36,10 @@ test('native step schemas exclude programming capabilities and exact disposal re
   step.dispose();release();
   assert.ok(owner.tools.schemas(agent).some(tool=>tool.name==='bash'));
   assert.ok(owner.tools.schemas(agent).some(tool=>tool.name==='write'));
-  const reviewRelease=restrictLifeTools(scope.ctx.tools,names,true);
+  const reviewRelease=restrictLifeTools(scope.ctx.tools,lifeInheritedToolNames(owner.tools,agent,true),true);
   const reviewNames=owner.tools.schemas(agent).map(tool=>tool.name);
   assert.ok(reviewNames.includes('read'));assert.ok(reviewNames.includes('write'));
+  assert.ok(reviewNames.includes('plan_next'),'Agent-local Life tools remain native scoped registrations');
   assert.ok(!reviewNames.includes('edit'));assert.ok(!reviewNames.includes('bash'));reviewRelease();
   }});
   t.after(()=>component.dispose());

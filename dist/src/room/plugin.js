@@ -1,3 +1,4 @@
+import { roomOverview, gardenOverview, stateViewParameter, factIdsParameter } from './tool-context.js';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { lstatSync, readFileSync } from 'node:fs';
 import { RoomWindow } from './window.js';
@@ -103,8 +104,20 @@ export class Room {
     }
     tools() {
         const behavior = this.ctx.petBehavior;
-        const state = defineTool({ name: 'room_state', description: '查看自己的真实房间状态、所在位置、身体需要和同一世界可去的房间/家具标识。', parameters: {}, output,
-            execute: async (_args, exec) => JSON.stringify(await behavior.roomState(this.checked(exec))) });
+        const state = defineTool({ name: 'room_state', description: '查看自己的真实房间状态、所在位置、身体需要和同一世界可去的房间/家具标识。', parameters: { view: stateViewParameter, factIds: factIdsParameter }, output,
+            execute: async ({ view, factIds }, exec) => {
+                const id = this.checked(exec);
+                if (factIds) {
+                    if (factIds.length < 1 || factIds.length > 16)
+                        throw Error('Expected 1–16 fact IDs');
+                    const facts = await behavior.readFacts(id, factIds);
+                    if (this.checked(exec) !== id)
+                        throw Error('Interaction workspace changed');
+                    return JSON.stringify({ facts });
+                }
+                const state = await behavior.roomState(id);
+                return JSON.stringify((view ?? (exec.agent && this.ctx.petCore.native.isAutonomous(exec.agent.id) ? 'overview' : 'full')) === 'overview' ? roomOverview(state) : state);
+            } });
         const act = defineTool({ name: 'room_action', description: '在自己的房间移动到 room_state 里的 room/spot，或进行日常互动。睡着需先 wake，不舒服时不能移动。talk 的 text 是给房间的留言。', parameters: {
                 action: { type: 'string', enum: roleActions, required: true }, room: { type: 'string' }, spot: { type: 'string' }, text: { type: 'string' }, on: { type: 'boolean' }
             }, output,
@@ -116,6 +129,7 @@ export class Room {
                 return JSON.stringify({ changed: result.changed, event: result.event, her: result.home.her, body: result.home.body });
             } });
         const garden = defineTool({ name: 'room_garden', description: '查看菜园，自己走去照料某块田或管理自主照料。state 返回作物、田块、库房和任务。control 按真实时间排队，读取结果确认是否完成。', parameters: {
+                view: stateViewParameter,
                 type: { type: 'string', enum: ['state', 'visit', 'careNow', 'auto', 'till', 'plant', 'water', 'fertilize', 'harvest', 'sell', 'buySeed', 'buyCompost'], required: true },
                 plotId: { type: 'integer' }, cropId: { type: 'string' }, quantity: { type: 'integer' }, enabled: { type: 'boolean' }, decision: { type: 'string', enum: ['force', 'defer'] }
             }, output,
@@ -123,7 +137,9 @@ export class Room {
                 if (input.type !== 'state' && exec.agent && this.ctx.petCore.native.isAutonomous(exec.agent.id))
                     throw Error('自主园艺请通过 life_plan_update 安排明确步骤，不直接连派操作');
                 const id = this.checked(exec);
-                return JSON.stringify(input.type === 'state' ? await behavior.garden(id, 'state') : await behavior.garden(id, 'control', { ...input, requestId: digest([exec.agent.id, exec.callId]) }));
+                const { view, ...operation } = input;
+                const state = input.type === 'state' ? await behavior.garden(id, 'state') : await behavior.garden(id, 'control', { ...operation, requestId: digest([exec.agent.id, exec.callId]) });
+                return JSON.stringify(input.type === 'state' && (view ?? (exec.agent && this.ctx.petCore.native.isAutonomous(exec.agent.id) ? 'overview' : 'full')) === 'overview' ? gardenOverview(state) : state);
             } });
         const photo = defineTool({ name: 'room_photo', description: '拍下自己当前房间的真实画面。overview 是含自己的近景，eyes 是自己的第一视角。look 可向前或看向室内。返回会话内可查看的照片。', parameters: {
                 view: { type: 'string', enum: ['overview', 'eyes'] }, look: { type: 'string', enum: ['forward', 'room'] }

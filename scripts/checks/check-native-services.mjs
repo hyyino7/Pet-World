@@ -94,7 +94,7 @@ try{
   const guest=await homes.open(identity);
   program=async function*(options){
     assert.ok(system(options).includes('TURN_PERSONA_NEXT'),'Guest uses the same SOUL');
-    assert.ok(system(options).includes('pet-expression') && system(options).includes('currentCompanionEmotion'),'Guest receives the shared Emotion guide/state sections');
+    assert.ok(system(options).includes('pet-expression') && all(options).includes('currentCompanionEmotion'),'Guest receives the shared Emotion guide/state sections');
     assert.ok(all(options).includes('CROSS_SURFACE_HANOI'),'Verified guest route reads the same Bank');
     assert.ok(!(options.tools??[]).some(tool=>tool.name.startsWith('pet_memory_') || tool.name==='read' || tool.name.startsWith('pet_matter_')),'Guest has no owner/file/memory tools');
     yield* say('GUEST_GARDEN_STORY\n<pet-expression>{"mood":"安静","reason":"听了群友的菜园故事","feelings":["calm"]}');
@@ -104,6 +104,11 @@ try{
   assert.equal((await ctx.get('petEmotion').read(workspace.id)).state?.reason,'听了群友的菜园故事','Guest footer updates the same Emotion instance');
   program=async function*(options){assert.ok(all(options).includes('GUEST_GARDEN_STORY'));assert.ok(all(options).includes('friend'));assert.ok(all(options).includes('group-fixture'));yield* say('The guest grew a sunflower.');};
   await send(b,'What did the guest grow?');
+  // Restart the real provider before another cross-session recall.
+  await host.native.memory.connection.close();
+  await host.native.memory.prepare(b.agent.id,host.native.scopeFor(b.agent.id));
+  program=async function*(options){assert.ok(all(options).includes('GUEST_GARDEN_STORY'),'Cross-session recall survives provider restart');yield* say('The guest grew a sunflower.');};
+  await send(b,'What did the guest grow after the service restarted?');
   // Exercise the actual scoped native Memory tools with current-turn evidence.
   const toolJson=options=>JSON.parse(options.messages.filter(message=>message.role==='tool').at(-1).content.filter(part=>part.type==='text').map(part=>part.text).join('\n'));
   const fact='OWNER_TRAVEL_CODE_ALPHA',changedFact='OWNER_TRAVEL_CODE_BETA';let record,toolStep=0;
@@ -175,5 +180,5 @@ try{
   assert.equal(host.workspace.runtime.store.get('memory-source-work',stale).workspaceId,oldBank,'Old input stays attributed to the original Bank');
   host.native.memory.prepare=prepare;
   await c.dispose();await a.dispose();await b.dispose();
-  console.log(JSON.stringify({ok:true,paidCalls:0,ordinarySteps:22,coreBeginCalls:beginCalls,coreActivities:0,coreExecutions:0,turnPinnedPersona:true,crossSessionRecall:true,verifiedGuestSharedBank:true,guestAttribution:true,guestEmotionSharedState:true,memoryToggleExistingSession:true,memoryFailureNonfatal:true,rebindDuringPrepareRejected:true,overlappingTurnWritesRetainFinal:true,coldBackgroundMemoryFailureNonfatal:true,backgroundSourcesUnique:true,memoryOffNoBackfill:true,originalEventsRetained:true,nativeMemoryToolsCrud:true,withdrawnNotInFreshContext:true}));
+  console.log(JSON.stringify({ok:true,paidCalls:0,ordinarySteps:22,coreBeginCalls:beginCalls,coreActivities:0,coreExecutions:0,turnPinnedPersona:true,crossSessionRecall:true,providerRestartRecall:true,verifiedGuestSharedBank:true,guestAttribution:true,guestEmotionSharedState:true,memoryToggleExistingSession:true,memoryFailureNonfatal:true,rebindDuringPrepareRejected:true,overlappingTurnWritesRetainFinal:true,coldBackgroundMemoryFailureNonfatal:true,backgroundSourcesUnique:true,memoryOffNoBackfill:true,originalEventsRetained:true,nativeMemoryToolsCrud:true,withdrawnNotInFreshContext:true}));
 }finally{homes?.stop();await ctx.fiber.dispose();rmSync(root,{recursive:true,force:true});}

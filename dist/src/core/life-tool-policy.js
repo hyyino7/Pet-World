@@ -10,8 +10,17 @@ const lifeCapabilities = new Set([
 export function lifeToolAllowed(name, review = false) {
     return lifeCapabilities.has(name) || review && (name === 'read' || name === 'write');
 }
+/** File tools belong to the native preset, not the global registry. Life only
+ * registers its own domain tools locally: never pass those local names to
+ * restrict(). Inspect the host service's views, keeping its scope identity. */
+export function lifeInheritedToolNames(tools, agent, review = false) {
+    return [...new Set([
+            ...tools.definitions().map(tool => tool.name),
+            ...(review ? tools.definitions(agent).filter(tool => tool.name === 'read' || tool.name === 'write').map(tool => tool.name) : []),
+        ])];
+}
 /** Native scoped restrictions have exact disposers; ordinary turns are restored. */
-export function restrictLifeTools(scoped, globalNames, review = false) {
-    return scoped.restrict({ allow: globalNames.filter(name => lifeToolAllowed(name, review)) });
+export function restrictLifeTools(scoped, inheritedNames, review = false) {
+    return scoped.restrict({ allow: inheritedNames.filter(name => lifeToolAllowed(name, review)) });
 }
 //# sourceMappingURL=life-tool-policy.js.map

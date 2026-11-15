@@ -1,15 +1,28 @@
-# Her World 0.1.0
+# Her World 0.1.2
 
-Fixes caretaker pause/resume replays that could interrupt a Life activity after
-explicit recovery and restart even though the garden job had not changed.
-Repeated controls now preserve existing work and phase progress; real pause,
-resume and cancel operations remain effective on the original job.
+Reduces repeated autonomous Life context while preserving original dialogue,
+interaction provenance, accepted plans and companion records.
 
-Includes the Room/garden/Desktop refresh and canvas blank-frame repairs.
-Regression coverage checks restart recovery, unchanged wallet/inventory,
-live controls and cross-view refresh convergence using disposable workspaces.
+- Keeps changing Body, plan, Emotion and Economy state in required native tail
+  context, with stable leading instructions and retained original events.
+- Adds structured overview/full state queries and exact interaction-receipt
+  lookup. Ordinary owner queries keep their full-view defaults.
+- Compacts interaction presentation without changing wake timing or durable
+  acknowledgement requirements.
+- Prepares older successful default Life state results during native idle
+  maintenance and projects them inside the next real request. Explicit full
+  queries, reading text, errors and original logs remain available. This adds
+  no summary calls and preserves native compaction and Memory batching.
+- Fixes preset-inherited review read/write capabilities while retaining the
+  original file-scope guard and the interrupted-review continuation from 0.1.1.
 
-Published to npm's stable `latest` channel. DSH's normal version/update controls
-no longer need the prerelease filter. Existing GitHub installations require the
-one-time native source switch described in [the update guide](https://github.com/hyyino7/her-world/blob/main/docs/github-updates.md).
-No installation or companion-data migration is performed by this release.
+Validation includes 377 unit tests, the 132- and 915-test Life integration
+suites, Memory provider/process tests, refresh and release checks, and isolated
+installed-DSH checks with scripted models. Native checks cover cross-session
+recall, provider restart, correction/withdrawal, review read/write rejection
+outside scope, persisted history restoration and native compaction compatibility.
+No paid models or personal companion workspaces are used by these checks.
+
+Payload replay measures text-character reductions only. Provider token charges
+and cache-hit improvements require observation after an owner-installed update.
+This release performs no installation or companion-data migration.

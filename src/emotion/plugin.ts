@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../core/index.js';
-import { registerWorldPrompt } from '../core/native/prompt.js';
+import { registerWorldPrompt, registerWorldContext } from '../core/native/prompt.js';
 import { COMPANION_FEELINGS, decideExpression, expressionStream, readRoomMood, type ExpressionAsset, type ExpressionEvent, type PlaybackReceipt, type ReplyIntent } from './index.js';
 import { RecentLedger, type RecentExperience } from './recent.js';
 import { EmotionFile, readEmotionState } from './state.js';
@@ -211,12 +211,12 @@ export function installEmotion(ctx: Context, host: PetCoreHost): void {
   const registerPrompt = (...args: Parameters<typeof registerWorldPrompt>) => {
     const prompt = registerWorldPrompt(...args); prompts.push(prompt); return prompt;
   };
-  const attach = (scopeCtx: Context, prompts = true) => {
+  const attach = (scopeCtx: Context, withPrompts = true) => {
     if (attached.has(scopeCtx)) return;
     attached.add(scopeCtx);
-    if (prompts) {
+    if (withPrompts) {
       registerPrompt(scopeCtx,'chatpet.expression-guide',32,agent=>bound(agent.session)?expressionGuide():'');
-      registerPrompt(scopeCtx,'chatpet.expression-state',33,agent=>bound(agent.session)?promptState.get(agent.id) ?? '':'',async agent=>{
+      prompts.push(registerWorldContext(scopeCtx,'chatpet.expression-state',33,agent=>bound(agent.session)?promptState.get(agent.id) ?? '':'',async agent=>{
         const workspace=bound(agent.session);if(!workspace){promptState.delete(agent.id);return;}
         const [snapshot,recent]=await Promise.all([emotion.read(workspace.id),emotion.experience(workspace.id)]);
         if(bound(agent.session)?.id!==workspace.id){promptState.delete(agent.id);return;}
@@ -230,7 +230,7 @@ export function installEmotion(ctx: Context, host: PetCoreHost): void {
           actions:recent.actions.slice(-24).map(({id,name,at,status,feedback})=>({id,name,time:new Date(at).toISOString(),status,feedback:feedback.map(f=>f.quote)})),
           moods:moods.slice(-8).map(({mood,reason,at})=>({mood,reason,time:new Date(at).toISOString()})),
         }));
-      });
+      }));
     }
     scopeCtx.on('session/event', async (session, event) => {
       try {

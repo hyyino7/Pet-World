@@ -1,0 +1,92 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {Session,SessionId} from '@deepseek-ai/dsh-session';
+import {createUserMessage} from '@deepseek-ai/dsh-llm';
+import type {Agent} from '@deepseek-ai/dsh-agent';
+import {homeView,emptyHomeState} from '#feiyu-home';
+import {prepareLifeHistory,applyLifeHistory,historicalStateOverview} from '../../src/core/native/history-maintenance.js';
+
+function fixture() {
+  const session=Session.create(SessionId('history-fixture'));
+  const full=homeView(emptyHomeState(1000),1000);
+  let turn=0,maintenanceCalls=0;
+  const appendTurn=(options:{owner?:boolean;takeover?:boolean;review?:boolean;failed?:boolean;full?:boolean;error?:boolean;receipt?:boolean;tool?:string}={})=>{
+    turn++;
+    session.append('turn/start',{turn});
+    session.append('user/message',createUserMessage({source:options.owner?{kind:'user'}:
+      {kind:'dsh-world-life',...(options.review?{purpose:'review',reviewDay:'2026-11-14'}:{})} as any,content:[{type:'text',text:'Original input '+turn}]}),{surfaceOp:'append'});
+    if(options.takeover)session.append('user/message',createUserMessage({source:{kind:'user'},content:[{type:'text',text:'Owner takeover'}]}),{surfaceOp:'append'});
+    const id=('call-'+turn) as any;
+    session.append('tool/call',{turn,step:1,callId:id,name:options.tool??'room_state',arguments:JSON.stringify(options.full?{view:'full'}:options.receipt?{factIds:['original']}:{})});
+    const event=session.append('tool/result',{turn,step:1,message:{id:('result-'+turn) as any,role:'tool',source:{kind:'tool',callId:id},toolCallId:id,
+      content:[{type:'text',text:JSON.stringify(full)}],...(options.error?{isError:true}:{})},meta:{original:'presentation retained'}},{surfaceOp:'append'});
+    session.append('turn/end',{turn,reason:options.failed?{kind:'aborted',cause:{kind:'user'}}:{kind:'completed'}} as any);
+    return event;
+  };
+  const agent={status:'idle',session,inbox:{nextTurn:[],nextStep:[]},runMaintenance:async(job:any)=>{
+    maintenanceCalls++;return job(new AbortController().signal);
+  }} as unknown as Agent;
+  const meter={estimateMessage:()=>123};
+  const openRequest=()=>{session.append('turn/start',{turn:++turn});session.append('step/start',{turn,step:1});};
+  return {session,full,appendTurn,agent,meter,openRequest,counts:()=>({maintenanceCalls})};
+}
+
+test('native maintenance projects only older successful default Life states, preserves originals and replays idempotently',async()=>{
+  const f=fixture(),first=f.appendTurn();f.appendTurn();
+  const originals=structuredClone(f.session.snapshotEvents());
+  const prepared=await prepareLifeHistory(f.agent,()=>true);
+  assert.deepEqual(f.session.snapshotEvents(),originals,'Idle maintenance only prepares; it never writes outside a turn');
+  f.openRequest();
+  const result=applyLifeHistory(f.agent,prepared,f.meter);
+  assert.equal(result.replaced,1);assert.ok(result.charsAfter<result.charsBefore);
+  assert.deepEqual(f.session.snapshotEvents().slice(0,originals.length),originals);
+  const replacement=f.session.surface.nodes.map(seq=>f.session.eventAt(seq)).find(event=>event?.sourceEventSeqs?.includes(first.seq));
+  assert.equal(replacement?.type,'tool/result');
+  if(replacement?.type!=='tool/result')throw Error('Missing native replacement');
+  assert.deepEqual(replacement.data.meta,first.data.meta);
+  assert.equal(replacement.data.message.toolCallId,first.data.message.toolCallId);
+  const projected=JSON.parse((replacement.data.message.content[0] as any).text);
+  assert.equal(projected.view,'overview');assert.deepEqual(projected.body,f.full.body);
+  assert.equal(f.session.snapshotEvents().filter(event=>String(event.type)==='compaction/prune').length,1);
+  assert.deepEqual(f.counts(),{maintenanceCalls:1});
+  const restored=Session.create(SessionId('restored'),f.session.snapshotEvents());
+  assert.deepEqual(restored.surface.nodes,f.session.surface.nodes,'Native restart reproduces the exact projected surface');
+  assert.equal(applyLifeHistory(f.agent,prepared,f.meter).replaced,0);
+});
+
+test('owner input, takeover, review, failure, explicit full, receipts, other tools and newest turn are protected',async()=>{
+  const f=fixture();
+  for(const options of [{owner:true},{takeover:true},{review:true},{failed:true},{full:true},{error:true},{receipt:true},{tool:'life_read_segment'},{}])f.appendTurn(options);
+  const before=structuredClone(f.session.snapshotEvents());
+  assert.equal((await prepareLifeHistory(f.agent,()=>true)).length,0);
+  assert.deepEqual(f.session.snapshotEvents(),before);
+});
+
+test('queued interaction, active turn and changed workspace never enter maintenance',async()=>{
+  for(const condition of ['queued','running','changed']) {
+    const f=fixture();f.appendTurn();f.appendTurn();
+    if(condition==='queued')(f.agent.inbox.nextTurn as any[]).push({});
+    if(condition==='running')Object.assign(f.agent,{status:'running'});
+    assert.equal((await prepareLifeHistory(f.agent,()=>condition!=='changed')).length,0);
+    assert.equal(f.counts().maintenanceCalls,0);
+  }
+});
+
+test('a native compaction that supersedes a prepared result makes the stale projection a no-op',async()=>{
+  const f=fixture();f.appendTurn();f.appendTurn();const prepared=await prepareLifeHistory(f.agent,()=>true);
+  const source=prepared[0].event;f.openRequest();
+  f.session.append('tool/result',source.data,{surfaceOp:{op:'replace',startSeq:source.seq,endSeq:source.seq},sourceEventSeqs:[source.seq]});
+  const before=structuredClone(f.session.snapshotEvents());
+  assert.equal(applyLifeHistory(f.agent,prepared,f.meter).replaced,0);
+  assert.deepEqual(f.session.snapshotEvents(),before);
+});
+
+test('structured history maintenance leaves reading, malformed and partial payloads untouched and preserves open plan state',()=>{
+  assert.equal(historicalStateOverview('room_state',{}, {body:{}}),undefined);
+  assert.equal(historicalStateOverview('room_state',{}, {ok:false}),undefined);
+  assert.equal(historicalStateOverview('life_read_segment',{}, {text:'Original reading'}),undefined);
+  const plan={revision:9,id:'accepted',goal:'Read and eat',cursor:1,steps:[{id:'read',kind:'read'}],
+    execution:{status:'waiting',operationId:'reading-offer'},pauseReason:'owner',replanReason:'receipt pending'};
+  const view=historicalStateOverview('life_plan_read',{}, {revision:9,plan}) as any;
+  assert.deepEqual(view.plan,plan);
+});

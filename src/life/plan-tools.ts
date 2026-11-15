@@ -1,3 +1,4 @@
+import {planOverview} from './tool-context.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools';
@@ -60,8 +61,9 @@ export function registerPlanTools(ctx:Context,host:PetCoreHost,life:CompanionLif
     return {id,validate:()=>{signal.throwIfAborted();if(checked(agent)!==id)throw Error('Life conversation or workspace admission changed');}};
   };
   const catalog:ToolDefinition[]=[
-    defineTool({name:'life_plan_read',description:'读取同一个伙伴跨会话保存的当前生活计划、版本、活动和进度。无计划也是有效状态。',parameters:{},output,
-      execute:async(_,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.readPlan(guard.id,guard.validate));}}),
+    defineTool({name:'life_plan_read',description:'读取同一个伙伴跨会话保存的当前生活计划、版本、活动和进度。无计划也是有效状态。',parameters:{view:{type:'string',enum:['overview','full'],description:'Autonomous turns default to overview; full retains the original snapshot.'}},output,
+      execute:async({view},exec)=>{const guard=admission(exec.agent,exec.signal);const state=await life.readPlan(guard.id,guard.validate);
+        return JSON.stringify((view??(host.native.isAutonomous(exec.agent!.id)?'overview':'full'))==='overview'?planOverview(state):state);}}),
     defineTool({name:'life_plan_update',description:'提交或明确替换持久生活计划。先读版本；可长期保持活动、休息或无安排。body 必须给 action；room 必须使用 room_state 中的 room/spot；garden 必须给 garden:{type:...}，先用 room_garden 的 state 查询目标和资源，巡视使用 type=visit。身体和园艺操作以真实执行结果结束，后续持续休息可另加 hold。economy 用目录中的真实 itemId 购买、出售或消费；收菜、出售、补种与消费都由你明确决定，不因成熟自动执行。read 指定已持有书本的实际片段，必须取得内容并确认才算读过，动画不代表阅读完成。计划只表达意图，程序验证并执行，不能声称已经完成。不要为每个动画片段或普通聊天重建计划。',parameters:{
       expectedRevision:{type:'integer',required:true},
       plan:{type:'object',required:true,properties:{

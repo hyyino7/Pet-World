@@ -1,4 +1,4 @@
-import { registerWorldPrompt } from '../core/native/prompt.js';
+import { registerWorldPrompt, registerWorldContext } from '../core/native/prompt.js';
 import { COMPANION_FEELINGS, decideExpression, expressionStream, readRoomMood } from './index.js';
 import { RecentLedger } from './recent.js';
 import { EmotionFile, readEmotionState } from './state.js';
@@ -243,13 +243,13 @@ export function installEmotion(ctx, host) {
         prompts.push(prompt);
         return prompt;
     };
-    const attach = (scopeCtx, prompts = true) => {
+    const attach = (scopeCtx, withPrompts = true) => {
         if (attached.has(scopeCtx))
             return;
         attached.add(scopeCtx);
-        if (prompts) {
+        if (withPrompts) {
             registerPrompt(scopeCtx, 'chatpet.expression-guide', 32, agent => bound(agent.session) ? expressionGuide() : '');
-            registerPrompt(scopeCtx, 'chatpet.expression-state', 33, agent => bound(agent.session) ? promptState.get(agent.id) ?? '' : '', async (agent) => {
+            prompts.push(registerWorldContext(scopeCtx, 'chatpet.expression-state', 33, agent => bound(agent.session) ? promptState.get(agent.id) ?? '' : '', async (agent) => {
                 const workspace = bound(agent.session);
                 if (!workspace) {
                     promptState.delete(agent.id);
@@ -273,7 +273,7 @@ export function installEmotion(ctx, host) {
                     actions: recent.actions.slice(-24).map(({ id, name, at, status, feedback }) => ({ id, name, time: new Date(at).toISOString(), status, feedback: feedback.map(f => f.quote) })),
                     moods: moods.slice(-8).map(({ mood, reason, at }) => ({ mood, reason, time: new Date(at).toISOString() })),
                 }));
-            });
+            }));
         }
         scopeCtx.on('session/event', async (session, event) => {
             try {

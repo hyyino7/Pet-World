@@ -1,9 +1,10 @@
 import { nativeResult } from './result.js';
-import { registerWorldPrompt, retireLegacyPrompt } from './prompt.js';
+import { registerWorldPrompt, retireLegacyPrompt, retireDynamicContext } from './prompt.js';
 import { WorldRecall } from './recall.js';
 import { installCompanionFoundation, companionWritingScope } from '../companion-foundation.js';
-import { lifeToolAllowed, restrictLifeTools } from '../life-tool-policy.js';
+import { lifeToolAllowed, lifeInheritedToolNames, restrictLifeTools } from '../life-tool-policy.js';
 import { installLifeReviewFileGuard } from '../life-review-files.js';
+import { prepareLifeHistory, applyLifeHistory } from './history-maintenance.js';
 export const name = 'chatpet-agent';
 export const inject = ['petCore', 'petWorld', 'agents', 'systemPrompt', 'tools'];
 /** DSH owns ordinary turn execution and permissions. Core supplies scoped services. */
@@ -16,6 +17,9 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
     // A native interruption ends a turn, not its unfinished review capability.
     const interruptedReviews = new Map();
     const pending = new Set();
+    const historyReady = new Map();
+    const historyPrepared = new Map();
+    let historyClosing = false;
     const recall = new WorldRecall();
     const scopeFor = (id) => {
         const status = host.workspace.status();
@@ -51,8 +55,8 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         if (lifePolicies.get(agent)?.review === review && lifePolicies.get(agent)?.reviewDay === reviewDay)
             return;
         releaseLifePolicy(agent);
-        const globalNames = ctx.tools.definitions().map(tool => tool.name);
-        lifePolicies.set(agent, { review, reviewDay, release: restrictLifeTools(agent.ctx.tools, globalNames, review) });
+        const inheritedNames = lifeInheritedToolNames(ctx.tools, agent, review);
+        lifePolicies.set(agent, { review, reviewDay, release: restrictLifeTools(agent.ctx.tools, inheritedNames, review) });
     };
     // A capability-admitted QQ retry continues an actual conversation; its
     // internal source remains a system observation, not autonomous owner work.
@@ -81,6 +85,24 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         void work.finally(() => pending.delete(work)).catch(() => { });
         return work;
     };
+    const drainHistory = (agent) => {
+        const scope = historyReady.get(agent);
+        if (historyClosing || !scope || agent.status !== 'idle')
+            return;
+        historyReady.delete(agent);
+        if (!sameScope(agent.id, scope) || scope.guest)
+            return;
+        void watch(prepareLifeHistory(agent, () => !historyClosing && sameScope(agent.id, scope)).then(changes => {
+            if (changes.length && !historyClosing && sameScope(agent.id, scope))
+                historyPrepared.set(agent, { scope, changes });
+        }).catch(error => {
+            ctx.logger('chatpet-context').warn('History maintenance pending; original events retained', error);
+        }));
+    };
+    const stopHistoryStatus = ctx.on('agent/status', ({ agent, status }) => {
+        if (status === 'idle')
+            queueMicrotask(() => drainHistory(agent));
+    }, { global: true });
     let archiveTail = Promise.resolve();
     function syncArchives(publishedIds) {
         const memory = host.native.memoryFor('');
@@ -136,6 +158,14 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
             retireLegacyPrompt(agent.session, turn, step, bound);
             scanned.set(agent, bound);
         }
+        const prepared = historyPrepared.get(agent);
+        historyPrepared.delete(agent);
+        if (prepared && sameScope(agent.id, prepared.scope)) {
+            const meter = ctx.get('tokenMeter');
+            if (meter)
+                applyLifeHistory(agent, prepared.changes, meter);
+        }
+        retireDynamicContext(agent, turn, step);
         recall.request(agent.session, turn, step, bound && !!host.native.memoryFor(agent.id));
         return next();
     };
@@ -292,7 +322,12 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         const agent = agents.get(session.id);
         if (agent)
             releaseLifePolicy(agent);
-        const done = host.native.finishTurn(session.id, saved.turn, result).catch(error => {
+        const done = host.native.finishTurn(session.id, saved.turn, result).then(() => {
+            if (agent && saved.background && saved.lifePolicy && !saved.lifePolicy.review && result.state === 'completed' && !historyClosing) {
+                historyReady.set(agent, saved.scope);
+                queueMicrotask(() => drainHistory(agent));
+            }
+        }).catch(error => {
             host.native.memory?.unavailable(error);
             ctx.logger('chatpet-memory').warn('Conversation retained; Memory write pending', error);
         }).finally(() => { if (turns.get(session.id) === saved) {
@@ -309,10 +344,16 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         turns.delete(agent.id);
         inputs.delete(agent.id);
         interruptedReviews.delete(agent.id);
+        historyReady.delete(agent);
+        historyPrepared.delete(agent);
         releaseLifePolicy(agent);
     }, { global: true });
     let stopped;
     const stop = () => stopped ??= (async () => {
+        historyClosing = true;
+        historyReady.clear();
+        historyPrepared.clear();
+        stopHistoryStatus();
         await Promise.allSettled([...pending]);
         await archiveTail;
         disposePrompt();

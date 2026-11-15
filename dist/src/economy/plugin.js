@@ -1,9 +1,10 @@
+import { economyOverview, economyPage } from './tool-context.js';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { lstatSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { bytesDigest, canonical, check, digest, integer } from '../core/storage.js';
-import { registerWorldPrompt } from '../core/native/prompt.js';
+import { registerWorldContext } from '../core/native/prompt.js';
 import { EconomyStore } from './store.js';
 import { installEconomyAccessGuard } from './access.js';
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];
@@ -286,14 +287,25 @@ export function apply(ctx) {
         return current.target.id;
     };
     const output = { schema: { type: 'string' }, render: (_, value) => [{ type: 'text', text: value }] };
-    ctx.tools.register(defineTool({ name: 'pet_economy_state', description: '读取同一伙伴的真实钱包、库存、商店目录、读物与书签、待确认消费及近期流水。基础餐食和饮水免费。种植、收获、出售和消费由你明确选择并写入持久生活计划，不会自动派工、发工资或凭文字增加物品。', parameters: {}, output,
-        execute: async (_args, exec) => {
+    ctx.tools.register(defineTool({ name: 'pet_economy_state', description: '读取同一伙伴的真实钱包、库存、商店目录、读物与书签、待确认消费及近期流水。基础餐食和饮水免费。种植、收获、出售和消费由你明确选择并写入持久生活计划，不会自动派工、发工资或凭文字增加物品。', parameters: { view: { type: 'string', enum: ['overview', 'full'], description: 'Autonomous turns default to overview. full retains the original snapshot.' },
+            factIds: { type: 'array', items: { type: 'string' }, description: 'Read 1–16 original committed economic interaction receipts by exact fact IDs.' },
+            section: { type: 'string', enum: ['catalog', 'ledger'], description: 'Optional paged catalog or recent ledger (up to 80 original recent entries).' }, offset: { type: 'integer' }, limit: { type: 'integer' } }, output,
+        execute: async (args, exec) => {
             const id = scope(exec.agent);
             check(id, 'Economy requires an admitted owner conversation');
             const validate = () => { exec.signal.throwIfAborted(); check(scope(exec.agent) === id, 'Economy conversation admission changed'); host.native.validate(exec.agent.id); };
-            return JSON.stringify(await service.snapshot(id, validate));
+            if (args.factIds) {
+                check(args.factIds.length >= 1 && args.factIds.length <= 16, 'Expected 1–16 fact IDs');
+                validate();
+                const facts = await service.readFacts(id, args.factIds);
+                validate();
+                return JSON.stringify({ facts });
+            }
+            const state = await service.snapshot(id, validate);
+            return JSON.stringify(args.section ? economyPage(state, args.section, args.offset, args.limit) :
+                (args.view ?? (host.native.isAutonomous(exec.agent.id) ? 'overview' : 'full')) === 'overview' ? economyOverview(state) : state);
         } }), { when: ({ agent }) => !!scope(agent) });
-    registerWorldPrompt(ctx, 'chatpet.economy', 35, agent => {
+    registerWorldContext(ctx, 'chatpet.economy', 35, agent => {
         const id = scope(agent);
         if (!id)
             return '';

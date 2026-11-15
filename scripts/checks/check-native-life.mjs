@@ -10,6 +10,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {mountFixtureServices} from '../lib/native-fixture-mount.mjs';
 import {mountInstalledStandard} from './lib/native-standard-preset.mjs';
 import {call, say} from './lib/native-conversation-scenarios.mjs';
+import {checkLifeHistory} from '../lib/check-life-history.mjs';
 import {checkLifeReview} from '../lib/check-life-review.mjs';
 const app = '/Applications/DeepSeek Harness.app/Contents';
 if (!process.versions.electron) {
@@ -38,7 +39,7 @@ class Fixture extends LlmAdapter {
     if (program) {yield* program(options); return;}
     if (stall) {await delay(10000, undefined, {signal:options.signal});yield* say('Must be cancelled');return;}
     const text = options.messages.flatMap(m=>m.content.filter(b=>b.type==='text').map(b=>b.text)).join('\n');
-    bodyObserved ||= text.includes('有人给你倒了杯水');
+    bodyObserved ||= text.includes('"type":"water"');
     if (phase++ % 3 === 0) yield* call('plan_next', {after_minutes:2, note:'喝水后休息一会儿'});
     else if (phase % 3 === 2) yield* call('reach_out', {text:'我喝过水啦，正在休息。'});
     else yield* say('我先在家里歇一会儿。');
@@ -79,14 +80,14 @@ try {
   assert.equal(bubbles.length, 1);
   const result = await life.act(workspace.id, 'water');
   assert.equal(result.event.type, 'water');
-  const homeFile = join(root,'.chatpet/data/life/home.json');
+  const homeFile = join(root,'.chatpet/data/behavior/home.json');
   const counts = JSON.parse(readFileSync(homeFile)).counts.water;
   assert.equal(counts, 1);
   const policy = unwrap(await host.services.core.getPolicy(request('quiet-read'), {}));
   unwrap(await host.services.preferences.setQuiet(request('quiet'), {expectedRevision:policy.revision, quiet:true}));
   // Exercise World's actual short alarm and its durable wake confirmation.
-  life.runtime.planNext({after_minutes:1}, '再喝水');
-  await until(()=> calls >= 6 && ctx.agents.get(homeId)?.status === 'idle', 'timed home wake', 75000);
+  life.runtime.planNext({at:new Date(Date.now()+1000).toISOString()}, '再喝水');
+  await until(()=> calls >= 6 && ctx.agents.get(homeId)?.status === 'idle', 'timed home wake');
   assert.ok(bodyObserved, 'Native prompt reads the exact saved original activity');
   assert.equal(bubbles.length, 1, 'Quiet mode suppresses reach_out');
   const snap = await life.snapshot(workspace.id);
@@ -122,5 +123,6 @@ try {
   assert.equal(ctx.agents.get(homeId).session.snapshotEvents().filter(e=>e.type==='turn/end').at(-1).data.reason.kind, 'aborted');
   console.log(JSON.stringify({ok:true, calls, bubbles:bubbles.length, homeReused:true, persistedWaterCount:counts, quiet:true, backgroundOrigin:'virtual_action', activeStop:true, memoryBatchShared:true, paidCalls:0}));
   }
+  if(!process.argv.includes('--review-only'))await checkLifeHistory({ctx,host,workspace,life,until,load,setProgram:fn=>{program=fn;}});
   await checkLifeReview({ctx, host, workspace, root, life, until, setProgram: fn => { program = fn; }});
 } finally {await ctx.fiber.dispose();rmSync(root,{recursive:true,force:true});}

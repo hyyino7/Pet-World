@@ -1,3 +1,4 @@
+import {INTERACTION_CONTEXT,presentFacts} from '../../src/core/interaction-presentation.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {acknowledgePromptFacts} from '../../src/core/interaction-context.js';
@@ -11,7 +12,7 @@ function fixture() {
     assert.equal(workspace,'world');order.push('ack');acknowledged.push(...ids);
   }};
   return {acknowledged,order,input:{turn:2,workspaceId:'world',sources:[{service,facts:[fact]}],validate:()=>{},
-    events:()=>[{type:'system/message',data:{turn:2,message:{content:[{type:'text',text:JSON.stringify([fact])}]}}}],
+    events:()=>[{type:'user/message',data:{source:{kind:'runtime-context',form:'snapshot',sections:[{name:INTERACTION_CONTEXT,text:presentFacts([fact])}]},content:[{type:'text',text:presentFacts([fact])}]}}],
     flush:async()=>{order.push('flush');return true;}}};
 }
 test('owner prompt facts are acknowledged only after their original native log is durable',async()=>{
@@ -22,7 +23,7 @@ test('a failed or absent native persistence participant retains owner prompt fac
   await assert.rejects(acknowledgePromptFacts({...f.input,flush:async()=>{throw Error('offline disk');}}),/offline disk/);
   assert.deepEqual(f.acknowledged,[]);
 });
-test('an unchanged effective system prompt can be acknowledged by a later completed turn',async()=>{
+test('an unchanged effective native context can be acknowledged by a later completed turn',async()=>{
   const f=fixture();await acknowledgePromptFacts({...f.input,turn:3});assert.deepEqual(f.acknowledged,[fact.id]);
 });
 test('a prepared context absent from the native effective surface cannot acknowledge a fact',async()=>{
@@ -32,4 +33,20 @@ test('scope and domain replacement during flush reject acknowledgement',async()=
   const f=fixture();let current=true;
   await assert.rejects(acknowledgePromptFacts({...f.input,validate:()=>{assert.equal(current,true,'scope changed');},flush:async()=>{current=false;return true;}}),/scope changed/);
   assert.deepEqual(f.acknowledged,[]);
+});
+
+test('incidental IDs, forged metadata and mismatched fact meanings cannot acknowledge an interaction',async()=>{
+  for(const events of [
+    [{type:'system/message',data:{message:{content:[{type:'text',text:fact.id}]}}}],
+    [{type:'user/message',data:{source:{kind:'runtime-context',form:'snapshot',sections:[{name:INTERACTION_CONTEXT,text:presentFacts([fact])}]},content:[{type:'text',text:'Not the admitted facts'}]}}],
+    [{type:'user/message',data:{source:{kind:'runtime-context',form:'snapshot',sections:[{name:INTERACTION_CONTEXT,text:presentFacts([{...fact,result:{status:'failed',summary:'Different outcome'}}])}]},content:[{type:'text',text:presentFacts([{...fact,result:{status:'failed',summary:'Different outcome'}}])}]}}],
+  ]) {const f=fixture();await acknowledgePromptFacts({...f.input,events:()=>events});assert.deepEqual(f.acknowledged,[]);}
+});
+
+test('native JSON key ordering does not lose an otherwise exact interaction acknowledgement',async()=>{
+  const f=fixture(),events=f.input.events();
+  const data=events[0].data,parsed=JSON.parse(data.source.sections[0].text);
+  parsed.facts[0]=Object.fromEntries(Object.entries(parsed.facts[0]).reverse());
+  const text=JSON.stringify(parsed);data.source.sections[0].text=text;data.content[0].text=text;
+  await acknowledgePromptFacts({...f.input,events:()=>events});assert.deepEqual(f.acknowledged,[fact.id]);
 });

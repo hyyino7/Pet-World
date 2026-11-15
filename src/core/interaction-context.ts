@@ -1,4 +1,5 @@
 import type {CompanionFact,CompanionFactSource} from '../contracts/interaction.js';
+import {contextFactIds} from './interaction-presentation.js';
 
 export interface PromptFactSource {service:CompanionFactSource;facts:CompanionFact[]}
 
@@ -9,10 +10,9 @@ export async function acknowledgePromptFacts(input:{
   flush:()=>Promise<unknown>;validate:()=>void;
 }):Promise<void> {
   input.validate();
-  // The caller supplies the native effective surface, including an unchanged
-  // system prompt retained from an earlier turn; removed history is excluded.
-  const context=JSON.stringify(input.events().filter(event=>event.type==='system/message'));
-  const observed=input.sources.map(source=>({service:source.service,facts:source.facts.filter(fact=>context.includes(fact.id))}));
+  // The caller supplies the effective native surface, excluding shadowed nodes.
+  const context=contextFactIds(input.events(),input.sources.flatMap(source=>source.facts));
+  const observed=input.sources.map(source=>({service:source.service,facts:source.facts.filter(fact=>context.has(JSON.stringify([fact.domain,fact.id])))}));
   if(!observed.some(source=>source.facts.length))return;
   const persisted=await input.flush();
   if(persisted!==true)throw Error('Native session has no durable persistence participant; interaction facts retained');

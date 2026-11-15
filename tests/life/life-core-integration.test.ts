@@ -28,7 +28,7 @@ async function fixture(t:TestContext) {
   writeFileSync(join(repo,'.chatpet/self.md'),'My own continuous self-description.');
   const workspace={id:'world',path:repo,sessionIds:['owner-a','owner-b','guest'],attachSession:async()=>{}};
   const registry={get:(id:string)=>id==='world'?workspace:undefined,archivedSessionIds:[] as string[]};
-  const listeners=new Map<string,((...args:any[])=>any)[]>(),sections=new Set<any>(),agents=new Map<string,any>(),services=new Map<string,any>();
+  const listeners=new Map<string,((...args:any[])=>any)[]>(),sections=new Set<any>(),contexts=new Set<any>(),agents=new Map<string,any>(),services=new Map<string,any>();
   const warnings:unknown[]=[],flushes:string[]=[];
   let persist=true;
   function on(name:string,listener:(...args:any[])=>any,options?:{prepend?:boolean}) {
@@ -43,8 +43,8 @@ async function fixture(t:TestContext) {
   const ctx={on,get:(name:string)=>services.get(name),emit:(name:string,...args:any[])=>{void emit(name,...args);},effect:()=>()=>{},
     logger:()=>({warn:(...args:unknown[])=>warnings.push(args)}),agents:{get:(id:string)=>agents.get(id)},tools:{register:()=>()=>{}},
     sessions:{flush:async(session:any)=>{flushes.push(session.id);return persist;}},
-    systemPrompt:{section:(section:any)=>{sections.add(section);return()=>sections.delete(section);},
-      assemble:async(context:any)=>middleware('system-prompt/assemble',[{},context],()=>[...sections.values()].map(row=>row.text(context)).filter(Boolean).join('\n\n'))},
+    systemPrompt:{context:(section:any)=>{contexts.add(section);return()=>contexts.delete(section);},section:(section:any)=>{sections.add(section);return()=>sections.delete(section);},
+      assemble:async(context:any)=>middleware('system-prompt/assemble',[{},context],()=>[...sections.values(),...contexts.values()].map(row=>row.text(context)).filter(Boolean).join('\n\n'))},
   } as unknown as Context;
   services.set('workspaceRegistry',registry);services.set('agents',ctx.agents);
   const world=createWorldService(host,()=>registry),behavior=new CompanionBehavior(ctx,host),life=new CompanionLife(ctx,host,'standard');
@@ -62,7 +62,7 @@ async function fixture(t:TestContext) {
   async function complete(agent:ReturnType<typeof fixtureAgent>,turn:number,outcome='completed',effective=true,beforeEnd?:()=>void) {
     const text=await prompt(agent);
     await middleware('agent/pre-step',[{agent,turn}],()=>({kind:'enter'}));
-    if(effective)agent.events.push({type:'system/message',data:{turn,message:{content:[{type:'text',text}]}}});
+    if(effective)agent.events.push({type:'user/message',data:{source:{kind:'runtime-context',form:'snapshot',sections:[...contexts].map(row=>({name:row.name,text:row.text({agent})})).filter(row=>row.text)},content:[{type:'text',text}]}});
     // The fixture uses a compact sequence array rather than DSH's surface tree.
     if(effective)(agent.session.surface.nodes as unknown as number[]).push(agent.events.length-1);
     beforeEnd?.();
@@ -73,6 +73,8 @@ async function fixture(t:TestContext) {
   function fixtureAgent(id:string,preset?:string){return agent(id,preset);}
   t.after(async()=>{dispose();await life.close();await behavior.close();await host.close();rmSync(root,{recursive:true,force:true});});
   return {host,behavior,life,plan,repo,registry,services,warnings,flushes,agent:fixtureAgent,prompt,complete,emit,
+    staticPrompt:(agent:Agent)=>[...sections].map(row=>row.text({agent})).filter(Boolean).join('\n\n'),
+    contextSections:(agent:Agent)=>[...contexts].map(row=>({name:row.name,text:row.text({agent}),required:row.required})),
     get persist(){return persist;},set persist(next:boolean){persist=next;}};
 }
 
@@ -115,4 +117,15 @@ test('unloading a domain while a prepared turn finishes cannot acknowledge its s
   f.behavior.acknowledgeFacts=async(...args)=>{acks++;return original(...args);};
   await f.complete(a,5,'completed',true,()=>{f.services.delete('petBehavior');});assert.equal(acks,0);
   f.services.set('petBehavior',f.behavior);assert.equal((await f.behavior.pendingFacts('world')).length,1);
+});
+
+test('body/interaction updates change required tail context without changing the system prefix or accepted plan',async t=>{
+  const f=await fixture(t),a=f.agent('owner-a');await f.prompt(a);
+  const before=f.staticPrompt(a),plan=JSON.stringify(f.plan.read());
+  await f.behavior.act('world','water','new-water','desktop');await f.prompt(a);
+  assert.equal(f.staticPrompt(a),before);
+  const contexts=f.contextSections(a);assert.ok(contexts.every(row=>row.required));
+  assert.ok(contexts.find(row=>row.name==='chatpet.interactions')?.text.includes('desktop'));
+  await f.complete(a,1);assert.equal((await f.behavior.pendingFacts('world')).length,0);
+  assert.equal(JSON.stringify(f.plan.read()),plan);
 });

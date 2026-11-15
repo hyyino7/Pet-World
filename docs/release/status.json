@@ -1,4 +1,4 @@
 {
   "stableReady": true,
-  "reason": "Caretaker pause/resume no-op replay after Life recovery and restart is covered by mapped-refused-movement regressions."
+  "reason": "Caretaker recovery regressions and context/review changes pass isolated continuity, native persistence, compaction and cross-session Memory checks; installed owner acceptance remains separate."
 }

@@ -47,6 +47,67 @@ pnpm run test:room-refresh
 Native/window checks in `scripts/checks/` and fixtures in `tests/manual/` require
 explicit isolated environments; they must not run against personal companion data.
 
+`pnpm run test:native-context` uses the installed DSH loop and native persistence
+with a scripted local model and a disposable workspace. It checks a stable system
+prefix, one current operational snapshot, durable interaction acknowledgements,
+retained originals and an unchanged accepted Life plan. It installs nothing and
+makes no paid model calls. Domain/Memory failure and restart cases remain in
+`test:life-integration`.
+
+`test:native-services` verifies real Bank recall across conversations and a
+provider restart. `test:native-life` explicitly enables the fixture's review
+schedule, exercises preset-inherited native read/write tools, rejects writing
+outside the original review scope, and checks independent writing after Bank
+correction/withdrawal. Both use disposable data and scripted models. Their local
+Memory provider must be allowed to bind loopback; a denied bind is an environment
+failure, not evidence of broken recall. Review masks combine the host's global view with visible preset read/write
+capabilities; agent-local Life tools are never passed as inherited names.
+
+Completed autonomous Life turns also prepare model-free history maintenance
+while the native Agent is idle. Only older successful default state reads are
+eligible; the latest turn, owner turns/takeovers, reviews, errors, explicit full
+views, interaction/transaction receipts and reading text remain untouched.
+The existing module-owned overview functions preserve pending plans, waiting
+states, failures, inventory and receipt identifiers. A queued input takes
+precedence. No new timer, session, summary call or Memory writer is created.
+
+Idle preparation does not write the log: DSH requires replacement tool results
+inside an open turn. Prepared changes land in the next real `agent/request`,
+with native shadow pricing, positional source citations and ordinary turn
+persistence. Changed bindings and nodes superseded by native compaction are
+discarded. All original events remain in the append-only log. Native semantic
+compaction, Memory batching, recall, source withdrawal and review schedules keep
+their existing ownership and settings. `test:native-life` checks persisted
+restoration and continuation through the actual preset compaction provider,
+using one explicitly requested scripted summary for that compatibility test.
+
+For an explicitly selected original native log, a read-only payload comparison is
+available after building:
+
+```sh
+pnpm run check:context-payload -- /absolute/events.jsonl.zstd --day 2026-11-14 --offset-hours 7
+```
+
+It accepts native JSONL (including concatenated Zstandard frames) or an event
+array. Output contains counts only. It compares the same original calls against
+the overview/fact renderers, preserving ordinary-owner full-view defaults. Text
+characters are not provider tokens or billed savings; the comparison excludes
+new context/header overhead and cannot predict future model choices or cache hits.
+Its `maintenance` section separately replays idle preparation over legacy full
+defaults, retaining the latest turn. These savings overlap the overview
+comparison and must not be added to it. Values are request-weighted text
+characters, not measured provider tokens, cache hits or billed savings.
+
+Current operational context uses required DSH tail snapshots. Superseded owned
+sections are retired through native surface replacements; original events stay
+in the append-only log. Other producers' distinct sections are retained, and an
+equal current snapshot is reused. Room, garden, economy and plan read tools accept
+`view: overview | full`; autonomous reads default to overview, ordinary owner
+reads retain full defaults. Economy also offers paged catalog/recent-ledger reads. Room/economy queries accept
+`factIds` to read original interaction receipts, including their numeric effects.
+Actual reading text, original dialogue, domain state and memory sources are not
+truncated by these model-facing views.
+
 Current runtime exports and bundle IDs are stable. Core's native adapters live
 in `src/core/native/`; each business module retains its existing data authority.
 `src/behavior/animation-allocation.json` is the current allocation input used by
