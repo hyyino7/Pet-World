@@ -329,7 +329,8 @@
       "sha256": "8a8fb5036cc90f206f91ef2e659035c824138700c58ce969fdd28565e164c6fc"
     },
     "src/garden-autonomy.js": {
-      "sha256": "9277e083f807e8ff610c8ae102266b5b0269217fa2295baf42efcbdabc72fb4a",
+      "sha256": "0346a8987bac94178ead32f863896581dbfaf43b070ca31ba9aac9cc38713ff0",
+      "identity_treatment": "Use role-neutral caretaker status and result messages instead of the upstream character name. Keep the original job, receipt, settlement and replay semantics unchanged; the host projects retained legacy labels without rewriting their source bytes.",
       "upstream_sha256": "51fde1095ff49415d25dede2178746ca4d583e854a988ae32169427f00e56dd0",
       "upstream_file": "src/garden-autonomy.js",
       "treatment": "Retain the original route/dwell/job executor with the Economy storage adapter. A requested generic visit does not implicitly choose harvest, sale or sowing in economic mode; preserved accepted jobs retain their receipts. Owner-authorized autonomous-life integration: reliable interaction facts and native delivery, safe activity continuity, deadline-based physical progression, and visibility-aware presentation. Code tests only; installed acceptance remains owner-run. Package audit repair: planned-mode preference receipts describe the saved preference and never promise automatic goals or cancellation of planned/requested work. Report whether a caretaker control actually changes its job; repeated pause/resume reads preserve live phases and unrelated Body work, while stale physical checkpoints are reconciled only for the original job."

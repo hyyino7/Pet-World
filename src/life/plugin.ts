@@ -323,9 +323,19 @@ export class CompanionLife {
     const bound=this.binding;
     const behavior=this.ctx.get('petBehavior');
     let advanced=false;
+    let continueAccepted=false;
     if(bound && behavior) {
       await this.resumeAcceptedPlan(bound);
+      const before=bound.plan.read().plan;
       advanced=await bound.plan.advance(bound.id,behavior);
+      const after=bound.plan.read().plan;
+      // A consumed completion transition must schedule the next accepted step
+      // itself. No new model consideration or unrelated domain event is needed.
+      continueAccepted=!!before && after?.id===before.id && after.cursor>before.cursor
+        && after.status==='active' && after.cursor<after.steps.length && !after.replanReason;
+      // Body work already committed. Optional native startup/observer failures
+      // must not consume the only continuation of this accepted queue.
+      if(continueAccepted)this.scheduleTick();
       await behavior.setReconsiderConditions(bound.id,bound.plan.read().plan?.reconsiderWhen ?? []);
     }
     await this.startRuntime();

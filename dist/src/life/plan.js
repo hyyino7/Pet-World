@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { createLifeStore, LIFE_STATE_MAX_BYTES } from '#dsh-world/life/lifeStore';
+import { PlannedAdmissionWaitError } from '../contracts/behavior.js';
 import { requirePresentationSlot } from '../behavior/playback.js';
+import { gardenReceiptText } from '../behavior/garden-receipt.js';
 const object = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 function check(value, message) { if (!value)
     throw Error(message); }
@@ -121,6 +123,13 @@ export class PersistentLifePlan {
             check(!plan.operationId || !!plan.steps[plan.cursor] && plan.operationId === `life:${plan.id}:${plan.steps[plan.cursor].id}`, 'Stored activity does not match the current plan step');
             if (plan.dispatchUntil)
                 instant(plan.dispatchUntil);
+            if (plan.admissionWait) {
+                const wait = plan.admissionWait;
+                check(object(wait) && wait.version === 1 && wait.kind === 'owner-activity' && wait.operationId === plan.operationId
+                    && typeof wait.requestId === 'string' && wait.requestId.length > 0, 'Invalid pending Body admission; original state retained');
+                instant(wait.observedAt);
+                check(!plan.execution, 'An unsubmitted admission cannot already have an execution receipt');
+            }
         }
         const revision = state.planRevision ?? plan?.revision ?? 0;
         check(Number.isSafeInteger(revision) && revision >= 0 && (!plan || plan.revision === revision), 'Stored life plan revisions disagree');
@@ -376,11 +385,37 @@ export class PersistentLifePlan {
                 if (plan.replanReason)
                     return false;
                 check(!plan.execution, 'A previously acknowledged activity has lost its durable receipt; preserve the state and reconcile it before replay');
+                if (step.until)
+                    check(Date.parse(step.until) > Date.now(), 'The activity absolute deadline elapsed before Body admission; revise the original plan explicitly');
+                // Relative stays start when Body becomes available, not while a short
+                // owner reaction owns it. An absolute calendar deadline never moves.
+                if (plan.admissionWait && step.durationMinutes !== undefined) {
+                    this.change(current.revision, p => { check(p, 'No current plan'); p.dispatchUntil = new Date(Date.now() + step.durationMinutes * 60_000).toISOString(); return p; }, false, false);
+                    current = this.read();
+                    plan = current.plan;
+                }
                 const until = plan.dispatchUntil;
-                execution = await behavior.startPlanned(workspaceId, { operationId, kind: step.kind, activity: step.activity,
-                    ...(step.room ? { room: step.room, spot: step.spot } : {}), ...(step.garden ? { garden: step.garden } : {}), ...(step.action ? { action: step.action } : {}), ...(step.economy ? { economy: step.economy } : {}), ...(step.reading ? { reading: step.reading } : {}),
-                    ...(step.presentationSlot ? { presentationSlot: step.presentationSlot } : {}),
-                    ...(until ? { until, freezeOnPause: step.durationMinutes !== undefined } : {}) });
+                try {
+                    execution = await behavior.startPlanned(workspaceId, { operationId, kind: step.kind, activity: step.activity,
+                        ...(step.room ? { room: step.room, spot: step.spot } : {}), ...(step.garden ? { garden: step.garden } : {}), ...(step.action ? { action: step.action } : {}), ...(step.economy ? { economy: step.economy } : {}), ...(step.reading ? { reading: step.reading } : {}),
+                        ...(step.presentationSlot ? { presentationSlot: step.presentationSlot } : {}),
+                        ...(until ? { until, freezeOnPause: step.durationMinutes !== undefined } : {}) });
+                }
+                catch (error) {
+                    if (!(error instanceof PlannedAdmissionWaitError) || error.wait.operationId !== operationId)
+                        throw error;
+                    const latest = this.read();
+                    if (latest.plan?.id !== plan.id || latest.plan.operationId !== operationId)
+                        return false;
+                    if (JSON.stringify(latest.plan.admissionWait) !== JSON.stringify(error.wait))
+                        this.change(latest.revision, p => {
+                            check(p, 'No current plan');
+                            p.admissionWait = structuredClone(error.wait);
+                            p.pauseReason = error.message;
+                            return p;
+                        }, false, false);
+                    return false;
+                }
             }
             current = this.read();
             // The await may outlive a binding or an intent: never apply its result to a replacement plan.
@@ -395,6 +430,10 @@ export class PersistentLifePlan {
             this.change(current.revision, p => {
                 check(p, 'No current plan');
                 p.execution = execution;
+                if (p.admissionWait) {
+                    delete p.admissionWait;
+                    p.pauseReason = null;
+                }
                 if (awaitingReceipt && ['running', 'completed'].includes(execution.status)) {
                     p.status = 'active';
                     p.pauseReason = null;
@@ -457,7 +496,7 @@ export class PersistentLifePlan {
                 throw error;
             if (latest.plan.replanReason)
                 return false;
-            this.change(latest.revision, p => { check(p, 'No current plan'); p.status = 'waiting'; p.pauseReason = String(error); p.replanReason = String(error); p.nextConsiderAt = new Date().toISOString(); return p; });
+            this.change(latest.revision, p => { check(p, 'No current plan'); delete p.admissionWait; p.status = 'waiting'; p.pauseReason = String(error); p.replanReason = String(error); p.nextConsiderAt = new Date().toISOString(); return p; });
             return true;
         }
         return false;
@@ -467,8 +506,10 @@ export class PersistentLifePlan {
     }
     static describe({ revision, plan }) {
         const clip = (value) => value && value.length > 600 ? value.slice(0, 600) + '…' : value;
+        const execution = object(plan?.execution) && plan.execution.kind === 'garden' && typeof plan.execution.reason === 'string'
+            ? { ...plan.execution, reason: gardenReceiptText(plan.execution.reason) } : plan?.execution;
         return JSON.stringify({ revision, plan: plan ? { id: plan.id, goal: clip(plan.goal), reason: clip(plan.reason), status: plan.status,
-                current: plan.steps[plan.cursor] ?? null, remainingPreview: plan.steps.slice(plan.cursor + 1, plan.cursor + 3), remainingCount: Math.max(0, plan.steps.length - plan.cursor - 1), execution: plan.execution,
+                current: plan.steps[plan.cursor] ?? null, remainingPreview: plan.steps.slice(plan.cursor + 1, plan.cursor + 3), remainingCount: Math.max(0, plan.steps.length - plan.cursor - 1), execution,
                 pauseReason: clip(plan.pauseReason), replanReason: clip(plan.replanReason), nextConsiderAt: plan.nextConsiderAt, reconsiderWhen: plan.reconsiderWhen } : null });
     }
 }

@@ -23,7 +23,8 @@ function fixture(t:TestContext) {
   const root=realpathSync(mkdtempSync(join(tmpdir(),'life-memory-code-'))),workspace=join(root,'workspace');mkdirSync(workspace);
   const runtime=new CoreRuntime({dataDir:join(root,'core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner-one',displayName:'Xiaoxi',character:'Disposable fixture'});
   let scope:NativeScope={workspaceId:'fixture-workspace',path:workspace,storageId:'fixture-bank',guest:false};
-  runtime.files={status:()=>({state:'ready',target:{id:scope.workspaceId,path:scope.path}}),storageId:()=>scope.storageId} as unknown as NonNullable<CoreRuntime['files']>;
+  runtime.files={status:()=>({state:'ready',target:{id:scope.workspaceId,path:scope.path}}),storageId:()=>scope.storageId,
+    companionSettings:()=>({memoryRecallCount:8,memoryRecallBlockChars:600})} as unknown as NonNullable<CoreRuntime['files']>;
   const memory=new NativeMemory(runtime,{dataDir:join(workspace,'.chatpet/data/memory'),python:resolve('.venv/bin/python')});
   const native=new CoreNative(runtime);native.memory=memory;native.resolveScope=()=>({...scope});native.lifeAdmission=()=>true;
   const observations:Observation[]=[],validations:unknown[]=[],starts:unknown[]=[];
@@ -51,7 +52,7 @@ const completed=(text:string)=>({state:'completed' as const,text,hostTurnIds:[]}
 /** Run the actual Python MemoryPort against only this fixture's observations.
  * No service socket/background runner is started. Every network connect is
  * forbidden, so an accidental LLM/embed request cannot escape the code test. */
-function inspectProvider(root:string,observations:Observation[],sourceIds:string[],withdraw?:string) {
+function inspectProvider(root:string,observations:Observation[],sourceIds:string[],withdraw?:string,query?:string) {
   const script=String.raw`
 import json, socket, sys
 from pathlib import Path
@@ -70,6 +71,7 @@ try:
     acknowledgements = [port.observe(port.scope, **row) for row in data['observations']]
     decisions = {key:port.source_decision(key, '1') for key in data['sourceIds']}
     sources = {key:port.source(key) for key in data['sourceIds']}
+    recalled = port.context(port.scope, query=data['query'], include_recent=True, max_chars=24000) if data.get('query') else None
     summary = None
     if all(value == 'eligible' for value in decisions.values()):
         summary = port.summary(port.scope, session_id='life-home', summary_seq=42, content='The owner gave Xiaoxi water.', sources=[{'id':key,'revision':'1'} for key in data['sourceIds']])
@@ -77,15 +79,16 @@ try:
     if data.get('withdraw'):
         port.derivations.record_tombstone(root_source_id=data['withdraw'], reason='Disposable withdrawal fixture')
         after = {key:port.source_decision(key, '1') for key in data['sourceIds']}
-    print(json.dumps({'decisions':decisions,'sources':sources,'acknowledgements':acknowledgements,'summary':summary,'afterWithdrawal':after}))
+    print(json.dumps({'decisions':decisions,'sources':sources,'acknowledgements':acknowledgements,'summary':summary,'afterWithdrawal':after,'recalled':recalled}))
 finally:
     ctx.runtime.stop()
     ctx.db.close()
 `;
   return JSON.parse(execFileSync(resolve('.venv/bin/python'),['-c',script,process.cwd(),join(root,'provider')],{
-    input:JSON.stringify({observations,sourceIds,withdraw}),encoding:'utf8',timeout:30_000,
+    input:JSON.stringify({observations,sourceIds,withdraw,query}),encoding:'utf8',timeout:30_000,
     env:{...process.env,PYTHONDONTWRITEBYTECODE:'1',DSH_MEMORY_EMOTION:'0',DSH_MEMORY_EMOTION_WRITE:'0'},maxBuffer:8*1024*1024,
-  })) as {decisions:Record<string,string>;sources:Record<string,any>;acknowledgements:{sourceId:string;observationId:string;state:string}[];summary:{id:string}|null;afterWithdrawal:Record<string,string>|null};
+  })) as {decisions:Record<string,string>;sources:Record<string,any>;acknowledgements:{sourceId:string;observationId:string;state:string}[];summary:{id:string}|null;afterWithdrawal:Record<string,string>|null;
+    recalled:{text:string;records:{memory:{id:string};dependencies:{sources:{id:string;revision:string}[]};interactions?:{role:string;text:string}[]}[]}|null};
 }
 
 test('actual Body facts and a Life reply keep a complete eligible Core-to-Memory source graph',async t=>{
@@ -111,19 +114,31 @@ test('actual Body facts and a Life reply keep a complete eligible Core-to-Memory
   assert.deepEqual(aggregate.roots,[{id:original.source_id,revision:'1'}]);
 });
 
-test('two owner conversations share one original fact without replaying its Memory observation',async t=>{
+test('an owner chat recalls the original interaction after another chat acknowledged delivery',async t=>{
   const f=fixture(t),fact=f.water('cross-chat');
   const [factId]=f.native.observeFacts('owner-A',[fact]);
   f.native.observeInputs('owner-A',1,[ownerMessage('question-A')]);await f.native.finishTurn('owner-A',1,completed('You gave me water.'));
   f.room.acknowledgeFacts([fact.id]);
-  f.native.observeFacts('owner-B',f.room.readFacts([fact.id]));
-  f.native.observeInputs('owner-B',1,[ownerMessage('question-B')]);await f.native.finishTurn('owner-B',1,completed('The same water interaction is still completed.'));
-  await f.native.useSources('owner-B',[factId]);
+  assert.deepEqual(f.room.pendingFacts(),[],'Delivery is already consumed before B asks');
+  f.native.observeInputs('owner-B',1,[ownerMessage('question-B')]);
+  const binding=await f.memory.prepare('owner-B',f.scope),call=f.memory.connection.call;
+  const recalledRecords:NonNullable<ReturnType<typeof inspectProvider>['recalled']>['records']=[];
+  f.memory.connection.call=async<T>(operation:string,args:Record<string,unknown>,bank?:string):Promise<T>=>{
+    if(operation==='context') {
+      const recalled=inspectProvider(f.root,f.observations,f.observations.map(row=>row.source_id),undefined,String(args.query)).recalled!;
+      recalledRecords.push(...recalled.records);
+      return recalled as T;
+    }
+    if(operation==='materialize') {assert.deepEqual(args.sources,[]);return [] as T;}
+    return call<T>(operation,args,bank);
+  };
+  const sources=await f.memory.recall('owner-B','What just happened?',true,binding);
+  assert.ok(sources.includes(factId),'Actual scoped Python recall returns the original fact without a fact ID in the query');
+  assert.ok(recalledRecords.some(row=>row.interactions?.some(item=>item.role==='system'&&item.text===fact.result.summary)));
+  assert.ok(f.memory.context('owner-B').includes(fact.result.summary));
+  await f.native.finishTurn('owner-B',1,completed('The same water interaction is still completed.'));
   assert.equal(f.observations.filter(row=>row.source_id===factId).length,1);
-  assert.ok(f.validations.length>0,'Already observed material must be revalidated instead of reconsolidated');
-  for(const session of ['owner-A','owner-B'])assert.ok(f.runtime.store.require<EvidenceSource>('source',replyId(session,1)).rootSourceIds.includes(factId));
-  const sources=f.observations.map(row=>row.source_id),provider=inspectProvider(f.root,f.observations,sources);
-  assert.ok(Object.values(provider.decisions).every(value=>value==='eligible'));
+  assert.ok(f.runtime.store.require<EvidenceSource>('source',replyId('owner-A',1)).rootSourceIds.includes(factId));
 });
 
 test('a post-provider acknowledgement failure survives Core reopen and retries the same original source',async t=>{

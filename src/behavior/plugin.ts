@@ -11,6 +11,7 @@ import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
 import type { CompanionFactActor } from '../contracts/interaction.js';
 import type { RoomInteractionContext } from './room.js';
+import {gardenHomeProjection} from './garden-receipt.js';
 export type { PlannedActivity, PlannedExecution } from '../contracts/behavior.js';
 
 interface Binding {id: string; path: string; storageId: string; room: CompanionRoom; fingerprint?: string; presentationFingerprint?: string}
@@ -228,7 +229,7 @@ export class CompanionBehavior {
   }
   promptLine(workspaceId: string) {
     const bound = this.currentBound(workspaceId); if (!bound) return '';
-    return buildHomePromptLine(bound.room.state,{now:Date.now(),allowActivity:true});
+    return buildHomePromptLine(gardenHomeProjection(bound.room.state),{now:Date.now(),allowActivity:true});
   }
   restState(workspaceId: string) {
     const bound = this.currentBound(workspaceId); if (!bound) return;

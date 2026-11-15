@@ -164,6 +164,7 @@ export class NativeMemory {
                 source_id: sourceId, revision: '1', content: source.text, actor_id: source.actorId,
                 source_kind: work.sourceKind ?? (source.origin === 'owner_statement' ? 'user_statement' : source.origin === 'model_interpretation' ? 'agent_inference' : 'system'),
                 attribution: work.attribution,
+                ...(source.eventTime?.from ? { occurred_at: source.eventTime.from } : {}),
                 conversation_context: work.sourceKind === 'user_statement' || source.origin === 'model_interpretation' || source.origin === 'owner_statement',
                 roots: source.rootSourceIds.map(id => ({ id, revision: '1' })),
             }, workspaceId);

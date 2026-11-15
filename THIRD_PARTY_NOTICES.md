@@ -15,6 +15,8 @@ page reaches the companion through native DSH and reads native chat history.
 QQ group play reuses the template's affinity scoring, slang library, role-card
 sections, sticker library and forwarded-message formatter. The affinity adapter
 supplies a storage file for the current QQ account and group.
+Caretaker status and result messages are role-neutral; host projections adapt
+retained generated character labels without rewriting original companion records.
 The original code and Three.js carry MIT notices. The 2D character artwork
 retains CC BY-NC-SA 4.0 and attribution. The models are included with the
 template for personal, noncommercial room display under the author's terms.
@@ -34,7 +36,8 @@ The canonical Python service and REST client/process host are retained under
 `vendor/mnemosyne/`. The upstream DSH session collector, plugin/preset and installer
 are excluded. Local changes address process termination, dependency revision
 coverage, durable partial-withdrawal settlement, scoped retrieval/consolidation
-and an import cycle. Pet scope
+and an import cycle. Consolidation preserves attributed interaction projections
+and retains marked delivery envelopes as evidence without another experience. Pet scope
 and native integration live in `src/memory/` and `src/core/native/memory.ts`.
 
 Apache-2.0 applies to this component. Its [LICENSE](vendor/mnemosyne/LICENSE),

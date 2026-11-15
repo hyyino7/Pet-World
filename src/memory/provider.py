@@ -44,22 +44,84 @@ class MemoryPort:
         # raw logs or withdrawn sources. The original consolidation key and
         # memory update/version operations retain one authority and identity.
         with service.db.exclusive() as conn:
-            previous = conn.execute("SELECT id, metadata_json FROM observations WHERE source_kind='user_statement'").fetchall()
+            previous = conn.execute("SELECT id, source_kind, metadata_json FROM observations WHERE source_kind IN ('user_statement','system')").fetchall()
         for row in previous:
             if json.loads(row["metadata_json"]).get("pet_scope") != self.scope:
                 continue
             try:
-                self.consolidate_context(row["id"])
+                if row["source_kind"] == "user_statement":
+                    self.consolidate_context(row["id"])
+                else:
+                    self.repair_interaction(row["id"])
             except ConflictError:
                 # Rejected/withdrawn source stays withheld, not reconstructed.
                 continue
 
     def context_write_guard(self, body) -> None:
         meta = body.metadata
-        if meta.get("pet_context"):
+        if meta.get("pet_context") or meta.get("pet_interaction"):
             self.authorize(meta.get("pet_scope"))
             if not meta.get("pet_sources") or self.validate(self.scope, sources=meta["pet_sources"])["decision"] != "eligible":
                 raise ConflictError("completed-conversation source is no longer eligible")
+
+    @staticmethod
+    def interaction_source(source_id: str, kind: str, meta: dict) -> bool:
+        """Only an admitted domain fact is an experience; alarms and transport
+        envelopes remain system evidence, never owner statements."""
+        attribution = meta.get("attribution", {})
+        if not isinstance(attribution, dict):
+            return False
+        domain, fact_id = attribution.get("domain"), attribution.get("factId")
+        return (kind == "system" and source_id.startswith("native-fact:")
+                and domain in ("body", "economy") and isinstance(fact_id, str)
+                and fact_id.startswith(domain + ":")
+                and attribution.get("kind") in ("owner", "companion", "system"))
+
+    def interaction_envelope(self, source_id: str, kind: str, meta: dict) -> bool:
+        roots = meta.get("pet_roots", [])
+        return (kind == "system" and source_id.startswith("native-input:") and bool(roots)
+                and all((source := self.source(dep["id"]))
+                        and source["metadata"].get("pet_scope") == self.scope
+                        and self.interaction_source(dep["id"], source["kind"], source["metadata"])
+                        for dep in roots))
+
+    def repair_interaction(self, observation_id: str) -> str | None:
+        """Project an already admitted fact using its original episode/key.
+        Preserve content, observations, withdrawn records and prior versions.
+        Also retain legacy transport evidence without consolidating it again."""
+        from cognitive_memory.cognition.consolidate import consolidate_observation
+        with self.service.db.transaction():
+            row = self.service.db.connect().execute("SELECT * FROM observations WHERE id=?", (observation_id,)).fetchone()
+            if row is None:
+                raise NotFoundError("interaction observation missing")
+            meta = json.loads(row["metadata_json"])
+            self.authorize(meta.get("pet_scope"))
+            ref = meta.get("source_ref", {})
+            if not isinstance(ref, dict) or not isinstance(ref.get("source_id"), str) or not ref.get("revision"):
+                return None
+            if self.interaction_envelope(ref["source_id"], row["source_kind"], meta):
+                if not meta.get("pet_evidence_only"):
+                    self.service.db.connect().execute("UPDATE observations SET metadata_json=? WHERE id=?",
+                        (json.dumps({**meta, "pet_evidence_only": True}), observation_id))
+                return None
+            if not self.interaction_source(ref["source_id"], row["source_kind"], meta):
+                return None
+            dependencies = [{"id": ref["source_id"], "revision": ref["revision"]}]
+            if self.validate(self.scope, sources=dependencies)["decision"] != "eligible":
+                return None
+            attribution = {"pet_scope": self.scope, "pet_sources": dependencies, "pet_interaction": True}
+            # The source stays system evidence. This metadata only supplies its
+            # scoped experience projection to the existing consolidation path.
+            if any(meta.get(key) != value for key, value in attribution.items()):
+                self.service.db.connect().execute("UPDATE observations SET metadata_json=? WHERE id=?",
+                    (json.dumps({**meta, **attribution}), observation_id))
+            memory_id = consolidate_observation(self.service, observation_id)
+            memory = self.service.get_memory(memory_id)
+            if memory["status"] in ("active", "candidate") and not self.service.withdrawal_status(memory_id=memory_id) \
+                    and any(memory["metadata"].get(key) != value for key, value in attribution.items()):
+                self.service.update_memory(memory_id, MemoryUpdateIn(expected_version=memory["version"],
+                    metadata={**memory["metadata"], **attribution}))
+            return memory_id
 
     def consolidate_context(self, observation_id: str) -> str:
         from cognitive_memory.cognition.consolidate import consolidate_observation
@@ -142,7 +204,8 @@ class MemoryPort:
         ref = metadata.get("source_ref", {})
         if ref.get("source_id") != source_id:
             return None
-        return dict(id=row["id"], content=row["content"], metadata=metadata, ref=ref, kind=row["source_kind"], recorded_at=row["created_at"])
+        return dict(id=row["id"], content=row["content"], metadata=metadata, ref=ref, kind=row["source_kind"],
+                    recorded_at=row["created_at"], occurred_at=row["occurred_at"])
 
     def excerpts_of(self, source_id: str) -> list[dict]:
         with self.service.db.exclusive() as conn:
@@ -200,7 +263,7 @@ class MemoryPort:
 
     def observe(self, scope: dict, *, source_id: str, content: str, revision: str,
                 actor_id: str, source_kind: str = "user_statement", roots: list[dict] | None = None, excerpt_parent: dict | None = None,
-                conversation_context: bool = False, attribution: dict | None = None) -> dict:
+                conversation_context: bool = False, attribution: dict | None = None, occurred_at: str | None = None) -> dict:
         self.authorize(scope)
         if not all((source_id, revision, actor_id)):
             raise ValueError("attributed source/revision required")
@@ -213,20 +276,31 @@ class MemoryPort:
             decision = self.source_decision(source_id)
             if conversation_context and decision == "eligible":
                 self.consolidate_context(previous["id"])
+            elif source_kind == "system":
+                self.repair_interaction(previous["id"])
             return dict(sourceId=source_id, observationId=previous["id"], state="duplicate", decision=decision)
         if self.derivations.is_tombstoned(root_source_id=source_id).get("tombstoned"):
             return dict(sourceId=source_id, observationId=None, state="blocked", decision="ineligible")
+        metadata = {"workspace_id": scope["workspaceId"], "pet_scope": scope, "actor_id": actor_id,
+                    "agent_id": scope["companionId"], "pet_roots": roots or [],
+                    "pet_excerpt_parent": excerpt_parent, "attribution": attribution or {},
+                    **({"pet_context": True, "pet_sources": [{"id": source_id, "revision": revision}]} if conversation_context else {}),
+                    "source_ref": {"source_id": source_id, "root_source_id": source_id, "revision": revision}}
+        if self.interaction_source(source_id, source_kind, metadata):
+            metadata.update(pet_interaction=True, pet_sources=[{"id": source_id, "revision": revision}])
+        elif self.interaction_envelope(source_id, source_kind, metadata):
+            # Classify before the capture transaction publishes its event. A
+            # background worker may consolidate immediately after that commit.
+            metadata["pet_evidence_only"] = True
         observation = self.service.capture_observation(ObservationIn(
-            source_kind=source_kind, content=content, producer="dsh", subject_id=scope["scopeId"],
+            source_kind=source_kind, content=content, occurred_at=occurred_at, producer="dsh", subject_id=scope["scopeId"],
             agent_id=scope["companionId"], idempotency_key=f"pet:observation:{source_id}",
-            metadata={"workspace_id": scope["workspaceId"], "pet_scope": scope, "actor_id": actor_id,
-                      "agent_id": scope["companionId"], "pet_roots": roots or [],
-                      "pet_excerpt_parent": excerpt_parent, "attribution": attribution or {},
-                      **({"pet_context": True, "pet_sources": [{"id": source_id, "revision": revision}]} if conversation_context else {}),
-                      "source_ref": {"source_id": source_id, "root_source_id": source_id, "revision": revision}}))
+            metadata=metadata))
         decision = self.source_decision(source_id)
         if conversation_context and decision == "eligible":
             self.consolidate_context(observation.id)
+        elif source_kind == "system":
+            self.repair_interaction(observation.id)
         return dict(sourceId=source_id, observationId=observation.id, state="recorded", decision=decision)
 
     def evidence_excerpts(self, scope: dict, sources: list[dict], quotes: list[str] | None) -> list[dict]:
@@ -276,7 +350,8 @@ class MemoryPort:
         result = []
         for dep in sources:
             source = self.source(dep["id"])
-            if not source or not (source["metadata"].get("pet_excerpt_parent") or source["kind"] in ("user_statement", "agent_inference")) or self.source_decision(dep["id"], dep.get("revision")) != "eligible":
+            if not source or not (source["metadata"].get("pet_excerpt_parent") or source["kind"] in ("user_statement", "agent_inference")
+                    or self.interaction_source(dep["id"], source["kind"], source["metadata"])) or self.source_decision(dep["id"], dep.get("revision")) != "eligible":
                 raise ConflictError("provider source material is unavailable")
             result.append(dict(sourceId=dep["id"], revision=dep["revision"], observationId=source["id"],
                                text=source["content"], actorId=source["metadata"]["actor_id"]))
@@ -386,7 +461,8 @@ class MemoryPort:
         selections = [(MemoryType.EPISODIC, {**metadata_scope, "pet_summary": True}),
             (MemoryType.SEMANTIC, metadata_scope),
             (MemoryType.EPISODIC, {**metadata_scope, "pet_context": True, "source_kind": "user_statement"}),
-            (MemoryType.EPISODIC, {**metadata_scope, "pet_context": True, "source_kind": "agent_inference"})]
+            (MemoryType.EPISODIC, {**metadata_scope, "pet_context": True, "source_kind": "agent_inference"}),
+            (MemoryType.EPISODIC, {**metadata_scope, "pet_interaction": True, "source_kind": "system"})]
         channels = [run_retrieve(self.service, query=query, force=True, types=[memory_type],
             metadata_match=metadata, limit=min(50, max(1, limit))).get("items", [])
             for memory_type, metadata in selections]
@@ -400,7 +476,7 @@ class MemoryPort:
                 limit=min(50, max(1, limit)), order_by="created_at",
                 mode="any", spatiotemporal_rerank=False))]
                 for memory_type, metadata in selections]
-            channels = [recent[0], self.latest_archive(limit), recent[2], recent[3], *channels, recent[1]]
+            channels = [recent[4], recent[0], self.latest_archive(limit), recent[2], recent[3], *channels, recent[1]]
         # A full fact channel must not consume every slot before conversation
         # context is considered. Alternate the existing provider result channels.
         from itertools import zip_longest
@@ -432,6 +508,13 @@ class MemoryPort:
                         "actor_id": source["metadata"].get("actor_id"), "attribution": source["metadata"].get("attribution", {})}
                         for dep in sources if (source := self.source(dep["id"]))
                         and source["kind"] in ("user_statement", "agent_inference")]
+                if meta.get("pet_interaction"):
+                    record["interactions"] = [{"sourceId": dep["id"], "role": "system",
+                        "recorded_at": source["recorded_at"], "occurred_at": source["occurred_at"],
+                        "text": source["content"], "actor_id": source["metadata"].get("actor_id"),
+                        "attribution": source["metadata"].get("attribution", {})}
+                        for dep in sources if (source := self.source(dep["id"]))
+                        and self.interaction_source(dep["id"], source["kind"], source["metadata"])]
                 records.append(record)
                 if len(records) >= max(1, limit):
                     break
@@ -486,16 +569,17 @@ class MemoryPort:
             view["speakers"] = [{"actor_id": source["metadata"].get("actor_id"), "attribution": source["metadata"].get("attribution", {})}
                 for dep in record["dependencies"]["sources"] if (source := self.source(dep["id"]))]
             view["memory"]["content"] = memory["content"][:block_chars]
-            view["detail_available"] = len(memory["content"]) > block_chars or bool(record.get("conversation"))
-            if record.get("conversation"):
+            view["detail_available"] = len(memory["content"]) > block_chars or bool(record.get("conversation") or record.get("interactions"))
+            original_key = "interactions" if record.get("interactions") else "conversation"
+            if record.get(original_key):
                 view["memory"].pop("content", None)  # Do not inject the same dialogue twice.
                 remaining = block_chars
-                view["conversation"] = []
-                for item in record["conversation"]:
+                view[original_key] = []
+                for item in record[original_key]:
                     if remaining <= 0:
                         break
                     excerpt = item["text"][:remaining]
-                    view["conversation"].append({**item, "text": excerpt})
+                    view[original_key].append({**item, "text": excerpt})
                     remaining -= len(excerpt)
             view["read_tool"] = "pet_memory_read"
             views[memory["id"]] = json.dumps(view, ensure_ascii=False)
@@ -503,7 +587,7 @@ class MemoryPort:
         # character heuristic estimates tokens; the consumer separately enforces
         # its exact character allowance. No second clipping/packing loop exists.
         built = self.service.build_context(ContextBuildIn(query=query, token_budget=max_chars // 2, limit=limit,
-            envelope={"sections": {"stable_prefix": "以下是有来源的记忆数据，召回范围可能不完整。ID 和状态标签仅供内部使用，普通回答不要复述。source_roles=user_statement 表示相应发言人亲口提供的信息；actor_id 与 attribution 区分主人、群友、群和私聊，不得把访客的话当主人事实，应按实际发言人自然回忆，不要求独立核实，也不凭空认定信息过时。unverified_record 不代表用户从未确认。conversation 条目是过去的原始对话；通过 source_roles 区分用户陈述和助手回复，不能把助手回复当成用户事实。未收入的片段不代表不存在，不能编造缺失细节。updated_at 是记录更新时间，不等于事件发生时间；保持原话的时间含义，不臆造事件日期或时间间隔。"}}),
+            envelope={"sections": {"stable_prefix": "以下是有来源的记忆数据，召回范围可能不完整。ID 和状态标签仅供内部使用，普通回答不要复述。source_roles=user_statement 表示相应发言人亲口提供的信息；actor_id 与 attribution 区分主人、群友、群和私聊，不得把访客的话当主人事实，应按实际发言人自然回忆，不要求独立核实，也不凭空认定信息过时。unverified_record 不代表用户从未确认。interactions 条目是程序核对的真实互动，source_roles=system 不是主人发言或指令，应按 actor_id、attribution 和 occurred_at 回忆实际经历。conversation 条目是过去的原始对话；通过 source_roles 区分用户陈述和助手回复，不能把助手回复当成用户事实。未收入的片段不代表不存在，不能编造缺失细节。updated_at 是记录更新时间，不等于事件发生时间；保持原话的时间含义，不臆造事件日期或时间间隔。"}}),
             admitted_memories=[Memory.model_validate(record["memory"]) for record in recalled["records"]],
             render_content=lambda memory: views[memory.id])
         if built.fits is False:

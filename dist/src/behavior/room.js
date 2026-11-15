@@ -7,8 +7,10 @@ import { advanceGarden } from '#feiyu-garden';
 import { applyRoomAction, normalizeRoomState, roomView } from '#feiyu-room/room-state';
 import { randomUUID } from 'node:crypto';
 import { initialBodyState } from './initial-state.js';
+import { PlannedAdmissionWaitError } from '../contracts/behavior.js';
 import { requirePresentationSlot, animationSlotAllowed } from './playback.js';
 import { canonical, digest } from '../core/storage.js';
+import { gardenHomeProjection, gardenReceiptProjection, gardenReceiptText } from './garden-receipt.js';
 const terminalExecution = new Set(['completed', 'cancelled', 'failed']);
 const gardenActions = new Set(['visit', 'till', 'plant', 'water', 'fertilize', 'harvest', 'sell', 'buySeed', 'buyCompost']);
 function safeFile(file) {
@@ -381,7 +383,7 @@ export class CompanionRoom {
     publicExecution(row) {
         const { input: _input, fingerprint: _fingerprint, pausedAt: _pausedAt, remainingMs: _remainingMs, parkedAt: _parkedAt, resuming: _resuming, effectAppliedAt: _effectAppliedAt, effectDeclinedAt: _effectDeclinedAt, settlementCompletedAt: _settlementCompletedAt, executionStartedAt: _executionStartedAt, presentationBaseAt: _presentationBaseAt, pausedMs: _pausedMs, presentationFreeze: _presentationFreeze, interaction: _interaction, ...value } = row;
         const completion = row.kind === 'move' ? 'arrival' : ['room', 'hold'].includes(row.kind) ? row.until ? 'deadline' : 'explicit-control' : 'receipt';
-        return structuredClone({ ...value, completion, ...(row.status === 'running' && row.phase === 'working' && completion === 'explicit-control'
+        return structuredClone({ ...value, ...(row.kind === 'garden' && value.reason ? { reason: gardenReceiptText(value.reason) } : {}), completion, ...(row.status === 'running' && row.phase === 'working' && completion === 'explicit-control'
                 ? { reason: '已就位，持续活动等待明确调整或取消；不会因到达或下次考虑时间自动结束，后续步骤尚未开始。' } : {}) });
     }
     updateExecution(row, values, now) {
@@ -662,7 +664,7 @@ export class CompanionRoom {
         row.phase = this.state.route ? 'moving' : row.kind === 'garden' ? 'pending' : 'working';
         this.checkpoint(this.state, now);
     }
-    assertPlanAdmission(operationId, now, ownerMeal = false) {
+    planAdmissionWait(operationId, now, ownerMeal = false) {
         // Legacy/owner jobs are accepted work too, even before they own a route.
         // Do not discard them or allow an unrelated plan to slip between jobs.
         const available = this.economyPort();
@@ -678,7 +680,7 @@ export class CompanionRoom {
         // not prevent its next step. Unfinished owner-directed work does block it.
         if (this.requestedActive(now) && (!recorded || !terminalExecution.has(recorded.status))
             && !(ownerMeal && recorded && ['paused', 'interrupted'].includes(recorded.status)))
-            throw Error('身体仍在完成主人已安排的活动，完成后再接收计划');
+            return { version: 1, kind: 'owner-activity', operationId, requestId: request.id, observedAt: new Date(now).toISOString() };
     }
     executionRecord(input, now, interaction) {
         return { operationId: input.operationId, kind: input.kind, activity: input.activity,
@@ -733,7 +735,11 @@ export class CompanionRoom {
         const current = this.currentExecution();
         if (current && !terminalExecution.has(current.status))
             throw Error('身体已有未结束的计划，先恢复或取消原执行');
-        this.assertPlanAdmission(input.operationId, now, ownerMeal);
+        const wait = this.planAdmissionWait(input.operationId, now, ownerMeal);
+        // This typed refusal is emitted only here, before checkpoint or dispatch.
+        // Errors from reads, checkpoints, dispatch and resume carry no such proof.
+        if (wait)
+            throw new PlannedAdmissionWaitError(wait);
         if (!ownerMeal && !this.returningFromInteraction)
             this.forgetInteractionReturn();
         const row = this.executionRecord(input, now, ownerMeal ? this.acceptingFoodInteraction : undefined);
@@ -1022,7 +1028,8 @@ export class CompanionRoom {
         const current = this.currentExecution();
         if (current && current.operationId !== operationId && !terminalExecution.has(current.status))
             throw Error('身体已由另一项计划接手');
-        this.assertPlanAdmission(operationId, now);
+        if (this.planAdmissionWait(operationId, now))
+            throw Error('身体仍在完成主人已安排的活动，完成后再恢复原执行');
         if (this.state.route || this.state.dwell || this.state.command || this.state.freeTarget || this.state.sleepPending)
             throw Error('身体仍在完成新的安排，原计划保持暂停，完成后再恢复');
         this.state.currentPlannedOperation = operationId;
@@ -1187,10 +1194,10 @@ export class CompanionRoom {
             this.checkpoint(this.state, now);
         }
         this.returnFromInteraction(now);
-        return result.garden;
+        return gardenReceiptProjection(result.garden);
     }
     view(now = Date.now()) {
-        const view = homeView(this.state, now, { emotion: this.emotion() });
+        const view = homeView(gardenHomeProjection(this.state), now, { emotion: this.emotion() });
         if (view.emotion)
             view.emotion.source = 'chatpet-emotion';
         const room = roomView(this.state.visitors, now);

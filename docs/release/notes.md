@@ -1,25 +1,30 @@
-# Her World 0.1.5
+# Her World 0.1.6
 
-Fixes Life plans that stalled before breakfast because travel was represented
-as an indefinite room activity. New `move` steps finish on actual arrival;
-`room` and `hold` retain sustained-activity semantics. New plans reject indefinite
-stays followed by unreachable steps, and execution receipts expose how the
-current activity completes. Existing saved plans retain their original meaning
-and remain available for explicit revision or cancellation.
+Accepted Life plans now dispatch their next step after an asynchronous action
+completes, without waiting for an unrelated event or another model decision.
+Optional native planner startup failures cannot consume that continuation.
+Short owner interactions defer an unsubmitted activity under its original
+operation ID and resume when Body becomes available. Unknown submission
+outcomes still require receipt reconciliation, and absolute deadlines are not
+extended.
 
-Regression coverage includes arrival followed by feeding, same-location travel,
-pause/resume, cancellation, restart and exactly-once feeding, finite stays,
-Economy unavailability and sleeping-body refusal. Tests use disposable data
-without paid models or personal companion workspaces.
+Completed Body and Economy interactions can be recalled across conversations
+as attributed system evidence. The Memory provider repairs existing admitted
+interaction projections while preserving original observations, memory IDs,
+content and prior versions. Delivery envelopes remain evidence rather than a
+second experience, including when background consolidation runs immediately
+after capture. Scope isolation and withdrawal remain enforced.
 
-Publication now uses one complete verification and checked archive. It waits
-for npm metadata and ordinary install downloads to match that archive before
-promoting main and publishing the GitHub Release. Re-running a failed release
-reuses its frozen version and source.
+Garden status and result messages no longer use the upstream character name.
+Read-only projections also adapt retained generated labels without rewriting
+saved records, owner messages or companion dialogue.
 
-Fixes package-manager `--` forwarding in the publication verification CLI.
-Version 0.1.4 was accepted by npm but its workflow stopped at that argument
-error; 0.1.5 includes the CLI regression check and completes the release flow.
+Regression coverage includes continuous multi-step execution, owner-interaction
+recovery across restart, pause and deadline handling, actual cross-conversation
+Memory recall, legacy Bank repair, consolidation races and original-data
+preservation. Verification uses disposable data without paid models or personal
+companion workspaces.
 
-Installation remains owner-controlled. Publication performs no local install,
-plan rewrite or personal-data modification.
+Installation remains owner-controlled. Publication performs no local install
+or personal-data modification. Installed functional acceptance is separate
+from the automated source and package checks.

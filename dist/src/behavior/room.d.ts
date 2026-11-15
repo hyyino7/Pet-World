@@ -143,7 +143,7 @@ export declare class CompanionRoom {
     private dispatchEconomy;
     private dispatchReading;
     private dispatchExecution;
-    private assertPlanAdmission;
+    private planAdmissionWait;
     private executionRecord;
     startPlanned(input: PlannedActivity, now?: number, ownerMeal?: boolean): PlannedExecution;
     consumeFood(input: {

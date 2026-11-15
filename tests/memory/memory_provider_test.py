@@ -11,7 +11,7 @@ sys.path[:0] = [str(ROOT / "vendor/mnemosyne/service/src"), str(ROOT / "src/memo
 from cognitive_memory.bootstrap import build_context
 from cognitive_memory.core.service import ConflictError, NotFoundError
 from cognitive_memory.evidence.derivation import DerivationStore
-from cognitive_memory.domain.models import MemoryUpdateIn, MemoryProposeIn
+from cognitive_memory.domain.models import MemoryUpdateIn, MemoryProposeIn, ObservationIn
 from provider import MemoryPort
 from memory_faults import withdrawal_fault
 
@@ -38,6 +38,121 @@ class ProviderConformance(unittest.TestCase):
     def memory(self, key, text):
         source, _ = self.source(key, text)
         return self.port.propose(self.scope, operation_id=key, content=text, sources=[source]), source
+
+    def interaction(self, key="grant", content="The owner gave me 50 coins; wallet balance is 144."):
+        source_id = "native-fact:" + key
+        result = self.port.observe(self.scope, source_id=source_id, revision="1", content=content,
+            source_kind="system", actor_id="owner", occurred_at="2026-11-15T07:17:52Z",
+            attribution={"kind": "owner", "domain": "economy", "factId": "economy:" + key,
+                         "channel": "settings", "observedInSessionId": "owner-A"})
+        return {"id": source_id, "revision": "1"}, result
+
+    def test_completed_interaction_is_recalled_as_system_evidence_in_another_chat(self):
+        # A has consumed delivery; B uses the Bank normally, with no second
+        # observeFacts call or known fact ID supplied by its caller.
+        with patch("socket.socket.connect", side_effect=AssertionError("network forbidden")):
+            source, _ = self.interaction()
+            self.assertEqual(self.port.source_decision(source["id"]), "eligible")
+            recalled = self.port.context(self.scope, query="Did it work?", include_recent=True, max_chars=24000)
+            self.assertEqual(len(recalled["records"]), 1)
+            record = recalled["records"][0]
+            self.assertEqual(record["interactions"][0]["role"], "system")
+            self.assertEqual(record["interactions"][0]["occurred_at"], "2026-11-15T07:17:52Z")
+            self.assertIn("50 coins", recalled["text"])
+            self.assertIn('"source_roles": ["system"]', recalled["text"])
+            self.assertNotIn('"role": "user"', recalled["text"])
+            detail = self.port.read(self.scope, memory_id=record["memory"]["id"])
+            self.assertEqual(detail["conversation"][0]["role"], "system")
+            self.assertEqual(self.port.materialize(self.scope, sources=[source])[0]["text"],
+                             "The owner gave me 50 coins; wallet balance is 144.")
+            self.assertFalse(self.port.recall(self.scope, query="50 coins", include_recent=True,
+                                             exclude_sources=[source["id"]])["records"])
+
+    def test_transport_is_retained_without_another_experience_or_generic_system_recall(self):
+        from cognitive_memory.cognition.consolidate import consolidate_observation
+        source, _ = self.interaction()
+        envelope = self.port.observe(self.scope, source_id="native-input:delivery", revision="1",
+            content='{"facts": ["transport bytes"]}', actor_id="system:companion-world",
+            source_kind="system", roots=[source])
+        self.assertIsNone(consolidate_observation(self.ctx.service, envelope["observationId"]))
+        self.assertEqual(self.port.source_decision("native-input:delivery"), "eligible")
+        self.assertEqual(self.port.source("native-input:delivery")["content"], '{"facts": ["transport bytes"]}')
+        self.port.observe(self.scope, source_id="native-input:alarm", revision="1", content="50 coins alarm",
+            actor_id="system", source_kind="system")
+        recalled = self.port.recall(self.scope, query="50 coins", include_recent=True)
+        self.assertEqual(len(recalled["records"]), 1)
+        self.assertEqual(recalled["records"][0]["dependencies"]["sources"], [source])
+        self.ctx.runtime.dispatch_outbox_once(); self.ctx.runtime.run_tasks_once()
+        self.assertFalse(self.ctx.db.connect().execute(
+            "SELECT 1 FROM memory_evidence WHERE observation_id=?", (envelope["observationId"],)).fetchone())
+
+    def test_legacy_interaction_projection_repairs_once_and_keeps_originals_and_versions(self):
+        from cognitive_memory.cognition.consolidate import consolidate_observation
+        # Legacy captures have scope on the source, but consolidation dropped it.
+        def legacy(key, text, attribution, roots):
+            return self.ctx.service.capture_observation(ObservationIn(source_kind="system", content=text,
+                producer="dsh", idempotency_key="pet:observation:" + key,
+                metadata={"workspace_id": self.scope["workspaceId"], "pet_scope": self.scope,
+                    "actor_id": "owner", "pet_roots": roots, "attribution": attribution,
+                    "source_ref": {"source_id": key, "root_source_id": key, "revision": "1"}}))
+        original = legacy("native-fact:legacy", "The owner gave me 50 coins.",
+            {"kind": "owner", "domain": "economy", "factId": "economy:legacy", "channel": "settings"}, [])
+        episode_id = consolidate_observation(self.ctx.service, original.id)
+        before = self.ctx.service.get_memory(episode_id)
+        envelope = legacy("native-input:legacy", '{"facts":"old transport"}', {}, [{"id": "native-fact:legacy", "revision": "1"}])
+        envelope_episode = consolidate_observation(self.ctx.service, envelope.id)
+        self.ctx.db.close(); self.open()
+        repaired = self.ctx.service.get_memory(episode_id)
+        self.assertEqual(repaired["content"], before["content"])
+        self.assertEqual(repaired["version"], before["version"] + 1)
+        self.assertTrue(repaired["metadata"]["pet_interaction"])
+        self.assertEqual(self.ctx.service.get_memory(envelope_episode)["content"], '{"facts":"old transport"}')
+        self.assertEqual(consolidate_observation(self.ctx.service, envelope.id), envelope_episode,
+                         "an already stored transport candidate keeps its original ID")
+        self.assertEqual([r["memory"]["id"] for r in self.port.recall(self.scope, query="50 coins", include_recent=True)["records"]], [episode_id])
+        counts = tuple(self.ctx.db.connect().execute("SELECT (SELECT COUNT(*) FROM observations), (SELECT COUNT(*) FROM memories), (SELECT COUNT(*) FROM memory_versions)").fetchone())
+        self.ctx.db.close(); self.open()
+        self.assertEqual(self.ctx.service.get_memory(episode_id)["version"], repaired["version"])
+        self.assertEqual(counts, tuple(self.ctx.db.connect().execute("SELECT (SELECT COUNT(*) FROM observations), (SELECT COUNT(*) FROM memories), (SELECT COUNT(*) FROM memory_versions)").fetchone()))
+        self.assertEqual(self.port.source("native-fact:legacy")["content"], original.content)
+
+    def test_capture_commit_can_immediately_consolidate_without_a_duplicate_envelope(self):
+        from cognitive_memory.cognition.consolidate import consolidate_observation
+        capture = self.ctx.service.capture_observation
+        interleaved = []
+        def consolidate_after_capture(body):
+            observation = capture(body)
+            # The worker wins before observe returns from capture and can run
+            # its post-capture repair. Exercise the real consolidation entry.
+            interleaved.append((observation.id, consolidate_observation(self.ctx.service, observation.id)))
+            return observation
+        with patch.object(self.ctx.service, "capture_observation", side_effect=consolidate_after_capture):
+            source, _ = self.interaction()
+            original_memory = interleaved[-1][1]
+            envelope = self.port.observe(self.scope, source_id="native-input:interleaved", revision="1",
+                content='{"facts":"delivery bytes"}', actor_id="system:companion-world",
+                source_kind="system", roots=[source])
+        self.assertEqual(interleaved[-1], (envelope["observationId"], None))
+        self.assertEqual(self.port.recall(self.scope, query="50 coins")["records"][0]["memory"]["id"], original_memory)
+        self.assertEqual(self.ctx.service.get_memory(original_memory)["version"], 1)
+        self.assertEqual(self.ctx.db.connect().execute("SELECT COUNT(*) FROM memories").fetchone()[0], 1)
+
+    def test_interaction_projection_keeps_withdrawal_and_scope_isolation(self):
+        source, _ = self.interaction()
+        memory = self.port.recall(self.scope, query="50 coins")["records"][0]["memory"]
+        foreign = MemoryPort(self.ctx.service, companion_id="other", scope_id="other-owner", workspace_id="foreign")
+        self.assertFalse(foreign.recall(foreign.scope, query="50 coins", include_recent=True)["records"])
+        with self.assertRaises(PermissionError):
+            foreign.read(foreign.scope, memory_id=memory["id"])
+        # Rebind the single service's guard to the original port, as production
+        # has one selected Bank/port at a time.
+        self.port = MemoryPort(self.ctx.service, companion_id="pet", scope_id="owner", workspace_id="repo")
+        self.port.withdraw(self.scope, memory_id=memory["id"], expected_version=memory["version"])
+        self.ctx.db.close(); self.open()
+        self.assertFalse(self.port.recall(self.scope, query="50 coins", include_recent=True)["records"])
+        with self.assertRaises(ConflictError):
+            self.port.read(self.scope, memory_id=memory["id"])
+        self.assertIsNotNone(self.port.source(source["id"]), "withdrawal keeps the original source")
 
     def test_missing_context_observation_keeps_the_provider_error_and_bank(self):
         def counts():

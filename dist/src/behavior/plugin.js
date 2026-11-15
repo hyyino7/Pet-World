@@ -6,6 +6,7 @@ import { digest } from '../core/storage.js';
 import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
+import { gardenHomeProjection } from './garden-receipt.js';
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
 const owners = new WeakMap();
 /** The only home/garden runtime writer. It does not create agents or model turns. */
@@ -323,7 +324,7 @@ export class CompanionBehavior {
         const bound = this.currentBound(workspaceId);
         if (!bound)
             return '';
-        return buildHomePromptLine(bound.room.state, { now: Date.now(), allowActivity: true });
+        return buildHomePromptLine(gardenHomeProjection(bound.room.state), { now: Date.now(), allowActivity: true });
     }
     restState(workspaceId) {
         const bound = this.currentBound(workspaceId);

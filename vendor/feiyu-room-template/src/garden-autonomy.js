@@ -260,12 +260,12 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
       const dwell=h.dwell?.target?.gardenJobId===job.id;
       if(route){job.phase='walking';g.care.status=`正在走去${labels[job.action.type]}`;}
       else if(dwell){
-        job.phase='working';job.workUntil=h.dwell.until;g.care.status=`小蓝鱼正在${labels[job.action.type]}`;
+        job.phase='working';job.workUntil=h.dwell.until;g.care.status=`正在${labels[job.action.type]}`;
         if(now>=h.dwell.until){
           const valid=validForJob(g,job,now);
           const result=valid.ok?(job.action.type==='visit'?{ok:true,state:g,message:'到了菜园门口，看看菜畦的长势'}:applyGardenAction(g,job.action,now)):valid;
           if(result.state)g=result.state;
-          finish(g,job,result.ok,`小蓝鱼：${result.message}`,now);
+          finish(g,job,result.ok,result.message,now);
           // Persist receipt BEFORE clearing home dwell: replay cannot spend/reward twice.
           storage.saveGarden(gardenFile,g);gardenCommit=true;
           h=endGardenWork(h,job,now,g.care.status,result.ok);homeTransition=true;
@@ -302,7 +302,7 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
           // Deferred work waits on its persisted condition, not another timer.
         }else if(env.goalPolicy==='planned'){
           g.care.status='本次照料已结束，等待下一项明确安排';
-        }else{g.care.status=g.care.autoEnabled?'菜园照料好了，等作物慢慢长大':'自主照料已暂停，你仍可请小蓝鱼完成指定操作';g.care.nextPlanAt=now+15_000;}
+        }else{g.care.status=g.care.autoEnabled?'菜园照料好了，等作物慢慢长大':'自主照料已暂停，仍可明确安排指定操作';g.care.nextPlanAt=now+15_000;}
       }
     }
     if(!gardenCommit && (careDirty || JSON.stringify(g.care)!==beforeCare))storage.saveGarden(gardenFile,g);
@@ -463,7 +463,7 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
         const job=g.care.task,h=endGardenWork(storage.loadHomeState(homeFile,now),job,now,'自主照料已暂停');
         finish(g,job,false,'自主照料已暂停',now,'cancelled');storage.saveHomeState(homeFile,h,now);
       }
-      const message=input.enabled?(env.goalPolicy==='planned'?'已保存照料偏好，下一项菜园活动由当前生活计划安排':'小蓝鱼会自己安排照料菜园'):(env.goalPolicy==='planned'?'园艺偏好已关闭；生活计划和明确指令仍有效':'已暂停自主照料');g.care.status=message;
+      const message=input.enabled?(env.goalPolicy==='planned'?'已保存照料偏好，下一项菜园活动由当前生活计划安排':'将自主安排照料菜园'):(env.goalPolicy==='planned'?'园艺偏好已关闭；生活计划和明确指令仍有效':'已暂停自主照料');g.care.status=message;
       if(requestId)g.care.receipts.push({requestId,jobId:'',fingerprint,status:'completed',message,at:now});
       g.care=normalizeGardenCare(g.care,Number.isSafeInteger(g.economyRevision));storage.saveGarden(gardenFile,g);
       const result=tick(now);return {ok:true,accepted:false,status:'completed',requestId,message,garden:result.garden,home:homeView(result.state,now,result.env)};
@@ -472,7 +472,7 @@ export function createGardenCaretaker({homeFile,gardenFile,getEnv=()=>({}),stora
     const valid=type==='visit'?{ok:true}:applyGardenAction(g,action,now);
     if(!valid.ok)return {ok:false,message:valid.message};
     const job=createJob(g,action,'requested',now,requestId);g.care.queue.push(job);g.care.nextPlanAt=0;
-    const message=`已记下${labels[type]}，小蓝鱼会走到现场完成；完成后才会结算`;
+    const message=`已记下${labels[type]}，将走到现场完成；完成后才会结算`;
     if(requestId)g.care.receipts.push({requestId,jobId:job.id,fingerprint,status:'queued',message,at:now});
     g.care=normalizeGardenCare(g.care,Number.isSafeInteger(g.economyRevision));storage.saveGarden(gardenFile,g);
     const result=tick(now);return {ok:true,accepted:true,status:'queued',requestId,message,garden:result.garden,home:homeView(result.state,now,result.env)};

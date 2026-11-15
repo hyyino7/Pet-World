@@ -27,7 +27,9 @@ Local adaptations:
   `service/src/cognitive_memory/retrieval/pipeline.py`: carry that optional query
   scope through the existing retriever, without adding another index/ranker.
 - `service/src/cognitive_memory/cognition/consolidate.py`: retain admitted Pet
-  source/scope metadata on existing inferred candidate episodes. The target port
+  source/scope metadata on existing inferred candidate episodes and explicitly
+  attributed interaction episodes. Keep marked native delivery envelopes as
+  original source evidence without generating another experience candidate. The target port
   supplies the existing transactional write guard for immediate/background work.
 - `service/src/cognitive_memory/claims/__init__.py`: lazy ClaimStore import fixes
   the first-withdrawal circular dependency without changing the public symbol.

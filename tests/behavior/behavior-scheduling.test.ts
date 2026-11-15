@@ -8,7 +8,7 @@ import type {PetCoreHost} from '../../src/core/index.js';
 import {CompanionLife} from '../../src/life/plugin.js';
 import {CompanionBehavior} from '../../src/behavior/plugin.js';
 import {CompanionRecordLibrary} from '../../src/core/records.js';
-import type {PersistentLifePlan} from '../../src/life/plan.js';
+import {PersistentLifePlan} from '../../src/life/plan.js';
 import type {BehaviorChange} from '../../src/contracts/behavior.js';
 import {emptyHomeState,nextHomeBoundary} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
@@ -201,6 +201,94 @@ test('a queued receipt read which completes real work still advances the same Li
   assert.equal(result.id,original.id);assert.equal(result.cursor,1);assert.equal(result.status,'waiting');
   assert.equal(f.counters.reschedules,before+1);assert.equal(f.body().plannedExecutions[operation].status,'completed');
   await f.advance(10);assert.equal(f.counters.reschedules,before+1);
+});
+
+test('an asynchronous arrival dispatches all remaining accepted steps without another domain event',async t=>{
+  const f=await fixture(t);
+  await f.life.updatePlan(f.workspace.id,f.plan.read().revision,{goal:'Move, eat and drink',reason:'Continue the accepted queue',
+    steps:[{id:'travel',kind:'move',activity:'Go to balcony',room:'balcony',spot:'chair'},
+      {id:'eat',kind:'body',activity:'Eat',action:'feed'},{id:'drink',kind:'body',activity:'Drink',action:'water'}],nextConsiderAt:null});
+  await f.settle();
+  const original=f.plan.read().plan!,counts={...f.body().counts},reschedules=f.counters.reschedules;
+  await f.advance(Math.ceil(f.body().route.arriveAt-Date.now())+2);
+  const finished=f.plan.read().plan!;
+  assert.equal(finished.id,original.id);assert.equal(finished.cursor,3);assert.equal(finished.status,'waiting');
+  assert.equal(f.body().counts.feed,counts.feed+1);assert.equal(f.body().counts.water,counts.water+1);
+  assert.equal(f.counters.reschedules,reschedules+1,'Only the whole completed queue earns a model consideration');
+  await f.advance(30_000);const ticks=f.counters.ticks;await f.advance(30_000);
+  assert.equal(f.counters.ticks,ticks,'Completed steps do not become a polling pump');
+  assert.equal(f.body().counts.feed,counts.feed+1);assert.equal(f.body().counts.water,counts.water+1);
+});
+
+test('a short owner reaction defers the original admission across Body/plan reopen without replanning',async t=>{
+  const f=await fixture(t);
+  await f.behavior.act(f.workspace.id,'pet','one-owner-touch','desktop');await f.settle();
+  await f.life.updatePlan(f.workspace.id,f.plan.read().revision,{goal:'Eat after the touch',reason:'The same intention remains valid',
+    steps:[{id:'eat',kind:'body',activity:'Eat',action:'feed'}],nextConsiderAt:'2099-01-01T00:00:00Z'});await f.settle();
+  const pending=f.plan.read().plan!,operation=pending.operationId!,feeds=f.body().counts.feed,reschedules=f.counters.reschedules;
+  assert.equal(pending.status,'active');assert.equal(pending.admissionWait?.kind,'owner-activity');assert.equal(pending.replanReason,null);
+  assert.equal(f.body().plannedExecutions?.[operation],undefined,'The typed wait proves Body has not submitted this operation');
+  const restored=new PersistentLifePlan(f.directory,'fish','storage','UTC');
+  (f.life as any).binding.plan=restored;
+  await f.reopenBodyAfter(1);await f.settle();
+  assert.equal(restored.read().plan!.operationId,operation);assert.equal(f.body().counts.feed,feeds);
+  await f.advance(Math.max(0,f.body().reactionUntil-Date.now())+2);
+  const finished=restored.read().plan!;
+  assert.equal(finished.id,pending.id);assert.equal(finished.cursor,1);assert.equal(finished.admissionWait,undefined);
+  assert.equal(f.body().counts.feed,feeds+1);assert.equal(f.counters.reschedules,reschedules,'Temporary ownership causes no model reconsideration');
+  f.emit('pet/core.changed');await f.settle();await f.advance(20_000);
+  assert.equal(f.body().counts.feed,feeds+1,'Reopen and repeated state events cannot repeat the effect');
+});
+
+test('an unavailable native planner cannot consume the continuation of already accepted Body work',async t=>{
+  const f=await fixture(t),internal=f.life as any;
+  internal.startRuntime=async()=>{throw Error('Fixture native planner unavailable');};
+  await f.life.updatePlan(f.workspace.id,f.plan.read().revision,{goal:'Move then eat despite native outage',reason:'Body owns accepted work',
+    steps:[{id:'travel',kind:'move',activity:'Go to balcony',room:'balcony',spot:'chair'},
+      {id:'eat',kind:'body',activity:'Eat',action:'feed'}],nextConsiderAt:null});await f.settle();
+  const original=f.plan.read().plan!,feeds=f.body().counts.feed;
+  await f.advance(Math.ceil(f.body().route.arriveAt-Date.now())+2);
+  assert.equal(f.plan.read().plan!.id,original.id);assert.equal(f.plan.read().plan!.cursor,2);
+  assert.equal(f.body().counts.feed,feeds+1);assert.match(internal.fault,/native planner unavailable/);
+  await f.advance(30_000);const ticks=f.counters.ticks;await f.advance(30_000);
+  assert.equal(f.counters.ticks,ticks);assert.equal(f.body().counts.feed,feeds+1);
+});
+
+test('deferred admission respects pause, starts relative duration at admission and never extends an absolute deadline',async t=>{
+  const f=await fixture(t);
+  await f.behavior.act(f.workspace.id,'pet','touch-before-rest','desktop');await f.settle();
+  await f.life.updatePlan(f.workspace.id,f.plan.read().revision,{goal:'Rest after care',reason:'Keep a complete rest',
+    steps:[{id:'rest',kind:'hold',activity:'Rest',durationMinutes:1}],nextConsiderAt:null});await f.settle();
+  const operation=f.plan.read().plan!.operationId!;
+  await f.life.controlPlan(f.workspace.id,f.plan.read().revision,'pause','Owner paused the plan');await f.settle();
+  await f.advance(20_000);assert.equal(f.plan.read().plan!.status,'paused');assert.equal(f.body().plannedExecutions?.[operation],undefined);
+  await f.life.controlPlan(f.workspace.id,f.plan.read().revision,'resume','Continue the same rest');await f.settle();
+  const admitted=f.plan.read().plan!,execution=f.body().plannedExecutions[operation];
+  assert.equal(admitted.operationId,operation);assert.equal(admitted.admissionWait,undefined);
+  assert.ok(Math.abs(Date.parse(execution.until)-Date.parse(execution.startedAt)-60_000)<5,'Waiting time must not consume a relative rest');
+  await f.life.controlPlan(f.workspace.id,f.plan.read().revision,'cancel','Choose a calendar-bound activity');await f.settle();
+  await f.behavior.act(f.workspace.id,'pet','touch-before-deadline','desktop');await f.settle();
+  const until=new Date(Date.now()+1000).toISOString();
+  await f.life.updatePlan(f.workspace.id,f.plan.read().revision,{goal:'Rest before the deadline',reason:'Do not extend the calendar',
+    steps:[{id:'calendar',kind:'hold',activity:'Calendar rest',until}],nextConsiderAt:null});await f.settle();
+  const expiredOperation=f.plan.read().plan!.operationId!;
+  await f.advance(12_000);
+  const expired=f.plan.read().plan!;
+  assert.equal(expired.status,'waiting');assert.match(expired.replanReason!,/absolute deadline elapsed/);
+  assert.equal(expired.dispatchUntil,until);assert.equal(f.body().plannedExecutions?.[expiredOperation],undefined);
+});
+
+test('an unknown admission error or legacy missing receipt is never treated as safe to resubmit',async t=>{
+  const f=await fixture(t),start=f.behavior.startPlanned.bind(f.behavior);let attempts=0;
+  f.behavior.startPlanned=async()=>{attempts++;throw Object.assign(Error('Unknown refusal'),{name:'PlannedAdmissionWaitError'});};
+  await f.life.updatePlan(f.workspace.id,f.plan.read().revision,{goal:'Retain uncertain work',reason:'Do not guess that a submission is safe',
+    steps:[{id:'eat',kind:'body',activity:'Eat',action:'feed'}],nextConsiderAt:null});await f.settle();
+  const waiting=f.plan.read().plan!,feeds=f.body().counts.feed;
+  assert.equal(waiting.status,'waiting');assert.equal(waiting.admissionWait,undefined);
+  f.behavior.startPlanned=start;
+  (f.life as any).binding.plan=new PersistentLifePlan(f.directory,'fish','storage','UTC');
+  f.emit('pet/core.changed');await f.settle();await f.advance(20_000);
+  assert.equal(f.plan.read().plan!.status,'waiting');assert.equal(f.body().counts.feed,feeds);assert.equal(attempts,1);
 });
 
 test('a real failed deadline checkpoint waits for explicit recovery without a millisecond disk retry loop',async t=>{

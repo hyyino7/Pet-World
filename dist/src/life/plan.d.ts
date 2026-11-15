@@ -1,6 +1,6 @@
 import { type LifeStore } from '#dsh-world/life/lifeStore';
 import type { CompanionBehavior } from '../behavior/plugin.js';
-import type { PlannedActivity } from '../contracts/behavior.js';
+import { type PlannedActivity, type PlannedAdmissionWait } from '../contracts/behavior.js';
 export type PlanStatus = 'active' | 'paused' | 'waiting' | 'completed' | 'cancelled';
 export interface LifeStep {
     id: string;
@@ -34,6 +34,8 @@ export interface CurrentLifePlan {
     cursor: number;
     operationId?: string;
     dispatchUntil?: string;
+    /** Explicit Body proof that this original operation has not been submitted. */
+    admissionWait?: PlannedAdmissionWait;
     execution?: unknown;
     nextConsiderAt: string | null;
     reconsiderWhen: LifeCondition[];

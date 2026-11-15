@@ -1,0 +1,58 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {emptyHomeState} from '../../vendor/feiyu-room-template/home-state.js';
+import {createGarden} from '../../vendor/feiyu-room-template/public/room/garden-state.js';
+import {createGardenCaretaker} from '../../vendor/feiyu-room-template/src/garden-autonomy.js';
+
+test('garden receipts describe the same companion activity without an upstream character identity',t=>{
+  const root=mkdtempSync(join(tmpdir(),'garden-identity-'));
+  t.after(()=>rmSync(root,{recursive:true,force:true}));
+  const homeFile=join(root,'home.json'),gardenFile=join(root,'garden.json');
+  const now=Date.parse('2026-11-15T05:00:00Z');
+  const home=emptyHomeState(now);
+  home.lastInteractionAt=0;
+  home.needs={hunger:.1,thirst:.1,bladder:.1,energy:.9,pain:0};
+  const garden=createGarden(now);
+  garden.care.autoEnabled=false;
+  garden.coins=100;
+  garden.inventory.radish=0;
+  Object.assign(garden.plots[0],{tilled:true,cropId:'radish',progress:1,moisture:.8,plantedAt:now-43_200_000});
+  writeFileSync(homeFile,JSON.stringify(home));
+  writeFileSync(gardenFile,JSON.stringify(garden));
+  const caretaker=createGardenCaretaker({homeFile,gardenFile,getEnv:()=>({autonomy:false,goalPolicy:'planned'})});
+  const originalRequest={type:'harvest',plotId:0,requestId:'one-harvest'};
+  const accepted=caretaker.control(originalRequest,now);
+  assert.equal(accepted.accepted,true);
+  assert.match(accepted.message,/已记下采收/);
+  assert.doesNotMatch(JSON.stringify(accepted),/小蓝鱼/);
+  const savedHome=()=>JSON.parse(readFileSync(homeFile,'utf8'));
+  const savedGarden=()=>JSON.parse(readFileSync(gardenFile,'utf8'));
+  const arrival=Math.ceil(savedHome().route.arriveAt)+1;
+  const working=caretaker.tick(arrival);
+  assert.equal(working.garden.care.task.phase,'working');
+  assert.equal(working.garden.care.status,'正在采收');
+  assert.doesNotMatch(JSON.stringify(working),/小蓝鱼/);
+  const completedAt=Math.ceil(savedHome().dwell.until)+1;
+  const completed=caretaker.tick(completedAt);
+  const receipt=completed.garden.care.receipts.find(row=>row.requestId===originalRequest.requestId);
+  assert.equal(receipt.status,'completed');
+  assert.match(receipt.message,/收获小萝卜/);
+  assert.doesNotMatch(JSON.stringify(completed),/小蓝鱼/);
+  const committed=savedGarden();
+  assert.equal(committed.inventory.radish,3);
+  assert.equal(committed.stats.harvests,1);
+  assert.equal(committed.coins,100);
+  // The same receipt survives caretaker restart; changing labels never repeats
+  // a harvest, grants stock twice or invents a second character's action.
+  const resumed=createGardenCaretaker({homeFile,gardenFile,getEnv:()=>({autonomy:false,goalPolicy:'planned'})});
+  const replay=resumed.control(originalRequest,completedAt+1);
+  assert.equal(replay.accepted,false);
+  assert.equal(replay.status,'completed');
+  assert.equal(replay.message,receipt.message);
+  assert.equal(savedGarden().inventory.radish,3);
+  assert.equal(savedGarden().stats.harvests,1);
+  assert.equal(savedGarden().coins,100);
+});

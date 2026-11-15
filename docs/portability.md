@@ -134,6 +134,13 @@ outage permits ordinary chat without a recall block. This supersedes the earlier
 per-conversation frozen-mode policy. Installed behavior remains identified by
 the dated delivery record until the refactor is packaged and installed.
 
+The Memory provider repairs recall metadata for already admitted Body/Economy
+interaction sources in the selected Bank. It reuses their existing episode IDs,
+retains original observations, content and prior versions, and respects source
+withdrawal. Delivery envelopes remain evidence rather than a second experience;
+old envelope candidates are retained without being added to interaction recall.
+This repair does not import unobserved native logs or recreate a missing Bank.
+
 The controlled two-profile test is `pnpm run test:native-portability`. It checks
 identity/settings/Bank/emotion continuity, full original event preservation,
 same-session continuation, no inference during restore and conflict refusal.

@@ -62,6 +62,21 @@ export interface PlannedActivity {
   /** Durations freeze while paused; explicit calendar deadlines do not. */
   freezeOnPause?: boolean;
 }
+/** Body's synchronous admission guard ran before the durable execution intent
+ * or any effect was submitted. Only this proof permits admission to be retried. */
+export interface PlannedAdmissionWait {
+  version: 1;
+  kind: 'owner-activity';
+  operationId: string;
+  requestId: string;
+  observedAt: string;
+}
+export class PlannedAdmissionWaitError extends Error {
+  constructor(readonly wait: PlannedAdmissionWait) {
+    super('身体仍在完成主人已安排的活动，完成后继续原计划');
+    this.name = 'PlannedAdmissionWaitError';
+  }
+}
 export interface PlannedExecution {
   operationId: string;
   kind: PlannedActivity['kind'];

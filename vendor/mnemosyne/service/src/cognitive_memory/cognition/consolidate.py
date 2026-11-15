@@ -67,6 +67,10 @@ def consolidate_observation(
         raw_meta = {}
     if not isinstance(raw_meta, dict):
         raw_meta = {}
+    # Retain native delivery envelopes as source evidence, not another lived
+    # experience. The scoped Pet port marks only validated fact envelopes.
+    if raw_meta.get("pet_evidence_only"):
+        return None
     # E01：巩固入口执行工作区授权；授权读取仍不自动 verified。
     assert_workspace_authorized(service.db, raw_meta, action="consolidate")
 
@@ -102,6 +106,9 @@ def consolidate_observation(
     # an inferred/candidate episode, never a verified owner fact.
     if raw_meta.get("pet_context"):
         for key in ("pet_scope", "pet_sources", "pet_context"):
+            meta[key] = raw_meta[key]
+    if raw_meta.get("pet_interaction"):
+        for key in ("pet_scope", "pet_sources", "pet_interaction"):
             meta[key] = raw_meta[key]
     st = raw_meta.get("spatiotemporal") if isinstance(raw_meta, dict) else None
     if isinstance(st, dict):

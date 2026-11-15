@@ -84,6 +84,19 @@ compaction, review and source withdrawal keep their existing owners. Operational
 settings and storage details are in [settings](settings.md) and
 [portability](portability.md).
 
+Accepted Life steps continue from actual completion events without another
+model decision. A typed Body refusal before submission retains the original
+operation while the current owner interaction finishes; an unknown submission
+outcome still requires receipt reconciliation. Integration tests must exercise
+these transitions through the real coordinators without manually advancing the
+next step.
+
+Interaction delivery acknowledgement is separate from shared Memory recall.
+Admitted domain facts remain system evidence with their original actor and
+source; transport envelopes are evidence only. Cross-conversation checks must
+call the actual provider recall after the first conversation acknowledges the
+fact, rather than supplying its known ID to the second conversation.
+
 Body retains optional `gardenClockEnabled` metadata in its existing home
 checkpoint. Explicit Life pause freezes crop time; component suspension retains
 clock intent. Queries before restoration preserve elapsed growth. Economy
