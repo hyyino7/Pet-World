@@ -123,7 +123,8 @@ modules, declarations and templates are redistributed under this MIT license.
 and the [upstream license](vendor/dsh-world/LICENSE) accompany the package.
 The Life runtime adaptation retains unfinished review dates and reconciles native
 diary write results through the existing scheduler and Life store, with bounded
-retries and protected historical records. Origin pins and upstream licenses are
+retries and protected historical records. The existing diary guard also admits
+missing-file backfill for pending dates from native owner conversations. Origin pins and upstream licenses are
 unchanged.
 Core's scoped prompt registration, request-series restart and retirement of old
 prompt content adapt `src/promptSection.ts`, `src/worldScope.ts` and

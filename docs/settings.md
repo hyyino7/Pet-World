@@ -432,6 +432,12 @@ retrying, and a successful write or an already existing nonempty diary prevents
 replaying that date. Existing-file reconciliation preserves the record; it does
 not claim a new verified write. Other dates in the backlog remain separate jobs.
 
+The native diary guard also accepts a direct owner-chat `write` to a missing
+historical diary when that exact date is already in the persisted review backlog.
+The successful native receipt clears that date without an additional autonomous
+turn. This exception does not permit editing an existing historical file or
+open file tools to an ordinary autonomous turn.
+
 A backfill turn receives the original date's scope. It can create that missing
 diary and records the actual backfill date in its text. Existing past diaries
 cannot be overwritten, including when a file appears between preparation and

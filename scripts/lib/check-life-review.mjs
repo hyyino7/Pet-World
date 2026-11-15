@@ -89,6 +89,28 @@ export async function checkLifeReview({ctx, host, workspace, root, life, until, 
   assert.equal((await readLifeWriting(host,scope(),'self.md'))?.trim(), self);
   keepSelfCopy(join(directory,'self.md'),day);
   assert.equal((await readLifeWriting(host,scope(),'self.history/'+day+'.md'))?.trim(), self);
+  // A direct owner request in the native home is distinct from an autonomous
+  // review. Exercise both Core's ordinary permissions and World's diary guard.
+  const priorDay=formatLocalTime(new Date(Date.now()-86400000),life.timeZone).slice(0,10);
+  const backfillFile=join(directory,'diary',priorDay+'.md');
+  assert.equal(existsSync(backfillFile),false);
+  store.update(state=>{state.pendingReviews=[{day:priorDay,at:new Date(Date.now()-86400000).toISOString(),attempts:0}];});
+  let backfillStep=0;
+  setProgram(async function*(options) {
+    const last=options.messages.filter(message=>message.role==='tool').at(-1);
+    if(backfillStep++===0)yield* call('write',{file_path:backfillFile,content:'Backfilled on '+day+'. I noticed the red lighthouse yesterday.'});
+    else if(backfillStep===2) {
+      assert.ok(last&&!last.isError,JSON.stringify(last));
+      yield* call('write',{file_path:backfillFile,content:'Must not replace the historical record.'});
+    } else {
+      assert.ok(last?.isError,'An existing historical diary remains protected');
+      yield* say('The missing diary was backfilled; its original contents remain.');
+    }
+  });
+  await talk('Please backfill the missing diary for '+priorDay+'.',homeId);
+  assert.equal(backfillStep,3);
+  assert.match(readFileSync(backfillFile,'utf8'),/I noticed the red lighthouse yesterday/);
+  assert.ok(!store.read().pendingReviews?.some(item=>item.day===priorDay),'Owner backfill acknowledges its original pending date');
   setProgram(async function*(options) {
     assert.ok(textOf(options).includes('<我是谁.md>\n'+self), JSON.stringify({message:'A different native conversation sees the upstream self section', selfIncluded:textOf(options).includes(self), roles:options.messages.map(m=>m.role), first:textOf(options).match(/.{0,20}我是谁.{0,70}/g)}));
     yield* say('I have my notebook.');
@@ -123,5 +145,5 @@ export async function checkLifeReview({ctx, host, workspace, root, life, until, 
   assert.equal(existsSync(join(directory,'conversations',day+'.jsonl')),false);
   await life.control(workspaceId, false);
   console.log(JSON.stringify({ok:true, review:'native', dialogueLines:reviewPage.items.length, privateExcluded:true,
-    ordinarySelf:true, nativeReadWrite:true, outsideScopeDenied:true, withdrawalPreservedOriginalWriting:true, paidCalls:0}));
+    ordinarySelf:true, nativeReadWrite:true, ownerBackfill:true, historicalOverwriteDenied:true, outsideScopeDenied:true, withdrawalPreservedOriginalWriting:true, paidCalls:0}));
 }

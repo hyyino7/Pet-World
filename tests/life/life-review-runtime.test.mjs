@@ -1,6 +1,7 @@
+import {closedDiaryRefusal} from '../../vendor/dsh-world/lib/life/diary.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,symlinkSync,unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createLifeRuntime} from '../../vendor/dsh-world/lib/life/runtime.js';
@@ -15,9 +16,9 @@ async function fixture(t) {
   store.update(state=>Object.assign(state,{homeSessionId:'home',planRevision:1,currentPlan:{id:'retained'},review:{day:'2026-11-15',at:'2026-11-15T23:00:00Z'}}));
   let reviewTime='23:00',unknown=false;
   let now=Date.parse('2026-11-15T23:00:00Z'),serial=0,turn=0,runtime,completed=0;
-  const handles=new Map(),handlers=new Map(),events=[],sent=[];
+  const handles=new Map(),handlers=new Map(),events=[],sent=[],guards=[];
   const session={id:'home',header:{agentPreset:'standard',cwd:root},get seq(){return events.length;},eventAt:seq=>events[seq],snapshotEvents:()=>events};
-  const agent={id:'home',session,status:'idle',inbox:{nextStep:[],nextTurn:[]},ctx:{tools:{register:()=>()=>{},guard:()=>()=>{}}},
+  const agent={id:'home',session,status:'idle',inbox:{nextStep:[],nextTurn:[]},ctx:{tools:{register:()=>()=>{},guard(fn){guards.push(fn);return()=>{const index=guards.indexOf(fn);if(index>=0)guards.splice(index,1);};}}},
     steer(message){sent.push(message);this.inbox.nextStep.push(message);}};
   const ctx={logger:{error(){}},on(name,handler){const set=handlers.get(name)??new Set();handlers.set(name,set);set.add(handler);return()=>set.delete(handler);},
     get:()=>undefined,agents:{list:()=>[agent],get:()=>agent},sessions:{flush:async()=>true}};
@@ -44,11 +45,13 @@ async function fixture(t) {
   const write=async(day,{error=false,content='A first-person diary.'}={})=>{
     const file=join(records,'diary',day+'.md'),callId='write-'+events.length;
     await emit('tool/call',{turn,name:'write',callId,arguments:JSON.stringify({file_path:file,content})});
+    const denial=guards.map(guard=>guard({name:'write',arguments:{file_path:file,content},agent})).find(Boolean);
+    error ||= Boolean(denial);
     if(!error)writeFileSync(file,content);
     await emit('tool/result',{turn,message:{role:'tool',toolCallId:callId,isError:error,content:[{type:'text',text:error?'Write denied':'Written'}]}});
   };
   await start();t.after(()=>runtime.stop());
-  return{store,sent,records,agent,emit,advance,admit,end,write,start,status:day=>reviewDiaryStatus(host,scope,day,session,sent.at(-1)?.id??''),get runtime(){return runtime;},get completed(){return completed;},
+  return{store,sent,records,agent,emit,advance,admit,end,write,start,owner:async()=>{agent.status='running';await emit('turn/start',{turn:++turn});await emit('user/message',{id:'owner-'+turn,role:'user',source:{kind:'user'},content:[{type:'text',text:'Backfill the missed diary.'}]});},status:day=>reviewDiaryStatus(host,scope,day,session,sent.at(-1)?.id??''),get runtime(){return runtime;},get completed(){return completed;},
     set reviewTime(value){reviewTime=value;runtime.reschedule();},set unknown(value){unknown=value;},
     set now(value){now=value;},get now(){return now;}};
 }
@@ -128,4 +131,28 @@ test('owner input ends autonomous review access without immediately reviving the
   await f.end();assert.equal(f.store.read().pendingReviews[0].retryAt,undefined);
   assert.match(f.store.read().pendingReviews[0].failure,/owner-interrupted/);
   await f.advance(60_000);assert.equal(f.sent.length,1);
+});
+
+test('ordinary owner turn can create a pending historical diary through the actual World guard, then cannot overwrite it',async t=>{
+  const f=await fixture(t);f.runtime.stop();f.now=Date.parse('2026-11-16T01:00:00Z');
+  f.store.update(state=>{state.review={day:'2026-11-16',at:'2026-11-16T23:00:00Z'};state.pendingReviews=[{day:'2026-11-15',at:'2026-11-15T23:00:00Z',attempts:0}];});
+  await f.start();await f.owner();
+  await f.write('2026-11-15',{content:'Backfilled on 2026-11-16. My original diary.'});
+  assert.equal(f.status('2026-11-15'),'existing','Owner write is not attributed to a nonexistent autonomous wake');
+  const path=join(f.records,'diary/2026-11-15.md');assert.match(readFileSync(path,'utf8'),/Backfilled/);
+  await f.write('2026-11-15',{content:'Forbidden replacement'});assert.match(readFileSync(path,'utf8'),/My original diary/);
+  await f.end();assert.deepEqual(f.store.read().pendingReviews,[],'The successful owner receipt clears the exact pending date');
+  assert.equal(f.sent.length,0,'Backfill needs no extra autonomous model turn');
+});
+
+test('pending-date permission permits only missing past-file creation and rejects aliases, edits and replacements',async t=>{
+  const f=await fixture(t),day='2026-11-14',file=join(f.records,'diary',day+'.md'),today='2026-11-16';
+  const open=new Set([today]),pending=new Set([day]);
+  const check=(tool,path=file,days=pending,opened=open)=>closedDiaryRefusal(tool,{file_path:path},join(f.records,'diary'),join(f.records,'..'),opened,today,days);
+  assert.equal(check('write','.chatpet/diary/'+day+'.md'),undefined);
+  assert.match(check('write',file,new Set()),/已经合上/);
+  assert.match(check('edit'),/已经合上/);
+  assert.match(check('write',join(f.records,'diary/2026-11-17.md'),new Set(['2026-11-17'])),/已经合上/);
+  writeFileSync(file,'Historical record');assert.match(check('write',file,pending,new Set([today,day])),/已经合上/);
+  unlinkSync(file);symlinkSync(join(f.records,'missing-target'),file);assert.match(check('write'),/已经合上/);
 });

@@ -620,6 +620,20 @@ export function createLifeRuntime(deps) {
         try { return deps.reviewDiaryStatus?.(day,session,messageId) ?? 'missing'; }
         catch (error) { faults.set('review', `日记写入待核对：${errorText(error)}`); return 'unknown'; }
     }
+    function finishOwnerBackfills(session, event) {
+        if (!deps.reviewDiaryStatus || !state.pendingReviews?.length || state.reviewWake) return;
+        const events = session.snapshotEvents();
+        const start = events.findLastIndex(item => item.type === 'turn/start' && item.data.turn === event.data.turn);
+        if (start < 0) return;
+        const input = events.slice(start).find(item => item.type === 'user/message' && item.data.source.kind === 'user');
+        if (!input) return;
+        const completed = state.pendingReviews.filter(item => reviewStatus(item.day,session,input.data.id) === 'written');
+        if (!completed.length) return;
+        const days = new Set(completed.map(item => item.day));
+        state.pendingReviews = state.pendingReviews.filter(item => !days.has(item.day));
+        store.write(state);
+        if (!state.pendingReviews.length) faults.clear('review');
+    }
     function finishReview(session, reason) {
         const wake = state.reviewWake;
         if (!wake || wake.sessionId !== session.id) return;
@@ -970,8 +984,10 @@ export function createLifeRuntime(deps) {
         inWorld: agent => !stopped && includes(agent.session),
         isHome: agent => agent.id === state.homeSessionId,
         guard: ({ name, arguments: args, agent }) => {
+            refreshState();
             const today = formatLocalTime(clock(), timeZone).slice(0, 10);
-            return closedDiaryRefusal(name, args, options.diaryDir, agent?.session.header.cwd ?? options.roomDir, openDiaryDays(today), today);
+            const backfill = new Set(deps.reviewDiaryStatus ? state.pendingReviews?.map(item => item.day) : []);
+            return closedDiaryRefusal(name, args, options.diaryDir, agent?.session.header.cwd ?? options.roomDir, openDiaryDays(today), today, backfill);
         },
         tools: agent => [
             ...lifeTools({
@@ -1027,6 +1043,7 @@ export function createLifeRuntime(deps) {
                 return;
             refreshState();
             journal.world(session, event);
+            if (event.type === 'turn/end') finishOwnerBackfills(session,event);
             if (session.id !== state.homeSessionId)
                 return;
             journal.home(session, event);

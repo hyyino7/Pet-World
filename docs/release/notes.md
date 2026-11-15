@@ -1,29 +1,20 @@
-# Her World 0.1.7
+# Her World 0.1.8
 
-Unfinished daily reviews now retain their original dates and failure reasons
-across midnight and restart. Missing diaries from previously delivered reviews
-are recovered from existing Life wake records. Technical retries are bounded;
-owner interruption and cancellation retain the task for a later daily review.
-Disabling evening review suspends pending dispatch without deleting the backlog.
+A direct owner request can now backfill a missing historical diary when that
+exact date is already in the persisted review backlog. The original native
+World diary guard previously rejected this ordinary-chat path even though an
+autonomous review could create the same missing file. The guard now distinguishes
+missing-file creation from editing a closed historical diary.
 
-Review prompts and tool refusals direct native file work through scoped `read`
-and `write`. Completion checks reconcile native write receipts with the canonical
-diary file. Existing records are retained without claiming a new write. Backfill
-can create a missing diary for its specified date, while existing historical
-diaries cannot be overwritten, including when a file appears before dispatch.
-No self-description change is required to finish a diary review.
+Successful native owner-write receipts clear the corresponding pending date
+without another autonomous model turn. Existing historical files, including
+linked entries, remain protected; the exception does not expose native file
+tools to ordinary autonomous turns or authorize unrelated dates.
 
-Sleep guidance and body context explicitly distinguish quiet waiting, a pending
-sleep action and actual sleep. Choosing sleep requires the existing `body/sleep`
-action; reply prose, a hold and a consideration alarm do not put the body to sleep.
-Sleep remains an autonomous choice. Regression checks exercise arrival, gentle
-touch and wait completion through the real Life and Body coordinators.
+The native isolated regression now creates a missed prior-day diary through an
+ordinary owner conversation, rejects an attempted overwrite and checks backlog
+acknowledgement. Existing review, scope, Memory withdrawal and original-record
+checks remain included. Tests use disposable data and scripted models.
 
-Focused verification passed 168 related tests, native isolated Life checks,
-types, build and package closure checks, without paid model calls or personal
-companion workspaces. The publication workflow also runs the full shared
-verification before publishing its checked archive.
-
-Installation remains owner-controlled. Publication performs no local install
-or personal-data modification. Installed functional acceptance is separate
-from automated source and package checks.
+Publication does not install the local plugin or modify personal diary files.
+Update Her World through DSH's native plugin version manager after publication.
