@@ -162,7 +162,7 @@ export class CompanionRoom {
         }
         const physical = this.currentExecution();
         const physicalTarget = this.state.route?.target ?? this.state.dwell?.target;
-        if (physical?.status === 'running' && ['body', 'hold', 'room'].includes(physical.kind) && physical.phase === 'pending'
+        if (physical?.status === 'running' && ['body', 'hold', 'room', 'move'].includes(physical.kind) && physical.phase === 'pending'
             && (physical.resuming || physicalTarget?.plannedOperationId !== physical.operationId))
             this.dispatchExecution(physical, now, physical.resuming === true);
         const arrivalRoute = this.state.route;
@@ -176,8 +176,11 @@ export class CompanionRoom {
         const current = this.currentExecution(), active = this.state.route?.target ?? this.state.dwell?.target;
         if (current?.status === 'running' && current.kind === 'body' && current.effectAppliedAt && (current.input.action !== 'sleep' || this.state.asleep))
             this.updateExecution(current, { status: 'completed', phase: 'completed' }, now);
-        else if (current?.status === 'running' && ['hold', 'room'].includes(current.kind)) {
-            if (active?.plannedOperationId === current.operationId) {
+        else if (current?.status === 'running' && ['hold', 'room', 'move'].includes(current.kind)) {
+            if (current.kind === 'move' && this.completeMove(current, now)) {
+                // Arrival owns completion even when Economy is unavailable.
+            }
+            else if (active?.plannedOperationId === current.operationId) {
                 const phase = this.state.route ? 'moving' : 'working', arrival = this.roomArrival(current, arrivalRoute);
                 if (current.phase !== phase || Object.keys(arrival).length)
                     this.updateExecution(current, { phase, ...arrival }, now);
@@ -377,7 +380,9 @@ export class CompanionRoom {
     }
     publicExecution(row) {
         const { input: _input, fingerprint: _fingerprint, pausedAt: _pausedAt, remainingMs: _remainingMs, parkedAt: _parkedAt, resuming: _resuming, effectAppliedAt: _effectAppliedAt, effectDeclinedAt: _effectDeclinedAt, settlementCompletedAt: _settlementCompletedAt, executionStartedAt: _executionStartedAt, presentationBaseAt: _presentationBaseAt, pausedMs: _pausedMs, presentationFreeze: _presentationFreeze, interaction: _interaction, ...value } = row;
-        return structuredClone(value);
+        const completion = row.kind === 'move' ? 'arrival' : ['room', 'hold'].includes(row.kind) ? row.until ? 'deadline' : 'explicit-control' : 'receipt';
+        return structuredClone({ ...value, completion, ...(row.status === 'running' && row.phase === 'working' && completion === 'explicit-control'
+                ? { reason: '已就位，持续活动等待明确调整或取消；不会因到达或下次考虑时间自动结束，后续步骤尚未开始。' } : {}) });
     }
     updateExecution(row, values, now) {
         // Optional fields cleared by a transition must be absent in memory as
@@ -570,6 +575,10 @@ export class CompanionRoom {
         }
     }
     dispatchExecution(row, now, resume = false) {
+        if (row.kind === 'move' && this.state.asleep) {
+            this.updateExecution(row, { status: 'failed', phase: 'completed', reason: '身体正在睡觉，先明确醒来再移动' }, now);
+            return;
+        }
         if (row.kind === 'economy') {
             this.dispatchEconomy(row, now);
             return;
@@ -678,7 +687,7 @@ export class CompanionRoom {
             ...(input.until ? { until: input.until } : {}), input: structuredClone(input), fingerprint: digest(input) };
     }
     startPlanned(input, now = Date.now(), ownerMeal = false) {
-        if (!input || !['hold', 'room', 'garden', 'body', 'economy', 'read'].includes(input.kind))
+        if (!input || !['hold', 'room', 'move', 'garden', 'body', 'economy', 'read'].includes(input.kind))
             throw Error('未知的计划活动');
         if (typeof input.operationId !== 'string' || !input.operationId || input.operationId.length > 96
             || /[\u0000-\u001f\u007f]/.test(input.operationId) || ['__proto__', 'constructor', 'prototype'].includes(input.operationId))
@@ -694,7 +703,7 @@ export class CompanionRoom {
         }
         if (input.freezeOnPause !== undefined && typeof input.freezeOnPause !== 'boolean')
             throw Error('计划暂停计时方式无效');
-        if (input.kind === 'room' && (typeof input.room !== 'string' || typeof input.spot !== 'string' || !HOME_LAYOUT.spots[input.room]?.[input.spot]))
+        if (['room', 'move'].includes(input.kind) && (typeof input.room !== 'string' || typeof input.spot !== 'string' || !HOME_LAYOUT.spots[input.room]?.[input.spot]))
             throw Error('计划中的房间位置不存在');
         if (input.kind === 'hold' && (input.room !== undefined || input.spot !== undefined))
             throw Error('原地活动不能指定移动目标');
@@ -711,7 +720,7 @@ export class CompanionRoom {
         if (input.kind === 'read' && (!input.reading || typeof input.reading.itemId !== 'string' || !input.reading.itemId.trim()
             || !Number.isSafeInteger(input.reading.segment) || input.reading.segment < 0))
             throw Error('阅读计划须指定已持有读物及实际片段编号');
-        if (['garden', 'body', 'economy', 'read'].includes(input.kind) && input.until !== undefined)
+        if (['move', 'garden', 'body', 'economy', 'read'].includes(input.kind) && input.until !== undefined)
             throw Error('执行活动依据真实回执结束，持续动画请另加原地或房间活动');
         canonical(input);
         const previous = this.executions()[input.operationId], fingerprint = digest(input);
@@ -853,6 +862,17 @@ export class CompanionRoom {
             return 0;
         const emotionAt = this.emotion()?.updatedAt;
         return Math.max(start, typeof emotionAt === 'number' && Number.isFinite(emotionAt) && emotionAt > 0 ? emotionAt : 0);
+    }
+    /** The owned destination dwell proves arrival, including after a reopen. */
+    completeMove(row, now) {
+        if (this.state.route || this.state.asleep || this.state.dwell?.target?.plannedOperationId !== row.operationId
+            || this.state.room !== row.input.room || this.state.spot !== row.input.spot)
+            return false;
+        // Release only this operation's dwell before admitting the next step.
+        this.state = pausePlannedHomeActivity(this.state, row.operationId, now);
+        this.state.activity = '已到达目标位置';
+        this.updateExecution(row, { status: 'completed', phase: 'completed' }, now);
+        return true;
     }
     /** Only an owned physical route arrival establishes a new quiet phase.
      * A moving receipt with its persisted arrival also covers the existing
@@ -1144,6 +1164,9 @@ export class CompanionRoom {
                     if (phase !== planned.phase)
                         this.updateExecution(planned, { phase }, now);
                 }
+            }
+            else if (planned.kind === 'move' && this.completeMove(planned, now)) {
+                // Actual physical arrival, never an animation or elapsed-time guess.
             }
             else if (target?.plannedOperationId === planned.operationId) {
                 const phase = this.state.route ? 'moving' : 'working', arrival = this.roomArrival(planned, arrivalRoute);

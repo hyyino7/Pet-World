@@ -53,7 +53,7 @@ export interface PlanDraft {
     nextConsiderAt: string | null;
     reconsiderWhen?: LifeCondition[];
 }
-/** Structural validation, not an invented daily routine or interval policy. */
+/** Validate executable structure and queue reachability without choosing a routine. */
 export declare function parsePlanDraft(raw: unknown): PlanDraft;
 /** One scoped intent in World's existing life.json. Body receipts own actual execution.
  * The owning CompanionLife queue serializes every intent mutation, including

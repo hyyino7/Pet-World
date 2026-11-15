@@ -10,8 +10,10 @@ function string(value, label) {
 function instant(value) {
     check(typeof value === 'string' && /(?:Z|[+-]\d\d:\d\d)$/.test(value) && Number.isFinite(Date.parse(value)), 'Use an ISO time with an explicit timezone');
 }
-/** Structural validation, not an invented daily routine or interval policy. */
-export function parsePlanDraft(raw) {
+/** Validate executable structure and queue reachability without choosing a routine. */
+export function parsePlanDraft(raw) { return parsePlan(raw, false); }
+/** Stored legacy queues remain readable; new submissions must be reachable. */
+function parsePlan(raw, legacy) {
     check(object(raw), 'Invalid life plan');
     string(raw.goal, 'goal');
     string(raw.reason, 'reason');
@@ -25,9 +27,9 @@ export function parsePlanDraft(raw) {
         check(value.activity.length <= 80, 'Use a short activity label; put the explanation in the plan reason');
         check(!ids.has(value.id), 'Activity ids must be unique');
         ids.add(value.id);
-        check(['hold', 'room', 'garden', 'body', 'economy', 'read'].includes(String(value.kind)), 'Unsupported activity kind');
+        check(['hold', 'room', 'move', 'garden', 'body', 'economy', 'read'].includes(String(value.kind)), 'Unsupported activity kind');
         const step = { id: value.id, kind: value.kind, activity: value.activity };
-        if (value.kind === 'room') {
+        if (value.kind === 'room' || value.kind === 'move') {
             string(value.room, 'room');
             string(value.spot, 'spot');
             step.room = value.room;
@@ -61,7 +63,7 @@ export function parsePlanDraft(raw) {
         }
         if (value.presentationSlot !== undefined)
             step.presentationSlot = requirePresentationSlot(value.presentationSlot, step);
-        if (['garden', 'body', 'economy', 'read'].includes(String(value.kind)))
+        if (['move', 'garden', 'body', 'economy', 'read'].includes(String(value.kind)))
             check(value.durationMinutes === undefined && value.until === undefined, 'Executable activities finish on actual receipts; use a following hold or room step for sustained animation');
         check(value.durationMinutes === undefined || value.until === undefined, 'Choose a duration or an end time');
         if (value.durationMinutes !== undefined) {
@@ -75,6 +77,10 @@ export function parsePlanDraft(raw) {
         }
         return step;
     });
+    if (!legacy)
+        for (const [index, step] of steps.entries()) {
+            check(!(['room', 'hold'].includes(step.kind) && step.durationMinutes === undefined && step.until === undefined && index < steps.length - 1), `Activity ${step.id} waits for explicit control and blocks later steps. Use move for arrival, set durationMinutes/until for a finite stay, or put indefinite waiting last. nextConsiderAt only wakes planning; it does not complete the activity.`);
+        }
     check(raw.nextConsiderAt === null || typeof raw.nextConsiderAt === 'string', 'Specify nextConsiderAt, or null to wait for an event');
     if (raw.nextConsiderAt !== null)
         instant(raw.nextConsiderAt);
@@ -110,7 +116,7 @@ export class PersistentLifePlan {
         if (plan) {
             check(plan.version === 1 && plan.companionId === companionId && plan.storageId === storageId, 'Life plan belongs to another companion or format');
             check(Number.isSafeInteger(plan.revision) && Number.isSafeInteger(plan.cursor) && plan.cursor >= 0 && plan.cursor <= plan.steps.length, 'Life plan progress is invalid; original state retained');
-            parsePlanDraft(plan);
+            parsePlan(plan, true);
             check(['active', 'paused', 'waiting', 'completed', 'cancelled'].includes(plan.status) && Array.isArray(plan.triggeredConditions), 'Invalid stored plan status');
             check(!plan.operationId || !!plan.steps[plan.cursor] && plan.operationId === `life:${plan.id}:${plan.steps[plan.cursor].id}`, 'Stored activity does not match the current plan step');
             if (plan.dispatchUntil)
@@ -147,6 +153,7 @@ export class PersistentLifePlan {
     }
     async commit(expectedRevision, draft, behavior, workspaceId, validate = () => { }) {
         validate();
+        draft = parsePlanDraft(draft);
         const old = this.read();
         check(old.revision === expectedRevision, 'Life plan changed; read it again');
         if (draft.nextConsiderAt)

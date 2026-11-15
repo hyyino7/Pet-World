@@ -1,7 +1,5 @@
 name: Source and runtime checks
 on:
-  push:
-    branches: [main]
   pull_request:
 permissions:
   contents: read
@@ -16,16 +14,7 @@ jobs:
         shell: bash
         run: |
           source ./scripts/env.sh
-          pnpm run check:env
-          pnpm run check:types
-          pnpm test
-          pnpm run check:release
-          pnpm run test:refresh
-          node --test tests/regressions/mapped-refused-movement.test.mjs
-          pnpm run test:release
-          mkdir -p .cache/release
-          COPYFILE_DISABLE=1 pnpm pack --pack-destination .cache/release
-          pnpm run check:package .cache/release/her-world-*.tgz
+          pnpm run verify
       - uses: actions/upload-artifact@v4
         with:
           name: checked-runtime

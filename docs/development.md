@@ -1,11 +1,11 @@
 # Development
 
-Use the current source and README as the working entry point. This repository
-keeps no historical handoff or implementation-report archive.
+Start with README and this document. Keep current source and operational docs;
+do not create historical plan, handoff or audit-report collections.
 
-## Bootstrap
+## Local tools
 
-On Apple Silicon macOS, install the pinned local runtimes with
+On Apple Silicon macOS, prepare the pinned tools once with
 `python3 scripts/setup-runtime.py` (requires `uv`), then:
 
 ```sh
@@ -14,119 +14,85 @@ pnpm install --frozen-lockfile --ignore-scripts
 uv pip install --python .venv/bin/python -r vendor/mnemosyne/requirements-test.lock
 ```
 
-Tools and dependencies are disposable and ignored. Do not replace global
-runtimes or the installed DSH application. Required upstream code is already
-in `vendor/`; origin/commit/license metadata is retained without cloned
-reference projects.
+Source `scripts/env.sh` in each development shell. Do not replace global tools
+or the installed DSH application. Bundled upstream origins and licenses stay in
+`references/manifest.json`, vendor records and `THIRD_PARTY_NOTICES.md`.
 
-## Verification
+## Everyday checks
+
+Run checks affected by the change. For a crop-clock edit, for example:
 
 ```sh
-pnpm run check:types
-pnpm test
-pnpm run test:life-integration
-pnpm run test:release
 pnpm run build
-pnpm run check:release
-pnpm run test:refresh
+node --test dist/tests/behavior/garden-clock-continuity.test.js tests/regressions/audit-r5-garden-clock.test.mjs
 ```
 
-`pnpm test` retains its previous scope: compiled TypeScript tests plus World
-JavaScript tests. `test:life-integration` retains the explicit existing regression
-suites. Moving tests does not remove their assertions or broaden them into live
-account/model checks. Python provider tests are under `tests/memory/`.
-`test:refresh` covers bounded Room/garden/Desktop refresh convergence, stale
-responses, explicit refreshes, intentional frame rates and resize/draw ordering.
-On macOS, the isolated compositor check uses the existing Electron runtime:
+Documentation-only edits need link, diff and scope checks. `pnpm test` and the
+existing focused suite commands remain available; do not chain overlapping
+suites and rebuilds just to repeat the same verification.
+
+## Full verification and release
 
 ```sh
-"$HOME/.dsh/electron/Electron.app/Contents/MacOS/Electron" tests/manual/room-canvas.cjs
-pnpm run test:room-refresh
+pnpm run verify
 ```
 
-Native/window checks in `scripts/checks/` and fixtures in `tests/manual/` require
-explicit isolated environments; they must not run against personal companion data.
+This is the shared PR/release check: environment and types, one build, all
+compiled TypeScript and JavaScript test entry files once, Python Memory tests,
+release validation, one archive and its package-closure/integrity checks.
+Regression tests for crop growth, wallet/inventory, deduplication, Memory,
+continuity, backup/restore and storage ownership remain included. Tests use
+disposable data and no paid models. Memory process tests need local loopback;
+a sandbox-denied bind is an environment failure, not a failed recall result.
 
-Crop-clock continuity is covered by `garden-clock-continuity.test.ts` in both
-the main tests and `test:life-integration`. It uses disposable Body and SQLite
-Economy data, including real Cordis service disposal and replacement, without
-models or installation. Body retains optional `gardenClockEnabled` metadata in
-its existing home checkpoint: an explicit Life pause freezes crop time, while
-component suspension preserves clock intent. Legacy checkpoints with unknown
-intent retain elapsed growth during observation until admission is restored.
-Economy rejects checkpoints that reduce an existing crop's committed progress or
-rewind its settlement clock. These checks prevent future rollback; they do not
-reconstruct growth already lost from an older save.
+The publication workflow runs this command itself. Local work normally needs
+only relevant checks; a separate manual release copy and a second full local
+verification are unnecessary for clean, committed source. See
+[publication and update instructions](github-updates.md) for the single release
+entry and for safely isolating intended changes from a dirty working tree.
 
-`pnpm run test:native-context` uses the installed DSH loop and native persistence
-with a scripted local model and a disposable workspace. It checks a stable system
-prefix, one current operational snapshot, durable interaction acknowledgements,
-retained originals and an unchanged accepted Life plan. It installs nothing and
-makes no paid model calls. Domain/Memory failure and restart cases remain in
-`test:life-integration`.
+## Optional native checks
 
-`test:native-services` verifies real Bank recall across conversations and a
-provider restart. `test:native-life` explicitly enables the fixture's review
-schedule, exercises preset-inherited native read/write tools, rejects writing
-outside the original review scope, and checks independent writing after Bank
-correction/withdrawal. Both use disposable data and scripted models. Their local
-Memory provider must be allowed to bind loopback; a denied bind is an environment
-failure, not evidence of broken recall. Review masks combine the host's global view with visible preset read/write
-capabilities; agent-local Life tools are never passed as inherited names.
+Native/window checks under `scripts/checks/` and `tests/manual/` require explicit
+isolated environments. Never run them against personal companion data.
 
-Completed autonomous Life turns also prepare model-free history maintenance
-while the native Agent is idle. Only older successful default state reads are
-eligible; the latest turn, owner turns/takeovers, reviews, errors, explicit full
-views, interaction/transaction receipts and reading text remain untouched.
-The existing module-owned overview functions preserve pending plans, waiting
-states, failures, inventory and receipt identifiers. A queued input takes
-precedence. No new timer, session, summary call or Memory writer is created.
+- `test:native-context`: real installed DSH loop/persistence with a scripted
+  local model; current context, durable interaction acknowledgement, originals
+  and the accepted plan survive.
+- `test:native-services`: cross-conversation Bank recall and provider restart.
+- `test:native-life`: scoped review read/write, outside-scope rejection,
+  correction/withdrawal, native history restoration and compaction continuity.
+- `test:room-refresh`: optional macOS Room compositor/window verification.
 
-Idle preparation does not write the log: DSH requires replacement tool results
-inside an open turn. Prepared changes land in the next real `agent/request`,
-with native shadow pricing, positional source citations and ordinary turn
-persistence. Changed bindings and nodes superseded by native compaction are
-discarded. All original events remain in the append-only log. Native semantic
-compaction, Memory batching, recall, source withdrawal and review schedules keep
-their existing ownership and settings. `test:native-life` checks persisted
-restoration and continuation through the actual preset compaction provider,
-using one explicitly requested scripted summary for that compatibility test.
+These checks do not install or update DSH. Installed owner acceptance is
+separate from source, package and scripted-host validation.
 
-For an explicitly selected original native log, a read-only payload comparison is
-available after building:
+For a specifically selected original native log, the read-only
+`pnpm run check:context-payload -- /absolute/events.jsonl.zstd --day YYYY-MM-DD --offset-hours 7`
+compares context rendering. Counts are request-weighted text characters, not
+billed tokens or measured cache savings; overlapping estimates cannot be added.
 
-```sh
-pnpm run check:context-payload -- /absolute/events.jsonl.zstd --day 2026-11-14 --offset-hours 7
-```
+## Runtime and data boundaries
 
-It accepts native JSONL (including concatenated Zstandard frames) or an event
-array. Output contains counts only. It compares the same original calls against
-the overview/fact renderers, preserving ordinary-owner full-view defaults. Text
-characters are not provider tokens or billed savings; the comparison excludes
-new context/header overhead and cannot predict future model choices or cache hits.
-Its `maintenance` section separately replays idle preparation over legacy full
-defaults, retaining the latest turn. These savings overlap the overview
-comparison and must not be added to it. Values are request-weighted text
-characters, not measured provider tokens, cache hits or billed savings.
+DSH owns chat and scheduling. Modules own their data and expose explicit
+interfaces; presentation and readers do not create assistant runtimes or write
+Memory independently. Current state uses required native tail snapshots and
+surface replacements; original events, dialogue, interaction receipts and
+reading text remain retained. History maintenance prepares during native idle
+and applies inside the next real request, without another model call. Memory,
+compaction, review and source withdrawal keep their existing owners. Operational
+settings and storage details are in [settings](settings.md) and
+[portability](portability.md).
 
-Current operational context uses required DSH tail snapshots. Superseded owned
-sections are retired through native surface replacements; original events stay
-in the append-only log. Other producers' distinct sections are retained, and an
-equal current snapshot is reused. Room, garden, economy and plan read tools accept
-`view: overview | full`; autonomous reads default to overview, ordinary owner
-reads retain full defaults. Economy also offers paged catalog/recent-ledger reads. Room/economy queries accept
-`factIds` to read original interaction receipts, including their numeric effects.
-Actual reading text, original dialogue, domain state and memory sources are not
-truncated by these model-facing views.
+Body retains optional `gardenClockEnabled` metadata in its existing home
+checkpoint. Explicit Life pause freezes crop time; component suspension retains
+clock intent. Queries before restoration preserve elapsed growth. Economy
+rejects checkpoints that rewind the existing crop or settlement clock. This
+does not reconstruct progress already lost in an older save.
 
-Current runtime exports and bundle IDs are stable. Core's native adapters live
-in `src/core/native/`; each business module retains its existing data authority.
-`src/behavior/animation-allocation.json` is the current allocation input used by
-`scripts/build/build-animation-map.mjs`. Artwork in `art/` is used by the optional
-life-media regeneration script; ordinary builds only verify those media.
-
-`dist/src` is generated but retained for direct GitHub installation. Build before
-publication and include the new generated runtime files; GitHub's release
-workflow performs this automatically. `dist/tests`, source maps, caches,
-virtual environments and local dependency directories are not source deliverables.
-Do not commit credentials, private profiles, companion data or cache directories.
+Keep runtime exports, native bundle IDs and companion data formats stable.
+`dist/src` is retained for GitHub installation; the release workflow builds and
+freezes it with the tested source. `dist/tests`, source maps, caches, tools and
+personal companion data are not deliverables. Ordinary builds verify built-in
+media; optional regeneration uses `src/behavior/animation-allocation.json` and
+artwork in `art/`.

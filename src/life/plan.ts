@@ -64,8 +64,11 @@ function string(value: unknown, label: string): asserts value is string {
 function instant(value: unknown): asserts value is string {
   check(typeof value === 'string' && /(?:Z|[+-]\d\d:\d\d)$/.test(value) && Number.isFinite(Date.parse(value)), 'Use an ISO time with an explicit timezone');
 }
-/** Structural validation, not an invented daily routine or interval policy. */
-export function parsePlanDraft(raw: unknown): PlanDraft {
+/** Validate executable structure and queue reachability without choosing a routine. */
+export function parsePlanDraft(raw: unknown): PlanDraft { return parsePlan(raw, false); }
+
+/** Stored legacy queues remain readable; new submissions must be reachable. */
+function parsePlan(raw: unknown, legacy: boolean): PlanDraft {
   check(object(raw), 'Invalid life plan'); string(raw.goal, 'goal'); string(raw.reason, 'reason');
   check(Array.isArray(raw.steps), 'Plan steps must be an array; empty is valid');
   const ids = new Set<string>();
@@ -74,9 +77,9 @@ export function parsePlanDraft(raw: unknown): PlanDraft {
     check(/^[\p{L}\p{N}_.-]{1,48}$/u.test(value.id),'Activity id must be a short stable identifier');
     check(value.activity.length<=80,'Use a short activity label; put the explanation in the plan reason');
     check(!ids.has(value.id), 'Activity ids must be unique'); ids.add(value.id);
-    check(['hold','room','garden','body','economy','read'].includes(String(value.kind)), 'Unsupported activity kind');
+    check(['hold','room','move','garden','body','economy','read'].includes(String(value.kind)), 'Unsupported activity kind');
     const step: LifeStep = {id:value.id, kind:value.kind as LifeStep['kind'], activity:value.activity};
-    if (value.kind === 'room') { string(value.room, 'room'); string(value.spot, 'spot'); step.room=value.room; step.spot=value.spot; }
+    if (value.kind === 'room' || value.kind === 'move') { string(value.room, 'room'); string(value.spot, 'spot'); step.room=value.room; step.spot=value.spot; }
     if (value.kind === 'garden') {
       check(object(value.garden), 'Garden activity requires an explicit operation');
       check(['visit','till','plant','water','fertilize','harvest','sell','buySeed','buyCompost'].includes(String(value.garden.type)), 'Unsupported garden operation');
@@ -103,7 +106,7 @@ export function parsePlanDraft(raw: unknown): PlanDraft {
       step.reading={itemId:value.reading.itemId,segment:value.reading.segment as number};
     }
     if(value.presentationSlot!==undefined)step.presentationSlot=requirePresentationSlot(value.presentationSlot,step);
-    if(['garden','body','economy','read'].includes(String(value.kind)))check(value.durationMinutes===undefined && value.until===undefined,
+    if(['move','garden','body','economy','read'].includes(String(value.kind)))check(value.durationMinutes===undefined && value.until===undefined,
       'Executable activities finish on actual receipts; use a following hold or room step for sustained animation');
     check(value.durationMinutes === undefined || value.until === undefined, 'Choose a duration or an end time');
     if (value.durationMinutes !== undefined) {
@@ -115,6 +118,10 @@ export function parsePlanDraft(raw: unknown): PlanDraft {
     if (value.until !== undefined) { instant(value.until); step.until=value.until; }
     return step;
   });
+  if (!legacy) for (const [index, step] of steps.entries()) {
+    check(!(['room','hold'].includes(step.kind) && step.durationMinutes === undefined && step.until === undefined && index < steps.length - 1),
+      `Activity ${step.id} waits for explicit control and blocks later steps. Use move for arrival, set durationMinutes/until for a finite stay, or put indefinite waiting last. nextConsiderAt only wakes planning; it does not complete the activity.`);
+  }
   check(raw.nextConsiderAt === null || typeof raw.nextConsiderAt === 'string', 'Specify nextConsiderAt, or null to wait for an event');
   if (raw.nextConsiderAt !== null) instant(raw.nextConsiderAt);
   check(raw.reconsiderWhen === undefined || Array.isArray(raw.reconsiderWhen), 'Invalid reconsideration conditions');
@@ -144,7 +151,7 @@ export class PersistentLifePlan {
       check(plan.version===1 && plan.companionId===companionId && plan.storageId===storageId, 'Life plan belongs to another companion or format');
       check(Number.isSafeInteger(plan.revision) && Number.isSafeInteger(plan.cursor) && plan.cursor>=0 && plan.cursor<=plan.steps.length,
         'Life plan progress is invalid; original state retained');
-      parsePlanDraft(plan);
+      parsePlan(plan, true);
       check(['active','paused','waiting','completed','cancelled'].includes(plan.status) && Array.isArray(plan.triggeredConditions), 'Invalid stored plan status');
       check(!plan.operationId || !!plan.steps[plan.cursor] && plan.operationId===`life:${plan.id}:${plan.steps[plan.cursor].id}`, 'Stored activity does not match the current plan step');
       if(plan.dispatchUntil)instant(plan.dispatchUntil);
@@ -174,6 +181,7 @@ export class PersistentLifePlan {
   }
   async commit(expectedRevision:number, draft:PlanDraft, behavior?:CompanionBehavior, workspaceId?:string,validate:()=>void=()=>{}) {
     validate();
+    draft=parsePlanDraft(draft);
     const old=this.read(); check(old.revision===expectedRevision, 'Life plan changed; read it again');
     if (draft.nextConsiderAt) check(Date.parse(draft.nextConsiderAt)>Date.now(), 'Next consideration must be in the future');
     for(const step of draft.steps)if(step.until)check(Date.parse(step.until)>Date.now(),'A new activity cannot have an end time in the past');

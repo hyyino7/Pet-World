@@ -69,7 +69,7 @@ export interface BehaviorSnapshot extends BehaviorChange {
 /** A durable program execution receipt; it is not a visual animation receipt. */
 export interface PlannedActivity {
     operationId: string;
-    kind: 'hold' | 'room' | 'garden' | 'body' | 'economy' | 'read';
+    kind: 'hold' | 'room' | 'move' | 'garden' | 'body' | 'economy' | 'read';
     activity: string;
     /** Optional registered portrayal; never grants an operation, object or effect. */
     presentationSlot?: string;
@@ -99,6 +99,8 @@ export interface PlannedExecution {
     startedAt: string;
     updatedAt: string;
     until?: string;
+    /** Completion contract, derived from the accepted operation. */
+    completion?: 'arrival' | 'deadline' | 'explicit-control' | 'receipt';
     reason?: string;
     /** A real program handoff that requires a native model turn, not animation. */
     awaitingInput?: 'reading-content';

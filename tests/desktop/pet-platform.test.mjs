@@ -18,17 +18,25 @@ export function fixture(root,getOrigin=()=> 'http://127.0.0.1',services={}) {
     run:async(action,input)=>{if(action==='send'){requests++;turns=[...turns,{id:requests*2,role:'user',text:input.text},{id:requests*2+1,role:'assistant',text:'native reply'}];}return chat.snapshot();}};
   let chatOpens=0,presentation;
   const events=new Map(),receipts=[],store=new Map();
-  const ctx={logger:console,connection:{broadcast(){}},get:name=>services[name],on:(name,listener)=>{
+  const ctx={logger:Object.assign(()=>console,console),petBehavior:services.petBehavior,connection:{broadcast(){}},get:name=>services[name],on:(name,listener)=>{
     const listeners=events.get(name) ?? new Set();events.set(name,listeners);listeners.add(listener);return()=>listeners.delete(listener);
   },webServer:{getOrigin},
     petCore:{workspace:{status:()=>({state:'ready',target}),companionSettings:()=>structuredClone(DEFAULT_COMPANION_SETTINGS),
       sessionStatus:session=>session.header.cwd===target.path?{state:'ready',target}:null,
-      runtime:{store:{get:(table,key)=>store.get(table+key),put:(table,key,value)=>store.set(table+key,value)}}}},
+      storageId:()=>target.id,runtime:{identity:()=>({displayName:'大肥鱼',character:''}),store:{get:(table,key)=>store.get(table+key),put:(table,key,value)=>store.set(table+key,value)}}}},
     petDesktop:{chat,openChat:async()=>{chatOpens++;},recordPlayback:receipt=>receipts.push(receipt),
       onPresentation:receive=>{presentation=receive;return()=>{presentation=undefined;};}}};
   const platform=new PetPlatform(ctx);
   return {platform,ctx,receipts,present:(type,value)=>presentation?.(type,value),publish:(name,...args)=>{for(const receive of events.get(name) ?? [])receive(...args);},
     rebind(id){target={...target,id};},requests:()=>requests,chatOpens:()=>chatOpens};
+}
+
+async function configureFixturePet(platform,display='none') {
+ const endpoint=new URL('http://localhost/chatpet-presentation/config');
+ const current=await platform.handle(endpoint,'GET',undefined,new AbortController().signal);
+ const template=current.obj.main.bodyTemplate;
+ assert.ok(template,'The current host exposes its explicit body template');
+ await platform.handle(endpoint,'PUT',JSON.stringify({pets:[{...template,display}]}),new AbortController().signal);
 }
 
 test('bound platform runs original config, media, controls, animation and native chat',async()=>{
@@ -37,19 +45,22 @@ test('bound platform runs original config, media, controls, animation and native
  try {
   const access=platform.ownerAccess('a'), tools=platform.controlAccess('a');
   assert.notEqual(access.token,tools.token);
+  assert.deepEqual((await request('config')).obj.main.pets,[],'Initialization creates no implicit body');
+  await configureFixturePet(platform);
   const conf=(await request('config')).obj;
   assert.equal(conf.main.pets[0].name,'大肥鱼');
   assert.equal(conf.main.pets[0].display,'none');
   const p=conf.main.pets[0];
   const multi=await request('config','PUT',{pets:[p,{...p,id:'second',name:'蓝鲸',display:'web',position:{corner:'top-left',marginX:5,marginY:9}}]});
   assert.equal(multi.obj.main?.pets.length??multi.obj.ok,2,JSON.stringify(multi.obj));
-  assert.deepEqual(platform.status().pets.map(x=>x.name),['大肥鱼','蓝鲸']);
+  assert.deepEqual(platform.status().pets.map(x=>x.name),['大肥鱼','大肥鱼'],'Every body projects the shared companion identity');
   const pack=platform.status().packsDirectory;
   writeFileSync(join(pack,'mini-config.json'),JSON.stringify({pets:[{...p,id:'packpet',name:'自己的形象'}]}));
   mkdirSync(join(pack,'mini-animation'));writeFileSync(join(pack,'mini-animation','自定义.webm'),'my-pack');
   assert.equal(readFileSync((await request('thumb/mini/自定义.webm')).file,'utf8'),'my-pack');
   assert.equal((await request('thumb/main/点击回应-元气挥手.webm')).kind,'file');
   for(const name of conf.main.animations.baifan)assert.equal((await request('thumb/main/'+encodeURIComponent(name)+'.webm')).kind,'file');
+  assert.equal((await request('thumb/main/吃白饭.webm')).kind,'file');
   assert.equal((await request('pic/memes/main/可爱.png')).kind,'file');
   const anim=await request('anim?pet=second&surface=web','POST',{name:'螃蟹走路'});
   assert.equal(anim.obj.ok,true,JSON.stringify(anim.obj));
@@ -70,7 +81,7 @@ test('settings read creates no body; one host preserves raw configuration while 
  const root=mkdtempSync(join(tmpdir(),'chatpet-platform-activity-'));
  let state={her:{kind:'idle',asleep:false},emotion:{feelings:[]}};
  let feeds=0;
- const {platform,chatOpens}=fixture(root,undefined,{petBehavior:{roomState:async()=>state,act:async(_id,action)=>{
+ const {platform,chatOpens}=fixture(root,undefined,{petBehavior:{roomState:async()=>state,roomAction:async(_id,{action})=>{
    assert.equal(action,'feed');feeds++;state={...state,her:{kind:'eat',asleep:false}};return {home:state};
  }},petEmotion:{}});
  const request=(endpoint,method='GET',body)=>platform.handle(new URL('http://localhost/chatpet-presentation/'+endpoint),method,body?JSON.stringify(body):undefined,new AbortController().signal);
@@ -78,19 +89,20 @@ test('settings read creates no body; one host preserves raw configuration while 
   assert.equal(platform.status().running,false);assert.equal(existsSync(join(root,'.chatpet')),false);
   platform.ownerAccess('a');await platform.refreshBehavior();
   const raw=(await request('config')).obj;
-  assert.ok(raw.main.animations.categories.some(c=>c.id==='吃什么'));
+  assert.ok(raw.main.animations.categories.some(c=>c.id==='吃什么'),'Raw compatible animation pools remain editable');
   const idle=(await request('config-live')).obj;
   assert.ok(!idle.main.animations.categories.some(c=>c.id==='吃什么'));
-  assert.ok(idle.main.animations.moves.actions.length,'cosmetic movement retained');
+  assert.deepEqual(idle.main.animations.moves.actions,[],'The continuing shared rest owns the projected animation');
   const menu=(await request('state')).obj.sections.menu.data.items;
   assert.ok(menu.some(i=>i.label==='进入房间'));
+  await configureFixturePet(platform);
   await platform.show();await platform.show();assert.equal(platform.status().pets.length,1);assert.equal(platform.status().pets[0].display,'desktop');
   await request('native-chat-window','POST',{});assert.equal(chatOpens(),1);
   assert.equal((await request('anim?pet=missing&surface=desktop','POST',{name:'吃饭团'})).obj.ok,false);assert.equal(feeds,0);
   assert.equal((await request('anim?pet=main&surface=desktop','POST',{name:'吃饭团'})).obj.ok,true);assert.equal(feeds,1);assert.equal(state.her.kind,'eat');
   state={her:{kind:'eat',asleep:false},emotion:{feelings:['anger']}};await platform.refreshBehavior();
   const eating=(await request('config-live')).obj;
-  assert.deepEqual(eating.main.animations.idle,['吃饭·碗饭']);assert.equal(eating.main.pets[0].workStatusEnabled,false);
+  assert.deepEqual(eating.main.animations.idle,['吃白饭']);assert.equal(eating.main.pets[0].workStatusEnabled,false);
   assert.equal((await request('anim?pet=main&surface=desktop','POST',{name:'写代码'})).status,409);
   assert.equal((await request('anim?pet=main&surface=desktop','POST',{name:'吃饭团'})).obj.ok,true);assert.equal(feeds,1,'A playback retry does not feed twice during the same activity');
   assert.deepEqual((await request('config')).obj.main.animations,raw.main.animations,'editor must not save temporary activity pools');
@@ -124,6 +136,7 @@ test('HTTP rejects visitor chat, accepts owner headers and confines media tokens
   const base='http://127.0.0.1:'+server.address().port+'/chatpet-presentation';
   const owner=platform.ownerAccess('a'),control=platform.controlAccess('a');
   assert.equal(control.baseUrl,base);
+  await configureFixturePet(platform);
   await platform.handle(new URL(base+'/pet-display'),'POST',JSON.stringify({id:'main',display:'web'}),new AbortController().signal);
   const action=await fetch(control.baseUrl+'/anim?pet=main&surface=web',{method:'POST',headers:{Authorization:'Bearer '+control.token},body:JSON.stringify({name:'螃蟹走路'})});
   const accepted=await action.json();assert.equal(accepted.ok,true);
@@ -151,10 +164,12 @@ test('HTTP rejects visitor chat, accepts owner headers and confines media tokens
 test('normal host reports only verified playback transitions into Emotion and refreshes shared behavior by events',async()=>{
  const root=mkdtempSync(join(tmpdir(),'chatpet-presentation-receipt-'));
  let home={her:{kind:'idle',activity:'安静地待着',asleep:false},emotion:{feelings:[]}};
- const {platform,receipts,publish,present}=fixture(root,undefined,{petBehavior:{roomState:async()=>home}});
+ const services={};
+ const {platform,receipts,publish,present}=fixture(root,undefined,services);
  const request=(path,method='GET',body)=>platform.handle(new URL('http://localhost/chatpet-presentation/'+path),method,body?JSON.stringify(body):undefined,new AbortController().signal);
  try{
   platform.ownerAccess('a');await platform.refreshBehavior();
+  await configureFixturePet(platform);
   const config=(await request('config')).obj;
   await request('config','PUT',{pets:[{...config.main.pets[0],display:'web'}]});
   present('expression',{workspaceId:'a',sessionId:'native-session',turn:1,action:'wave'});
@@ -167,11 +182,12 @@ test('normal host reports only verified playback transitions into Emotion and re
   assert.deepEqual(receipts.map(({id,name,status,kind})=>({id,name,status,kind})),[
     {id:playback,name:'wave',status:'playing',kind:'expression'},
     {id:playback,name:'wave',status:'ended',kind:'expression'}]);
+  services.petBehavior={roomState:async()=>home};
   home={her:{kind:'eat',activity:'正在吃饭',asleep:false},emotion:{feelings:['anger']}};
   publish('pet/behavior.changed',{workspaceId:'a',bootId:'test',revision:2});
   await platform.refreshBehavior();
   assert.equal(platform.status().activity,undefined);
-  assert.equal(platform.status().representation.action,'吃饭·碗饭');
+  assert.equal(platform.status().representation.action,'吃白饭');
  }finally{platform.close();rmSync(root,{recursive:true,force:true});}
 });
 
@@ -206,19 +222,20 @@ test('all nine feelings preserve actual activity and Room displays text without 
  const adapted=adaptRoomApp(source);
  assert.throws(()=>adaptRoomApp('changed upstream'),/source changed/);
  const chipSource=adapted.slice(adapted.indexOf('  const emo = state.emotion;'),adapted.indexOf("  $('qqText').textContent"));
- const render=new Function('state','$',chipSource);
+ const render=new Function('state','$','companionLabel',chipSource);
+ const renderChip=state=>render(state,()=>chip,()=> '大肥鱼');
  const chip={textContent:'',title:'',classList:{toggle(){}}};
  for(const feeling of companionFeelings){
-  render({emotion:{feelings:[feeling]}},()=>chip);
+  renderChip({emotion:{feelings:[feeling]}});
   assert.equal(chip.textContent,'心情 · '+feelingLabels[feeling]);
   assert.equal(behaviorPresentation({her:{kind:'eat',activity:'正在吃饭'},emotion:{feelings:[feeling]}}).action,'eat');
   assert.equal(behaviorPresentation({her:{kind:'idle',asleep:true},emotion:{feelings:[feeling]}}).action,'sleep');
  }
- render({emotion:{label:'有点想你',mood:68}},()=>chip);assert.equal(chip.textContent,'心情 · 有点想你');
- render({emotion:{label:'旧的中文心情'}},()=>chip);assert.equal(chip.textContent,'心情 · 旧的中文心情');
- render({emotion:null},()=>chip);assert.equal(chip.textContent,'');
+ renderChip({emotion:{label:'有点想你',mood:68}});assert.equal(chip.textContent,'心情 · 有点想你');
+ renderChip({emotion:{label:'旧的中文心情'}});assert.equal(chip.textContent,'心情 · 旧的中文心情');
+ renderChip({emotion:null});assert.equal(chip.textContent,'');
  const activitySource=adapted.slice(adapted.indexOf('  const expressionText ='),adapted.indexOf("  $('barEnergy').style.width"));
- const renderActivity=new Function('state','her','$',activitySource);
+ const renderActivity=new Function('state','her','$','charMode="webm"',activitySource);
  const expression={sessionId:'chat',turn:2,action:'wave',actionLabel:'元气挥手'};
  const idle={kind:'idle',activity:'安静待着'};
  renderActivity({presentation:behaviorPresentation({her:idle},expression)},idle,()=>chip);

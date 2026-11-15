@@ -22,6 +22,4 @@ const rows=parse(readFileSync(manifest.dsh.bundle.patch,'utf8')).flatMap(patch=>
 assert.equal(rows.find(row=>row.id==='00-Core').name,'her-world/00-Core');
 assert.ok(!rows.find(row=>row.id==='00-Core').config,'Public bundles must not contain device binding');
 assert.ok(rows.every(row=>!row.name.startsWith('dsh-Chatpet')),'Legacy module name in bundle');
-const policy=JSON.parse(readFileSync('docs/release/status.json','utf8'));
-if(!policy.stableReady) assert.ok(semver.prerelease(manifest.version),'Stable release blocked: '+policy.reason);
 console.log('Release metadata, complete source, prebuilt exports and hook-free GitHub install passed.');

@@ -122,7 +122,9 @@
     "test:audit-r6": "pnpm run build && node --test --test-timeout=30000 dist/tests/regressions/audit-r6-binding.test.js tests/regressions/audit-r6-channel-drafts.test.mjs tests/regressions/audit-r6-memory-scope.test.mjs tests/regressions/audit-r6-emotion-size.test.mjs tests/regressions/audit-r6-garden-refresh.test.mjs",
     "check:release": "node scripts/checks/check-release.mjs",
     "test:release": "node --test tests/infrastructure/release-flow.test.mjs",
-    "test:refresh": "node --test tests/regressions/room-refresh.test.mjs tests/regressions/mapped-refresh-convergence.test.mjs"
+    "test:refresh": "node --test tests/regressions/room-refresh.test.mjs tests/regressions/mapped-refresh-convergence.test.mjs",
+    "verify": "node scripts/checks/verify.mjs",
+    "check:published": "node scripts/checks/check-published.mjs"
   },
   "optionalDependencies": {
     "@andresaya/edge-tts": "1.9.1",

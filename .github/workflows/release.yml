@@ -1,7 +1,5 @@
 name: Publish Her World
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
     inputs:
       version:
@@ -26,7 +24,6 @@ jobs:
       - name: Select and validate version
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
-          EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
           source ./scripts/env.sh
@@ -35,57 +32,41 @@ jobs:
           import semver from 'semver';
           import assert from 'node:assert/strict';
           const p=JSON.parse(readFileSync('package.json'));
-          const version=process.env.EVENT_NAME==='workflow_dispatch'?process.env.REQUESTED_VERSION:process.env.GITHUB_REF_NAME.slice(1);
+          const version=process.env.REQUESTED_VERSION;
           assert.equal(semver.valid(version),version,'Use exact SemVer without a v prefix');
-          if(process.env.EVENT_NAME!=='workflow_dispatch')assert.equal(p.version,version,'Tag and package version differ');
           p.version=version;writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');
           appendFileSync(process.env.GITHUB_ENV,`RELEASE_VERSION=${version}\n`);
           JS
-          RELEASE_VERSION="$(node -p "JSON.parse(require('fs').readFileSync('package.json')).version")"
-          if [ "$EVENT_NAME" = workflow_dispatch ]; then
-            if git ls-remote --exit-code --tags origin "refs/tags/v$RELEASE_VERSION"; then
-              git fetch origin "refs/tags/v$RELEASE_VERSION:refs/tags/v$RELEASE_VERSION"
-              git restore --worktree package.json
-              git checkout --detach "v$RELEASE_VERSION"
-              node --input-type=module -e 'import {readFileSync} from "node:fs"; import assert from "node:assert/strict"; const frozen=JSON.parse(readFileSync("release.json")); assert.equal(frozen.sourceCommit,process.env.GITHUB_SHA,"Version belongs to a different source commit; choose a new version");'
-              echo 'REUSE_TAG=1' >> "$GITHUB_ENV"
-            fi
+          export RELEASE_VERSION="$(node -p "JSON.parse(require('fs').readFileSync('package.json')).version")"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$RELEASE_VERSION"; then
+            git fetch origin "refs/tags/v$RELEASE_VERSION:refs/tags/v$RELEASE_VERSION"
+            git restore --worktree package.json
+            git checkout --detach "v$RELEASE_VERSION"
+            node --input-type=module -e 'import {readFileSync} from "node:fs"; import assert from "node:assert/strict"; const frozen=JSON.parse(readFileSync("release.json")); assert.equal(frozen.sourceCommit,process.env.GITHUB_SHA,"Version belongs to a different source commit; choose a new version");'
+            echo 'REUSE_TAG=1' >> "$GITHUB_ENV"
+          else
+            node --input-type=module -e 'import {writeFileSync} from "node:fs"; writeFileSync("release.json",JSON.stringify({version:process.env.RELEASE_VERSION,sourceCommit:process.env.GITHUB_SHA},null,2)+"\n");'
           fi
       - name: Verify and freeze installable Git commit
         id: frozen
-        env:
-          EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
           source ./scripts/env.sh
-          pnpm run check:env
-          pnpm run check:types
-          pnpm test
-          pnpm run check:release
-          pnpm run test:refresh
-          node --test tests/regressions/mapped-refused-movement.test.mjs
-          pnpm run test:release
-          if [ "$EVENT_NAME" = workflow_dispatch ] && [ "${REUSE_TAG:-0}" != 1 ]; then
+          pnpm run verify
+          if [ "${REUSE_TAG:-0}" != 1 ]; then
             git config user.name github-actions[bot]
             git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-            export SOURCE_SHA="$GITHUB_SHA"
-            node --input-type=module -e 'import {writeFileSync} from "node:fs"; writeFileSync("release.json",JSON.stringify({version:process.env.RELEASE_VERSION,sourceCommit:process.env.SOURCE_SHA},null,2)+"\n");'
             git add --update
             git add release.json
             git add -f dist/src
             git reset -- 'dist/src/**/*.js.map'
             git commit -m "Release Her World $RELEASE_VERSION"
             git tag "v$RELEASE_VERSION"
-            git push origin "HEAD:refs/heads/releases/v$RELEASE_VERSION" "refs/tags/v$RELEASE_VERSION"
+            git push origin "refs/tags/v$RELEASE_VERSION"
           else
-            git diff --exit-code -- src vendor dist/src
+            git diff --exit-code -- src vendor dist/src package.json release.json
           fi
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          mkdir -p .cache/release
-          COPYFILE_DISABLE=1 pnpm pack --pack-destination .cache/release
-          pnpm run check:package .cache/release/her-world-*.tgz
-          cd .cache/release
-          shasum -a 256 her-world-*.tgz > SHA256SUMS
       - name: Publish checked archive to npm through trusted publishing
         shell: bash
         run: |
@@ -106,13 +87,9 @@ jobs:
             if [[ "$RELEASE_VERSION" == *-* ]]; then tag=next; fi
             npm publish "$archive" --ignore-scripts --access=public --registry=https://registry.npmjs.org/ --tag="$tag"
           fi
-          # npm may process an accepted archive asynchronously before it becomes public.
-          verified=0
-          for attempt in {1..180}; do
-            if read_integrity; then matches_archive; verified=1; break; fi
-            sleep 5
-          done
-          test "$verified" = 1
+          # Metadata can appear before the ordinary install URL stops returning
+          # a cached 404. Do not finish publication until its bytes match.
+          pnpm run check:published -- "$archive"
       - name: Promote verified runtime to the default GitHub install branch
         env:
           RELEASE_COMMIT: ${{ steps.frozen.outputs.commit }}

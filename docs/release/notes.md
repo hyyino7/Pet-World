@@ -1,21 +1,21 @@
-# Her World 0.1.3
+# Her World 0.1.4
 
-Fixes crop-growth rollback when garden state is queried before the Body clock
-has recovered, including component replacement during a plugin update.
+Fixes Life plans that stalled before breakfast because travel was represented
+as an indefinite room activity. New `move` steps finish on actual arrival;
+`room` and `hold` retain sustained-activity semantics. New plans reject indefinite
+stays followed by unreachable steps, and execution receipts expose how the
+current activity completes. Existing saved plans retain their original meaning
+and remain available for explicit revision or cancellation.
 
-- Retains crop-clock intent in the existing Body checkpoint. Component disposal
-  suspends its executor without treating it as an explicit owner pause.
-- Preserves elapsed growth during state observation and storage restart;
-  explicit Life disable and re-enable still exclude the paused interval.
-- Uses saved clock intent when applying Economy settings while an executor is
-  unavailable, and rejects checkpoints that rewind an existing crop or its
-  settlement clock. Wallet, inventory and request deduplication remain intact.
+Regression coverage includes arrival followed by feeding, same-location travel,
+pause/resume, cancellation, restart and exactly-once feeding, finite stays,
+Economy unavailability and sleeping-body refusal. Tests use disposable data
+without paid models or personal companion workspaces.
 
-Validation covers repeated state queries, partial and mature crop projections,
-SQLite storage reopening, real Cordis Life unload and Body/Economy replacement,
-explicit pause/resume, and rejection of regressive checkpoints. Tests use
-disposable data with no paid model calls or personal companion workspaces.
+Publication now uses one complete verification and checked archive. It waits
+for npm metadata and ordinary install downloads to match that archive before
+promoting main and publishing the GitHub Release. Re-running a failed release
+reuses its frozen version and source.
 
-This release does not reconstruct growth already lost in an older save.
-Installation remains owner-controlled; publication performs no local install
-or personal-data modification.
+Installation remains owner-controlled. Publication performs no local install,
+plan rewrite or personal-data modification.

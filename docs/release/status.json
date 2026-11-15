@@ -1,4 +1,0 @@
-{
-  "stableReady": true,
-  "reason": "Caretaker recovery regressions and context/review changes pass isolated continuity, native persistence, compaction and cross-session Memory checks; installed owner acceptance remains separate."
-}

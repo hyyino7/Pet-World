@@ -342,6 +342,16 @@ supplies its next consideration time and body-condition thresholds. Pausing
 Life retains its plan and accepted operation state. The virtual economy retains its owning wallet/inventory/ledger and actual
 execution receipts.
 
+Plan steps distinguish travel from sustained activity. `move` goes to an
+existing room/spot and completes on actual arrival, including when already at
+that position. `room` stays at a selected position; `hold` continues at the
+current position. Both sustained kinds accept a duration or end time. Without
+either, they wait for explicit control and must be the final step in a new
+plan. `nextConsiderAt` wakes planning; it never completes an activity. Execution
+receipts expose the completion contract and explain indefinite stays. Existing
+saved queues keep their original meaning and remain available for explicit
+revision or cancellation; no automatic conversion or replay occurs.
+
 `life_plan_keep` records a
 considered continuation without replacing current work. It starts one initial
 planning opportunity when enabled Life has no plan and offers one consideration

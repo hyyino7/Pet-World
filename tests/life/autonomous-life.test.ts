@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {advanceHomeState,applyHomeAction,emptyHomeState,nextHomeBoundary} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
 import {CompanionRoom,type RoomEconomyPort} from '../../src/behavior/room.js';
-import {PersistentLifePlan} from '../../src/life/plan.js';
+import {PersistentLifePlan,parsePlanDraft} from '../../src/life/plan.js';
 import type {CompanionBehavior} from '../../src/behavior/plugin.js';
 import {CoreNative} from '../../src/core/native/conversation.js';
 import type {CoreRuntime} from '../../src/core/runtime.js';
@@ -14,6 +14,23 @@ import {EconomyStore} from '../../src/economy/store.js';
 import {bytesDigest} from '../../src/core/storage.js';
 
 const owner={kind:'owner' as const,id:'owner-one',channel:'room'};
+const breakfast={id:'breakfast',kind:'body' as const,activity:'Eat breakfast',action:'feed' as const};
+const travel={id:'balcony',kind:'move' as const,activity:'Return to balcony',room:'balcony',spot:'chair'};
+const draft=(steps:unknown[])=>({goal:'Breakfast on the balcony',reason:'Ready to eat',steps,nextConsiderAt:null});
+
+test('plan admission distinguishes arrival, finite stays and terminal indefinite waiting',()=>{
+  assert.equal(parsePlanDraft(draft([travel,breakfast])).steps[0].kind,'move');
+  for(const kind of ['room','hold']) {
+    const stay={id:'stay',kind,activity:'Stay',...(kind==='room'?{room:'balcony',spot:'chair'}:{})};
+    assert.throws(()=>parsePlanDraft({...draft([stay,breakfast]),nextConsiderAt:'2099-01-01T00:00:00Z'}),/blocks later steps/);
+    assert.equal(parsePlanDraft(draft([stay])).steps.length,1);
+    assert.equal(parsePlanDraft(draft([{...stay,durationMinutes:2},breakfast])).steps.length,2);
+    assert.equal(parsePlanDraft(draft([{...stay,until:'2099-01-01T00:00:00Z'},breakfast])).steps.length,2);
+  }
+  for(const timed of [{durationMinutes:1},{until:'2099-01-01T00:00:00Z'}])
+    assert.throws(()=>parsePlanDraft(draft([{...travel,...timed},breakfast])),/actual receipts/);
+  assert.throws(()=>parsePlanDraft(draft([{...travel,spot:undefined}])),/spot/);
+});
 function fixture(t:{after(fn:()=>void):void;mock:{timers:{enable(options:any):void}}},economy?:RoomEconomyPort) {
   const root=mkdtempSync(join(tmpdir(),'autonomous-life-code-'));
   t.after(()=>rmSync(root,{recursive:true,force:true}));
@@ -25,6 +42,92 @@ function fixture(t:{after(fn:()=>void):void;mock:{timers:{enable(options:any):vo
   const open=()=>new CompanionRoom(root,()=>undefined,()=>economy);
   return {root,now,open,room:open()};
 }
+
+test('real arrival advances a persistent breakfast plan and feeding happens exactly once across restart',async t=>{
+  const f=fixture(t);let room=f.room;room.setAutonomy(true,f.now);
+  const plan=new PersistentLifePlan(f.root,'fish','world','UTC');
+  const behavior={inspectPlanned:async(_:string,id:string)=>room.inspectPlanned(id),startPlanned:async(_:string,input:any)=>room.startPlanned(input)} as unknown as CompanionBehavior;
+  await plan.commit(0,parsePlanDraft(draft([travel,breakfast])));
+  await plan.advance('workspace',behavior);
+  assert.equal(plan.read().plan!.cursor,0);
+  assert.equal(room.plannedState()!.phase,'moving');
+  const arrival=room.state.route.arriveAt;
+  t.mock.timers.tick(Math.ceil(arrival-Date.now())+1);
+  // Reopen with an owned route still persisted; no UI or model completes it.
+  room=f.open();room.setAutonomy(true,Date.now());room.tick(Date.now());
+  await plan.advance('workspace',behavior);
+  assert.equal(plan.read().plan!.cursor,1);
+  assert.equal(room.state.room,'balcony');assert.equal(room.state.spot,'chair');
+  assert.equal(room.state.route,null);assert.equal(room.state.dwell,null);
+  const count=room.state.counts.feed;
+  await plan.advance('workspace',behavior);
+  assert.equal(room.state.counts.feed,count+1);
+  room=f.open();room.setAutonomy(true,Date.now());
+  const restored=new PersistentLifePlan(f.root,'fish','world','UTC');
+  await restored.advance('workspace',behavior);await restored.advance('workspace',behavior);
+  assert.equal(room.state.counts.feed,count+1);assert.equal(restored.read().plan!.cursor,2);
+});
+
+test('arrival-only movement handles same-location, pause/resume, cancellation and replay',t=>{
+  const f=fixture(t);f.room.setAutonomy(true,f.now);
+  const input={operationId:'travel',...travel};
+  f.room.startPlanned(input,f.now);
+  assert.equal(f.room.inspectPlanned('travel',f.now)!.completion,'arrival');
+  f.room.pausePlanned('travel',f.now+100);
+  assert.equal(f.room.inspectPlanned('travel',f.now+100)!.status,'paused');
+  f.room.resumePlanned('travel',f.now+200);
+  f.room.tick(Math.ceil(f.room.state.route.arriveAt)+1);
+  assert.equal(f.room.inspectPlanned('travel',Math.ceil(f.room.state.lastTickAt))!.status,'completed');
+  const at=Math.ceil(f.room.state.lastTickAt);
+  assert.equal(f.room.startPlanned({...input,operationId:'already-there'},at).status,'completed');
+  assert.equal(f.room.state.dwell,null);
+  assert.equal(f.room.startPlanned(input,at).status,'completed');
+  f.room.startPlanned({...input,operationId:'cancel-trip',room:'kitchen',spot:'sink'},at);
+  f.room.cancelPlanned('cancel-trip',at+100);
+  f.room.tick(at+60_000);
+  assert.equal(f.room.inspectPlanned('cancel-trip',at+60_000)!.status,'cancelled');
+});
+
+test('finite room stays keep their deadline while arrival-only movement works without Economy',t=>{
+  const f=fixture(t);f.room.setAutonomy(true,f.now);
+  f.room.startPlanned({...travel,operationId:'finite',kind:'room',until:new Date(f.now+60_000).toISOString()},f.now);
+  const arrival=Math.ceil(f.room.state.route.arriveAt)+1;
+  f.room.tick(arrival);
+  assert.equal(f.room.inspectPlanned('finite',arrival)!.status,'running');
+  assert.equal(f.room.inspectPlanned('finite',arrival)!.completion,'deadline');
+  f.room.tick(f.now+60_001);
+  assert.equal(f.room.inspectPlanned('finite',f.now+60_001)!.status,'completed');
+  f.room.state.economyGardenAuthority=true;
+  f.room.startPlanned({...travel,operationId:'no-economy',room:'kitchen',spot:'sink'},f.now+60_002);
+  f.room.tick(Math.ceil(f.room.state.route.arriveAt)+1);
+  assert.equal(f.room.plannedState(),undefined);
+  assert.equal(f.room.inspectPlanned('no-economy',Math.ceil(f.room.state.lastTickAt))!.status,'completed');
+});
+
+test('movement cannot silently wait forever or wake a sleeping body',t=>{
+  const f=fixture(t);Object.assign(f.room.state,{asleep:true,room:'her_room',spot:'bed'});
+  const result=f.room.startPlanned({...travel,operationId:'sleeping-move',room:'her_room',spot:'bed'},f.now);
+  assert.equal(result.status,'failed');assert.match(result.reason!,/先明确醒来/);
+  assert.equal(f.room.state.asleep,true);assert.equal(f.room.state.route,null);assert.equal(f.room.state.dwell,null);
+});
+
+test('legacy indefinite room queues stay readable while invalid replacements preserve the original',async t=>{
+  const f=fixture(t),plan=new PersistentLifePlan(f.root,'fish','world','UTC');
+  const stay={...travel,kind:'room' as const};
+  await plan.commit(0,parsePlanDraft(draft([stay])));
+  const file=join(f.root,'life.json'),state=JSON.parse(readFileSync(file,'utf8'));
+  state.currentPlan.steps.push(breakfast);writeFileSync(file,JSON.stringify(state));
+  assert.equal(plan.read().plan!.steps.length,2);
+  const original=readFileSync(file,'utf8');
+  await assert.rejects(()=>plan.commit(plan.read().revision,draft([stay,breakfast]) as any),/blocks later steps/);
+  assert.equal(readFileSync(file,'utf8'),original);
+  f.room.setAutonomy(true,f.now);
+  f.room.startPlanned({operationId:'legacy-stay',...stay},f.now);
+  f.room.tick(Math.ceil(f.room.state.route.arriveAt)+1);
+  const receipt=f.room.inspectPlanned('legacy-stay',Math.ceil(f.room.state.lastTickAt))!;
+  assert.equal(receipt.status,'running');assert.equal(receipt.completion,'explicit-control');
+  assert.match(receipt.reason!,/后续步骤尚未开始/);
+});
 
 test('committed owner water survives retries, restart, acknowledgement and changed-payload conflicts',t=>{
   const f=fixture(t),context={requestId:'water-once',actor:owner};

@@ -15,7 +15,7 @@ export function animationSlotAllowed(value, input) {
     const food = value.startsWith('food.') && !foodWorkflows.has(value) && !foodDetails.has(value) && value !== 'food.caught';
     if (kind === 'food-item')
         return food;
-    if (kind === 'room' && value.startsWith('move.'))
+    if ((kind === 'room' || kind === 'move') && value.startsWith('move.'))
         return true;
     if (kind === 'hold' || kind === 'room' || kind === 'rest' || kind === 'idle' || kind === 'free')
         return value.startsWith('rest.') || quietTalk.has(value) || value === 'leisure.balcony';

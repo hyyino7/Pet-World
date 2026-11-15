@@ -36,7 +36,7 @@ export function animationSlotAllowed(value:unknown,input:string|AnimationSlotCon
   const context=typeof input==='string'?{kind:input}:input,kind=context.kind;
   const food=value.startsWith('food.')&&!foodWorkflows.has(value)&&!foodDetails.has(value)&&value!=='food.caught';
   if(kind==='food-item')return food;
-  if(kind==='room'&&value.startsWith('move.'))return true;
+  if((kind==='room'||kind==='move')&&value.startsWith('move.'))return true;
   if(kind==='hold'||kind==='room'||kind==='rest'||kind==='idle'||kind==='free')
     return value.startsWith('rest.')||quietTalk.has(value)||value==='leisure.balcony';
   if(kind==='read')return value==='read.main'||value==='read.handling';

@@ -159,6 +159,8 @@ export declare class CompanionRoom {
     plannedState(): PlannedExecution | undefined;
     private presentationBase;
     private presentationCue;
+    /** The owned destination dwell proves arrival, including after a reopen. */
+    private completeMove;
     /** Only an owned physical route arrival establishes a new quiet phase.
      * A moving receipt with its persisted arrival also covers the existing
      * physical-save/phase-ack crash boundary, without inventing an old onset. */
