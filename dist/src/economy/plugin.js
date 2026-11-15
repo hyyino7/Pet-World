@@ -245,9 +245,12 @@ export class CompanionEconomy {
         // UI may send the complete edited configuration. Schema/revision are CAS
         // metadata rather than user-editable economic values.
         const { version: _schema, revision: _revision, ...patch } = next;
-        // The public Body snapshot serializes its physical checkpoint. Settings
-        // must use the same passive admission rather than catch up disabled time.
-        const passive = (await this.ctx.get('petBehavior')?.snapshot(workspaceId))?.autonomyEnabled ?? false;
+        // Serialize Body work first, then use saved clock intent. An unavailable
+        // executor is not evidence that the owner paused natural crop time.
+        const behavior = this.ctx.get('petBehavior');
+        await behavior?.snapshot(workspaceId);
+        const passive = this.ctx.get('petLife')?.bodyClockState?.(workspaceId)?.enabled
+            ?? behavior?.gardenClockState?.(workspaceId) ?? true;
         signal.throwIfAborted();
         validate();
         check(this.bound(workspaceId) === store, 'Economy binding changed');

@@ -53,6 +53,8 @@ export class CompanionRoom {
             if (!Number.isFinite(Number(saved.createdAt)) || Number(saved.createdAt) <= 0)
                 throw Error('身体存档缺少有效创建时间，原文件已保留');
             this.state = normalizeHomeState(saved);
+            if (this.state.gardenClockEnabled !== undefined && typeof this.state.gardenClockEnabled !== 'boolean')
+                throw Error('菜园时钟状态无效，原文件已保留');
             const window = this.state.offlineBodyWindow;
             if (window && (![window.startAt, window.endAt, window.negativeUntil].every(Number.isFinite)
                 || window.endAt < window.startAt || window.negativeUntil < window.startAt
@@ -113,8 +115,9 @@ export class CompanionRoom {
         if (!port && this.gardenAuthorityUnavailable())
             throw Error('经济组件暂不可用，菜园保留并等待恢复');
         let garden;
+        const passive = this.gardenClockState() !== false;
         try {
-            garden = port ? port.loadGarden(now, this.autonomous) : (safeFile(this.gardenFile), loadGarden(this.gardenFile, now));
+            garden = port ? port.loadGarden(now, passive) : (safeFile(this.gardenFile), loadGarden(this.gardenFile, now));
         }
         catch (error) {
             if (port) {
@@ -123,10 +126,13 @@ export class CompanionRoom {
             }
             throw error;
         }
-        if (!this.autonomous)
+        if (!passive)
             garden.updatedAt = Math.max(garden.updatedAt, now);
         return garden;
     }
+    /** Undefined means clock intent has not been restored, never an owner pause.
+     * Keep elapsed crop time until an explicit admission establishes otherwise. */
+    gardenClockState() { return this.state.gardenClockEnabled; }
     saveGardenState(state, now = Date.now()) {
         const port = this.economyPort();
         if (port) {
@@ -212,8 +218,10 @@ export class CompanionRoom {
         }
     }
     setAutonomy(enabled, now = Date.now(), preserveElapsed = false) {
-        if (enabled === this.autonomous)
+        const admitted = this.gardenClockState();
+        if (enabled === this.autonomous && admitted === enabled)
             return;
+        const restoreElapsed = enabled && (preserveElapsed || admitted === true);
         // Settle the active interval before pausing; discard disabled time before
         // an explicit enable, except an admitted enabled-restart restoration.
         if (this.autonomous) {
@@ -223,8 +231,11 @@ export class CompanionRoom {
             if (garden?.unavailable !== true)
                 this.saveGardenState(advanceGarden(this.loadGardenState(now), now), now);
         }
-        else if (!preserveElapsed)
+        else if (!restoreElapsed) {
+            if (admitted !== true)
+                this.state.gardenClockEnabled = false;
             this.tick(now);
+        }
         else if (enabled && now > this.state.lastTickAt) {
             const previous = this.state.offlineBodyWindow;
             if (previous && this.state.lastTickAt < previous.endAt)
@@ -239,10 +250,24 @@ export class CompanionRoom {
             // Reads never open another window and no new activity is selected here.
             this.checkpoint(this.state, now);
         }
+        this.state.gardenClockEnabled = enabled;
+        this.checkpoint(this.state, now);
         this.autonomous = enabled;
         if (!enabled)
             this.stopAutomatic(now);
         this.tick(now);
+        this.flush();
+    }
+    /** Component disposal stops this executor, not the saved owner's clock.
+     * Settle before releasing it so a replacement cannot lose projected growth. */
+    suspendAutonomy(now = Date.now()) {
+        if (this.autonomous) {
+            const garden = this.tick(now);
+            if (garden?.unavailable !== true)
+                this.saveGardenState(advanceGarden(this.loadGardenState(now), now), now);
+        }
+        this.autonomous = false;
+        this.stopAutomatic(now);
         this.flush();
     }
     checkpoint(state, now) {
@@ -1289,7 +1314,7 @@ export class CompanionRoom {
         if (!port)
             safeFile(this.gardenFile);
         const revision = port ? this.loadGardenState(now).economyRevision : undefined;
-        const result = port ? port.actGarden(action, now, this.autonomous) : actGarden(this.gardenFile, action, now);
+        const result = port ? port.actGarden(action, now, this.gardenClockState() !== false) : actGarden(this.gardenFile, action, now);
         // The authoritative action is committed once. A refusal must not retire
         // accepted Body work. An old Economy receipt has no new revision; a new
         // commit interrupts against the latest checkpoint.

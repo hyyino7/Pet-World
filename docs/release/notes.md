@@ -1,28 +1,21 @@
-# Her World 0.1.2
+# Her World 0.1.3
 
-Reduces repeated autonomous Life context while preserving original dialogue,
-interaction provenance, accepted plans and companion records.
+Fixes crop-growth rollback when garden state is queried before the Body clock
+has recovered, including component replacement during a plugin update.
 
-- Keeps changing Body, plan, Emotion and Economy state in required native tail
-  context, with stable leading instructions and retained original events.
-- Adds structured overview/full state queries and exact interaction-receipt
-  lookup. Ordinary owner queries keep their full-view defaults.
-- Compacts interaction presentation without changing wake timing or durable
-  acknowledgement requirements.
-- Prepares older successful default Life state results during native idle
-  maintenance and projects them inside the next real request. Explicit full
-  queries, reading text, errors and original logs remain available. This adds
-  no summary calls and preserves native compaction and Memory batching.
-- Fixes preset-inherited review read/write capabilities while retaining the
-  original file-scope guard and the interrupted-review continuation from 0.1.1.
+- Retains crop-clock intent in the existing Body checkpoint. Component disposal
+  suspends its executor without treating it as an explicit owner pause.
+- Preserves elapsed growth during state observation and storage restart;
+  explicit Life disable and re-enable still exclude the paused interval.
+- Uses saved clock intent when applying Economy settings while an executor is
+  unavailable, and rejects checkpoints that rewind an existing crop or its
+  settlement clock. Wallet, inventory and request deduplication remain intact.
 
-Validation includes 377 unit tests, the 132- and 915-test Life integration
-suites, Memory provider/process tests, refresh and release checks, and isolated
-installed-DSH checks with scripted models. Native checks cover cross-session
-recall, provider restart, correction/withdrawal, review read/write rejection
-outside scope, persisted history restoration and native compaction compatibility.
-No paid models or personal companion workspaces are used by these checks.
+Validation covers repeated state queries, partial and mature crop projections,
+SQLite storage reopening, real Cordis Life unload and Body/Economy replacement,
+explicit pause/resume, and rejection of regressive checkpoints. Tests use
+disposable data with no paid model calls or personal companion workspaces.
 
-Payload replay measures text-character reductions only. Provider token charges
-and cache-hit improvements require observation after an owner-installed update.
-This release performs no installation or companion-data migration.
+This release does not reconstruct growth already lost in an older save.
+Installation remains owner-controlled; publication performs no local install
+or personal-data modification.

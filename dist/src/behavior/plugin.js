@@ -98,7 +98,10 @@ export class CompanionBehavior {
                         if (this.currentBound(bound.id) !== bound)
                             return;
                         this.autonomous = admission?.enabled ?? life.running();
-                        bound.room.setAutonomy(this.autonomous, Date.now(), admission?.restoreElapsed);
+                        if (admission || this.autonomous)
+                            bound.room.setAutonomy(this.autonomous, Date.now(), admission?.restoreElapsed);
+                        else
+                            bound.room.suspendAutonomy();
                         this.publish();
                     }).catch(error => { this.fault = String(error); });
                 };
@@ -108,7 +111,7 @@ export class CompanionBehavior {
                     void this.enqueue(() => {
                         if (this.closed || this.ctx.get('petLife')?.running())
                             return;
-                        this.binding?.room.setAutonomy(false);
+                        this.binding?.room.suspendAutonomy();
                         this.autonomous = false;
                         this.publish();
                     }).catch(error => { this.fault = String(error); });
@@ -220,9 +223,9 @@ export class CompanionBehavior {
                 };
             }) };
         const admission = this.ctx.get('petLife')?.bodyClockState?.(id);
-        if (admission?.enabled) {
-            this.autonomous = true;
-            this.binding.room.setAutonomy(true, Date.now(), admission.restoreElapsed);
+        if (admission) {
+            this.autonomous = admission.enabled;
+            this.binding.room.setAutonomy(admission.enabled, Date.now(), admission.restoreElapsed);
         }
     }
     checked(workspaceId) {
@@ -405,6 +408,9 @@ export class CompanionBehavior {
             this.publish();
         });
     }
+    gardenClockState(workspaceId) {
+        return this.currentBound(workspaceId)?.room.gardenClockState();
+    }
     plannedCall(workspaceId, work, validate = () => { }, observation = false) {
         return this.enqueue(async () => {
             const before = this.checked(workspaceId);
@@ -449,7 +455,7 @@ export class CompanionBehavior {
         for (const stop of this.subscriptions.splice(0))
             stop();
         try {
-            await this.enqueue(() => { this.binding?.room.setAutonomy(false); this.binding?.room.flush(); this.binding = undefined; });
+            await this.enqueue(() => { this.binding?.room.suspendAutonomy(); this.binding?.room.flush(); this.binding = undefined; });
         }
         finally {
             if (owners.get(this.host) === this)

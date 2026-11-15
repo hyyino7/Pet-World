@@ -71,12 +71,15 @@ export class CompanionBehavior {
         this.synchronize();const bound=this.binding;if(!bound)return;
         await this.refreshEmotion(bound.id);
         if(this.currentBound(bound.id)!==bound)return;
-        this.autonomous=admission?.enabled ?? life.running();bound.room.setAutonomy(this.autonomous,Date.now(),admission?.restoreElapsed);this.publish();
+        this.autonomous=admission?.enabled ?? life.running();
+        if(admission || this.autonomous)bound.room.setAutonomy(this.autonomous,Date.now(),admission?.restoreElapsed);
+        else bound.room.suspendAutonomy();
+        this.publish();
       }).catch(error=>{this.fault=String(error);});};
       scope.on('pet/life.changed',synchronize);synchronize();
       scope.effect(()=>()=>{void this.enqueue(()=>{
         if(this.closed||this.ctx.get('petLife')?.running())return;
-        this.binding?.room.setAutonomy(false);this.autonomous=false;this.publish();
+        this.binding?.room.suspendAutonomy();this.autonomous=false;this.publish();
       }).catch(error=>{this.fault=String(error);});});
     });
   }
@@ -143,8 +146,8 @@ export class CompanionBehavior {
         hours:settings?.offlineBodyHours ?? 4,needCeiling:(settings?.offlineNeedCeilingPercent ?? 70)/100,
         energyFloor:(settings?.offlineEnergyFloorPercent ?? 35)/100};})};
     const admission=this.ctx.get('petLife')?.bodyClockState?.(id);
-    if(admission?.enabled) {
-      this.autonomous=true;this.binding.room.setAutonomy(true,Date.now(),admission.restoreElapsed);
+    if(admission) {
+      this.autonomous=admission.enabled;this.binding.room.setAutonomy(admission.enabled,Date.now(),admission.restoreElapsed);
     }
   }
   private checked(workspaceId: string) {
@@ -289,6 +292,9 @@ export class CompanionBehavior {
       bound.room.setAutonomy(enabled,Date.now(),admission?.restoreElapsed); this.autonomous = enabled; this.publish();
     });
   }
+  gardenClockState(workspaceId:string):boolean|undefined {
+    return this.currentBound(workspaceId)?.room.gardenClockState();
+  }
   private plannedCall<T>(workspaceId: string, work: (room: CompanionRoom) => T, validate:()=>void=()=>{},observation=false): Promise<T> {
     return this.enqueue(async () => {
       const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);
@@ -324,7 +330,7 @@ export class CompanionBehavior {
   async close() {
     this.closed = true; clearTimeout(this.timer);
     for(const stop of this.subscriptions.splice(0))stop();
-    try {await this.enqueue(() => {this.binding?.room.setAutonomy(false); this.binding?.room.flush(); this.binding = undefined;});}
+    try {await this.enqueue(() => {this.binding?.room.suspendAutonomy(); this.binding?.room.flush(); this.binding = undefined;});}
     finally {if (owners.get(this.host) === this) owners.delete(this.host);}
   }
 }

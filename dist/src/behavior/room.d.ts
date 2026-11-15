@@ -111,11 +111,17 @@ export declare class CompanionRoom {
     private gardenAuthorityUnavailable;
     private requireEconomy;
     private loadGardenState;
+    /** Undefined means clock intent has not been restored, never an owner pause.
+     * Keep elapsed crop time until an explicit admission establishes otherwise. */
+    gardenClockState(): boolean | undefined;
     private saveGardenState;
     private gardenUnavailable;
     private requestedActive;
     private stopAutomatic;
     setAutonomy(enabled: boolean, now?: number, preserveElapsed?: boolean): void;
+    /** Component disposal stops this executor, not the saved owner's clock.
+     * Settle before releasing it so a replacement cannot lose projected growth. */
+    suspendAutonomy(now?: number): void;
     private checkpoint;
     flush(): void;
     nextWakeAt(now?: number, conditions?: readonly {

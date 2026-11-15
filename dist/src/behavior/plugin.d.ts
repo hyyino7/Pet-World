@@ -95,6 +95,7 @@ export declare class CompanionBehavior {
         home?: any;
     }>;
     setAutonomy(workspaceId: string, enabled: boolean): Promise<void>;
+    gardenClockState(workspaceId: string): boolean | undefined;
     private plannedCall;
     consumeFood(workspaceId: string, input: {
         operationId: string;

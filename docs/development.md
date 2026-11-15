@@ -47,6 +47,17 @@ pnpm run test:room-refresh
 Native/window checks in `scripts/checks/` and fixtures in `tests/manual/` require
 explicit isolated environments; they must not run against personal companion data.
 
+Crop-clock continuity is covered by `garden-clock-continuity.test.ts` in both
+the main tests and `test:life-integration`. It uses disposable Body and SQLite
+Economy data, including real Cordis service disposal and replacement, without
+models or installation. Body retains optional `gardenClockEnabled` metadata in
+its existing home checkpoint: an explicit Life pause freezes crop time, while
+component suspension preserves clock intent. Legacy checkpoints with unknown
+intent retain elapsed growth during observation until admission is restored.
+Economy rejects checkpoints that reduce an existing crop's committed progress or
+rewind its settlement clock. These checks prevent future rollback; they do not
+reconstruct growth already lost from an older save.
+
 `pnpm run test:native-context` uses the installed DSH loop and native persistence
 with a scripted local model and a disposable workspace. It checks a stable system
 prefix, one current operational snapshot, durable interaction acknowledgements,

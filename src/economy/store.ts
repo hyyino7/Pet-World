@@ -434,7 +434,13 @@ export class EconomyStore {
   }
   private commitGarden(state:any,expectedRevision:number,requestId:string,kind:string,now:number) {
     integer(expectedRevision,'garden expected revision',1);if(expectedRevision!==this.revision())reject('STALE_REVISION','Garden snapshot is stale; reload it before committing');
-    this.validateGardenResources(state);const before=this.gardenResources(this.projectGarden()),normalized=this.normalize(state,now),after=this.gardenResources(normalized);
+    this.validateGardenResources(state);const previous=this.projectGarden(),before=this.gardenResources(previous),normalized=this.normalize(state,now),after=this.gardenResources(normalized);
+    check(normalized.updatedAt>=previous.updatedAt,'Garden checkpoint would rewind its clock');
+    for(const plot of normalized.plots) {
+      const old=previous.plots.find((row:any)=>row.id===plot.id);
+      if(plot.cropId && old?.cropId===plot.cropId && old.plantedAt===plot.plantedAt)
+        check(plot.progress>=old.progress,'Garden checkpoint would rewind an existing crop');
+    }
     // Legacy normalization must never round/clamp money or inventory.
     check(canonical(after)===canonical(this.gardenResources(state)),'Garden normalization changed money or inventory');
     for(const [itemId,quantity] of Object.entries(after)){integer(quantity,'garden resource');if(itemId!=='$money')check(quantity>=this.reserved(itemId),'Garden attempted to spend reserved inventory');}

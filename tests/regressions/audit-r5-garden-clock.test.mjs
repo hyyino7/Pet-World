@@ -17,6 +17,7 @@ function fixture(t,{service=false}={}) {
   const root=mkdtempSync(join(tmpdir(),'r5-garden-clock-')),directory=join(root,'.chatpet/data/life');
   mkdirSync(directory,{recursive:true});
   const home=emptyHomeState(start);
+  home.gardenClockEnabled=false; // This fixture represents an explicit owner pause.
   Object.assign(home,{needs:{hunger:.3,thirst:.3,energy:.8,bladder:.1,pain:0},asleep:false,
     sleepPending:false,route:null,dwell:null,command:null,freeTarget:null,reactionUntil:0,eventLog:[],lastInteractionAt:0});
   const garden=createGarden(start);garden.care.autoEnabled=false;
@@ -171,10 +172,10 @@ test('R5: paused owner seed purchase, planting and sale retain actual inventory,
   assert.equal(saved.plots[1].cropId,'radish');
 });
 
-test('R5: settings with Body unloaded do not create passive crop time or a second body',async t=>{
+test('R5: settings with unknown clock intent preserve elapsed growth without creating a second body',async t=>{
   const f=fixture(t);f.move(6*HOUR);const before=await f.economy.snapshot(f.target.id);
   await f.economy.settings(f.target.id,before.configurationVersion,{articlePrice:21},'unloaded-body-rules',new AbortController().signal);
-  assert.equal(f.saved().plots[0].progress,0);assert.equal(f.saved().updatedAt,Date.now());
+  closeTo(f.saved().plots[0].progress,.5);assert.equal(f.saved().updatedAt,Date.now());
   assert.equal(f.ctx.get('petBehavior'),undefined);
 });
 
