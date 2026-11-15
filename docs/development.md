@@ -103,6 +103,11 @@ clock intent. Queries before restoration preserve elapsed growth. Economy
 rejects checkpoints that rewind the existing crop or settlement clock. This
 does not reconstruct progress already lost in an older save.
 
+Review regressions include `tests/life/life-review-runtime.test.mjs` and the
+compiled `life-review-files`, `review-continuation` and `life-sleep-continuity`
+tests. They cover dated retries, restart reconciliation, existing diary protection
+and actual sleep through the Life/Body coordinators without a paid model.
+
 Keep runtime exports, native bundle IDs and companion data formats stable.
 `dist/src` is retained for GitHub installation; the release workflow builds and
 freezes it with the tested source. `dist/tests`, source maps, caches, tools and

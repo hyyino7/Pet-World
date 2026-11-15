@@ -31,7 +31,10 @@ test('review reads its existing materials and Core records but writes only self 
   for(const name of ['self.md','diary/2026-11-12.md','diary/2026-11-13.md','self.history/2026-11-12.md'])
     assert.doesNotThrow(()=>assertLifeReviewFile(f.host,f.access,'read',join(f.records,name),today));
   for(const kind of ['activity','conversations'])assert.doesNotThrow(()=>assertLifeReviewFile(f.host,f.access,'read',join(f.life,kind,'2026-11-12.jsonl'),today));
-  for(const name of ['self.md','diary/2026-11-12.md','diary/2026-11-13.md'])assert.doesNotThrow(()=>assertLifeReviewFile(f.host,f.access,'write',join(f.records,name),today));
+  for(const name of ['self.md','diary/2026-11-13.md'])assert.doesNotThrow(()=>assertLifeReviewFile(f.host,f.access,'write',join(f.records,name),today));
+  assert.throws(()=>assertLifeReviewFile(f.host,f.access,'write',join(f.records,'diary/2026-11-12.md'),today),/历史日记已经存在/);
+  unlinkSync(join(f.records,'diary/2026-11-12.md'));
+  assert.doesNotThrow(()=>assertLifeReviewFile(f.host,f.access,'write',join(f.records,'diary/2026-11-12.md'),today));
   for(const file of [join(f.life,'life.json'),join(f.life,'home.json'),join(f.records,'data/core/core.sqlite'),join(f.records,'data/economy/economy.sqlite'),join(f.records,'USER.md'),join(f.root,'outside.txt')])
     for(const tool of ['read','write'])assert.throws(()=>assertLifeReviewFile(f.host,f.access,tool,file,today));
   for(const name of ['self.history/2026-11-12.md','diary/2026-11-11.md'])assert.throws(()=>assertLifeReviewFile(f.host,f.access,'write',join(f.records,name),today));
@@ -76,4 +79,17 @@ test('native review file guard resolves cwd, rechecks aliases and releases on ow
   renameSync(join(f.records,'diary'),join(f.records,'old-diary'));symlinkSync(join(f.records,'old-diary'),join(f.records,'diary'));
   assert.match(guards[0](item),/writing path/,'A path changed after preparation is rechecked before dispatch');
   access={...f.access,guest:true};assert.match(await prepare(exec('../self.md')),/范围/);
+});
+
+ test('backfill creation is revoked if a historical file appears before native dispatch',async t=>{
+  const f=fixture(t),handlers=new Map<string,Function>(),guards:Function[]=[];
+  const day='2026-11-11',path=join(f.records,'diary',day+'.md'),access={...f.access,reviewDay:day};
+  const ctx={on:(name:string,fn:Function)=>{handlers.set(name,fn);return()=>{};},tools:{guard:(fn:Function)=>{guards.push(fn);return()=>{};}},
+    get:(name:string)=>name==='fs'?{resolve:async(p:string)=>p,processPath:(p:string)=>p}:name==='workingDirectory'?{ensure:async()=>f.root}:undefined} as unknown as Context;
+  t.after(installLifeReviewFileGuard(ctx,f.host,()=>access,()=>today));
+  const exec={name:'write',agent:{id:'home'},token:{},arguments:{file_path:path,content:'Backfill'},signal:new AbortController().signal};
+  await handlers.get('tools/pre-execute')!(exec,async()=>{});
+  assert.equal(guards[0](exec),undefined);
+  writeFileSync(path,'An existing historical diary');
+  assert.match(guards[0](exec),/历史日记已经存在/);
 });

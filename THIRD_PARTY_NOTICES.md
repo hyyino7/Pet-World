@@ -121,6 +121,10 @@ The World foundation uses a separate 0.7.4 release pin,
 modules, declarations and templates are redistributed under this MIT license.
 [Release integrity and individual file hashes](vendor/dsh-world/origin.json)
 and the [upstream license](vendor/dsh-world/LICENSE) accompany the package.
+The Life runtime adaptation retains unfinished review dates and reconciles native
+diary write results through the existing scheduler and Life store, with bounded
+retries and protected historical records. Origin pins and upstream licenses are
+unchanged.
 Core's scoped prompt registration, request-series restart and retirement of old
 prompt content adapt `src/promptSection.ts`, `src/worldScope.ts` and
 `src/runtime.ts`. Emotion uses this placement for its expression contract.

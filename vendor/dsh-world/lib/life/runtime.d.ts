@@ -22,8 +22,10 @@ export interface LifeDeps {
     timers?: LifeTimers;
     /** CNY her home may spend a day; undefined or absent is no limit. */
     dailyBudget?: () => number | undefined;
-    /** Called once each evening look back has been handed to her home (not for alarms or greetings, and not when delivery failed). */
+    /** Called after verified diary completion when reviewDiaryStatus is provided; legacy hosts receive it on review delivery. */
     afterReview?: () => void;
+    /** Opt-in native write receipt verification; existing old diaries are retained. */
+    reviewDiaryStatus?: (day:string,session:Agent['session'],messageId:string) => 'written'|'existing'|'missing';
     /** Read-only facts appended after the user's alarm template is rendered. */
     alarmContext?: (now: Date) => string | undefined;
     photos?: () => PhotoStore;
@@ -77,6 +79,7 @@ export declare function createLifeRuntime(deps: LifeDeps): {
         homeSessionId: string | undefined;
         alarm: Alarm | undefined;
         review: Review | undefined;
+        pendingReviews: import("./types.ts").LifeState['pendingReviews'];
         spend: import("./types.ts").Spend | undefined;
         currentPlan: unknown;
         planRevision: number | undefined;

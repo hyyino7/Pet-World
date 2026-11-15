@@ -89,6 +89,9 @@ export interface LifeState {
     alarm?: Alarm;
     greeting?: Greeting;
     review?: Review;
+    /** Unfinished exact dates; additive fields preserve version-1 saves. */
+    pendingReviews?: (Review & {attempts?:number;retryAt?:string;failure?:string})[];
+    reviewWake?: {day:string;sessionId:string;messageId:string;ownerInterrupted?:boolean};
     spend?: Spend;
     delivering?: PendingWake;
     /** Life owns the versioned plan schema; the scheduler preserves it verbatim. */

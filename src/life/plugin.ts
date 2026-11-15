@@ -1,3 +1,4 @@
+import {reviewDiaryStatus} from './review-completion.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import type {SessionId} from '@deepseek-ai/dsh-session';
@@ -62,7 +63,7 @@ export class CompanionLife {
     registerWorldPrompt(ctx, 'chatpet.life', 34, agent => {
       if (!this.running() || ctx.petWorld.sessionStatus(agent.session)?.state !== 'ready') return '';
       return this.runtime?.isHome(agent.id) ?
-        '这是你当前的自主规划投递会话，不是生活状态的存储位置。收到生活唤醒时先用 life_plan_read 读取持久计划及版本，然后实际保存本次考虑结果：需要改变意图用 life_plan_update；决定继续原活动或保持等待用 life_plan_keep，不重建活动；需要暂停或取消用 life_activity_control。没有计划时也由你决定，不必等主人逐项安排；想安静等待可保存有原因的空步骤计划并将 nextConsiderAt 设为 null。口头描述、读取状态或只设闹钟都不能代替保存生活意图。经济活动先用 pet_economy_state 查看真实目录、余额与库存；收菜、出售、补种和库存餐食都由你明确选择并写入计划，成熟不会自动处理。阅读步骤先取得该步原 operationId，再用 life_read_segment 接收实际文字，读到内容后用 life_read_confirm 确认原片段，动画或购买不能冒充阅读或读懂。根据兴趣和真实状态安排有原因的完整活动，不用密集动作清单替代生活。由程序持续执行已接受活动，模型回复结束或动画结束不代表活动结束。不必为了每个小动作再唤醒。允许长时间继续、休息或没有下一安排。有限活动全部完成后若未选下次考虑时间，会给你一次接续机会；你仍可明确选择等待，不会被反复催促。plan_next 设置同一计划下次考虑时间，check_alarm 查看。需要主动联系时用 reach_out，不必每轮发言；生活事件不是用户发言。普通主人聊天无需每轮重写计划。保持现有人设、自述和记忆。' : '';
+        '这是你当前的自主规划投递会话，不是生活状态的存储位置。收到生活唤醒时先用 life_plan_read 读取持久计划及版本，然后实际保存本次考虑结果：需要改变意图用 life_plan_update；决定继续原活动或保持等待用 life_plan_keep，不重建活动；需要暂停或取消用 life_activity_control。没有计划时也由你决定，不必等主人逐项安排；想安静等待可保存有原因的空步骤计划并将 nextConsiderAt 设为 null。口头描述、读取状态或只设闹钟都不能代替保存生活意图。经济活动先用 pet_economy_state 查看真实目录、余额与库存；收菜、出售、补种和库存餐食都由你明确选择并写入计划，成熟不会自动处理。阅读步骤先取得该步原 operationId，再用 life_read_segment 接收实际文字，读到内容后用 life_read_confirm 确认原片段，动画或购买不能冒充阅读或读懂。根据兴趣和真实状态安排有原因的完整活动，不用密集动作清单替代生活。由程序持续执行已接受活动，模型回复结束或动画结束不代表活动结束。不必为了每个小动作再唤醒。允许长时间继续、休息或没有下一安排。hold、躺在床上和下次考虑时间都不会让身体入睡；决定睡觉时用 life_plan_update 明确安排 kind=body、action=sleep，再按需要接 hold 等待。入睡要以身体回执及 asleep 状态为准；失败时查看真实原因并修订或恢复原计划，不能用“睡了”的文字代替。有限活动全部完成后若未选下次考虑时间，会给你一次接续机会；你仍可明确选择等待，不会被反复催促。plan_next 设置同一计划下次考虑时间，check_alarm 查看。需要主动联系时用 reach_out，不必每轮发言；生活事件不是用户发言。普通主人聊天无需每轮重写计划。保持现有人设、自述和记忆。' : '';
     });
     const changed=()=>this.scheduleTick();
     this.subscriptions.push(ctx.on('pet/core.changed',changed),ctx.on('pet/behavior.changed',event=>{if(event.reason!=='observation')changed();}),
@@ -185,6 +186,11 @@ export class CompanionLife {
         schedule: () => this.preferences, alarmFile: REVIEW_ALARM_FILE},
       dailyBudget: () => this.preferences.dailyBudget ?? undefined,
       photos: () => bound.library.album(),
+      reviewDiaryStatus: (day,session,messageId) => {
+        if(!active() || !member(session.id))throw Error('Review workspace or home changed');
+        return reviewDiaryStatus(host,{id:bound.id,directory:bound.library.paths.directory,timeZone:this.timeZone,
+          sessionIds:this.current()!.sessionIds,isHome:id=>this.isHome(id)},day,session,messageId);
+      },
       afterReview: () => {
         const id = store.read().homeSessionId;
         if (id && this.preferences.compactAfterReview && this.running()) this.ctx.emit('pet/life.review', id);

@@ -219,6 +219,7 @@ export function createLifeRuntime(deps) {
         if (!pending)
             return;
         refreshState();
+        if (state.reviewWake?.messageId === pending.messageId) delete state.reviewWake;
         if (requirePlanningDecision && pending.planRevision !== undefined && pending.planRevision !== planRevision()) {
             // A new owner decision supersedes even an unstarted greeting or
             // review. It keeps its own alarm and must not be reawakened here.
@@ -290,12 +291,14 @@ export function createLifeRuntime(deps) {
         const correction = requirePlanningDecision && recovery?.status === 'retrying'
             && 'alarm' in job && job.alarm.source === 'plan' && recovery.retryAt === job.alarm.at;
         const factJob = 'facts' in job;
+        const reviewJob = source === 'review' && !!deps.reviewDiaryStatus;
         if (!factJob && requirePlanningDecision && recovery && !correction) clearPlanningRecovery();
         const pending = { messageId: message.id, sessionId: agent.id, sentAt: now.toISOString(), what, scheduledAt, source, job,
-            ...(!factJob && requirePlanningDecision ? { planRevision: planRevision(), decisionRevision: decisionRevision() }
+            ...(!factJob && !reviewJob && requirePlanningDecision ? { planRevision: planRevision(), decisionRevision: decisionRevision() }
                 : source === 'plan' && hasCurrentPlan() ? { planRevision: state.planRevision } : {}),
             ...(correction ? { recoveryMessageId: recovery.messageId, recoveryAttempts: recovery.attempts } : {}) };
         state.delivering = pending;
+        if (reviewJob) state.reviewWake = {day:job.review.day,sessionId:agent.id,messageId:message.id};
         // This is an admission record, not optional after-the-fact bookkeeping.
         // A message must not start when its consumption cannot be recovered.
         store.write(state);
@@ -311,6 +314,11 @@ export function createLifeRuntime(deps) {
         // check settles it. Hiding due work also avoids a zero-delay timer loop.
         if (requirePlanningDecision && state.planningWake) return;
         const { greeting, review, alarm } = state;
+        if (state.reviewWake) return;
+        const retry = validClockTime(options.schedule().review) && state.pendingReviews?.find(item => item.retryAt);
+        if (retry && (!review || Date.parse(retry.retryAt) < Date.parse(review.at))
+            && (!alarm || Date.parse(retry.retryAt) <= Date.parse(alarm.at)))
+            return {kind:'review',at:retry.retryAt,review:{at:retry.at,day:retry.day}};
         if (greeting)
             return { kind: 'greeting', at: greeting.at, greeting };
         if (review && (!alarm || Date.parse(review.at) <= Date.parse(alarm.at)))
@@ -604,29 +612,92 @@ export function createLifeRuntime(deps) {
             days.add(state.review.day);
         if (reviewing)
             days.add(reviewing);
+        if (state.reviewWake) days.add(state.reviewWake.day);
         return days;
     }
     /** The evening look back on her day; her 我是谁 is kept as it was, so she can rewrite it freely. */
+    function reviewStatus(day, session, messageId) {
+        try { return deps.reviewDiaryStatus?.(day,session,messageId) ?? 'missing'; }
+        catch (error) { faults.set('review', `日记写入待核对：${errorText(error)}`); return 'unknown'; }
+    }
+    function finishReview(session, reason) {
+        const wake = state.reviewWake;
+        if (!wake || wake.sessionId !== session.id) return;
+        const events = session.snapshotEvents(), input = events.findIndex(event => event.type === 'user/message' && event.data.id === wake.messageId);
+        if (input < 0) {
+            if (reason === 'aborted') {
+                delete state.reviewWake;
+                const item = state.pendingReviews?.find(item => item.day === wake.day);
+                if (item) { delete item.retryAt; item.failure = `日记 ${item.day} 未核实投递；保留补写任务`; }
+                store.write(state);
+            }
+            return;
+        }
+        const turn = events.slice(0,input).reverse().find(event => event.type === 'turn/start')?.data.turn;
+        const end = events.slice(input).find(event => event.type === 'turn/end' && event.data.turn === turn);
+        if (!end && reason !== 'aborted') return;
+        const item = state.pendingReviews?.find(item => item.day === wake.day);
+        if (!item) { delete state.reviewWake; store.write(state); return; }
+        const status = reviewStatus(wake.day,session,wake.messageId);
+        if (status === 'unknown') {
+            delete state.reviewWake;
+            delete item.retryAt;
+            item.failure = `日记 ${item.day} 的写入结果无法核对；保留任务，等待后续回顾`;
+            store.write(state);
+            faults.set('review',item.failure);
+            timer.arm();
+            return;
+        }
+        delete state.reviewWake;
+        if (status === 'written' || status === 'existing') {
+            state.pendingReviews = state.pendingReviews.filter(value => value.day !== wake.day);
+            if (state.pendingReviews[0]) state.pendingReviews[0].retryAt = new Date(clock().getTime()+60_000).toISOString();
+            faults.clear('review');
+            store.write(state);
+            deps.afterReview?.();
+        } else {
+            const why = wake.ownerInterrupted ? 'owner-interrupted' : reason ?? end?.data.reason.kind ?? 'interrupted';
+            item.failure = `日记 ${item.day} 尚无成功写入回执（${why}）；保留补写任务`;
+            const maximum = deps.planningRepairAttempts?.() ?? 1;
+            // A technical retry is bounded. Owner/native cancellation waits for
+            // a later scheduled review instead of reviving the cancelled turn.
+            if (!['aborted','forked','owner-interrupted'].includes(why) && (item.attempts ?? 0) < maximum) {
+                item.attempts = (item.attempts ?? 0) + 1;
+                item.retryAt = new Date(clock().getTime()+60_000).toISOString();
+            } else delete item.retryAt;
+            store.write(state);
+            faults.set('review',item.failure);
+        }
+        timer.arm();
+    }
     function lookBack(review) {
         let snapshot;
+        if (deps.reviewDiaryStatus) {
+            state.pendingReviews ??= [];
+            if (!state.pendingReviews.some(item => item.day === review.day))
+                state.pendingReviews.push({...review,attempts:0});
+            // A new daily opportunity also carries older unfinished dates.
+            // Each exact day is dispatched separately, with its own file scope.
+            review = state.pendingReviews[0];
+            delete review.retryAt;
+        }
         const take = () => {
             reviewing = review.day;
             try {
                 snapshot = keepSelfCopy(options.selfFile, review.day);
                 faults.clear('snapshot');
-            }
-            catch (error) {
-                faults.set('snapshot', `我是谁没能留底：${errorText(error)}`);
-                ctx.logger.error(error);
-            }
-            if (validClockTime(options.schedule().review)) state.review = nextReview(clock(), timeZone, options.schedule().review);
-            else delete state.review;
+            } catch (error) { faults.set('snapshot', `我是谁没能留底：${errorText(error)}`); ctx.logger.error(error); }
+            if (validClockTime(options.schedule().review)) {
+                const next = nextReview(clock(), timeZone, options.schedule().review);
+                // Retrying an older date must not consume tomorrow's review.
+                if (!state.review || Date.parse(state.review.at) <= clock().getTime()) state.review = next;
+            } else delete state.review;
         };
         const existing = (dir) => { const file = join(options.worldDir, dir, `${review.day}.jsonl`); return existsSync(file) ? file : undefined; };
         return sayOwn('每日回顾', 'review', review.at, { review }, take, () => { state.review = review; }, now => reviewText(review, now, {
             ...withValue('conversations', existing('conversations')), ...withValue('activity', existing('activity')), ...withValue('snapshot', snapshot),
             diaryDir: options.diaryDir, selfFile: options.selfFile,
-        }, timeZone, wake(), alarmMessages(), templateValues()), () => deps.afterReview?.());
+        }, timeZone, wake(), alarmMessages(), templateValues()), deps.reviewDiaryStatus ? undefined : () => deps.afterReview?.());
     }
     async function send(alarm) {
         let planRevision;
@@ -963,6 +1034,7 @@ export function createLifeRuntime(deps) {
                 spent(event.data.usage, event.data.message.source.model);
             if (event.type === 'user/message' && event.data.source.kind === 'user') {
                 earlyStop.partnerSpoke();
+                if (state.reviewWake) { state.reviewWake.ownerInterrupted = true; store.write(state); }
                 if (requirePlanningDecision && state.planningRecovery) {
                     clearPlanningRecovery();
                     store.write(state);
@@ -994,6 +1066,7 @@ export function createLifeRuntime(deps) {
             }
             if (event.type !== 'turn/end')
                 return;
+            if (deps.reviewDiaryStatus) finishReview(session,event.data.reason.kind);
             if (state.delivering?.source !== 'review')
                 reviewing = undefined;
             home.turnEnded(session.id);
@@ -1020,6 +1093,32 @@ export function createLifeRuntime(deps) {
             faults.clear('home');
             await reconcile(agent);
             reconcilePlanning(agent);
+            if (deps.reviewDiaryStatus && state.reviewWake) {
+                finishReview(agent.session,agent.status === 'idle' ? 'aborted' : undefined);
+                // A replaced home cannot own the old capability or block new work.
+                if (state.reviewWake && state.reviewWake.sessionId !== agent.id) {
+                    delete state.reviewWake; store.write(state);
+                }
+            }
+            for (const item of state.pendingReviews ?? []) if (item.failure) faults.set('review',item.failure);
+            // Recover only dates proven by this Life store's delivered review
+            // records. Do not invent past tasks by scanning arbitrary files.
+            if (deps.reviewDiaryStatus) {
+                const today = formatLocalTime(clock(),timeZone).slice(0,10);
+                for (const wake of store.wakes()) {
+                    if (wake.source !== 'review' || !Number.isFinite(Date.parse(wake.scheduledAt))) continue;
+                    const day = formatLocalTime(new Date(wake.scheduledAt),timeZone).slice(0,10);
+                    if (day > today || state.pendingReviews?.some(item => item.day === day)) continue;
+                    if (reviewStatus(day,agent.session,'') === 'missing') {
+                        state.pendingReviews ??= [];
+                        state.pendingReviews.push({day,at:wake.scheduledAt,attempts:0,failure:`日记 ${day} 在已投递回顾后仍缺失；等待补写`});
+                    }
+                }
+                if (state.pendingReviews?.length) {
+                    state.pendingReviews.sort((a,b)=>a.day.localeCompare(b.day));
+                    store.write(state);
+                }
+            }
             // The morning fallback is the plugin's, not a plan of hers: starting again wakes her rather than leaving her asleep till then.
             const bootstrap = requirePlanningDecision && !hasCurrentPlan() && !state.greeting
                 && !state.delivering && !state.planningWake && !state.alarm
@@ -1058,7 +1157,7 @@ export function createLifeRuntime(deps) {
     }
     return {
         start, stop, planNext, checkAlarm, cancelAlarm, deliver, reschedule, reschedulePlan, notifyFacts, acceptsFactMessage,
-        snapshot: () => { refreshState(); planningFault(); return { homeSessionId: state.homeSessionId, alarm: state.alarm, review: state.review, spend: state.spend,
+        snapshot: () => { refreshState(); planningFault(); return { homeSessionId: state.homeSessionId, alarm: state.alarm, review: state.review, pendingReviews: state.pendingReviews, spend: state.spend,
             currentPlan: state.currentPlan, planRevision: state.planRevision, planningRecovery: currentRecovery(), faults: faults.list() }; },
         /** Resolves once no alarm delivery is in flight (its durability flush can outlast the turn it starts). */
         settled: async () => { while (delivery || factDiscovery)

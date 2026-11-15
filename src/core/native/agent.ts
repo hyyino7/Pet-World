@@ -164,7 +164,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     const saved=turns.get(exec.agent.id)!;
     if(!sameScope(exec.agent.id,saved.scope))return '会话已离开原绑定工作区';
     if(saved.background && saved.lifePolicy && !lifeToolAllowed(exec.name,saved.lifePolicy.review))
-      return '自主生活仅使用当前生活能力；普通主人对话仍沿用原生工具权限';
+      return saved.lifePolicy.review ? '自主回顾不能使用 bash、edit 或编程工具；请改用已开放的 read 读取记录目录/素材、write 写入指定日期日记和自述。此次拒绝不表示 read/write 无权限。' : '自主生活仅使用当前生活能力；普通主人对话仍沿用原生工具权限';
     if(saved.background)try{host.native.guardTool(exec.agent.id);}catch{return '自主轮次已结束或超过限额';}
   });
   const onStep=async(payload:{agent:Agent;turn:number;step:number;messages:UserMessage[];signal:AbortSignal},next:()=>Promise<PreStepDecision>):Promise<PreStepDecision>=>{

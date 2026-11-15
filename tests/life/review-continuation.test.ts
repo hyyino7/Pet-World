@@ -30,7 +30,7 @@ function fixture() {
     const event={type:'turn/end',data:{turn,reason:{kind}}};events.push(event);
     await handlers.get('session/event')!.at(-1)!(agent.session,event);agent.status='idle';
   }
-  return {start,end,stop,rebind(){storageId='other';}};
+  return {start,end,stop,denial:(name:string)=>guards.map(guard=>guard({agent,name})).find(Boolean),rebind(){storageId='other';}};
 }
 const review={kind:'dsh-world-life',purpose:'review',reviewDay:'2026-11-14'},alarm={kind:'dsh-world-life'};
 
@@ -45,4 +45,11 @@ for(const change of ['binding','owner'] as const)test('interrupted review does n
   const f=fixture();t.after(f.stop);await f.start(review);await f.end('aborted');
   if(change==='binding')f.rebind();else {assert.equal(await f.start({kind:'user'}),undefined);await f.end('completed');}
   assert.ok(!(await f.start(alarm))?.includes('write'));await f.end('completed');
+});
+
+test('review tool refusal names the permitted recovery path without lifting the mask',async t=>{
+  const f=fixture();t.after(f.stop);await f.start(review);
+  assert.match(f.denial('bash'),/read.*write/);
+  assert.match(f.denial('bash'),/不表示.*无权限/);
+  await f.end('completed');await f.start({kind:'user'});assert.equal(f.denial('bash'),undefined);await f.end('completed');
 });

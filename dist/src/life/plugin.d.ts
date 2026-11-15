@@ -68,6 +68,7 @@ export declare class CompanionLife {
             homeSessionId: string | undefined;
             alarm: import("../../vendor/dsh-world/lib/life/types.js").Alarm | undefined;
             review: import("../../vendor/dsh-world/lib/life/types.js").Review | undefined;
+            pendingReviews: import("../../vendor/dsh-world/lib/life/types.js").LifeState["pendingReviews"];
             spend: import("../../vendor/dsh-world/lib/life/types.js").Spend | undefined;
             currentPlan: unknown;
             planRevision: number | undefined;

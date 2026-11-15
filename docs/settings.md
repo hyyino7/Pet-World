@@ -420,11 +420,33 @@ to each turn; no aggregate daily spending cap has been added.
 
 Daily review uses native `read` and `write` for its own self-description and
 diary, including read-only listings of its diary and self-history directories.
-If a review turn is interrupted, its scoped file access follows the next Life
-turn in the same live home and workspace until that turn completes. Owner input,
-rebinding or home disposal ends this continuation. This is an in-memory permission
-continuation, not a persisted review retry or proof that a diary was written.
-Other autonomous turns retain their existing file restrictions.
+Shell or programming-tool refusal does not revoke these scoped file tools.
+Previously delivered review dates with a missing diary are recovered from the
+existing Life wake records on startup. Unfinished dates and their failure reasons persist in Life's existing state;
+a completed model reply is not a diary write receipt. A missing or empty diary
+retains its task, with at most the configured planning repair count of automatic
+corrections per date, then waits for a later daily review. Native cancellation
+waits for that later opportunity. Disabling evening review retains pending tasks
+without dispatching them. Restarts reconcile the original native session before
+retrying, and a successful write or an already existing nonempty diary prevents
+replaying that date. Existing-file reconciliation preserves the record; it does
+not claim a new verified write. Other dates in the backlog remain separate jobs.
+
+A backfill turn receives the original date's scope. It can create that missing
+diary and records the actual backfill date in its text. Existing past diaries
+cannot be overwritten, including when a file appears between preparation and
+dispatch; corrections belong in today's diary. A day still in progress can be
+appended through the native write workflow. No long-term self change is required
+for a successful diary review. Owner input, rebinding or home disposal ends the
+live permission continuation; pending tasks do not grant file access to ordinary
+autonomous turns.
+
+Quiet waiting, lying in bed and the next consideration alarm do not put the body
+to sleep. Choosing sleep requires an explicit `body` step with `action: sleep`;
+arrival and actual body receipts establish sleep. The prompt reports whether the
+body is awake, awaiting sleep or asleep. Failure receipts retain their real reason
+for plan repair; labels and reply prose never execute sleep. A completed hold and
+gentle touch do not wake an already sleeping body.
 
 - **概览 → 打开房间**, **生活 → 房间与菜园 → 打开房间**, or the pet menu's **进入房间** opens the same independent window. Repeating the command focuses it. Wake, rest, feeding, touch, movement and requested garden actions share Behavior's saved body with Desktop and remain usable while Life is paused. Closing Room releases its renderer/request lifetime; it does not reset the body or start another Agent. The TV asks the operating system to select a shared source and uses the existing native Room conversation for frame commentary. Actual physical source sharing remains a separate owner trial.
 - A visible native garden with a moist, immature crop also reads its current

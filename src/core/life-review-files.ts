@@ -35,7 +35,11 @@ export function assertLifeReviewFile(host:Pick<PetCoreHost,'workspace'>,access:L
   if(name==='self.md'||/^(?:diary|self\.history)\/\d{4}-\d{2}-\d{2}\.md$/.test(name)) {
     companionWritingFile(host,writing,name);
     if(tool==='read')return;
-    if(tool==='write'&&(name==='self.md'||name===`diary/${today}.md`||name===`diary/${access.reviewDay}.md`))return;
+    if(tool==='write'&&(name==='self.md'||name===`diary/${today}.md`))return;
+    if(tool==='write'&&name===`diary/${access.reviewDay}.md`) {
+      if(lstatSync(resolve(path),{throwIfNoEntry:false}))throw Error('历史日记已经存在，不能覆盖；更正写入今天的日记');
+      return;
+    }
     throw Error('自主回顾只写自己的当前自述和本次回顾/当日日记');
   }
   if(tool==='read') {

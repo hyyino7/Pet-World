@@ -324,7 +324,9 @@ export class CompanionBehavior {
         const bound = this.currentBound(workspaceId);
         if (!bound)
             return '';
-        return buildHomePromptLine(gardenHomeProjection(bound.room.state), { now: Date.now(), allowActivity: true });
+        const rest = this.restState(workspaceId);
+        return buildHomePromptLine(gardenHomeProjection(bound.room.state), { now: Date.now(), allowActivity: true })
+            + `\n【身体睡眠回执】${rest.sleeping ? '已入睡' : rest.pending ? '尚未入睡，正在执行睡觉安排' : '未入睡，且没有待执行的睡觉安排'}。睡觉须实际提交 body/sleep；hold 和闹钟都不会自动入睡。`;
     }
     restState(workspaceId) {
         const bound = this.currentBound(workspaceId);
