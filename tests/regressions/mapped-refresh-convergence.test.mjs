@@ -84,7 +84,7 @@ async function fixture(t,{real=false,direct=false,lifecycle=false}={}) {
     assert.fail('The actual platform refresh did not settle');
   };
   const changed=(revision,bootId='fixture-boot',reason='observation',workspaceId=target.id)=>emit('pet/behavior.changed',{workspaceId,bootId,revision,reason});
-  t.after(async()=>{platform.close();await body?.close();rmSync(root,{recursive:true,force:true});assert.equal(guardTrips,0,'The event delivery guard must never stop a refresh pump');assert.deepEqual(forbidden,[]);});
+  t.after(async()=>{platform.close();await body?.close();rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:20});assert.equal(guardTrips,0,'The event delivery guard must never stop a refresh pump');assert.deepEqual(forbidden,[]);});
   platform.ownerAccess(target.id);await drain();
   assert.ok((listeners.get('pet/behavior.changed')?.size??0)>0,'The actual ensure() path registered its listener');
   return {platform,body,service,services,ctx,fibers,warnings,drain,changed,
