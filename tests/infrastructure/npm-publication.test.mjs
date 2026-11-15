@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {readFileSync} from 'node:fs';
+import {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {parse} from 'yaml';
 import {waitForNpmArchive} from '../../scripts/lib/npm-publication.mjs';
@@ -11,6 +14,20 @@ const integrity=`sha512-${createHash('sha512').update(bytes).digest('base64')}`;
 const metadataURL=`https://registry.npmjs.org/${name}/${version}`;
 const archiveURL=`https://registry.npmjs.org/${name}/-/${name}-${version}.tgz`;
 const metadata=()=>Response.json({name,version,dist:{integrity,tarball:archiveURL}});
+
+test('publication CLI accepts direct and package-manager separator arguments against checked bytes',t=>{
+  const cwd=mkdtempSync(join(tmpdir(),'npm-publication-cli-'));
+  t.after(()=>rmSync(cwd,{recursive:true,force:true}));
+  writeFileSync(join(cwd,'package.json'),JSON.stringify({name,version}));
+  const archive=join(cwd,'checked archive.tgz');writeFileSync(archive,bytes);
+  const shim=join(cwd,'fetch.mjs');
+  writeFileSync(shim,`globalThis.fetch=async url=>{if(url===${JSON.stringify(metadataURL)})return Response.json(${JSON.stringify({name,version,dist:{integrity,tarball:archiveURL}})});if(url===${JSON.stringify(archiveURL)})return new Response(Buffer.from(${JSON.stringify(bytes.toString('base64'))},'base64'));throw Error('Unexpected URL: '+url);};`);
+  const cli=fileURLToPath(new URL('../../scripts/checks/check-published.mjs',import.meta.url));
+  for(const separator of [[],['--']]) {
+    const result=spawnSync(process.execPath,['--import',shim,cli,...separator,archive],{cwd,encoding:'utf8'});
+    assert.equal(result.status,0,result.stderr);assert.equal(JSON.parse(result.stdout).verified,true);
+  }
+});
 function fixture(respond,timeoutMs=60_000) {
   let clock=0;const calls=[],retries=[];
   return {calls,retries,run:()=>waitForNpmArchive({name,version,integrity,timeoutMs,now:()=>clock,

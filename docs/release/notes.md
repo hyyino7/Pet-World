@@ -1,4 +1,4 @@
-# Her World 0.1.4
+# Her World 0.1.5
 
 Fixes Life plans that stalled before breakfast because travel was represented
 as an indefinite room activity. New `move` steps finish on actual arrival;
@@ -16,6 +16,10 @@ Publication now uses one complete verification and checked archive. It waits
 for npm metadata and ordinary install downloads to match that archive before
 promoting main and publishing the GitHub Release. Re-running a failed release
 reuses its frozen version and source.
+
+Fixes package-manager `--` forwarding in the publication verification CLI.
+Version 0.1.4 was accepted by npm but its workflow stopped at that argument
+error; 0.1.5 includes the CLI regression check and completes the release flow.
 
 Installation remains owner-controlled. Publication performs no local install,
 plan rewrite or personal-data modification.
