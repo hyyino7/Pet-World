@@ -897,6 +897,21 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
 - Claude 复查时在允许回环的本机重跑：`pnpm run build && pnpm run test:behavior-list` 自测 10/10、行为条目 16/16，B10 通过。
 - 保留原有审查文本；本轮共 5 个文件，交 Claude 以一个提交验收提交。未运行 `git add/commit/stash/reset/checkout`，未推送或合并；主人验收另行完成。
 
+### C 批（实现与快测完成，待 Claude 验收和提交）
+
+- `scripts/fixtures/synthetic-companion.mjs`：通过 `dist/src` 的 Core、Memory、Emotion、Body、Life、Economy、记录库、渠道、语音公开流程生成 current/legacy 互斥合成环境；浏览器数据单独留合成导出，不冒充已盘点浏览器。
+- `arch/storage.json` 只新增 `dataVersions`，原结构和 50 条登记不改；本轮未发现需回报 A 批的路径登记不一致。
+- `scripts/migrate/{companion-migrate,context,io,runner}.mjs`、`steps/0001-storage-manifest.mjs`：版本、日志、pid/token 锁、原备份校验续做及目标状态幂等；复用现有备份器和恢复器，正式代码不留测试钩子。
+- `scripts/migrate/{inventory,inventory-plan}.mjs`：按共享备份根输出文件、表名/行数、已知 kind 数量、未知 kind 个数、经济标记和差异；绑定元数据与 SQLite 盘点都在隔离镜像中读取。
+- `tests/migrate/*.mjs`：两种变体的六类演练和盘点检查；注入步骤/DSH 探测均在测试侧，Memory 召回和 SIGKILL 使用真实子进程。
+- 本轮只修 `scripts/migrate/inventory-plan.mjs:26`：用 `realpathSync` 规范化镜像根，绑定、注册表及备份计划的派生路径都从规范根构造，保留共享读取器的严格校验。
+- 新增 `tests/migrate/inventory-paths.test.mjs`：current/legacy 均用真实软链接临时父目录复现；修前 0 通过/2 失败，均在 `scripts/lib/repo-storage.mjs:46` 被拒绝；现有测试及断言未改。
+- 本轮快测 `pnpm run build && node --test tests/migrate/*.test.mjs` 只跑 1 轮：build 通过，60 通过/0 失败/0 跳过；正常迁移回退、真实召回/撤回、四断点续做、并发、结算恢复和拒绝演练均通过。
+- 两种布局的完整镜像备份计划（含全部根目录）与共享 `backupPlan` 深度相等；盘点前后整个合成环境（Repo、DSH home、注册表、回执）的文件清单及字节哈希相等，临时镜像均清理。
+- 保留发现：`inspectRepoBinding` 在 `scripts/lib/repo-storage.mjs:20` 使用只读 SQLite 连接仍会创建源 Core WAL/SHM；本轮对两种关闭后的合成副本独立调用，均实测新增且仅新增 `core.sqlite-shm`、`core.sqlite-wal`，故盘点不能直接对源调用它。
+- `pnpm run check:arch` 通过（规则 74、词表 1381，新增/消失均 0）；`git diff --check`、文档链接及范围检查通过；无未完成的 C 批实现项，未跑全量 verify、真实副本或已安装 DSH 验收。
+- 本轮除本节外只改 scripts/migrate/、新增 tests/migrate/ 回归；未访问外网、安装依赖或调用付费模型；网络仅用本机回环；测试模拟 DSH 探测，正式脚本保留真实探测并拒绝无法确认停写的环境；未运行 git add/commit，由 Claude 验收后按生成器、骨架、盘点、测试、最后本节文档分开提交。
+
 ## 审查结论
 
 ### A 批（第一轮，审查基于 `4071d60`）
