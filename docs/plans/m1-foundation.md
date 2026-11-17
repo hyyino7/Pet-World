@@ -937,6 +937,21 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
 - 本轮验证：语法检查、`pnpm run build`、`pnpm run check:arch` 均通过；`node --test --test-reporter=tap tests/migrate/*.test.mjs` 首轮 46 通过/28 失败，补空值头后最终 50 通过/28 失败/0 跳过。28 个失败均为真实 Memory 夹具的 readiness timeout/exit，含新增两变体用例；`.venv/bin/python` 回环 bind 探针为 PermissionError/errno 1，记为沙箱环境问题，夹具失败导致部分子用例未展开，两变体需 Claude 在本机复验。
 - 本轮仅改 `scripts/migrate/{runner,errors}.mjs`、新增 `tests/migrate/journal-exists.test.mjs` 及本方案；其余既有工作区文件字节未变。未运行 `git add/commit/stash/reset/checkout`、全量 verify、联网、依赖安装、付费模型、DSH 或真实数据验收。
 
+### E 批（典型修改三题已通过，整体待验收）
+
+- 固定起点为 `main` 的 `bfe069f`；典型修改三题均已通过相关快测，只作对比、不合并；本次仅收尾 QQ 测试和对应文档，未运行 `git add/commit`。
+- 菜园：`catalog.ts` 改小萝卜默认 12→10 小时、售价 3→4；新增真实种植、成熟、出售、重启及重放测试。3 文件（`src/` 1：手写 1、生成 0 / `dist/` 1 / 测试 1），第二层 / `economy` 1 模块；1 轮 build 3.10 秒，相关测试 43 通过 / 0 失败。
+- Room：复用 `assets.ts` 的页面适配与 HUD，新增口渴百分比状态项及发布页面脚本测试。3 文件（`src/` 1：手写 1、生成 0 / `dist/` 1 / 测试 1），第三层 / `room` 1 模块；1 轮 build 3.12 秒，相关测试 17 通过 / 0 失败。
+- QQ（已通过快测）：设置及校验、主动消息前的账号 UTC 日额度/回执原子预留、现有 Console 数字控件及测试；11 文件（`src/` 4：手写 3、生成 1 / `dist/` 6 / 测试 1），第三层 / `channels/console/desktop` 3 模块，Desktop 为 Console 的生成联动。
+- QQ 收尾仅给 `tests/behavior/qq-daily-reach.test.mjs:55` 的 VM 渲染片段加函数作用域，未改实现或断言；先复现失败 1 次，修复后 1 轮 `pnpm run build && node --test tests/behavior/qq-daily-reach.test.mjs` 通过，额度测试 2/2。
+- QQ 相关快测：`node --test dist/tests/infrastructure/group-material.test.js dist/tests/regressions/audit-r7-channel-nudge.test.js tests/behavior-list/channels.test.mjs tests/regressions/audit-qq-recovery.test.mjs tests/regressions/audit-r6-channel-drafts.test.mjs tests/regressions/mapped-channel-path-binding.test.mjs tests/regressions/mapped-group-name-wake.test.mjs tests/world/world-foundation.test.mjs tests/world/world-modules.test.mjs`，80/80，0 跳过。
+- 文件数取相对起点的 diff 与 status 并集，未跟踪测试和已跟踪 build 产物均计入；层/模块按 `arch/layers.json` 的路径归属统计。三个实验分支不合并；当前数字及口径在 `docs/product.md`。
+- `docs/product.md` 登记 5 条已知问题；`/tmp` 丢弃式验证末轮 11/11，含 guest/TV footer、Memory scope 命名、错误语义、分类器分歧，以及 plan/status/锁外预检/拒绝生成 WAL/SHM；双读并发复现 `ERR_SQLITE_ERROR` / `errcode 261`，均只登记。
+- 同文件以 A 的图和读码复核后 5 种扩展，照料动作更正为至少 10 文件；G5 七项分清调用点、目标及边，Console 运维 9 条单列；86 个历史提交逐一分类、按 70 个可辨认批次归组，修复 36/70＝51.4%（估计）。
+- `docs/architecture.md` 补真实基线位置、存储登记链接及近期账本目录；`docs/development.md` 译为中文并集中检查、清单、迁移、盘点及计数命令；product 同步分级、130 个测试入口和实测表。恢复命令由 Claude 在 E worktree 实跑：删掉 `.venv`、`node_modules` 后按 development.md 的命令重建，`check:env` 通过，build 约 3 秒，种地时钟快测 24/24，`check:arch` 通过。`AGENTS.md` 由 Claude 按 dev-kit 模板重写（约 7 KB）。
+- 主 worktree 的架构检查通过：规则 81、词表报告 1073，新增/消失均 0；行为清单 B10 因沙箱拒绝回环导致失败，Claude 在沙箱外复跑 16/16 通过，未跳过或替换真实 provider。
+- 链接、引用行号、diff 与范围检查通过；未跑全量 verify、真实副本或已安装 DSH 验收，未联网、装依赖、调用付费模型、读取个人工作区或执行 git 写操作。
+
 ## 审查结论
 
 ### A 批（第一轮，审查基于 `4071d60`）
