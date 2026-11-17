@@ -107,4 +107,19 @@ Her World 现在把 Node、pnpm、Python 装在仓库里的 `.tools/`，靠 `sou
 
 ## 执行结果
 
+- `scripts/env.sh`、`scripts/setup-runtime.py` 已删除；`scripts/doctor.mjs` 复用 `check()`，比较三个版本并检查 venv 激活路径，失败时指向恢复说明。
+- `scripts/checks/verify.mjs`、`package.json` 的 Python 测试入口改用 `.venv/bin/python`；`scripts/install-dsh.mjs` 删除旧 store 保护。
+- `.npmrc` 取消项目 store；`.gitignore`、`tsconfig.json`、`tsconfig.build.json` 清除 `.tools` / `.pnpm-store` 的对应残留。
+- `.github/actions/project-runtime/action.yml` 改用三个官方 action；`.github/workflows/ci.yml`、`.github/workflows/release.yml` 删除旧 source 步骤。
+- `AGENTS.md`、`docs/development.md` 说明 mise / uv、恢复命令和检查边界；`docs/portability.md`、`docs/settings.md`、`art/life-animation-sources/README.md` 更新调用方式；本文件记录结果。
+- `pnpm run check:env && pnpm run check:types`：本 worktree 和临时副本的首次恢复、挪目录恢复、旧 store 恢复后均通过；原 doctor 在无 `.tools` 环境下预期失败 1 次。
+- `.venv/bin/python tests/memory/memory_provider_test.py`：22 通过、0 失败；`pnpm pack --pack-destination <TMPDIR>` 与 `pnpm run check:package <archive>` 通过。
+- 临时副本验证 Node / pnpm / Python 版本不符、venv 路径过期、激活变量缺失、解释器缺失共 6 类异常，均按预期失败并提示恢复；最终未解决失败 0。
+- 三份 YAML 解析、三个改动脚本的 `node --check`、新增文档引用目标、`git diff --check` 通过；未运行全量门禁，按 skill 留给 Claude 合并前运行。
+- 演练全在 `$TMPDIR/runtime-toolchain-*` 副本完成，未碰主 checkout；`rm -rf` 被自动审批拒绝，改用核对临时目录及名称后的 `shutil.rmtree` 删除两个依赖目录，再执行原安装链。
+- 演练脚本有 3 次前置预期断言失败：旧 store 需模拟旧 shell 变量、无依赖变化的 install 会保留旧 store 并成功、pnpm 会自动切到声明版本；按实测调整夹具后完成验证，业务实现未返修。
+- 实测差异：直接 install 并非总会因旧 store 报错；删除重建后已确认切到默认共享 store。mise 因沙箱不能写 tracked-configs 有警告，安装与检查仍成功。
+- 待 Claude 验收：`main` 尚无 `docs/animation-standard.md`，该文件待作者提交后补改；GitHub CI、下次发布、合并后主 checkout 恢复与旧缓存清理未验证，未推送或合并。
+- 提交受环境阻止：`git add` 无法创建 `/Users/hy-yin/Developer/Projects/Dafeiyu-World/.git/worktrees/Dafeiyu-World/index.lock`（Operation not permitted）；改动未暂存、未提交，需在允许写入该 worktree Git 元数据的会话完成提交。
+
 ## 审查结论
