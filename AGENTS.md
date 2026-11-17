@@ -45,6 +45,7 @@ Her World（npm 包 `her-world`）是跑在 DSH 里的伙伴插件：同一个�
 - 快测：`pnpm run build`，然后 `node --test <受影响的测试文件>`。构建只要几秒；改了 `arch/` 或模块之间的依赖，还要跑 `pnpm run check:arch`。
 - 门禁：`pnpm run verify`，合并前跑一次。它会自动收集 `tests/**/*.test.mjs` 和 `dist/tests/**/*.test.js`，并包含 `check:arch`。
 - 行为清单：`pnpm run build && pnpm run test:behavior-list`
+- 门禁和行为清单里的 Memory 测试要监听本机回环；在不允许回环的沙箱里会失败，这是环境问题，要换到允许回环的地方重跑，不能记成通过或跳过（见 [docs/development.md](docs/development.md#architecture-behavior)）。
 - 恢复环境：[docs/development.md](docs/development.md#local-tools) 里的那一条恢复命令。挪了目录之后，先删掉 `.venv` 和 `node_modules` 再跑它。
 - 迁移和盘点命令：见 [docs/development.md](docs/development.md)。真实数据只在主人提供的隔离副本上跑；Agent 只看命令输出的原因代码和通过与否。
 - 高风险（改之前先停下对齐）：
