@@ -34,6 +34,7 @@ stable npm channel; DSH lists normal version updates without a prerelease filter
 | `docs/` | Current development, settings, portability and release instructions |
 
 - [Development and verification](docs/development.md)
+- [Animation and artwork standard](docs/animation-standard.md)
 - [GitHub installation and release workflow](docs/github-updates.md)
 - [Settings](docs/settings.md)
 - [Portable storage](docs/portability.md)
