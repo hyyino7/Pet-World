@@ -885,6 +885,19 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
 
 </details>
 
+### B 批（实现与快测完成，待 Claude 验收提交）
+- 文件：`tests/behavior-list/index.json` 登记 15 类、4 家族、L1/L2/L3 和 L1 补齐阶段；`entries.ts` 集中源码适配。
+- `fixture.mjs` 提供插件入口、假原生宿主/模型及磁盘日志；`domains/native/channels/families.test.mjs` 覆盖公开面及完整流程。
+- `scripts/checks/run-behavior-list.mjs` 用 `run()` 核对字面身份与实际结果；`index.test.mjs` 验证覆盖及零匹配、重复、skip、todo、取消等反例。
+- `package.json` 仅新增 `test:behavior-list`；未修改 `src/`、`vendor/`、原测试断言，未涉及 A/C/D/E 或新建 `arch/`、`scripts/arch/`。
+- B05 已修：夹具按目录价格拨款，经原生工具提交购种计划，验证购买落盘后再走原种植、暂停和重启断言。
+- B07 已修：跨日重试成功后推进 61 秒并重启重建到期闹钟，当天独立回顾与主人历史补写均通过。
+- B12 已修：假 Date 与真实 batch 定时器均越过 5000ms 安静窗口；重启收件、重复输入和再次重启均验证不重复送达。
+- B10 已验证：回环可用后原测试通过，真实 Memory 子进程、跨会话召回和重启召回均成功，无需改测试。
+- 本轮仅修改 `families.test.mjs`、`channels.test.mjs` 的夹具流程和本节；快测 `pnpm run build && pnpm run test:behavior-list` 本轮 1 轮全绿：build 通过，自测 10/10、行为条目 16/16，0 失败、0 跳过。
+- 15/15 类和 4/4 家族已跑通，未确认旧业务 bug、未偏离 B 批范围；未运行全量门禁，未启动或更新 DSH、未访问外网、未安装依赖、未访问真实数据。
+- 按 4 个提交分组交 Claude 代为提交，执行结果随最后一组；未运行 `git add/commit`，未推送或合并。Claude 仍须按「验收」节复核等级和门禁，主人验收另行完成。
+
 ## 审查结论
 
 ### A 批（第一轮，审查基于 `4071d60`）
