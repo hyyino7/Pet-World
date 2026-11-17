@@ -239,8 +239,6 @@ const hash = data => createHash('sha256').update(data).digest('hex');
 const originalPatch = hash(patch);
 const previousProfile = JSON.parse(readFileSync(join(profileDir, 'package.json'), 'utf8'));
 const profileEnv = {...process.env,npm_config_ignore_scripts:'true'};
-// A source build's project-local store must not replace the DSH profile's package store.
-if (profileEnv.pnpm_config_store_dir === join(packageRoot,'.cache','pnpm-store')) delete profileEnv.pnpm_config_store_dir;
 if (process.argv.includes('--offline')) profileEnv.npm_config_offline='true';
 if (previousProfile.dependencies?.['codex-pet'])
   assert.ok(process.argv.includes('--replace-codex-pet'), 'Use --replace-codex-pet after fully quitting DSH to replace the previous bundle');

@@ -9,5 +9,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.mts"],
-  "exclude": ["node_modules", "references", ".tools", ".venv", ".cache"]
+  "exclude": ["node_modules", "references", ".venv", ".cache"]
 }
