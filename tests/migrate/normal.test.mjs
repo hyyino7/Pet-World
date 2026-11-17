@@ -20,9 +20,11 @@ for (const variant of variants) test(`${variant}: migration, actual recall and p
   assert.deepEqual(JSON.parse(executed.stdout).steps,[{id:'0001-storage-manifest',state:'complete'}]);
   for (const command of ['plan','status']) {
     const result = spawnSync(process.execPath,[...cli,command,'--installation',f.installation],{encoding:'utf8'});
-    assert.equal(result.status,0,result.stderr); assert.equal(JSON.parse(result.stdout).steps[0].state,'complete');
+    assert.equal(result.status,0,result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout).steps,command === 'plan' ? [] : [{id:'0001-storage-manifest',state:'complete'}]);
     assert.ok(!result.stdout.includes(f.config.companionId));
   }
+  const originalLease = readFileSync(join(backup,'data/companion/payload/data/migration.lock'));
   const version = read(join(f.data, 'storage-manifest.json'));
   assert.equal(version.schemaVersion, 1); assert.equal(version.companionId, f.config.companionId);
   const header = JSON.parse(readFileSync(join(f.data, 'migrations.jsonl'),'utf8').split('\n')[0]);
@@ -45,6 +47,7 @@ for (const variant of variants) test(`${variant}: migration, actual recall and p
   assert.ok(result.preservedJournals.includes('core records:channel-usage-event'));
   assert.equal(existsSync(join(f.data,'storage-manifest.json')),false);
   assert.equal(existsSync(join(f.data,'migrations.jsonl')),false);
+  assert.deepEqual(readFileSync(join(f.data,'migration.lock')),originalLease,'Shared restore retains the backed-up lease; verify no migration is running before removing it');
   assert.equal(read(join(f.data,'life/life.json')).spend.yuan,2);
   assert.match(readFileSync(join(f.profile,'cordis.patch.yml'),'utf8'),/Later/);
   assert.deepEqual(memoryLogical(f),before);
