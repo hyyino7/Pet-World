@@ -523,7 +523,20 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
 
 ## 执行结果
 
-<Codex 完成后按批填写，每批 15 行以内>
+### A 批（实现与快测完成，待 Claude 验收和提交）
+
+- `arch/layers.json`：13 个模块、13 个服务、依赖/事件和生成源声明；`arch/storage.json`：第 4 节全部数据类别，共 50 条登记。
+- `scripts/arch/check.mjs`、`lib/*.mjs`：TypeScript AST 的 R1–R4、R5 报告、R8、逐条身份与只减不增的棘轮；`fixtures/**`：独立最小违规/干净样例。
+- 本轮只修 `lib/storage.mjs`：声明含 `data/` 才截取后缀，避免空字符串误匹配；在 `tests/arch/known-violations.test.mjs` 追加 8 种路径归属断言，保留原失败测试。
+- `tests/arch/*.mjs`：已知写法、生成源、R5 读写和棘轮测试；`package.json` 新增 `check:arch`；`scripts/checks/verify.mjs:13` 在 build 前接入（两处接线本轮未改）。
+- 调用检查脚本的 `scan()` 重新生成 `arch/baseline/writers.json`，并与再次扫描的序列化结果逐条相等；324 条身份均未变，9 条由未知变为有归属（6 违规、3 一致），现为 63 违规、111 一致、150 未知。
+- `arch/baseline/rules.json` 保持 74 条；`vocabulary.json` 保持 1381 条：314 对完全重复和 358 对子集关系各记双方身份，另有 37 条裸字符串，即 `(314 + 358) × 2 + 37`，不是 1381 个重复组。
+- 完全同集按取值去重为 84 个跨文件重复组（语法口径，未逐组认定业务重复）；裸字符串为 kind 10、action 9、status 3、type 15。扫描也收录 CSS、路径、协议等集合，存在业务词表以外的噪音，本轮不改 R8 规则或基线。
+- 本轮快测共 2 轮：`node --test tests/arch/*.test.mjs` 首轮复现 17 通过/1 失败，修后 19 通过/0 失败，均无跳过；两轮 `pnpm run check:arch -- --report` 均通过，规则/词表均新增 0、消失 0。
+- 复核一次性验收表 R1–R5 共 45 个位置及全部 324 条 R5 报告；R8 七组定义份数仍为 3、2、4、4、4、2+标签1、2；`git diff --check`、文档链接和范围检查通过。
+- 无未完成的 A 批实现项；未运行全量 verify、构建、DSH 或付费模型，未访问个人数据，未改 src/、vendor/、原有测试或 B–E；正式文档同步留 E 批。
+- 本轮未运行 git add/commit，全部改动留给 Claude 按声明/实现、生成基线、样例、测试/接线、最后执行结果分开提交；未推送、未合并。
+- 验收注意：R5 只报告，仍有 150 条无法静态判定；84 组是同集统计而非业务重复确认数。全量门禁、Claude 验收及主人验收仍待各自执行。
 
 ## 审查结论
 
