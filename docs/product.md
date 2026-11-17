@@ -96,33 +96,33 @@ Her World 是跑在 DSH 里的伙伴插件，同一个伙伴的身份、记忆�
 
 ### 典型修改前后对比
 
-回答「重写是不是真的降低了维护成本」。固定起点是 `main` 的 `bfe069f`。前 3 题在同一起点的独立 `codex/m1-baseline-*` 分支实做，只用于度量，不合并；三题均已通过相关快测。统计包含工作区修改和未跟踪文件。计数方法见 [开发说明](development.md#baseline-counting)。层和模块按 [arch/layers.json](../arch/layers.json) 的文件根映射；测试及 `dist/src` 归回其源码模块，不另算一层；`src/` 内声明的生成文件仍计入其物理模块。
+回答「重写是不是真的降低了维护成本」。固定起点是 `main` 的 `bfe069f`。前 3 题在同一起点的独立 `codex/m1-baseline-*` 分支实做，只用于度量，不合并；只统计 `git diff --stat bfe069f..<分支>` 的已提交差异。计数方法见 [开发说明](development.md#baseline-counting)。层和模块按 [arch/layers.json](../arch/layers.json) 的文件根映射；测试及 `dist/src` 归回其源码模块，不另算一层；`src/` 内声明的生成文件仍计入其物理模块。
 
 | 典型修改 | 现在（基线） | 目标 |
 | --- | --- | --- |
-| 1. 把小萝卜的默认生长时间由 12 小时改为 10 小时，售价由 3 改为 4 | 3 文件：`src/` 1（手写 1、生成 0）、`dist/` 1、测试 1；1 层 / 1 模块（第二层 `economy`）；build + 相关测试 43/43，1 轮 | 只动第二层·钱包区及其测试 |
-| 2. 给 Room 增加「当前口渴值」百分比状态项 | 3 文件：`src/` 1（手写 1、生成 0）、`dist/` 1、测试 1；1 层 / 1 模块（第三层 `room`）；build + 相关测试 17/17，1 轮 | 只动 Room 及共用资源，不动第一层、第二层 |
-| 3. 给 QQ 加每账号每日主动消息额度 | **已通过快测**：11 文件：`src/` 4（手写 3、生成 1）、`dist/` 6、测试 1；1 层 / 3 模块（第三层 `channels/console/desktop`，其中 Desktop 是生成联动）；build 通过，额度测试 2/2、相关 QQ/channels 测试 80/80 | 只动 Channels，不动其他层 |
+| 1. 把小萝卜的默认生长时间由 12 小时改为 10 小时，售价由 3 改为 4 | 3 文件：`src/` 1（手写 1、生成 0）、`dist/` 1、测试 1；1 层 / 1 模块（第二层 `economy`） | 只动第二层·钱包区及其测试 |
+| 2. 给 Room 增加「当前口渴值」百分比状态项 | 3 文件：`src/` 1（手写 1、生成 0）、`dist/` 1、测试 1；1 层 / 1 模块（第三层 `room`） | 只动 Room 及共用资源，不动第一层、第二层 |
+| 3. 给 QQ 加每账号每日主动消息额度 | 11 文件：`src/` 4（手写 3、生成 1）、`dist/` 6、测试 1；1 层 / 3 模块（第三层 `channels/console/desktop`，其中 Desktop 是生成联动） | 只动 Channels，不动其他层 |
 | 4. 新增一个伙伴可调用的工具 | 1 文件（复用已挂载的工具集合，仅 owner 用）；2 文件（Life 也可用）；4 文件（另加历史投影） | 工具定义里一处声明来源，其余派生 |
 | 5. 新增一类输入来源 | 至少 3 文件（有独立准入及工具策略的后台来源）；至少 5 个自有文件（含设置与持久化的新聊天平台，上游身份支持另计） | 一个来源适配器登记 |
 | 6. 新增一个上下文段（例如天气） | 1–2 文件（已有模块内登记，或另拆读取器）；预算、有效期和 guest 可见性没有集中契约检查 | 一条段声明，约束由契约检查 |
 | 7. 新增一个设置页项目 | 至少 3 文件（界面、拥有者的字段校验、实际消费，沿用透传 RPC）；新操作再加路由和处理器，共至少 5 文件 | 一份字段声明驱动显示、保存、执行 |
-| 8. 新增一个照料动作；新增一个事实领域 | 至少 10 个自有文件（照料动作，3 层 / 5 模块，上游另计）；至少 8 个文件（事实领域，含提供者和 Python 侧识别） | 一份基础表或领域声明，其余派生，漏改能被检查发现 |
+| 8. 新增一个照料动作；新增一个事实领域 | 照料动作接入 Life、Room、Console 并新增播放映射，不进入计划：至少 7 个自有文件，2 层 / 4 模块；同一动作再进入计划：至少 10 个自有文件，3 层 / 5 模块；上游另计。事实领域至少 8 个文件（含提供者和 Python 侧识别） | 一份基础表或领域声明，其余派生，漏改能被检查发现 |
 
-三题的 `dist/` 都是 build 联动的已跟踪 `dist/src/` 文件，保留并计数；新测试各 1 个也已计入。菜园、Room 的 build 分别为 3.10、3.12 秒，相关测试为 0.56、0.40 秒。QQ 本次收尾先复现重复声明失败 1 次，只给测试的渲染片段加函数作用域；修复后 1 轮 build、额度测试和相关 QQ/channels 测试全部通过，未改实现或断言。
+三题的 `dist/` 都是 build 联动的已跟踪 `dist/src/` 文件，保留并计数；新测试各 1 个也已计入。
 
-QQ 手写代码涉及 Channels 与 Console，`src/desktop/platform/client.js` 是 Console 内嵌客户端的生成产物。设置页保存到真实持久化及额度执行的流程已通过（`tests/behavior/qq-daily-reach.test.mjs:42`）；`dailyReachLimit` 默认 10，0 禁发，按 UTC 日和当前存储绑定内的账号计数。发送前与回执一起持久预留，重复请求不重扣，未知发送仍占额度，测试覆盖重启、换目标、换账号、跨日、并发和无效设置（同文件 `:42`、`:80`）。
+QQ 实验分支 `codex/m1-baseline-3-channel` 的手写代码涉及 Channels 与 Console，`src/desktop/platform/client.js` 是 Console 内嵌客户端的生成产物。设置页保存到真实持久化及额度执行的流程由该分支的 `tests/behavior/qq-daily-reach.test.mjs:42` 覆盖；`dailyReachLimit` 默认 10，0 禁发，按 UTC 日和当前存储绑定内的账号计数。发送前与回执一起持久预留，重复请求不重扣，未知发送仍占额度，测试覆盖重启、换目标、换账号、跨日、并发和无效设置（同文件 `:42`、`:80`）。
 
 后 5 题是 A 的 R1 import 图结合执行点读码所得的下限，未实际实现，排除测试、文档和构建产物；图中仅被动导入类型的消费者不等于必改文件。复核依据：
 
 | 题 | 文件与执行点 |
 | --- | --- |
-| 4 工具 | 已挂载工具集合可在 `src/room/plugin.ts:95` 增加定义；Life 另有 `src/core/life-tool-policy.ts:2` 白名单。历史瘦身识别在 `src/core/native/history-maintenance.ts:13`，另需模块投影（如 `src/room/tool-context.ts:8`）；其消费者 `src/core/native/agent.ts:17` 无需跟着新增分支。1/2/4 的说法只适用于上述复用路径。 |
-| 5 输入来源 | 后台来源需适配器、`src/core/native/conversation.ts:23` 的准入端口、`src/core/native/agent.ts:56` 的工具策略；聊天平台至少涉及适配器（现有例 `src/channels/qq.ts:38`）、`src/channels/messaging-settings.ts:4`、`src/channels/messaging-storage.ts:6`、`src/channels/messaging.ts:57` 和 `src/console/client.js:344`。身份校验还依赖上游 `speakerIdentity`（`src/channels/sessions.ts:6`），因此 3/5 不能当所有来源的精确改动数。 |
-| 6 上下文 | 已挂载模块可直接调用 `src/core/native/prompt.ts:91,179` 的登记函数，现有例为 `src/life/plugin.ts:63`；读取器可同文件或独立文件。动态段退休在 `src/core/native/prompt.ts:25`，guest 过滤由各登记者自行决定（`src/emotion/plugin.ts:218`），不是统一预算或可见性声明。 |
-| 7 设置 | `src/console/client.js:568` 控件、`src/core/companion-settings.ts:4,56` 的字段声明及解析、消费端（如 `src/emotion/recent.ts:7`）构成 3 个文件；现有透传在 `src/console/settings.ts:338`。新操作还要改 `src/console/plugin.ts:28` 的路由清单和 `src/console/settings.ts:69` 的分支。 |
-| 8 照料动作 | 原「至少 9」漏掉 `src/life/plugin.ts:36` 的独立入口词表。10 个文件分别为 `src/behavior/plugin.ts:18`、`src/behavior/room.ts:83,591,971`、`src/behavior/playback.ts:34,102`、`src/contracts/behavior.ts:58`、`src/life/plugin.ts:36`、`src/life/plan.ts:93`、`src/life/plan-tools.ts:89`、`src/room/plugin.ts:14`、`src/console/settings.ts:225`、`src/console/client.js:656`；源码检查不扫描 vendor，实际身体执行若需上游改动应另计。 |
-| 8 事实领域 | 统一按文件计，原「8 处」不是可比较单位：领域提供者（现有例 `src/economy/plugin.ts:145`）加 `src/contracts/interaction.ts:13`、`src/core/native/conversation.ts:108`、`src/core/companion-foundation.ts:179,228`、`src/core/interaction-presentation.ts:15`、`src/life/facts.ts:9`、`src/life/plugin.ts:360`、`src/memory/provider.py:76`，至少 8 文件；存储布局、UI 或新公开接口增加的文件另计。 |
+| 4 工具 | 已挂载工具集合可在 `src/room/plugin.ts:95` 增加定义；Life 另有 `src/core/life-tool-policy.ts:2,12` 白名单。历史瘦身识别在 `src/core/native/history-maintenance.ts:16`，另需模块投影（如 `src/room/tool-context.ts:10`）；其消费者 `src/core/native/agent.ts:17` 无需跟着新增分支。1/2/4 的说法只适用于上述复用路径。 |
+| 5 输入来源 | 后台来源需适配器、`src/core/native/conversation.ts:24-26` 的准入端口、`src/core/native/agent.ts:56` 的工具策略；聊天平台至少涉及适配器（现有例 `src/channels/qq.ts:38`）、`src/channels/messaging-settings.ts:4`、`src/channels/messaging-storage.ts:6`、`src/channels/messaging.ts:57` 和 `src/console/client.js:344`。身份校验还依赖上游 `speakerIdentity`（`src/channels/sessions.ts:6`），因此 3/5 不能当所有来源的精确改动数。 |
+| 6 上下文 | 已挂载模块可直接调用 `src/core/native/prompt.ts:91,179` 的登记函数，现有例为 `src/life/plugin.ts:63`；读取器可同文件或独立文件。动态段退休在 `src/core/native/prompt.ts:25`，guest 可见性由登记回调自行决定（如 `src/emotion/plugin.ts:218` 的作用域条件），不是统一预算或可见性声明。 |
+| 7 设置 | `src/console/client.js:1049,1103` 的伙伴设置控件、`src/core/companion-settings.ts:4,56` 的字段声明及解析、消费端（如 `src/emotion/recent.ts:71-72`）构成 3 个文件；现有透传在 `src/console/settings.ts:339`。新操作还要改 `src/console/plugin.ts:28` 的路由清单和 `src/console/settings.ts:79` 一类处理分支。 |
+| 8 照料动作 | 按同时接入 Life、Room、Console 的现有入口并新增播放映射计：不进入计划时，至少涉及 `src/behavior/plugin.ts:18`、`src/behavior/room.ts:83,971`、`src/behavior/playback.ts:175,188`、`src/life/plugin.ts:36`、`src/room/plugin.ts:14`、`src/console/settings.ts:225`、`src/console/client.js:656` 共 7 文件，2 层 / 4 模块（第二层 `behavior/life`，第三层 `room/console`）。同一动作再进入计划时，还要改 `src/contracts/behavior.ts:58`、`src/life/plan.ts:93`、`src/life/plan-tools.ts:89`，并扩展已计入的 `src/behavior/room.ts:591` 和 `src/behavior/playback.ts:43-48`，共至少 10 文件，3 层 / 5 模块（另含第一层 `contracts`）。现有 `pet` 在照料词表中，未进入计划动作联合；复用现有上游执行和素材，新增上游动作或素材另计。 |
+| 8 事实领域 | 统一按文件计：领域提供者（现有例 `src/economy/plugin.ts:145`）加 `src/contracts/interaction.ts:13`、`src/core/native/conversation.ts:107`、`src/core/companion-foundation.ts:179,228`、`src/core/interaction-presentation.ts:15`、`src/life/facts.ts:9`、`src/life/plugin.ts:360,365`、`src/memory/provider.py:76`，至少 8 文件；存储布局、UI 或新公开接口增加的文件另计。 |
 
 目标是方向性的：动的文件数和跨的层数要明显下降。「什么算明显」等阶段 1 测出基线后，由主人和 Claude 一起定，写进这里。
 
@@ -138,101 +138,12 @@ QQ 手写代码涉及 Channels 与 Console，`src/desktop/platform/client.js` �
 | 3. kind/action 字符串判断 | 381 点 / 45 文件；kind 277 点 / 41 文件，action 104 点 / 13 文件 | 沿用现有 AST 统计（`scripts/arch/lib/vocabulary.mjs:38`）；重叠文件只计一次。与人工词法盘点不混算，也不外推到未扫描的测试、Python 或 vendor |
 | 4. 手写超过 1500 行的文件 | 0 个 | 跟踪文件中的 `src/`、`scripts/`、`tests/` 代码，排除生成清单、vendor 和 dist；按实际文本行计 |
 | 5. 模块间依赖 | R1 42 条；合并 R1/R2 后 59 条；合并 R1–R4 后 **60 条** | 有向 `from→to` 去重，排除模块内部自环和未知端点，含类型导入；报告按单规则含自环的原始数分别是 54/47/19/5，不与本行相加 |
-| 6. 修复批次占比 | **36 / 70 = 51.4%（估计）**；可辨认批次为修复 36、功能 13、发版 11、其他 10 | 从保留历史的 86 个提交逐个分类；6 个合并不重复计。按下表批次标识去重，不以修复提交数作分子；大包导入内部未保留的返工无法还原，70 只是可辨认批次，比例不是完整历史的精确频率 |
-| 7. 典型修改基线 | 菜园、Room 各 3 文件 / 1 层 / 1 模块；QQ 未完成，当前 11 文件 / 1 层 / 3 模块；后五题见上表 | 源码、测试、构建产物分开；实际修改与读码下限分开 |
+| 6. 修复批次占比 | **36 / 70 = 51.4%（估计）**；可辨认批次为修复 36、功能 13、发版 11、其他 10 | 从保留历史的 86 个提交逐个分类；6 个合并不重复计。按 G3 的不变量及修复轮次归批并去重，不以修复提交数作分子；大包导入内部未保留的返工无法还原，70 只是可辨认批次，比例不是完整历史的精确频率 |
+| 7. 典型修改基线 | 前 3 题基线已完成：菜园、Room 各 3 文件 / 1 层 / 1 模块；QQ 11 文件 / 1 层 / 3 模块；后五题见上表 | 源码、测试、构建产物分开；实际修改与读码下限分开 |
 
-Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模块边）；`src/core/companion-foundation.ts:179` 一处条件读取对应两个目标，不能再记成「19 处」。Console 行保留在当前违规基线里，没有改成放行规则。
+Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模块边）；`src/core/companion-foundation.ts:179` 一处条件读取对应两个目标。Console 行保留在当前违规基线里，没有改成放行规则。
 
-**修复批次如何数：** 一个不变量的一轮修复记一批（F）；一个提交里的不同不变量或有证据的再次返工分别记，附随测试、生成基线、结果文档和合并不重复记。功能（N）、发版（P）、其他（O）同样按交付批次去重。分类依据是提交说明、源码/测试差异和保存的执行结果，拿不准的已标估计；没有记录的轮次不补猜。`36330d3` 里的 F34/F35 是同一盘点覆盖不变量的两轮修法，`e20c196` 的 F30/F31 区分首次原因分类和后续完成日志提示纠正；两者均由方案 C 批执行结果及复查印证。下表列全体提交，批次标识仅用于核对本次度量。
-
-| 提交 | 类别 | 归入批次 | 判断依据 |
-| --- | --- | --- | --- |
-| `dd5e077` | 其他 | O01 | 开发环境初建 |
-| `4ac51de` | 功能 | N01 | Core 契约与实现同一交付 |
-| `f8990dd` | 功能 | N01 | Core 与设置 |
-| `ef0e1b7` | 其他 | O03 | 交接文档 |
-| `676bd65` | 功能（估计） | N02 | 大包 Memory/互动；内部返工未知 |
-| `3203d36` | 功能（估计） | N03 | 大包 Room/Desktop；内部返工未知 |
-| `aa27b0b` | 其他 | O02 | 当前仓库初始化 |
-| `3e87b46` | 其他 | O02 | 初始化的忽略项 |
-| `2962d0f` | 功能（估计） | N04 | 大包模块/DSH；内部返工未知 |
-| `3f390e2` | 其他（估计） | O04 | 迁入既有候选，不重复算原功能 |
-| `e894a4e` | 其他 | — | 合并；不重复算子提交批次 |
-| `2531edb` | 修复 | F01 | CI Python 运行环境 |
-| `c1f5357` | 修复 | F02 | 源码包排除本地验证链接 |
-| `3844125` | 修复 | F03 | CI 缺锁定的 Memory 夹具依赖 |
-| `6fcbdbb` | 其他 | O05 | 发布验收说明 |
-| `863a161` | 功能 | N05 | GitHub 安装路径 |
-| `fc6986c` | 发版 | P01 | 版本与发布元数据 |
-| `ff3bc7b` | 其他 | O06 | 目录整理与历史清理 |
-| `595968b` | 修复 | F04 F05 | 读取刷新收敛；Room 画面空白各一批 |
-| `144a1ab` | 发版 | P02 | 版本与发布元数据 |
-| `184a510` | 功能 | N06 | npm 发布工作流 |
-| `bae4e96` | 修复 | F06 | 等待 npm 可下载 |
-| `c5d6323` | 发版 | P03 | 版本与发布元数据 |
-| `86d0683` | 功能 | N07 | 原生 npm 更新流程简化 |
-| `23d45d6` | 修复 | F07 | 照料控制重放保留执行 |
-| `d7043ab` | 发版 | P04 | 版本与发布元数据 |
-| `1a6e474` | 修复 | F08 | 中断回顾的文件作用域 |
-| `f96780f` | 发版 | P05 | 版本与发布元数据 |
-| `7f0ce5d` | 功能 + 修复（估计） | N08 F09 F10 | 上下文投影；事实确认；继承文件工具 |
-| `edde0bf` | 发版 | P06 | 版本与发布元数据 |
-| `9b8a9ba` | 修复 | F11 | 种地时钟连续性 |
-| `9af9757` | 发版 | P07 | 版本与发布元数据 |
-| `5ebaac5` | 修复（估计） | F12 F13 | 实际到达推进；发布校验两条不变量 |
-| `acaa7dc` | 修复 | F14 | 发布 CLI 的包管理器分隔符 |
-| `7df6f8e` | 发版 | P08 | 版本与发布元数据 |
-| `b8acd7a` | 修复（估计） | F15 F16 F17 | 计划续行；跨会话召回；菜园身份投影 |
-| `cbf36ec` | 发版 | P09 | 版本与发布元数据 |
-| `95baca0` | 修复（估计） | F18 F19 | 按日恢复回顾；实际睡眠终态 |
-| `e703948` | 修复 | F20 | 临时目录清理瞬态失败 |
-| `471c774` | 发版 | P10 | 版本与发布元数据 |
-| `4d31b63` | 修复 | F21 | 主人聊天创建待补历史日记 |
-| `0a45ada` | 发版 | P11 | 版本与发布元数据 |
-| `77c3819` | 其他 | O07 | 工具链方案 |
-| `8dc9a27` | 功能 | N09 | 工具链版本检查 |
-| `f0fb9ec` | 功能 | N09 | 同批 Python 入口 |
-| `000d050` | 功能 | N09 | 同批工具链移交 mise/uv |
-| `790e178` | 其他 | N09 | 同批文档，不另计 |
-| `8c2959a` | 其他 | N09 | 同批结果，不另计 |
-| `091d38b` | 其他 | O08 | 素材标准 |
-| `173fd5e` | 其他 | — | 合并；不重复算子提交批次 |
-| `c46bf78` | 修复 | F22 | 测试固定日期过期 |
-| `847c143` | 修复 | F23 | 包内文档断链 |
-| `af88ac2` | 其他 | — | 合并；不重复算子提交批次 |
-| `3a6f908` | 其他 | O09 | 重构章程 |
-| `8b6082d` | 其他 | O10 | M1 实施方案 |
-| `46fe0dc` | 功能 | N10 | 架构声明 |
-| `f326bb1` | 功能 | N10 | 同批 AST 检查 |
-| `6106c1d` | 功能 | N10 | 同批生成基线 |
-| `902ee00` | 功能 | N10 | 同批违规样例 |
-| `277b2f7` | 功能 | N10 | 同批测试与接线 |
-| `580ce69` | 其他 | N10 | 同批结果，不另计 |
-| `a079514` | 修复 | F24 | 存储声明和写入报告对齐 |
-| `d4818b2` | 修复 | F24 | 同轮生成报告，不另计 |
-| `4071d60` | 其他 | F24 | 同轮结果，不另计 |
-| `a11ffc8` | 修复 | F25 | R8 身份按位置记 |
-| `0573a8a` | 功能 | N11 | 主人确认收窄 vendor 扫描范围 |
-| `1c2f3a4` | 修复 | F26 | 未解析名字和内联类型不得漏报 |
-| `6255514` | 修复 | F25 F26 N11 | 上述返工的生成基线，不另计 |
-| `8b3fc84` | 其他 | F25 F26 N11 | 上述返工结果，不另计 |
-| `32cb340` | 其他 | — | 合并；不重复算子提交批次 |
-| `7de4c2b` | 功能 | N12 | 行为清单 runner 与夹具 |
-| `db91a3a` | 功能 | N12 | 同批公开行为 |
-| `91c0a17` | 功能 | N12 | 同批故障家族 |
-| `c62930a` | 功能 | N12 | 同批渠道行为与结果 |
-| `7efb167` | 修复 | F27 F28 | B07 时区；B17 卸载及适配边界 |
-| `b2fee05` | 其他 | — | 合并；不重复算子提交批次 |
-| `ee0356c` | 功能 | N13 | 合成副本 |
-| `ee17bbd` | 功能 | N13 | 同批迁移骨架 |
-| `147c24a` | 功能 + 修复 | N13 F29 | 盘点；同提交内镜像父路径规范化返工 |
-| `ac8df23` | 功能 | N13 | 同批演练测试 |
-| `a98627b` | 其他 | N13 | 同批结果，不另计 |
-| `e20c196` | 修复 | F30 F31 F32 | 拒绝原因分类；完成日志提示再返工；plan/status 分离 |
-| `36330d3` | 修复 | F33 F34 F35 | 绑定 ID 隐去；Bank 覆盖修复及空目录语义再返工 |
-| `6e3c139` | 修复 | F36 | 演练补真实争锁结果与恢复锁断言 |
-| `2797f05` | 其他 | F30 F31 F32 F33 F34 F35 F36 | 上述返工结果，不另计 |
-| `bfe069f` | 其他 | — | 合并；不重复算子提交批次 |
+**修复批次如何数：** 一个不变量的一轮修复记一批（F）；一个提交里的不同不变量或有证据的再次返工分别记，附随测试、生成基线、结果文档和合并不重复记。功能（N）、发版（P）、其他（O）同样按交付批次去重。分类依据是提交说明、源码/测试差异和保存的执行结果，拿不准的已标估计；没有记录的轮次不补猜。
 
 ### 「要不要重写」的判断尺度
 
@@ -300,15 +211,15 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 
 ## 已知问题
 
-以下只登记现状，不在 M1 修改业务或共享读取器；复现使用 `/tmp` 丢弃式脚本、真实初始化器和合成绑定，不读个人资料、不启动 DSH、不调用模型。11 项验证最终全通过，证明下列行为存在；脚本和故意触发的类型错误均不进入门禁。
+以下登记已确认的现有行为及复现边界；是否修改由主人决定。
 
 | 问题 | 位置 | 影响 | 能否复现 | 状态 |
 | --- | --- | --- | --- | --- |
-| 1. guest 和电视回复 footer 会改共享情绪 | `src/core/native/agent.ts:46` 给 guest 作用域；`src/room/chat.ts:130` 产生 `chatpet-room-tv` 来源；`src/room/plugin.ts:149` 阻止电视工具；`src/emotion/plugin.ts:166,269,280` 的流和完成处理未排除两者 | 没有主人工具权限也能经回复 footer 更新同一个情绪文件 | 已复现：在合成绑定上向真实 Emotion 流及完成处理分别送 guest 与 TV 来源原生事件，两者均落盘；guest 的原有断言另见 `scripts/checks/check-native-services.mjs:104`。未验证已安装 DSH 的电视完整入口 | **现有行为，是否改变待主人决定** |
+| 1. guest 和电视回复 footer 会改共享情绪 | `src/core/native/agent.ts:46` 给 guest 作用域；`src/room/chat.ts:130` 产生 `chatpet-room-tv` 来源；`src/room/plugin.ts:149` 阻止电视工具；`src/emotion/plugin.ts:166` 的作用域解析、`:273-278` 的流处理和 `:269` 的完成处理未排除两者 | 没有主人工具权限也能经回复 footer 更新同一个情绪文件 | 已复现：在合成绑定上向真实 Emotion 流及完成处理分别送 guest 与 TV 来源原生事件，两者均落盘；guest 的原有断言另见 `scripts/checks/check-native-services.mjs:104`。未验证已安装 DSH 的电视完整入口 | **现有行为，是否改变待主人决定** |
 | 2. Memory 的 `workspaceId` 实际接收 `storageId` | `src/core/native/memory.ts:53` → `src/memory/client.ts:11` | 字段名混淆原生工作区和可搬迁 Bank 身份；本项不证明串库 | 已复现：合成工作区设置不同的两种 ID，经公开 `findForOwner` 驱动、仅在 provider 启动边界捕获 scope，收到的是 `storageId` | 待主人决定 |
 | 3. 错误码及设置回复的恢复语义不一致 | `src/contracts/common.ts:21` 有 `EXPIRED_USE`，`src/core/storage.ts:10` 的辅助联合没有；`src/console/settings.ts:17,400,402` 只保留 `code/message/details` | 辅助函数无法按声明类型表达该拒绝；设置调用者丢失 `effect/retry`，不能据此判断核对或重试 | 已复现：丢弃式 TypeScript 调用产生 TS2345；真实设置处理器收到 `partial/reconcile` 后，回复均无这两个字段 | 待主人决定 |
 | 4. 两套呈现分类器对混合情绪结论不同 | `src/behavior/presentation.ts:21`；`src/behavior/playback.ts:95,109` | 空闲且 `feelings=[anger,calm]` 时，语义呈现为 `emotion/anger`，播放槽为 `rest.calm` | 已复现：同一个合成 home 调用两个真实函数得到上述不同结果 | 待主人决定 |
-| 5. 只读绑定检查写源库附属文件，并发存在锁竞争 | `scripts/lib/repo-storage.mjs:20` 的只读 SQLite 连接；`scripts/migrate/context.mjs:14,38`；锁前调用顺序 `scripts/migrate/runner.mjs:35,43,52` | `plan`、`status`、锁外预检和版本不一致等拒绝路径仍在源 Core 目录生成 `core.sqlite-wal/-shm`；迁移锁保护不了此前的 SQLite 读取，并发预检可能提前失败 | 已复现：关闭的合成 Core 清理附属文件后，独立 inspect、两种 CLI 只读命令、锁外 `assertOffline`、`manifest-mismatch` 拒绝均重新生成两文件而未取得迁移锁；双读屏障实测 `ERR_SQLITE_ERROR` / `errcode 261`。来源是方案 C 批第一轮「建议修」第 4 条；盘点已用隔离镜像（`scripts/migrate/inventory-plan.mjs:31,35`） | 已确认，待主人安排共享读取器修复；E 批只登记 |
+| 5. 只读绑定检查写源库附属文件，并发存在锁竞争 | `scripts/lib/repo-storage.mjs:20` 的只读 SQLite 连接；`scripts/migrate/context.mjs:14,38`；锁前调用顺序 `scripts/migrate/runner.mjs:35,43,52` | `plan`、`status`、锁外预检和版本不一致等拒绝路径仍在源 Core 目录生成 `core.sqlite-wal/-shm`；迁移锁保护不了此前的 SQLite 读取，并发预检可能提前失败 | 已复现：关闭的合成 Core 清理附属文件后，独立 inspect、两种 CLI 只读命令、锁外 `assertOffline`、`manifest-mismatch` 拒绝均重新生成两文件而未取得迁移锁；双读屏障实测 `ERR_SQLITE_ERROR` / `errcode 261`。盘点使用隔离镜像（`scripts/migrate/inventory-plan.mjs:31,35`） | 已确认，待主人安排共享读取器修复 |
 
 ## 阶段
 
@@ -341,7 +252,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 故障家族的完整流程用例（G9） | - [ ] 「故障家族」表里的四个家族各有一条从真实入口走完整流程的用例，在旧代码上全绿 |
 | R8 报告脚本（词汇重复与裸字符串） | - [ ] 对旧代码运行，输出的重复词表和裸字符串清单包含「词表重复基线」里已知的那些重复；旧重复固定进基线，之后新增重复阻断 |
 | `AGENTS.md` 按 dev-kit 模板重写开发约定（快测、门禁、恢复环境、高风险、禁改），并加一页入口（G6） | - [ ] 快测和恢复命令实际跑过 |
-| 已知问题登记 | 5 项现状及复现边界见「已知问题」；只登记，不修；是否改变及是否单独立项由主人决定 |
+| 已知问题登记：盘点中顺带发现的疑似问题 | - [ ] 登记以下 4 条，每条写清位置、影响、能否复现，**不修，由主人决定是否单独立为修复任务**：（1）guest 和电视画面没有情绪工具，但回复里带情绪 footer 时，完成处理似乎仍能改共享情绪（有无排除分支未确认）；（2）Memory 的 `workspaceId` 实际接收 `storageId`；（3）`EXPIRED_USE` 在错误码声明里有，但辅助联合里没有；设置页回复丢失 `effect` 和 `retry`；（4）空闲时 `feelings=[anger, calm]`，两套分类器对同一情绪呈现不同（已登记 5 条，见「已知问题」） |
 
 **主人的验收动作**：看行为清单、现状违规清单和基线表；在隔离环境用副本打开，确认聊天和记忆正常。
 

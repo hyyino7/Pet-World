@@ -32,7 +32,7 @@ pnpm run build
 node --test dist/tests/behavior/garden-clock-continuity.test.js tests/regressions/audit-r5-garden-clock.test.mjs
 ```
 
-build 会更新生成文件和编译产物；`dist/src` 中已有跟踪文件的差异也要检查。只改文档时做链接、diff 和范围检查。已有的聚焦测试脚本仍可用，不串联重叠套件重复构建。三题基线的 build 均少于 60 秒，无需新增编译脚本。
+build 会更新生成文件和编译产物；`dist/src` 中已有跟踪文件的差异也要检查。只改文档时做链接、diff 和范围检查。`pnpm test` 和已有的聚焦测试脚本仍可用，不串联重叠套件重复构建。
 
 <a id="architecture-behavior"></a>
 ## 架构检查与行为清单
@@ -100,7 +100,7 @@ node scripts/migrate/companion-migrate.mjs run --installation /tmp/her-world-syn
 node scripts/migrate/companion-migrate.mjs run --installation /tmp/her-world-synthetic/installation.json --resume
 ```
 
-失败只输出固定原因代码和说明，退出码非 0。完成日志会拒绝再次全新执行；`lock-held` 要求先确认没有迁移进程，再按提示处理遗留锁。当前 plan/status、锁外预检和部分拒绝路径仍可能生成源 Core 的 WAL/SHM，并发预检也可能遇到 SQLite 锁竞争；这属于源码 `docs/product.md` 的已知问题，迁移锁尚未消除此影响。
+失败只输出固定原因代码和说明，退出码非 0。完成日志会拒绝再次全新执行；`lock-held` 要求先确认没有迁移进程，再按提示处理遗留锁。当前 plan/status、锁外预检和部分拒绝路径仍可能生成源 Core 的 WAL/SHM，并发预检也可能遇到 SQLite 锁竞争；已登记为源码检出中 `docs/product.md`「已知问题」第 5 条，迁移锁尚未消除此影响。
 
 回退使用原有恢复器；它会先备份当前状态、保留送达/额度等不可回退记录，并要求安装包指纹一致。迁移期间备份的锁会随恢复回来：
 
@@ -113,14 +113,13 @@ node scripts/companion-backup.mjs restore --installation /tmp/her-world-syntheti
 <a id="baseline-counting"></a>
 ## 典型修改的计数
 
-固定起点为 `bfe069f`。在每个基线 worktree 中执行：
+固定起点为 `bfe069f`。先把修改提交到对应的实验分支，再将 `<分支>` 替换为该分支名执行：
 
 ```sh
-git diff --stat bfe069f
-git status --porcelain
+git diff --stat bfe069f..<分支>
 ```
 
-两者结合取文件并集：stat 计已跟踪的差异，status 中的 `??` 未跟踪文件也计入。分为 `src/`、测试和其他，其他包含跟踪的 build 产物；不为压低数字删除这些差异。按 `arch/layers.json` 的文件根映射模块和层，测试及 `dist/src` 归回相应源码模块，不另造测试层；位于 `src/` 的生成文件仍计入其物理模块，并注明它的生成源。三个分支都只度量，不合并。
+只统计起点与实验分支之间已提交的差异。分为 `src/`、测试和其他，其他包含跟踪的 build 产物；不为压低数字删除这些差异。按 `arch/layers.json` 的文件根映射模块和层，测试及 `dist/src` 归回相应源码模块，不另造测试层；位于 `src/` 的生成文件仍计入其物理模块，并注明它的生成源。三个分支都只度量，不合并。
 
 G5 的规则、词表和模块边使用上面的架构报告及其现有 `scan()` 结果人工归组；修复批次结合提交说明、源码/测试差异和已保存的执行结果逐个判断，附随生成文件、文档和合并不重复计。它尚无独立的仓库度量命令。
 
@@ -130,7 +129,7 @@ G5 的规则、词表和模块边使用上面的架构报告及其现有 `scan()
 pnpm run verify
 ```
 
-这是共享的 PR/发布检查：环境、类型、架构棘轮、一次构建，所有编译后的 TypeScript 和 JavaScript 测试入口各一次，Python Memory 测试、发布校验，以及一次归档和包闭包/完整性检查。种地、钱包、库存、去重、Memory、连续性、备份恢复与存储归属的回归仍在其中；测试使用可丢弃数据，不调用付费模型。
+这是共享的 PR/发布检查：环境、类型、架构棘轮、一次构建，所有编译后的 TypeScript 和 JavaScript 测试入口各一次，Python Memory 测试、发布校验，以及一次归档和包闭包/完整性检查。种地、钱包、库存、去重、Memory、连续性、备份恢复与存储归属的回归仍在其中；测试使用可丢弃数据，不调用付费模型。Memory 进程测试需要本机回环；沙箱拒绝监听应记录为环境失败，不是召回失败，不能记成通过或跳过。
 
 发布工作流会自行执行它。日常只做相关快测；已提交且干净的源码无需另做发布副本再重复全量验证。发布入口及脏工作区的隔离方法见 [发布与更新说明](github-updates.md)。
 
