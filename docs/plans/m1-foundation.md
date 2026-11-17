@@ -501,7 +501,7 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
 4. **存储版本号和迁移日志放哪** — 推荐：`.chatpet/data/storage-manifest.json` 加 `.chatpet/data/migrations.jsonl`。理由：不碰 `manifest.json` 的指纹；文件在 `.chatpet/` 里，现有备份自然覆盖。备选：Core 数据库的 `meta` 表，但那等于又往 Core 库里塞一类数据，和 R5 要求的方向相反。决定：按推荐（主人 2026-11-17 确认）
 5. **`arch/storage.json` 和 architecture 第 4 节的关系** — 推荐：路径清单只在 `storage.json` 里维护；第 4 节保留拥有者、写入协议和理由，并链接过去。理由：每个事实只写一处，而生成器、盘点、R5、迁移都要读机器可读的清单。决定：按推荐（主人 2026-11-17 确认）
 6. **怎么数浏览器里的待确认请求** — 推荐：主人在日常 DSH 的开发者工具里跑一段只读片段，只数键的个数。备选：写程序解析 Electron 的 localStorage 库文件，但要加解析依赖，而且会碰到值。决定：按推荐（主人 2026-11-17 确认）
-7. **旧代码里的特殊归属** — 推荐：`world/` 暂归第一层，`contracts/` 暂作第一层共用；生成文件（`src/desktop/platform/client.js` 等，在 `layers.json` 里列出名单）不进 R1–R4、R8 的扫描，但它们的生成源要扫描，报告里列出跳过了哪些。理由：前两者真正的拆分在后续阶段；生成文件要改也是改生成器，扫生成文件本身只会产生无法处理的噪音。决定：按推荐（主人 2026-11-17 确认）
+7. **旧代码里的特殊归属** — 推荐：`world/` 暂归第一层，`contracts/` 暂作第一层共用；生成文件（`src/desktop/platform/client.js` 等，在 `layers.json` 里列出名单）不进 R1–R4、R8 的扫描，但它们的生成源要扫描，报告里列出跳过了哪些。理由：前两者真正的拆分在后续阶段；生成文件要改也是改生成器，扫生成文件本身只会产生无法处理的噪音。决定：按推荐（主人 2026-11-17 确认）；A 批验收时收窄：`vendor/` 里的生成源也不扫，只扫生成脚本和 `src/` 里的生成源（主人 2026-11-17 确认）
 8. **真实副本检查点的前提** — 推荐：主人提供副本位置，并准备好独立的 macOS 用户（或独立的 DSH home）作为隔离环境之后，D 才开始；第 4 步的聊天由主人自己操作，会用主人配置的模型。决定：按推荐（主人 2026-11-17 确认）
 9. **行为清单在 M1 做到什么程度** — 推荐：15 类每类至少一条 L2 或 L1，4 个故障家族各一条 L1；15 类各自的 L1 在索引里标注计划阶段，随对应模块的重写补齐，最晚阶段 4 结束。理由：M1 表格的完成标准是「每类有可运行的行为测试」，[product.md](../product.md) 第 87 行要求每类最终都有完整流程；一次补齐 15 条 L1，会让 M1 变成半个测试重写项目。备选：M1 就补齐 15 条 L1。决定：按推荐（主人 2026-11-17 确认）
 
@@ -523,22 +523,436 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
 
 ## 执行结果
 
-### A 批（实现与快测完成，待 Claude 验收和提交）
+### A 批（第一轮必须修已完成，待 Claude 复验和提交）
 
-- `arch/layers.json`：13 个模块、13 个服务、依赖/事件和生成源声明；`arch/storage.json`：第 4 节全部数据类别，共 50 条登记。
-- `scripts/arch/check.mjs`、`lib/*.mjs`：TypeScript AST 的 R1–R4、R5 报告、R8、逐条身份与只减不增的棘轮；`fixtures/**`：独立最小违规/干净样例。
-- 本轮只修 `lib/storage.mjs`：声明含 `data/` 才截取后缀，避免空字符串误匹配；在 `tests/arch/known-violations.test.mjs` 追加 8 种路径归属断言，保留原失败测试。
-- `tests/arch/*.mjs`：已知写法、生成源、R5 读写和棘轮测试；`package.json` 新增 `check:arch`；`scripts/checks/verify.mjs:13` 在 build 前接入（两处接线本轮未改）。
-- 调用检查脚本的 `scan()` 重新生成 `arch/baseline/writers.json`，并与再次扫描的序列化结果逐条相等；324 条身份均未变，9 条由未知变为有归属（6 违规、3 一致），现为 63 违规、111 一致、150 未知。
-- `arch/baseline/rules.json` 保持 74 条；`vocabulary.json` 保持 1381 条：314 对完全重复和 358 对子集关系各记双方身份，另有 37 条裸字符串，即 `(314 + 358) × 2 + 37`，不是 1381 个重复组。
-- 完全同集按取值去重为 84 个跨文件重复组（语法口径，未逐组认定业务重复）；裸字符串为 kind 10、action 9、status 3、type 15。扫描也收录 CSS、路径、协议等集合，存在业务词表以外的噪音，本轮不改 R8 规则或基线。
-- 本轮快测共 2 轮：`node --test tests/arch/*.test.mjs` 首轮复现 17 通过/1 失败，修后 19 通过/0 失败，均无跳过；两轮 `pnpm run check:arch -- --report` 均通过，规则/词表均新增 0、消失 0。
-- 复核一次性验收表 R1–R5 共 45 个位置及全部 324 条 R5 报告；R8 七组定义份数仍为 3、2、4、4、4、2+标签1、2；`git diff --check`、文档链接和范围检查通过。
-- 无未完成的 A 批实现项；未运行全量 verify、构建、DSH 或付费模型，未访问个人数据，未改 src/、vendor/、原有测试或 B–E；正式文档同步留 E 批。
-- 本轮未运行 git add/commit，全部改动留给 Claude 按声明/实现、生成基线、样例、测试/接线、最后执行结果分开提交；未推送、未合并。
-- 验收注意：R5 只报告，仍有 150 条无法静态判定；84 组是同集统计而非业务重复确认数。全量门禁、Claude 验收及主人验收仍待各自执行。
+- `arch/layers.json`：13 个模块、13 个服务、依赖/事件和生成源声明；`arch/storage.json`：第 4 节全部数据类别，共 50 条登记，本轮均未改。
+- `scripts/arch/check.mjs`、`lib/*.mjs`：TypeScript AST 的 R1–R4、R5 报告、R8 和棘轮；本轮只调整 R8 身份、vendor 扫描范围和 R1–R3 名字解析及内联类型导入。
+- `fixtures/**`：独立最小违规/干净样例；本轮增加 `core/resolution.ts`，覆盖模板、计算解构、内联类型导入和完整可解析写法。
+- `tests/arch/*.mjs`：本轮新增 7 条回归；`package.json`、`scripts/checks/verify.mjs` 接线保持不变。
+- 当前 `rules.json` 共 81 条（R1 28、R2 41、R3 2、R4 10）；`vocabulary.json` 共 1073 条（1038 条双向重复/子集关系记录、35 条裸 string）；`writers.json` 保持 324 条。
+- 本轮快测：zsh 下 `node --test tests/arch/*.test.mjs` 31 通过/0 失败/0 跳过，`pnpm run check:arch` 通过；新增回归修前分别复现 R8 1 项、vendor 1 项、R1–R3 3 项失败，首次整套检查另修正新样例同名行号导致的测试定位冲突。
+- 未运行全量 verify、构建、DSH 或付费模型，未访问个人数据；未改 src/、vendor/、原有非 arch 测试或 B–E；正式文档同步留 E 批。
+- 本轮未运行 git add/commit/stash/reset，未推送、未合并；改动由 Claude 按最终提交计划分开提交。
+- 验收注意：建议修 4–7 按主人要求不做；R5 只报告、R8 仍有非业务集合噪音；全量门禁、Claude 复验和主人验收仍待各自执行，C 批随后需变基。
 - 返工（C 批发现的存储登记问题，已修）：逐条核对原有 50 条并在 `arch/storage.json:6-55` 各行补 `evidence`；实质修正第 18、21、34-43、47-48 行：近期账本改为 Memory 目录容器、Emotion 业务拥有者（`src/core/index.ts:18`、`src/emotion/recent.ts:11,17,25,56,78`），身体/旧菜园、Life 各文件、记录库/相册新旧位置、Channels 设备目录用 `locations` 分别登记，补相册文件范围和建表清单，校正当前写入者（各处源码依据见对应行）；R5 修正精确路径优先级、分位置容器和建表归属，新增 `tests/arch/storage-locations.test.mjs`，保留全部现有测试；用 `scan()` 重生成 writers：324 条调用身份未变、18 条报告字段修正，现为 65 违规/109 一致/150 未知，rules/vocabulary 字节未变；快测 `node --test tests/arch/*.test.mjs` 24 通过/0 失败、`pnpm run check:arch` 通过；除本行执行记录外仅改 A 批允许目录，未运行全量门禁、真实副本或 git add/commit，由 Claude 验收及提交。
+- 返工（A 批第一轮）：只修必须修 1–3，逐条状态见下方审查结论；直接调用 `scan()` 重生成三份基线并复扫核对，rules 74→81（新增 10、消失 3，其中 1 条同位置改报未知），vocabulary 1381→1073（新增 0、消失 308，全为 vendor 相关，保留项按新身份重编码），writers 字节不变；逐条位置和原因见紧接下方差异表，快测 31/31 与 check:arch 通过，保留 Claude 原审查及拍板点 7 收窄记录。
+- 返工（A 批第二轮）：只修必须修第 8 条，R8 重复关系身份去掉 `relation`，新增完全重复集合单方加值变为子集的回归；修前确认 1 失败（新增 2、消失 2），修后 `node --test tests/arch/*.test.mjs` 32 通过/0 失败/0 跳过，`pnpm run check:arch` 通过（rules 81、vocabulary 1073，均新增 0/消失 0）；三份基线未重生成、字节未变，未改无关部分；未运行全量门禁或 Git 写操作，由 Claude 复验及提交。
+
+<details>
+<summary>A 批第一轮基线差异（逐条位置与原因）</summary>
+
+所有基线由当前 `scan()` 直接生成，未用 `--write-baseline` 绕过新增限制。以下与返工前的基线比较；R8 的旧身份先映射到第 1 条确定的新身份再核对，保留的 1073 条只是重新编码，不算新增违规。
+
+**规则新增 10 条**
+
+| 规则 | 位置 | 函数路径 | 目标 | 原因 |
+| --- | --- | --- | --- | --- |
+| R1 | `src/console/settings.ts:67:28` | `settingsHandler/<callback>` | `src/channels/plugin.js` | 第 3 条：补扫内联类型导入（原有旧违规）。 |
+| R1 | `src/console/settings.ts:68:28` | `settingsHandler/<callback>` | `src/desktop/platform/plugin.js` | 第 3 条：补扫内联类型导入（原有旧违规）。 |
+| R1 | `src/console/settings.ts:68:150` | `settingsHandler/<callback>` | `src/desktop/platform/plugin.js` | 第 3 条：补扫内联类型导入（原有旧违规）。 |
+| R1 | `src/core/initialization.ts:12:19` | `<module>` | `?` | 第 3 条：路径含无法解析的动态部分，现明示未知（原有写法）。 |
+| R1 | `src/desktop/features.ts:14:50` | `upstream` | `?` | 第 3 条：路径含无法解析的动态部分，现明示未知（原有写法）。 |
+| R1 | `src/desktop/platform/migration.ts:28:16` | `<module>` | `?` | 第 3 条：路径含无法解析的动态部分，现明示未知（原有写法）。 |
+| R1 | `src/desktop/platform/plugin.ts:37:18` | `<module>` | `?` | 第 3 条：路径含无法解析的动态部分，现明示未知（原有写法）。 |
+| R1 | `src/memory/client.ts:53:41` | `MemoryConnection/open` | `?` | 第 3 条：路径含无法解析的动态部分，现明示未知（原有写法）。 |
+| R1 | `src/memory/client.ts:54:36` | `MemoryConnection/open` | `?` | 第 3 条：路径含无法解析的动态部分，现明示未知（原有写法）。 |
+| R1 | `src/voice/plugin.ts:8:50` | `upstream` | `?` | 第 3 条：部分动态路径不再冒充完整目标，同一位置改报未知。 |
+
+**规则消失 3 条**
+
+| 规则 | 位置 | 函数路径 | 原目标 | 原因 |
+| --- | --- | --- | --- | --- |
+| R1 | `src/voice/plugin.ts:8:50` | `upstream` | `src/desktop/upstream/host/*.js` | 第 3 条：部分路径不能冒充完整目标，同一位置改报未知。 |
+| R2 | `vendor/dsh-pet/platform/upstream/client.js:14977:10` | `<callback>/createTransport/api` | `petApi7340` | 第 2 条：排除 vendor 生成源。 |
+| R2 | `vendor/dsh-pet/platform/upstream/client.js:15113:18` | `<callback>/mountBaifan/get` | `?` | 第 2 条：排除 vendor 生成源。 |
+
+**R8 新增 0 条，消失 308 条**
+
+其中 306 条是涉及 vendor 的重复关系双向记录（206 条双方都在 vendor，100 条只有一方在 vendor），另 2 条是 vendor 里的裸 string；308 条消失均由第 2 条收窄扫描范围导致。审查原述 306 条只计重复关系，未含 2 条裸 string。每行是一条原基线记录，重复关系的两端分别列出；下表的「第 2 条」均指排除 vendor 生成源。
+
+| 原位置 | 函数路径 | 形状 | 对方位置 / 函数路径或字段 | 关系 | 消失原因 |
+| --- | --- | --- | --- | --- | --- |
+| `src/behavior/room.ts:524:34` | `CompanionRoom/dispatchExecution` | `array` | `vendor/dsh-pet/platform/upstream/client.js:67 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:67:31` | `<callback>` | `array` | `src/behavior/room.ts:524 / CompanionRoom/dispatchExecution` | 子集 | 第 2 条 |
+| `src/behavior/room.ts:524:34` | `CompanionRoom/dispatchExecution` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:15 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:15:50` | `<module>` | `array` | `src/behavior/room.ts:524 / CompanionRoom/dispatchExecution` | 子集 | 第 2 条 |
+| `src/behavior/room.ts:524:34` | `CompanionRoom/dispatchExecution` | `array` | `vendor/dsh-pet/src/shared/menu/types.ts:20 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/types.ts:20:5` | `<module>` | `union` | `src/behavior/room.ts:524 / CompanionRoom/dispatchExecution` | 子集 | 第 2 条 |
+| `src/desktop/helper/main.cjs:45:33` | `trayRequest` | `array` | `vendor/dsh-pet/platform/upstream/client.js:50 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:50:23` | `<callback>` | `array` | `src/desktop/helper/main.cjs:45 / trayRequest` | 子集 | 第 2 条 |
+| `src/desktop/helper/main.cjs:45:33` | `trayRequest` | `array` | `vendor/dsh-pet/platform/upstream/client.js:77 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:77:24` | `<callback>` | `labels` | `src/desktop/helper/main.cjs:45 / trayRequest` | 子集 | 第 2 条 |
+| `src/desktop/helper/main.cjs:45:33` | `trayRequest` | `array` | `vendor/dsh-pet/platform/upstream/client.js:5407 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5407:22` | `<callback>` | `array` | `src/desktop/helper/main.cjs:45 / trayRequest` | 子集 | 第 2 条 |
+| `src/desktop/helper/main.cjs:45:33` | `trayRequest` | `array` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `src/desktop/helper/main.cjs:45 / trayRequest` | 子集 | 第 2 条 |
+| `src/desktop/helper/main.cjs:45:33` | `trayRequest` | `array` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `src/desktop/helper/main.cjs:45 / trayRequest` | 子集 | 第 2 条 |
+| `src/desktop/helper/main.cjs:45:33` | `trayRequest` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:22 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:22:62` | `<module>` | `labels` | `src/desktop/helper/main.cjs:45 / trayRequest` | 子集 | 第 2 条 |
+| `src/desktop/helper/main.cjs:45:33` | `trayRequest` | `array` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `src/desktop/helper/main.cjs:45 / trayRequest` | 子集 | 第 2 条 |
+| `src/desktop/images.ts:26:17` | `DesktopImages/validate` | `array` | `vendor/dsh-pet/platform/upstream/client.js:5699 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5699:21` | `<callback>` | `array` | `src/desktop/images.ts:26 / DesktopImages/validate` | 重复 | 第 2 条 |
+| `src/desktop/images.ts:26:17` | `DesktopImages/validate` | `array` | `vendor/dsh-pet/src/shared/chat/image-pick.ts:8 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/image-pick.ts:8:28` | `<module>` | `array` | `src/desktop/images.ts:26 / DesktopImages/validate` | 重复 | 第 2 条 |
+| `src/desktop/platform/browser-entry.js:8:18` | `registerCompanion/factory/apply` | `array` | `vendor/dsh-pet/platform/upstream/client.js:17810 / <callback>/makeFactory/<callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:17810:18` | `<callback>/makeFactory/<callback>` | `array` | `src/desktop/platform/browser-entry.js:8 / registerCompanion/factory/apply` | 子集 | 第 2 条 |
+| `src/desktop/platform/migration.ts:151:107` | `migratePresentation` | `array` | `vendor/dsh-pet/platform/upstream/client.js:6614 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:6614:14` | `<callback>` | `labels` | `src/desktop/platform/migration.ts:151 / migratePresentation` | 子集 | 第 2 条 |
+| `src/desktop/platform/migration.ts:151:107` | `migratePresentation` | `array` | `vendor/dsh-pet/platform/upstream/client.js:6839 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:6839:14` | `<callback>` | `labels` | `src/desktop/platform/migration.ts:151 / migratePresentation` | 子集 | 第 2 条 |
+| `src/desktop/platform/migration.ts:151:107` | `migratePresentation` | `array` | `vendor/dsh-pet/platform/upstream/client.js:7064 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:7064:14` | `<callback>` | `labels` | `src/desktop/platform/migration.ts:151 / migratePresentation` | 子集 | 第 2 条 |
+| `src/desktop/platform/migration.ts:151:107` | `migratePresentation` | `array` | `vendor/dsh-pet/platform/upstream/client.js:7289 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:7289:14` | `<callback>` | `labels` | `src/desktop/platform/migration.ts:151 / migratePresentation` | 子集 | 第 2 条 |
+| `src/desktop/platform/migration.ts:151:107` | `migratePresentation` | `array` | `vendor/dsh-pet/platform/upstream/client.js:7514 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:7514:14` | `<callback>` | `labels` | `src/desktop/platform/migration.ts:151 / migratePresentation` | 子集 | 第 2 条 |
+| `src/desktop/platform/migration.ts:151:107` | `migratePresentation` | `array` | `vendor/dsh-pet/platform/upstream/client.js:7739 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:7739:14` | `<callback>` | `labels` | `src/desktop/platform/migration.ts:151 / migratePresentation` | 子集 | 第 2 条 |
+| `src/desktop/platform/migration.ts:151:107` | `migratePresentation` | `array` | `vendor/dsh-pet/platform/upstream/client.js:7964 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:7964:14` | `<callback>` | `labels` | `src/desktop/platform/migration.ts:151 / migratePresentation` | 子集 | 第 2 条 |
+| `src/desktop/platform/migration.ts:151:107` | `migratePresentation` | `array` | `vendor/dsh-pet/platform/upstream/client.js:8189 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:8189:14` | `<callback>` | `labels` | `src/desktop/platform/migration.ts:151 / migratePresentation` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:253:32` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/platform/upstream/client.js:50 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:50:23` | `<callback>` | `array` | `src/desktop/platform/plugin.ts:253 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:253:32` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/platform/upstream/client.js:77 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:77:24` | `<callback>` | `labels` | `src/desktop/platform/plugin.ts:253 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:253:32` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/platform/upstream/client.js:5407 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5407:22` | `<callback>` | `array` | `src/desktop/platform/plugin.ts:253 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:253:32` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `src/desktop/platform/plugin.ts:253 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:253:32` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `src/desktop/platform/plugin.ts:253 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:253:32` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:22 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:22:62` | `<module>` | `labels` | `src/desktop/platform/plugin.ts:253 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:253:32` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `src/desktop/platform/plugin.ts:253 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:254:20` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/platform/upstream/client.js:50 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:50:23` | `<callback>` | `array` | `src/desktop/platform/plugin.ts:254 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:254:20` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/platform/upstream/client.js:77 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:77:24` | `<callback>` | `labels` | `src/desktop/platform/plugin.ts:254 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:254:20` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/platform/upstream/client.js:5407 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5407:22` | `<callback>` | `array` | `src/desktop/platform/plugin.ts:254 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:254:20` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `src/desktop/platform/plugin.ts:254 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:254:20` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `src/desktop/platform/plugin.ts:254 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:254:20` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:22 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:22:62` | `<module>` | `labels` | `src/desktop/platform/plugin.ts:254 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/desktop/platform/plugin.ts:254:20` | `PetPlatform/bodyStatus/pets . some:callback0` | `array` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `src/desktop/platform/plugin.ts:254 / PetPlatform/bodyStatus/pets . some:callback0` | 子集 | 第 2 条 |
+| `src/emotion/index.ts:50:11` | `<module>` | `union` | `vendor/dsh-pet/src/shared/playback.ts:9 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:9:30` | `<module>` | `union` | `src/emotion/index.ts:50 / <module>` | 子集 | 第 2 条 |
+| `src/emotion/index.ts:50:11` | `<module>` | `union` | `vendor/dsh-pet/src/shared/playback.ts:12 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:12:32` | `<module>` | `union` | `src/emotion/index.ts:50 / <module>` | 重复 | 第 2 条 |
+| `src/emotion/index.ts:50:11` | `<module>` | `union` | `vendor/dsh-pet/src/shared/playback.ts:15 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:15:61` | `<module>` | `array` | `src/emotion/index.ts:50 / <module>` | 子集 | 第 2 条 |
+| `src/emotion/index.ts:50:11` | `<module>` | `union` | `vendor/dsh-pet/src/shared/playback.ts:18 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:18:65` | `<module>` | `array` | `src/emotion/index.ts:50 / <module>` | 重复 | 第 2 条 |
+| `src/emotion/plugin.ts:65:10` | `CompanionEmotion/recordPlayback` | `array` | `vendor/dsh-pet/src/shared/playback.ts:9 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:9:30` | `<module>` | `union` | `src/emotion/plugin.ts:65 / CompanionEmotion/recordPlayback` | 子集 | 第 2 条 |
+| `src/emotion/plugin.ts:65:10` | `CompanionEmotion/recordPlayback` | `array` | `vendor/dsh-pet/src/shared/playback.ts:12 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:12:32` | `<module>` | `union` | `src/emotion/plugin.ts:65 / CompanionEmotion/recordPlayback` | 重复 | 第 2 条 |
+| `src/emotion/plugin.ts:65:10` | `CompanionEmotion/recordPlayback` | `array` | `vendor/dsh-pet/src/shared/playback.ts:15 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:15:61` | `<module>` | `array` | `src/emotion/plugin.ts:65 / CompanionEmotion/recordPlayback` | 子集 | 第 2 条 |
+| `src/emotion/plugin.ts:65:10` | `CompanionEmotion/recordPlayback` | `array` | `vendor/dsh-pet/src/shared/playback.ts:18 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:18:65` | `<module>` | `array` | `src/emotion/plugin.ts:65 / CompanionEmotion/recordPlayback` | 重复 | 第 2 条 |
+| `src/emotion/plugin.ts:180:20` | `installEmotion/<callback>` | `labels` | `vendor/dsh-pet/src/shared/playback.ts:9 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:9:30` | `<module>` | `union` | `src/emotion/plugin.ts:180 / installEmotion/<callback>` | 子集 | 第 2 条 |
+| `src/emotion/plugin.ts:180:20` | `installEmotion/<callback>` | `labels` | `vendor/dsh-pet/src/shared/playback.ts:12 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:12:32` | `<module>` | `union` | `src/emotion/plugin.ts:180 / installEmotion/<callback>` | 重复 | 第 2 条 |
+| `src/emotion/plugin.ts:180:20` | `installEmotion/<callback>` | `labels` | `vendor/dsh-pet/src/shared/playback.ts:15 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:15:61` | `<module>` | `array` | `src/emotion/plugin.ts:180 / installEmotion/<callback>` | 子集 | 第 2 条 |
+| `src/emotion/plugin.ts:180:20` | `installEmotion/<callback>` | `labels` | `vendor/dsh-pet/src/shared/playback.ts:18 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/playback.ts:18:65` | `<module>` | `array` | `src/emotion/plugin.ts:180 / installEmotion/<callback>` | 重复 | 第 2 条 |
+| `src/life/plugin.ts:490:44` | `CompanionLife/desktopRest` | `union` | `vendor/dsh-pet/platform/upstream/client.js:67 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:67:31` | `<callback>` | `array` | `src/life/plugin.ts:490 / CompanionLife/desktopRest` | 子集 | 第 2 条 |
+| `src/life/plugin.ts:490:44` | `CompanionLife/desktopRest` | `union` | `vendor/dsh-pet/src/shared/menu/tree.ts:15 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:15:50` | `<module>` | `array` | `src/life/plugin.ts:490 / CompanionLife/desktopRest` | 子集 | 第 2 条 |
+| `src/life/plugin.ts:490:44` | `CompanionLife/desktopRest` | `union` | `vendor/dsh-pet/src/shared/menu/types.ts:20 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/types.ts:20:5` | `<module>` | `union` | `src/life/plugin.ts:490 / CompanionLife/desktopRest` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:50:23` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/chat/dialog.ts:128 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/dialog.ts:128:12` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:50 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:50:23` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:50 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:50:23` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:50 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:50:23` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:22 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:22:62` | `<module>` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:50 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:50:23` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:50 / readMenuItems` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:50:55` | `readMenuItems` | `union` | `vendor/dsh-pet/platform/upstream/client.js:50 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:50:23` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/state.ts:193 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:193:27` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:50 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:50:23` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:50 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:67:31` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:15 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:15:50` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:67 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:67:31` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/menu/types.ts:20 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/types.ts:20:5` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:67 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:77:24` | `<callback>` | `labels` | `vendor/dsh-pet/src/shared/chat/dialog.ts:128 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/dialog.ts:128:12` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:77 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:77:24` | `<callback>` | `labels` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:77 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:77:24` | `<callback>` | `labels` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:77 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:77:24` | `<callback>` | `labels` | `vendor/dsh-pet/src/shared/menu/tree.ts:22 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:22:62` | `<module>` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:77 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:77:24` | `<callback>` | `labels` | `vendor/dsh-pet/src/shared/menu/tree.ts:50 / readMenuItems` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:50:55` | `readMenuItems` | `union` | `vendor/dsh-pet/platform/upstream/client.js:77 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:77:24` | `<callback>` | `labels` | `vendor/dsh-pet/src/shared/state.ts:193 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:193:27` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:77 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:77:24` | `<callback>` | `labels` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:77 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:148:22` | `<callback>` | `labels` | `vendor/dsh-pet/src/shared/menu/tree.ts:100 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:100:46` | `<module>` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:148 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:259:18` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/menu/css.ts:12 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/css.ts:12:25` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:259 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:537:21` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/tooltip.ts:46 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/tooltip.ts:46:28` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:537 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1177:21` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/balance/parse.ts:16 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/parse.ts:16:50` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:1177 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1177:21` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/balance/types.ts:30 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/types.ts:30:25` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:1177 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1186:35` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/balance/parse.ts:24 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/parse.ts:24:63` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:1186 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1565:18` | `<callback>/urgentWindow` | `array` | `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:58 / urgentWindow` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:58:20` | `urgentWindow` | `array` | `vendor/dsh-pet/platform/upstream/client.js:1565 / <callback>/urgentWindow` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1565:18` | `<callback>/urgentWindow` | `array` | `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:136 / windowsDetail` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:136:19` | `windowsDetail` | `array` | `vendor/dsh-pet/platform/upstream/client.js:1565 / <callback>/urgentWindow` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1565:18` | `<callback>/urgentWindow` | `array` | `vendor/dsh-pet/src/shared/balance/types.ts:181 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/types.ts:181:25` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:1565 / <callback>/urgentWindow` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1642:18` | `<callback>/windowsDetail` | `array` | `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:58 / urgentWindow` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:58:20` | `urgentWindow` | `array` | `vendor/dsh-pet/platform/upstream/client.js:1642 / <callback>/windowsDetail` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1642:18` | `<callback>/windowsDetail` | `array` | `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:136 / windowsDetail` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:136:19` | `windowsDetail` | `array` | `vendor/dsh-pet/platform/upstream/client.js:1642 / <callback>/windowsDetail` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1642:18` | `<callback>/windowsDetail` | `array` | `vendor/dsh-pet/src/shared/balance/types.ts:181 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/types.ts:181:25` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:1642 / <callback>/windowsDetail` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1798:28` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/work-status.ts:10 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/work-status.ts:10:35` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:1798 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1894:28` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/state.ts:117 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:117:31` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:1894 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1894:28` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/state.ts:127 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:127:28` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:1894 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1903:24` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/state.ts:120 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:120:27` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:1903 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:1903:24` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/state.ts:130 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:130:24` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:1903 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:2573:18` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/todo/format.ts:18 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/todo/format.ts:18:18` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:2573 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:2671:19` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/todo/due-picker.ts:14 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/todo/due-picker.ts:14:19` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:2671 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:3307:24` | `<callback>` | `labels` | `vendor/dsh-pet/src/shared/notify.ts:9 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/notify.ts:9:29` | `<module>` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:3307 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:3333:2` | `<callback>/frameToToast` | `switch` | `vendor/dsh-pet/src/shared/notify.ts:72 / frameToToast` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/notify.ts:72:3` | `frameToToast` | `switch` | `vendor/dsh-pet/platform/upstream/client.js:3333 / <callback>/frameToToast` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:3832:21` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/pickers.ts:77 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/pickers.ts:77:24` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:3832 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:3832:21` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/weights.ts:9 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/weights.ts:9:28` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:3832 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:4363:14` | `<callback>/makeDialog/SettingsDialog` | `labels` | `vendor/dsh-pet/src/shared/balance/parse.ts:24 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/parse.ts:24:63` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:4363 / <callback>/makeDialog/SettingsDialog` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:4371:14` | `<callback>/makeDialog/SettingsDialog` | `labels` | `vendor/dsh-pet/src/shared/balance/parse.ts:24 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/parse.ts:24:63` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:4371 / <callback>/makeDialog/SettingsDialog` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5407:22` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/chat/dialog.ts:128 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/dialog.ts:128:12` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:5407 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5407:22` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:5407 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5407:22` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:5407 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5407:22` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:22 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:22:62` | `<module>` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:5407 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5407:22` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:50 / readMenuItems` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:50:55` | `readMenuItems` | `union` | `vendor/dsh-pet/platform/upstream/client.js:5407 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5407:22` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/state.ts:193 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:193:27` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:5407 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5407:22` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:5407 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5446:17` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/motion.ts:82 / anchorPixel` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/motion.ts:82:3` | `anchorPixel` | `switch` | `vendor/dsh-pet/platform/upstream/client.js:5446 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5446:17` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/types.ts:9 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:9:22` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:5446 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5618:15` | `<callback>/makePetCard/PetCard` | `labels` | `vendor/dsh-pet/src/shared/balance/parse.ts:24 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/parse.ts:24:63` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:5618 / <callback>/makePetCard/PetCard` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5699:21` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/chat/image-pick.ts:8 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/image-pick.ts:8:28` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:5699 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:5707:19` | `<callback>` | `labels` | `vendor/dsh-pet/src/shared/chat/image-pick.ts:17 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/image-pick.ts:17:54` | `<module>` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:5707 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:10145:25` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/score-popup.ts:13 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/score-popup.ts:13:32` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:10145 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:10182:22` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/score-popup.ts:55 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/score-popup.ts:55:22` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:10182 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:11127:20` | `<callback>` | `labels` | `vendor/dsh-pet/src/shared/chat/icons.ts:8 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/icons.ts:8:20` | `<module>` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:11127 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:11148:29` | `<callback>/pictureIcon` | `labels` | `vendor/dsh-pet/src/shared/chat/icons.ts:33 / pictureIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/icons.ts:33:21` | `pictureIcon` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:11148 / <callback>/pictureIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:11148:29` | `<callback>/pictureIcon` | `labels` | `vendor/dsh-pet/src/shared/chat/icons.ts:49 / micIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/icons.ts:49:21` | `micIcon` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:11148 / <callback>/pictureIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:11154:24` | `<callback>/pictureIcon` | `labels` | `vendor/dsh-pet/src/shared/chat/icons.ts:34 / pictureIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/icons.ts:34:23` | `pictureIcon` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:11154 / <callback>/pictureIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:11154:24` | `<callback>/pictureIcon` | `labels` | `vendor/dsh-pet/src/shared/chat/icons.ts:67 / cameraIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/icons.ts:67:23` | `cameraIcon` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:11154 / <callback>/pictureIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:11168:29` | `<callback>/micIcon` | `labels` | `vendor/dsh-pet/src/shared/chat/icons.ts:33 / pictureIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/icons.ts:33:21` | `pictureIcon` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:11168 / <callback>/micIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:11168:29` | `<callback>/micIcon` | `labels` | `vendor/dsh-pet/src/shared/chat/icons.ts:49 / micIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/icons.ts:49:21` | `micIcon` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:11168 / <callback>/micIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:11184:140` | `<callback>/cameraIcon` | `labels` | `vendor/dsh-pet/src/shared/chat/icons.ts:34 / pictureIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/icons.ts:34:23` | `pictureIcon` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:11184 / <callback>/cameraIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:11184:140` | `<callback>/cameraIcon` | `labels` | `vendor/dsh-pet/src/shared/chat/icons.ts:67 / cameraIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/icons.ts:67:23` | `cameraIcon` | `labels` | `vendor/dsh-pet/platform/upstream/client.js:11184 / <callback>/cameraIcon` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:11194:18` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/chat/styles.ts:11 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/styles.ts:11:25` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:11194 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:13527:23` | `<callback>` | `array` | `vendor/dsh-pet/src/shared/work-status.ts:10 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/work-status.ts:10:35` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:13527 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:13662:5` | `<callback>/createPetMulti/PetMulti/useEffect:callback0/applySection` | `switch` | `vendor/dsh-pet/src/shared/state.ts:117 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:117:31` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:13662 / <callback>/createPetMulti/PetMulti/useEffect:callback0/applySection` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:13662:5` | `<callback>/createPetMulti/PetMulti/useEffect:callback0/applySection` | `switch` | `vendor/dsh-pet/src/shared/state.ts:127 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:127:28` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:13662 / <callback>/createPetMulti/PetMulti/useEffect:callback0/applySection` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:13694:5` | `<callback>/createPetMulti/PetMulti/useEffect:callback0/applyPetLeaf` | `switch` | `vendor/dsh-pet/src/shared/state.ts:120 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:120:27` | `<module>` | `union` | `vendor/dsh-pet/platform/upstream/client.js:13694 / <callback>/createPetMulti/PetMulti/useEffect:callback0/applyPetLeaf` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/platform/upstream/client.js:13694:5` | `<callback>/createPetMulti/PetMulti/useEffect:callback0/applyPetLeaf` | `switch` | `vendor/dsh-pet/src/shared/state.ts:130 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:130:24` | `<module>` | `array` | `vendor/dsh-pet/platform/upstream/client.js:13694 / <callback>/createPetMulti/PetMulti/useEffect:callback0/applyPetLeaf` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/runtime/electron-helper/sprite/menu.js:11:20` | `<module>` | `labels` | `vendor/dsh-pet/src/shared/chat/dialog.ts:128 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/dialog.ts:128:12` | `<module>` | `union` | `vendor/dsh-pet/runtime/electron-helper/sprite/menu.js:11 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/runtime/electron-helper/sprite/menu.js:11:20` | `<module>` | `labels` | `vendor/dsh-pet/src/shared/menu/tree.ts:50 / readMenuItems` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:50:55` | `readMenuItems` | `union` | `vendor/dsh-pet/runtime/electron-helper/sprite/menu.js:11 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/runtime/electron-helper/sprite/menu.js:11:20` | `<module>` | `labels` | `vendor/dsh-pet/src/shared/state.ts:193 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:193:27` | `<module>` | `union` | `vendor/dsh-pet/runtime/electron-helper/sprite/menu.js:11 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/client/pet/animation/animation.ts:53:17` | `<callback>` | `union` | `vendor/dsh-pet/src/shared/physics/contact.ts:11 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/physics/contact.ts:11:27` | `<module>` | `union` | `vendor/dsh-pet/src/client/pet/animation/animation.ts:53 / <callback>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/client/pet/animation/animation.ts:53:17` | `<callback>` | `union` | `vendor/dsh-pet/src/shared/state.ts:235 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:235:25` | `<module>` | `union` | `vendor/dsh-pet/src/client/pet/animation/animation.ts:53 / <callback>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:58:20` | `urgentWindow` | `array` | `vendor/dsh-pet/src/shared/balance/types.ts:181 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/types.ts:181:25` | `<module>` | `union` | `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:58 / urgentWindow` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:136:19` | `windowsDetail` | `array` | `vendor/dsh-pet/src/shared/balance/types.ts:181 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/types.ts:181:25` | `<module>` | `union` | `vendor/dsh-pet/src/shared/balance/handlers/windows.ts:136 / windowsDetail` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/parse.ts:16:50` | `<module>` | `array` | `vendor/dsh-pet/src/shared/balance/types.ts:30 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/balance/types.ts:30:25` | `<module>` | `union` | `vendor/dsh-pet/src/shared/balance/parse.ts:16 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/dialog.ts:128:12` | `<module>` | `union` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `vendor/dsh-pet/src/shared/chat/dialog.ts:128 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/dialog.ts:128:12` | `<module>` | `union` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `vendor/dsh-pet/src/shared/chat/dialog.ts:128 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/dialog.ts:128:12` | `<module>` | `union` | `vendor/dsh-pet/src/shared/menu/tree.ts:22 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:22:62` | `<module>` | `labels` | `vendor/dsh-pet/src/shared/chat/dialog.ts:128 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/dialog.ts:128:12` | `<module>` | `union` | `vendor/dsh-pet/src/shared/menu/tree.ts:50 / readMenuItems` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:50:55` | `readMenuItems` | `union` | `vendor/dsh-pet/src/shared/chat/dialog.ts:128 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/dialog.ts:128:12` | `<module>` | `union` | `vendor/dsh-pet/src/shared/state.ts:193 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:193:27` | `<module>` | `union` | `vendor/dsh-pet/src/shared/chat/dialog.ts:128 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/dialog.ts:128:12` | `<module>` | `union` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `vendor/dsh-pet/src/shared/chat/dialog.ts:128 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/send.ts:16:26` | `<module>` | `union` | `vendor/dsh-pet/src/shared/whisper.ts:13 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/whisper.ts:13:26` | `<module>` | `union` | `vendor/dsh-pet/src/shared/chat/send.ts:16 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:22 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:22:62` | `<module>` | `labels` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:50 / readMenuItems` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:50:55` | `readMenuItems` | `union` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `vendor/dsh-pet/src/shared/state.ts:193 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:193:27` | `<module>` | `union` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/config.ts:11:43` | `<module>` | `array` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `vendor/dsh-pet/src/shared/config.ts:11 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:22 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:22:62` | `<module>` | `labels` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `vendor/dsh-pet/src/shared/menu/tree.ts:50 / readMenuItems` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:50:55` | `readMenuItems` | `union` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `vendor/dsh-pet/src/shared/state.ts:193 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:193:27` | `<module>` | `union` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/display-hotkey.ts:13:30` | `<module>` | `array` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `vendor/dsh-pet/src/shared/display-hotkey.ts:13 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:15:50` | `<module>` | `array` | `vendor/dsh-pet/src/shared/menu/types.ts:20 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/types.ts:20:5` | `<module>` | `union` | `vendor/dsh-pet/src/shared/menu/tree.ts:15 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:22:62` | `<module>` | `labels` | `vendor/dsh-pet/src/shared/state.ts:193 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:193:27` | `<module>` | `union` | `vendor/dsh-pet/src/shared/menu/tree.ts:22 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:22:62` | `<module>` | `labels` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `vendor/dsh-pet/src/shared/menu/tree.ts:22 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:50:55` | `readMenuItems` | `union` | `vendor/dsh-pet/src/shared/state.ts:193 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:193:27` | `<module>` | `union` | `vendor/dsh-pet/src/shared/menu/tree.ts:50 / readMenuItems` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/menu/tree.ts:50:55` | `readMenuItems` | `union` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `vendor/dsh-pet/src/shared/menu/tree.ts:50 / readMenuItems` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/motion.ts:82:3` | `anchorPixel` | `switch` | `vendor/dsh-pet/src/shared/types.ts:9 / <module>` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:9:22` | `<module>` | `union` | `vendor/dsh-pet/src/shared/motion.ts:82 / anchorPixel` | 重复 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/physics/contact.ts:11:27` | `<module>` | `union` | `vendor/dsh-pet/src/shared/state.ts:235 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:235:25` | `<module>` | `union` | `vendor/dsh-pet/src/shared/physics/contact.ts:11 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/pickers.ts:77:24` | `<module>` | `union` | `vendor/dsh-pet/src/shared/weights.ts:9 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/weights.ts:9:28` | `<module>` | `array` | `vendor/dsh-pet/src/shared/pickers.ts:77 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/state.ts:193:27` | `<module>` | `union` | `vendor/dsh-pet/src/shared/types.ts:20 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/types.ts:20:26` | `<module>` | `union` | `vendor/dsh-pet/src/shared/state.ts:193 / <module>` | 子集 | 第 2 条 |
+| `vendor/dsh-pet/src/shared/chat/image-pick.ts:71:32` | `<module>` | `bare string` | `kind` | 裸 string | 第 2 条 |
+| `vendor/dsh-pet/src/shared/notify.ts:44:3` | `<module>` | `bare string` | `type` | 裸 string | 第 2 条 |
+
+`writers.json` 由 `scan()` 重生成后与返工前逐字节相同：324 条调用无新增、无消失，65 条违规、109 条一致、150 条未知；未改变建议修 4–5 的 R5 规则。
+
+</details>
 
 ## 审查结论
 
-<Claude 验收时填写必须修的问题>
+### A 批（第一轮，审查基于 `4071d60`）
+
+两层审查：Codex `codex exec review --base main`（只读）＋ Claude 核实。所有条目都在临时副本里复现过，不是只读推断。已经通过的：快测 24/24、`check:arch`、`pnpm run verify`（1180/1180）、一次性验收表 45 个位置、`storage.json` 50 条依据逐行核对、Core「删一处旧违规、在另一个函数加一处」会失败、挪行号或改格式不误报。
+
+**必须修**
+
+1. **R8 条目身份含集合取值和整段表达式，改动已有重复集合的内容就再也过不了门禁。**`scripts/arch/lib/ast.mjs:53` 把 `normalize(node)` 记作 `expression`，`scripts/arch/lib/vocabulary.mjs:60` 又把 `values` 和对方的 `expression` 写进 `target`，而 `scripts/arch/lib/ratchet.mjs:6` 的身份包含这两项。实测：
+   - 把 `src/behavior/presentation.ts:7` 标签表里的 `calm:'平静'` 改成 `'安静'`，结果新增 8 条、消失 8 条；
+   - 给 `src/core/workspace.ts:40` 的状态联合加一个值，结果新增 2 条、消失 2 条。
+
+   两种情况 `check:arch` 都失败，`--write-baseline` 又拒绝新增，所以没有正当出路，只能改脚本或手改基线。这种改文案、加状态值的日常改动会被永久挡住。
+
+   修法：R8 重复关系的身份改成「规则 + 本方文件 + 本方函数路径 + 形状 + 对方文件 + 对方函数路径 + 关系」，不含取值和表达式正文。裸 string 条目保持「文件 + 函数路径 + 字段名」。新出现一对重复照样会被抓到；同一函数里多出一份，按计数抓到。加两条测试：改已有重复集合的取值或标签文案不失败；新增一对重复仍失败。
+
+   已修：R8 重复关系按双方文件、函数路径、本方形状和关系计身份；裸 string 按文件、函数路径、字段名计身份，取值和表达式只保留诊断用途。新增回归先复现失败，修后改状态取值和标签文案可通过，新增重复对及同函数多一份仍阻断。
+2. **扫描范围把 `vendor/` 上游代码带了进去。**`arch/layers.json:95-101` 的生成源列了大量 `vendor/dsh-pet/**`，`scripts/arch/lib/scan.mjs:27-30` 把它们全部加进扫描，`scripts/arch/lib/rules.mjs:9` 再把它们归到 `desktop`。后果：
+   - `vocabulary.json` 1381 条里有 306 条涉及 vendor，其中 206 条两边都是 vendor，包括 CSS 字符串、星期、SVG 属性；
+   - `rules.json` 有 2 条 R2 误报：`vendor/dsh-pet/platform/upstream/client.js:14977,15113`，读的是上游打包文件自己的服务 `petApi7340`。
+
+   上游同步属于 AGENTS 允许的流程，但一旦改出新身份就会被门禁卡死，而且同样无法收紧基线。方案里写了「R1 不检查 vendor」、「上游代码按层分配是阶段 2、3 的事」，拍板点 7 想管住的是我们自己的生成逻辑。
+
+   修法：收集生成源时跳过 `vendor/`，生成脚本和 `src/` 下的生成源照扫；`--report` 的「跳过」一行另列被跳过的 vendor 生成源。（这是对拍板点 7「生成源要扫描」的收窄：vendor 里的生成源不扫，主人 2026-11-17 已确认。）
+
+   已修：收集生成源时排除 `vendor/`，保留声明用于来源追踪；`--report` 单列去重后的 97 个被跳过的 vendor 生成源，自有生成脚本和 `src/` 生成源继续扫描。合成夹具确认 vendor 内容改变不影响门禁，自有生成源仍受 R1、R8 检查。
+3. **「判不出就报无法静态判定」没有兑现，有几种等价写法能零报告绕过。**下面四条都用最小样例在副本里实测过，零报告通过：
+   - `scripts/arch/lib/ast.mjs:80-86`：模板插值判不出时变成 `*`，调用方却把它当成已解析的字符串。于是 `ctx.get(`${name}`)` 被 R2 当作「不是 pet 服务」忽略；`import(`${base}/life/plugin.js`)` 被 R1 当作外部包跳过。
+   - `scripts/arch/lib/rules.mjs:52-55`：不处理内联类型导入 `ImportTypeNode`，所以 `type T = import('../life/plugin.js').X` 不报，而等价的 `import type` 会报。**现有代码就有漏报**：`src/console/settings.ts:67-68` 通过内联 `import()` 类型依赖了 `channels/plugin.js` 和 `desktop/platform/plugin.js`。
+   - `scripts/arch/lib/ast.mjs:68` 的 `key()` 不认 `ComputedPropertyName`，所以 `const k='petLife'; const {[k]:life}=ctx` 不报。
+
+   修法：
+   - 字符串解析要带上「是否完整」的信息，含 `*` 的服务名、本地依赖、事件名一律报「无法静态判定」；
+   - 内联类型导入走同一个依赖解析器；
+   - 解构里的计算属性名用 `strings()` 解析，解析不出就报「无法静态判定」；
+   - 每种写法在 `scripts/arch/fixtures/known-violations/` 加最小样例，并在 `tests/arch/known-violations.test.mjs` 断言。
+
+   已修：字符串解析增加 `stringResult()` 的完整性标记，并沿模板、拼接和别名传递；R1–R3 对不完整名字报告无法静态判定。内联类型导入复用同一依赖解析器；计算解构按字符串解析计算键，未知键明示未知。新增 `core/resolution.ts` 最小样例和逐位置断言，保留完整模板与合法计算解构的零误报检查。
+
+**建议修（不阻塞合并，可以顺带做）**
+
+4. `scripts/arch/lib/storage.mjs:28-35`：R5 只解析第一个参数，但 `rename*`、`copyFile*` 的写入目标是第二个参数。原子写会被报成临时文件，150 条「无法静态判定」里有 13 条和它有关。建议按操作语义分别记来源和目标。
+
+   未修：主人限定本轮只修必须修 1–3，R5 参数语义不在本轮范围。
+5. R5 把未登记的 CoreStore kind 默认归给 `core`（`scripts/arch/lib/storage.mjs:60`），Core 写一个未登记的 kind 会显示「一致」。建议改成「未登记」。现在有「逐 kind 对上 store.put」测试兜底，所以不急。
+
+   未修：主人限定本轮只修必须修 1–3，未登记 kind 的报告策略不在本轮范围。
+6. R8 在 `src/` 里仍有非业务集合，例如 `http:|https:`、`127.0.0.1|[::1]|localhost`、`GET|HEAD`、`__proto__|constructor|prototype`、文件后缀和路径片段数组。第 1 条修好后，已有的这些集合可以照常修改，剩下的影响只是：新代码再写出同样的集合会被拦，要按方案「真误报就修脚本」处理。是否现在就加过滤规则（例如路径片段数组、对象标签表只收 `Record<联合类型, string>`）由主人决定，不阻塞 A。
+
+   未修：主人明确排除建议修 4–7，本轮保留现有 R8 集合收集口径。
+7. Console 读写其他第三层模块的 9 条（R1 5 条、R2 4 条）现在算基线条目，符合「已知违规只登记」。建议 E 批的度量表把它们单独列一行，标明「等运维操作表」，免得和真正的方向违规混在一起计数。
+
+   未修：主人明确排除建议修 4–7，E 批度量表未开始。
+
+**返工注意**
+
+- 第 2、3 条会改变扫描结果：第 2 条删掉 vendor 条目，第 3 条新增 `console/settings.ts` 等旧违规。A 还没合并，基线在返工里**直接用 `scan()` 重新生成**，和最初建基线的方式相同。在执行结果里逐条列出新增和消失的条目及原因。合并之后才执行只减不增。
+- 第 1 条改了 R8 身份，`vocabulary.json` 要整份重新生成；条目数（关系数）应当不变或只因第 2 条减少。
+- 返工后 `codex/m1-c-migration`（建在 `4071d60` 上）需要变基。
+
+### A 批复查（第二轮）
+
+第 2、3 条已确认修好。在隔离副本里复现过：模板插值、动态 import、内联 `import()` 类型、计算属性解构这四种写法全部报出；改 vendor 不影响门禁；新写 `'left'|'right'` 不再被拦；Core 违规换位置照样失败。第 1 条只修好一半：改标签文案已经能通过，**但给原本完全重复的集合加一个值仍然失败**，下面一条必须修。
+
+**必须修**
+
+8. **R8 身份不能含「关系」。**`scripts/arch/lib/ratchet.mjs:8` 把 `item.relation` 算进了身份。给 `src/core/workspace.ts:40` 的状态联合加一个 `'paused'` 后，它和 `src/console/client.js` 标签表的关系从「重复」变成「子集」，身份跟着变，结果新增 2 条、消失 2 条，`--write-baseline` 拒绝写入，又一次没有正当出路。这一条出在第一轮审查给的修法里，公式写了「+ 关系」，Codex 是照着做的。
+
+   修法：身份去掉 `relation`，保留「规则 + 本方文件 + 本方函数路径 + 形状 + 对方文件 + 对方函数路径」。基线存的是条目，身份在比对时现算，所以 `vocabulary.json` 不用重新生成。在 `tests/arch/ratchet.test.mjs` 加一条测试：两个文件里原本完全相同的集合，一方加一个值、变成子集后，`check:arch` 仍然通过。
+
+   已修：`scripts/arch/lib/ratchet.mjs` 仅从 R8 重复关系的身份中移除 `relation`，关系仍保留作报告信息；`tests/arch/ratchet.test.mjs` 新增完全重复的状态联合与标签表单方加值变成子集的回归，确认修前新增 2/消失 2 而失败、修后检查通过且基线字节不变。现有新增重复对和同函数增加重复的阻断测试仍通过；未重生成基线。
