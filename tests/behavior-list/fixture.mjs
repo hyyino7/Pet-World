@@ -85,6 +85,8 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
     if(host.workspace.status().state!=='ready')await bind(repo);
     const bodyDirectory=join(repo,'.chatpet/data/life');mkdirSync(bodyDirectory,{recursive:true});
     if(!existsSync(join(bodyDirectory,'home.json'))) {
+      // 用上游默认结构预置合成存档，固定非睡眠、无在途动作的起点，便于照料断言。
+      // needs 的基线供投喂及离线额度测试使用；关闭菜园自动照料，让种植只由测试入口驱动。
       const home=Object.assign(emptyHomeState(Date.now()),{room:'living',spot:'sofa',asleep:false,sleepPending:false,route:null,dwell:null,command:null,freeTarget:null,reactionUntil:0,lastInteractionAt:0,eventLog:[],needs:{hunger:.8,thirst:.2,energy:.8,bladder:.1,pain:0}});
       writeFileSync(join(bodyDirectory,'home.json'),JSON.stringify(home));
       const garden=createGarden(Date.now());garden.care.autoEnabled=false;
@@ -154,7 +156,6 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
     service,get host(){return service('petCore');},get body(){return service('petBehavior');},get economy(){return service('petEconomy');},get life(){return service('petLife');},
     agent:id=>agentInfo.get(id).agent,logFile,
     async restart(){await close();await start();},
-    async unloadVoice(){service('petVoice').release();services.delete('petVoice');},
     set flushAllowed(value){flushAllowed=value;},
     async enable(){const preferences=(await service('petLife').snapshot('world')).preferences;
       await service('petLife').settings('world',preferences,{...preferences,wake:'',review:''});await service('petLife').control('world',true);await service('petBehavior').setAutonomy('world',true);},

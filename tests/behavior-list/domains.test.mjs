@@ -65,12 +65,12 @@ test('睡眠中库存投喂不耗物品并保留睡眠终态',async t=>{
 test('停机后的身体消耗只使用一次配置额度',async t=>{
   const f=await fixture(t,{life:false,economy:false});await f.body.setAutonomy('world',true);
   const before=(await f.body.snapshot('world')).needs;
-  // 卸载组件保留运行时钟的意图，72 小时后恢复只扣默认 4 小时额度。
+  // 卸载组件持久化花园时钟的启用状态；重启据此恢复离线额度，72 小时只扣默认 4 小时。
   await f.body.close();t.mock.timers.tick(72*HOUR);await f.restart();
-  await f.body.setAutonomy('world',true,true);const after=(await f.body.snapshot('world')).needs;
+  await f.body.setAutonomy('world',true);const after=(await f.body.snapshot('world')).needs;
   assert.ok(Math.abs(after.thirst-Math.min(.7,before.thirst+.085*4))<1e-9);
   assert.ok(after.hunger<=Math.max(.7,before.hunger));assert.ok(after.energy>=.35);
-  await f.restart();await f.body.setAutonomy('world',true,true);
+  await f.restart();await f.body.setAutonomy('world',true);
   assert.deepEqual((await f.body.snapshot('world')).needs,after);
 });
 

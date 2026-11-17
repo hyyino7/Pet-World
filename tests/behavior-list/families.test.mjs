@@ -5,6 +5,7 @@ import {join} from 'node:path';
 import vm from 'node:vm';
 import {setTimeout as pause} from 'node:timers/promises';
 import {fixture,until} from './fixture.mjs';
+import {readHearControlSource} from '../../dist/tests/behavior-list/entries.js';
 
 async function ownerPlan(f,steps){
   const active=await f.begin(),before=await f.tool(active,'life_plan_read',{view:'full'});
@@ -58,7 +59,8 @@ test('插件入口种植暂停及重启均不倒退时钟',async t=>{
 });
 
 test('自主回顾跨日重启续原日期且主人补写不能覆盖历史',async t=>{
-  const f=await fixture(t,{now:'2026-11-15T15:59:00Z'});await f.enable();
+  // 使用宿主本地的回顾前一分钟，不依赖运行环境的 UTC 偏移。
+  const f=await fixture(t,{now:new Date(2026,10,15,22,59).toISOString()});await f.enable();
   await ownerPlan(f,[]);
   const preferences=(await f.life.snapshot('world')).preferences;
   await f.life.settings('world',preferences,{...preferences,review:'23:00'});
@@ -95,7 +97,7 @@ test('语音插件关闭取消识别并拒绝晚到音频和结果',async t=>{
   const recognizer={listProviders:()=>['synthetic'],resolve:input=>input,
     transcribe(_input,signal){captured=signal;calls++;return new Promise(resolve=>{finish=resolve;});}};
   const f=await fixture(t,{recognizer,life:false,economy:false});
-  const source=readFileSync('src/desktop/platform/client.js','utf8'),from=source.indexOf('function createHearControl(opts) {'),to=source.indexOf('\n//#endregion',from);
+  const source=readHearControlSource(),from=source.indexOf('function createHearControl(opts) {'),to=source.indexOf('\n//#endregion',from);
   assert.ok(from>=0&&to>from);
   let grant,finishRecording,intervals=0;
   const input={isConnected:true,value:'',selectionStart:0,selectionEnd:0,focus(){},blur(){},setSelectionRange(){}};
@@ -110,10 +112,15 @@ test('语音插件关闭取消识别并拒绝晚到音频和结果',async t=>{
   await until(()=>calls===1);finish({text:'Synthetic recognized input'});await until(()=>!!input.value);
   await f.end(await f.begin('home',{id:'spoken',role:'user',source:{kind:'user'},content:[{type:'text',text:input.value}]}));first.dispose();input.value='';
   const second=control();second.start();grant();await pause(1);second.stop();finishRecording({peak:1,wave:new ArrayBuffer(0)});
-  await until(()=>calls===2);second.dispose();await f.unloadVoice();assert.equal(captured.aborted,true);
-  finish({text:'Late result must not be used'});await pause(5);assert.equal(input.value,'');assert.equal(intervals,0);
-  const late=control();late.start();late.dispose();grant();await pause(5);assert.equal(calls,2);assert.equal(input.value,'');
+  await until(()=>calls===2);assert.equal(captured.aborted,false);second.dispose();assert.equal(captured.aborted,true,'控件关闭取消在途识别');
+  finish({text:'Late control result must not be used'});await pause(5);assert.equal(input.value,'');assert.equal(intervals,0);
+  // 控件保持存活，由假宿主执行插件 effect 清理；不能先由控件取消请求。
+  const third=control();third.start();grant();await pause(1);third.stop();finishRecording({peak:1,wave:new ArrayBuffer(0)});
+  await until(()=>calls===3);assert.equal(captured.aborted,false);await f.restart();assert.equal(captured.aborted,true,'插件卸载必须经 effect 取消在途识别');
+  finish({text:'Late plugin result must not be used'});await pause(5);assert.equal(input.value,'');assert.equal(intervals,0);third.dispose();
+  const late=control();late.start();late.dispose();grant();await pause(5);assert.equal(calls,3);assert.equal(input.value,'');
   await f.restart();const events=JSON.parse(readFileSync(f.logFile('home'),'utf8'));
   assert.equal(events.filter(event=>event.type==='user/message'&&event.data.id==='spoken').length,1);
-  assert.ok(!JSON.stringify(events).includes('Late result must not be used'));
+  assert.ok(!JSON.stringify(events).includes('Late control result must not be used'));
+  assert.ok(!JSON.stringify(events).includes('Late plugin result must not be used'));
 });
