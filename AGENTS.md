@@ -1,7 +1,11 @@
 # Her World Collaboration
 
-Communicate in Chinese; keep source code and repository documentation in English
-unless the user requests otherwise.
+Communicate in Chinese. Write repository documentation in Chinese; keep code,
+commands, paths and branch names in English. Translate existing English docs
+when you next edit them.
+
+开工前先读 docs/product.md 的当前阶段：Her World 正在按三层结构整体重构，
+结构见 docs/architecture.md，已拍板的取舍见 docs/decisions.md。
 
 Start with README.md and docs/development.md. This working tree keeps only the
 current source and operational documentation; do not recreate historical plans,
