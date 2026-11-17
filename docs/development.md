@@ -133,4 +133,4 @@ media; optional regeneration uses `src/behavior/animation-allocation.json` and
 artwork in `art/`.
 
 For artwork handoff, canvas and anchor constraints, timing, visual review and
-media registration, see the [animation and artwork standard](animation-standard.md).
+media registration, see `docs/animation-standard.md` in the source checkout.
