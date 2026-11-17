@@ -65,39 +65,50 @@ export function project(root, paths) {
     if(ts.isBindingElement(decl)) {
       const names=[]; let current=decl;
       while(ts.isBindingElement(current)) {
-        names.unshift(key(current.propertyName??current.name));
+        const name=current.propertyName??current.name;
+        const result=ts.isComputedPropertyName(name)?stringResult(name.expression,next):{values:[key(name)],complete:!!key(name)};
+        names.unshift(result.complete?result.values:['?']);
         current=current.parent.parent;
       }
       if(ts.isVariableDeclaration(current) && current.initializer) {
         const base=resolve(current.initializer,next);
-        return base?.map(value=>[value,...names].join('.'));
+        return names.reduce((values,parts)=>values?.flatMap(value=>parts.map(part=>value+'.'+part)),base);
       }
     }
   }
-  function strings(node,seen=new Set()) {
-    node=unwrap(node);if(!node)return;
+  function strings(node,seen=new Set(),state={complete:true}) {
+    node=unwrap(node);if(!node){state.complete=false;return;}
     if(ts.isStringLiteralLike(node))return [node.text];
     if(ts.isTemplateExpression(node)) {
       let result=[node.head.text];
       for(const span of node.templateSpans) {
-        const values=strings(span.expression,seen)??['*'];
+        const values=strings(span.expression,seen,state)??['*'];
         result=result.flatMap(prefix=>values.map(value=>prefix+value+span.literal.text));
       }
       return result;
     }
     if(ts.isConditionalExpression(node)) {
-      const left=strings(node.whenTrue,seen),right=strings(node.whenFalse,seen);
+      const left=strings(node.whenTrue,seen,state),right=strings(node.whenFalse,seen,state);
       return left && right?[...new Set([...left,...right])]:undefined;
     }
     if(ts.isBinaryExpression(node) && node.operatorToken.kind===ts.SyntaxKind.PlusToken) {
-      const a=strings(node.left,seen),b=strings(node.right,seen);
+      const a=strings(node.left,seen,state),b=strings(node.right,seen,state);
       return a||b?(a??['*']).flatMap(x=>(b??['*']).map(y=>x+y)):undefined;
     }
     if(ts.isCallExpression(node)&&['join','resolve'].includes(key(node.expression))) {
-      return node.arguments.reduce((prefix,arg)=>prefix.flatMap(a=>(strings(arg,seen)??['*']).map(b=>a?(a+'/'+b):b)),['']);
+      return node.arguments.reduce((prefix,arg)=>prefix.flatMap(a=>(strings(arg,seen,state)??['*']).map(b=>a?(a+'/'+b):b)),['']);
     }
-    if(ts.isPropertyAccessExpression(node)&&node.name.text==='href'&&ts.isCallExpression(node.expression)&&key(node.expression.expression)==='pathToFileURL')return strings(node.expression.arguments[0],seen);
-    if(ts.isIdentifier(node))return binding(node,strings,seen);
+    if(ts.isPropertyAccessExpression(node)&&node.name.text==='href'&&ts.isCallExpression(node.expression)&&key(node.expression.expression)==='pathToFileURL')return strings(node.expression.arguments[0],seen,state);
+    if(ts.isIdentifier(node)) {
+      const values=binding(node,(value,next)=>strings(value,next,state),seen);
+      if(values)return values;
+    }
+    state.complete=false;
+  }
+  // 保留部分路径给 R5 报告；R1–R3 必须同时检查完整性，不能把占位符当作真实名字。
+  function stringResult(node,seen=new Set()) {
+    const state={complete:true},values=strings(node,seen,state);
+    return {values,complete:!!values&&state.complete};
   }
   function pathsOf(node,seen=new Set()) {
     node=unwrap(node);if(!node)return [];
@@ -116,6 +127,6 @@ export function project(root, paths) {
     }
     return [];
   }
-  return {sources,checker,strings,pathsOf};
+  return {sources,checker,strings,stringResult,pathsOf};
 }
 export function readJson(path) {return JSON.parse(readFileSync(path,'utf8'));}

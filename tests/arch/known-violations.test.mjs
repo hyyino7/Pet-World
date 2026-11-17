@@ -8,19 +8,42 @@ import {join} from 'node:path';
 test('R1 覆盖四种扩展名、动态 import、createRequire 别名与 package imports',t=>{
   const result=workspace(t,{},'known-violations').scan();
   const found=result.rules.filter(r=>r.rule==='R1');
-  assert.equal(found.length,7);
+  assert.equal(found.length,10);
   for(const suffix of ['imports.ts','dynamic.mjs','require.cjs','static.js'])assert.ok(found.some(r=>r.file.endsWith(suffix)),suffix);
   for(const target of ['src/life/plugin.js','src/room/plugin.js','src/desktop/plugin.js'])assert.ok(found.some(r=>r.target===target),target);
 });
 test('R2 覆盖 bind、解构、对象别名、scope、计算名、inject 和未知目标',t=>{
-  const rows=workspace(t,{},'known-violations').scan().rules.filter(r=>r.rule==='R2');
+  const rows=workspace(t,{},'known-violations').scan().rules.filter(r=>r.rule==='R2'&&r.file.endsWith('/services.ts'));
   for(const [line,targets] of [[4,['petLife']],[6,['petBehavior']],[8,['petRoom']],[9,['petDesktop']],[10,['petChannels']],[12,['petBehavior','petEconomy']],[13,['?']],[14,['?']],[16,['petLife']],[17,['petEconomy']]]) {
     assert.deepEqual(rows.filter(r=>r.line===line).map(r=>r.target).sort(),targets.sort(),`services.ts:${line}`);
   }
 });
 test('R3 上层事件被拒绝，原生订阅已登记；未声明发布被拒绝',t=>{
   const rows=workspace(t,{},'known-violations').scan().rules.filter(r=>r.rule==='R3');
-  assert.deepEqual(rows.map(r=>r.target).sort(),['pet/life.review','pet/not-declared']);
+  assert.deepEqual(rows.map(r=>r.target).sort(),['?','?','pet/life.review','pet/not-declared']);
+});
+test('R1 未解析的模板依赖明示未知，内联类型导入和完整模板走同一解析器',t=>{
+  const rows=workspace(t,{},'known-violations').scan().rules.filter(r=>r.rule==='R1'&&r.file.endsWith('/resolution.ts'));
+  assert.deepEqual(rows.map(r=>[r.line,r.target,r.reason]),[
+    [4,'?','无法静态判定本地依赖'],[13,'src/life/plugin.js','依赖方向违规'],[18,'src/life/plugin.js','依赖方向违规'],
+  ]);
+});
+test('R2 模板和计算解构不再漏报，完整插值与常量计算名保留真实目标',t=>{
+  const rows=workspace(t,{},'known-violations').scan().rules.filter(r=>r.rule==='R2'&&r.file.endsWith('/resolution.ts'));
+  assert.deepEqual(rows.map(r=>[r.line,r.target]),[[2,'?'],[3,'?'],[7,'?'],[8,'?'],[9,'?'],[12,'petLife'],[16,'petLife']]);
+  assert.ok(rows.filter(r=>r.target==='?').every(r=>r.reason.includes('无法静态判定')));
+});
+test('R3 未解析的模板订阅与发布都明示未知',t=>{
+  const rows=workspace(t,{},'known-violations').scan().rules.filter(r=>r.rule==='R3'&&r.file.endsWith('/resolution.ts'));
+  assert.deepEqual(rows.map(r=>[r.line,r.target,r.reason]),[[5,'?','无法静态判定事件'],[6,'?','无法静态判定事件']]);
+});
+test('完整模板、本地内联类型和合法计算解构不会误报',t=>{
+  const work=workspace(t,{'src/core/resolved.ts':`type T=import('./local.js').X;
+    const k='petCore'; const {[k]: core}=ctx;
+    const event='agent/disposed'; ctx.on(\`${'${event}'}\`,()=>{});
+    const name='petCore'; ctx.get(\`${'${name}'}\`);
+    const file='./local.js'; import(\`${'${file}'}\`);`});
+  assert.deepEqual(work.scan().rules,[]);
 });
 test('R4 直接写入、对象别名、解构别名和解构赋值都被抓到',t=>{
   const rows=workspace(t,{},'known-violations').scan().rules.filter(r=>r.rule==='R4');
