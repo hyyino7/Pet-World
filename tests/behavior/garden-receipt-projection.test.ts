@@ -32,7 +32,8 @@ test('legacy garden projections remove only generated role labels without mutati
 test('old completed garden execution and Body display remain readable without rewriting save bytes',t=>{
   const root=mkdtempSync(join(tmpdir(),'garden-receipt-projection-'));
   t.after(()=>rmSync(root,{recursive:true,force:true}));
-  const now=Date.parse('2026-11-15T05:00:00Z'),home=emptyHomeState(now),file=join(root,'home.json');
+  // CompanionRoom loads with the real clock and keeps only events from the last 24 hours.
+  const now=Date.now(),home=emptyHomeState(now),file=join(root,'home.json');
   home.activity=receipt;
   home.eventLog=[{at:now,type:'garden',text:receipt,room:'garden',spot:'plot0'}];
   writeFileSync(file,JSON.stringify(home));
