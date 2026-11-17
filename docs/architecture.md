@@ -115,7 +115,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 ## 3. 依赖规则和自动检查
 
-规则写成机器可读的清单 `layers.json`：每个模块属于哪层，允许依赖谁，允许读哪些服务，允许发布和订阅哪些事件。检查脚本用仓库已有的 TypeScript 编译器接口写，不加新依赖。
+规则写成机器可读的清单 [arch/layers.json](../arch/layers.json)：每个模块属于哪层，允许依赖谁，允许读哪些服务，允许发布和订阅哪些事件。检查脚本用仓库已有的 TypeScript 编译器接口写，不加新依赖。
 
 - **R0**：第三层 → 第二层 → 第一层；第三层模块之间禁止互相依赖。向下调用、向上事件与登记。
 
@@ -130,7 +130,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | **R7** | 外围可关闭 | 见下 | 组合测试 | 阶段 2 覆盖生活世界的卸载与暂停；阶段 3 覆盖全部外围模块 |
 | **R8** | 词汇重复与裸字符串 | 同一组字符串取值（例如六种照料动作）出现在多个文件；公开接口（各层 contracts 和对外服务）里的 `kind / action / status / type` 字段是裸 `string`，而不是声明出来的类型 | 扫描；旧重复留在基线里放行并只报告，随各阶段统一词表逐步清理；新增重复当场阻断 | M1 |
 
-**棘轮**：现状违规固定成一份基线文件，之后已建立的检查有任何新增违规，构建就失败；基线条目只减不增，清理旧违规是单独的工作。棘轮只对已经建立的检查生效，尚未建立的不假装生效。基线文件的位置在 M1 的实施方案里定。
+**棘轮**：R1–R4 的基线在 [arch/baseline/rules.json](../arch/baseline/rules.json)，R8 在 [arch/baseline/vocabulary.json](../arch/baseline/vocabulary.json)；R5 的 [arch/baseline/writers.json](../arch/baseline/writers.json) 只作报告，不参与棘轮。已建立的检查出现新增违规，或旧条目消失而未同步收紧基线，都会失败；更新基线只能删条目，清理旧违规时同提交收紧。检查与报告命令见 [开发说明](development.md#architecture-behavior)。尚未建立的检查不计为已生效。
 
 **R5 的做法：**
 
@@ -154,7 +154,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 ## 4. 状态拥有者表
 
-数据位置默认**不变**。「唯一写入协议」一栏标「待定」的，在对应阶段的实施方案里补。
+数据路径、物理容器、当前写入者、目标拥有者和版本的机器登记见 [arch/storage.json](../arch/storage.json)；路径清单在那里维护，本节说明归属和写入协议。数据位置默认**不变**。「唯一写入协议」一栏标「待定」的，在对应阶段的实施方案里补。
 
 | 数据 | 新拥有者 | 现在谁写 | 变化 / 唯一写入协议 |
 | --- | --- | --- | --- |
@@ -164,7 +164,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | Core 数据库：`desktop-session` | **第三层·Desktop** | Desktop 直接写 | **搬出**到 Desktop 自己的存储（随 Desktop 重写） |
 | Core 数据库：`economy.initialized:*` 标记 | **第二层·钱包区** | Economy 写 | **搬出**到 `economy.sqlite`（随阶段 2 的钱包区） |
 | Mnemosyne 记忆库 `data/memory/data/memory.db` 等 | 第一层·记忆 | Mnemosyne 服务、Pet 接口 | 不变 |
-| 情绪 `data/emotion/state.json`；近期账本 `recent-interactions.sqlite` | 第一层·情绪 | Emotion | 初始化改为自己登记 |
+| 情绪 `data/emotion/state.json`；近期账本 `.chatpet/data/memory/recent-interactions.sqlite`（`src/emotion/recent.ts:11,17,47,55`） | 第一层·情绪 | Emotion | 近期账本虽在 Memory 目录，业务拥有者仍是 Emotion；初始化改为自己登记 |
 | 共享 home 会话身份记录 | 第一层·身份与绑定 | Core（目前在 `life.json` 里读写，`core/companion-foundation.ts:89` 一带） | 从 `life.json` 拆出归第一层，生活世界只读；这是一项真实迁移，**放在阶段 2（2a）**；在此之前 Core 对它的读写作为一条基线例外登记 |
 | 身体 `data/behavior/home.json`（或 `data/life/home.json`） | 第二层·身体区 | Behavior | 不变 |
 | 旧菜园 `garden.json` | 第二层·钱包区（只作迁移来源） | 尚未采用 Economy 的存档由旧存储写 | 不再作为运行路径，只作尚未采用存档的一次性迁移来源 |
@@ -423,7 +423,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | 三个旧入口独立卸载的语义 | 阶段 2 开始前填 6.2 的表，P3 用测试覆盖 |
 | 主人的真实数据是否都在第 4 节的位置里（含旧位置 `data/life/` 下的自述、日记、相册） | P1 在真实数据副本上盘点实际文件和表，对比登记表 |
 | 旧安装能否无缝升级 | P1 在隔离的已安装环境里演练 |
-| 检查脚本能否覆盖 R1–R4 | P0 对旧代码跑，要求准确列出已知的 19 处向上读取、`lifeAdmission / roomAdmission / channelBoundary`、`desktop-session` 写入等 |
+| 检查脚本能否覆盖 R1–R4 | P0 对旧代码跑，要求准确列出 [product.md](product.md) G5 所列的 Core 向上读取、`lifeAdmission / roomAdmission / channelBoundary`；存储写入另看 R5 报告 |
 | 记录库的唯一写入协议（原生 `write/edit` 工具） | P2 前决定：经记录库守卫，还是保留现状并在清单里明示 |
 | 上游的完整集合：`HOME_ACTIONS`、身体 kind、`source.kind`、Life 自动登记的提示词段 | 本地只有声明或 `any`；需要上游契约，或隔离环境里的只读目录快照，才能确认完整取值 |
 | 素材名称是否准确表现了动作、情绪和对象 | 分配表的文字匹配不能证明效果；需要在隔离的呈现端里观看素材验收 |
