@@ -220,6 +220,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 3. 错误码及设置回复的恢复语义不一致 | `src/contracts/common.ts:21` 有 `EXPIRED_USE`，`src/core/storage.ts:10` 的辅助联合没有；`src/console/settings.ts:17,400,402` 只保留 `code/message/details` | 辅助函数无法按声明类型表达该拒绝；设置调用者丢失 `effect/retry`，不能据此判断核对或重试 | 已复现：丢弃式 TypeScript 调用产生 TS2345；真实设置处理器收到 `partial/reconcile` 后，回复均无这两个字段 | 待主人决定 |
 | 4. 两套呈现分类器对混合情绪结论不同 | `src/behavior/presentation.ts:21`；`src/behavior/playback.ts:95,109` | 空闲且 `feelings=[anger,calm]` 时，语义呈现为 `emotion/anger`，播放槽为 `rest.calm` | 已复现：同一个合成 home 调用两个真实函数得到上述不同结果 | 待主人决定 |
 | 5. 只读绑定检查写源库附属文件，并发存在锁竞争 | `scripts/lib/repo-storage.mjs:20` 的只读 SQLite 连接；`scripts/migrate/context.mjs:14,38`；锁前调用顺序 `scripts/migrate/runner.mjs:35,43,52` | `plan`、`status`、锁外预检和版本不一致等拒绝路径仍在源 Core 目录生成 `core.sqlite-wal/-shm`；迁移锁保护不了此前的 SQLite 读取，并发预检可能提前失败 | 已复现：关闭的合成 Core 清理附属文件后，独立 inspect、两种 CLI 只读命令、锁外 `assertOffline`、`manifest-mismatch` 拒绝均重新生成两文件而未取得迁移锁；双读屏障实测 `ERR_SQLITE_ERROR` / `errcode 261`。盘点使用隔离镜像（`scripts/migrate/inventory-plan.mjs:31,35`） | 已确认，待主人安排共享读取器修复 |
+| 6. 新装环境里桌宠外观编辑器没加载 | 已安装的 0.1.8 桌宠外观编辑器；源码位置在本仓库还没定位 | 新设备上界面固定提示 `EDITOR_NOT_LOADED`，没有添加形象的入口；桌宠服务本身可用 | 已在 Mac mini 新装 DSH + 0.1.8 上观察到（M1 D 批）。当时的 Codex 怀疑是可选命令依赖挡住了编辑器加载，并写了候选补丁，但补丁没有装上，修复效果没验证；默认独立桌宠的 Electron 路径缺失也是同时观察到的环境缺口，是不是原因还没确定 | 已观察到，原因未确认，待主人安排 |
 
 ## 阶段
 
@@ -252,7 +253,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 故障家族的完整流程用例（G9） | - [ ] 「故障家族」表里的四个家族各有一条从真实入口走完整流程的用例，在旧代码上全绿 |
 | R8 报告脚本（词汇重复与裸字符串） | - [ ] 对旧代码运行，输出的重复词表和裸字符串清单包含「词表重复基线」里已知的那些重复；旧重复固定进基线，之后新增重复阻断 |
 | `AGENTS.md` 按 dev-kit 模板重写开发约定（快测、门禁、恢复环境、高风险、禁改），并加一页入口（G6） | - [ ] 快测和恢复命令实际跑过 |
-| 已知问题登记：盘点中顺带发现的疑似问题 | - [ ] 登记以下 4 条，每条写清位置、影响、能否复现，**不修，由主人决定是否单独立为修复任务**：（1）guest 和电视画面没有情绪工具，但回复里带情绪 footer 时，完成处理似乎仍能改共享情绪（有无排除分支未确认）；（2）Memory 的 `workspaceId` 实际接收 `storageId`；（3）`EXPIRED_USE` 在错误码声明里有，但辅助联合里没有；设置页回复丢失 `effect` 和 `retry`；（4）空闲时 `feelings=[anger, calm]`，两套分类器对同一情绪呈现不同（已登记 5 条，见「已知问题」） |
+| 已知问题登记：盘点中顺带发现的疑似问题 | - [ ] 登记以下 4 条，每条写清位置、影响、能否复现，**不修，由主人决定是否单独立为修复任务**：（1）guest 和电视画面没有情绪工具，但回复里带情绪 footer 时，完成处理似乎仍能改共享情绪（有无排除分支未确认）；（2）Memory 的 `workspaceId` 实际接收 `storageId`；（3）`EXPIRED_USE` 在错误码声明里有，但辅助联合里没有；设置页回复丢失 `effect` 和 `retry`；（4）空闲时 `feelings=[anger, calm]`，两套分类器对同一情绪呈现不同（已登记 6 条，见「已知问题」） |
 
 **主人的验收动作**：看行为清单、现状违规清单和基线表；在隔离环境用副本打开，确认聊天和记忆正常。
 

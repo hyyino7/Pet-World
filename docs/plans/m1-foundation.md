@@ -333,7 +333,7 @@ R5 报告、合成副本生成器、盘点和迁移都读它（拍板点 5）。
   - 和 `storage.json` 的差异：多出了什么、缺了什么
 - 在合成副本上自测：输出里不出现生成器写进去的任何假内容字符串、companionId、路径前缀以外的绝对路径。
 
-### D 真实副本检查点（等主人）
+### D 真实副本检查点（已完成）
 
 **前提**：主人提供真实数据副本，并准备好隔离环境（拍板点 8）。隔离环境按 [portability.md](../portability.md)「Move to another device」搭：
 
@@ -936,6 +936,25 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
 - 新增 `tests/migrate/journal-exists.test.mjs:22`：current/legacy 各先成功跑 CLI `run`，再用新备份目录重跑，断言退出 1、`journal-exists`、未创建新备份及 `.chatpet` 文件哈希不变；`:30` 补有效未完成、坏头（含四种空值头）、坏 JSON、两种截断及混入其他迁移的分类断言。离线夹具先实测 0 通过/1 失败（误报 `journal-invalid`），补四种空值头后也均复现误归 `journal-exists`，修后专项最终 12 通过/0 失败。
 - 本轮验证：语法检查、`pnpm run build`、`pnpm run check:arch` 均通过；`node --test --test-reporter=tap tests/migrate/*.test.mjs` 首轮 46 通过/28 失败，补空值头后最终 50 通过/28 失败/0 跳过。28 个失败均为真实 Memory 夹具的 readiness timeout/exit，含新增两变体用例；`.venv/bin/python` 回环 bind 探针为 PermissionError/errno 1，记为沙箱环境问题，夹具失败导致部分子用例未展开，两变体需 Claude 在本机复验。
 - 本轮仅改 `scripts/migrate/{runner,errors}.mjs`、新增 `tests/migrate/journal-exists.test.mjs` 及本方案；其余既有工作区文件字节未变。未运行 `git add/commit/stash/reset/checkout`、全量 verify、联网、依赖安装、付费模型、DSH 或真实数据验收。
+
+### D 批（已完成，主人执行）
+
+- 环境：独立的 Mac mini 新装 DSH 和 0.1.8 包，作为隔离环境（拍板点 8 的「独立设备」形式）；源机在 DSH 退出后打包伙伴 Repo、安装包和 `6674177` 的 bundle，经本地传输，三个文件的 sha256 和清单一致。这也是 [portability.md](../portability.md)「Move to another device」第一次在真机上走完。
+- 第 1 步盘点：拷来的副本与源机盘点的文件集合、表名、行数一致（companion 根 134 个文件）。装好并聊过之后多出 1 个原生会话文件、20 张表行数增加，全部是新增，和聊天写入相符，没有缺失。`differences.missing` 为空。差异逐条处理如下：
+  - 2 种未登记 kind 是 `native-memory-view`（8 行）和 `native-memory-action`（4 行）：`2962d0f` 之前的代码写入，当前 `src/` 不读不写。已作为旧版遗留登记进 `arch/storage.json`，并在 [architecture.md](../architecture.md) 第 4 节说明。不算「重要数据漏登」，没有触发停止条件。
+  - `differences.extra` 的 `.chatpet/.gitignore`（安装脚本写入，`scripts/lib/repo-storage.mjs:228-232`）和 `.chatpet/migrations/`（80 个文件，一次性导入旧伙伴的存档）不进登记表，原因写在 architecture.md 第 4 节表格下方。
+  - 设备 profile 里的语音（2 个文件）、附件（8 个文件）没有随 Repo 迁移，符合 portability.md 的设备自有约定，不算 companion 对比失败。
+- 第 2 步 Economy：已采用。源机和新机都有 `economy.initialized` 标记，`economy.sqlite` 的 11 张表表名和行数一致。
+- 第 3 步浏览器待确认请求：主人在日常 DSH 的 Her World 控制台页只读统计 `chatpet:economy:pending:*` 键，结果 0。
+- 第 4 步演练（退出码由主人终端或 Agent 回报，聊天由主人操作，只记正常与否）：
+  - `run --backup backup-1` 0，`status` complete；之后聊天和既有记忆正常。
+  - `companion-backup.mjs restore` 0，`restored: true`；`status` 回到 pending；之后聊天正常。
+  - 崩溃演练：真实 DSH 进程不存在（`pgrep` 1）；`run --backup backup-2` 在日志出现后 SIGKILL，退出 137，`status` 仍为 pending；`run --resume` 0，`status` complete。`migrations.jsonl` 只统计事件类型：`migration`、`lock-takeover`、`start`、`done` 各 1 行，迁移步骤恰好完成 1 次。之后聊天和既有记忆正常。
+  - 演练一轮通过，没有失败轮次。
+- 能证明的范围不变：0.1.8 能容忍新增的元数据文件，迁移、续做、恢复正常；换包后的回退留到 M3。
+- 顺带发现：新装环境里桌宠外观编辑器没有加载，已登记为 [product.md](../product.md)「已知问题」第 6 条。Mac mini 上的 Codex 写了一个候选补丁，不在本方案流程内，没有采用。
+- 顺带发现：本机跑 `pnpm run test:native-memory` 失败，在 `scripts/checks/check-native-memory.mjs:130` 的第一次原生回合就报 `Native turn ended: error`，原因没查；它不在 `verify` 里。脚本 `:177` 还在断言已经不写的 `native-memory-action`，即使前面能跑通，这里也会出问题。
+- 数据边界：Agent 只看路径、文件名、个数、表名、行数、kind 前缀和退出码；报告不含正文、字段值、身份或会话标识。传输目录和 Mac mini 上 `~/her-world-drill/` 的三份备份都是真实数据的完整副本，M1 评审点之后由主人决定删除。
 
 ### E 批（已合并）
 
