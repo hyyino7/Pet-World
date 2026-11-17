@@ -1,0 +1,48 @@
+import {fileURLToPath} from 'node:url';
+import {resolve,join} from 'node:path';
+import {scan} from './lib/scan.mjs';
+import {updateBaselines} from './lib/ratchet.mjs';
+
+export function report(result,log=console.log) {
+  for(const rule of ['R1','R2','R3','R4']) {
+    const entries=result.rules.filter(r=>r.rule===rule);
+    const edges=new Set(result.edges.filter(e=>e.rule===rule).map(e=>e.from+' → '+e.to));
+    const sites=new Set(entries.map(r=>JSON.stringify([r.file,r.line,r.column])));
+    const badEdges=new Set(entries.filter(r=>r.from&&r.to).map(r=>r.from+' → '+r.to));
+    log(`${rule}：${entries.length} 条违规目标；${sites.size} 个调用点；${badEdges.size} 条违规依赖边；${edges.size} 条依赖边（全图）`);
+    for(const r of entries)log(`${rule} ${r.file}:${r.line} ${r.scope} → ${r.target} [${r.reason}] ${r.expression}`);
+  }
+  log('R5 写入报告（只报告，不阻断；读写均列出）');
+  for(const r of result.writers)log(`R5 ${r.file}:${r.line} ${r.violation===null?'无法静态判定':r.violation?'违规':'一致'} 写入模块=${r.writer} 操作=${r.access} 物理容器=${r.container} 业务拥有者=${r.owner} 目标=${r.target}`);
+  log(`R8：${result.vocabulary.length} 条重复关系/裸字符串；${result.definitions.length} 个词表定义`);
+  for(const r of result.vocabulary)log(`R8 ${r.file}:${r.line} ${r.shape==='bare string'?'裸 string '+r.target:r.relation+' ['+r.values.join(', ')+'] ↔ '+r.other.file+':'+r.other.line}`);
+  log('R8 全部定义位置（含子集、schema、标签表）');
+  for(const r of result.definitions)log(`R8 定义 ${r.file}:${r.line} ${r.shape} [${r.values.join(', ')}]`);
+  for(const name of ['kind','action']) {
+    const rows=result.judgments.filter(r=>r.target===name),src=rows.filter(r=>r.file.startsWith('src/'));
+    log(`R8 ${name} 字符串判断：运行源码 ${src.length} 点/${new Set(src.map(r=>r.file)).size} 文件；扫描范围 ${rows.length} 点/${new Set(rows.map(r=>r.file)).size} 文件`);
+  }
+  log(`跳过生成文件（${result.skipped.length}；自有生成源已扫描）：${result.skipped.join(', ')}`);
+  log(`跳过 vendor 生成源（${result.skippedVendorSources.length}）：${result.skippedVendorSources.join(', ')}`);
+}
+export function main(args=process.argv.slice(2),root=resolve(import.meta.dirname,'../..')) {
+  const flags=args.filter(arg=>arg!=='--');
+  if(flags.some(arg=>!['--report','--write-baseline'].includes(arg)))throw Error('只支持 --report 和 --write-baseline');
+  const result=scan(root);
+  if(flags.includes('--report'))report(result);
+  const outcomes=updateBaselines([
+    {file:join(root,'arch/baseline/rules.json'),items:result.rules},
+    {file:join(root,'arch/baseline/vocabulary.json'),items:result.vocabulary},
+  ],flags.includes('--write-baseline'));
+  for(const r of outcomes) {
+    console.log(`${r.file}：当前 ${r.items.length}；新增 ${r.added.length}；消失 ${r.removed.length}`);
+    if(r.added.length)console.error('新增违规：',JSON.stringify(r.added));
+    if(r.removed.length&&!flags.includes('--write-baseline'))console.error('旧违规已消失；请在同一提交用 --write-baseline 收紧基线：',JSON.stringify(r.removed));
+  }
+  const ok=flags.includes('--write-baseline')||outcomes.every(r=>r.ok);
+  console.log(ok?'架构检查通过':'架构检查失败');
+  return ok?0:1;
+}
+if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
+  try {process.exitCode=main();}catch(error){console.error(error.message);process.exitCode=1;}
+}

@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "modules": {
+    "core": {
+      "layer": 1,
+      "root": "src/core/",
+      "services": ["petCore","petWorld","petTranscripts"],
+      "dependencies": ["core","memory","emotion","contracts","world"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion"],
+      "publishes": ["pet/core.changed"],
+      "subscribes": ["agent/disposed","agent/inbox/inserted","agent/pre-step","agent/request","agent/status","pet/core.changed","session/event","system-prompt/assemble","tools/pre-execute","tools/result","domain/changed"],
+      "generated": []
+    },
+    "memory": {
+      "layer": 1,
+      "root": "src/memory/",
+      "services": ["petMemory"],
+      "dependencies": ["core","memory","emotion","contracts","world"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion"],
+      "publishes": [],
+      "subscribes": ["pet/life.review","session/event"],
+      "generated": []
+    },
+    "emotion": {
+      "layer": 1,
+      "root": "src/emotion/",
+      "services": ["petEmotion"],
+      "dependencies": ["core","memory","emotion","contracts","world"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion"],
+      "publishes": ["pet/emotion.changed","pet/emotion.expression"],
+      "subscribes": ["agent/disposed","session/event"],
+      "generated": []
+    },
+    "contracts": {
+      "layer": 1,
+      "root": "src/contracts/",
+      "services": [],
+      "dependencies": ["core","memory","emotion","contracts","world"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion"],
+      "publishes": [],
+      "subscribes": [],
+      "generated": []
+    },
+    "world": {
+      "layer": 1,
+      "root": "src/world/",
+      "services": [],
+      "dependencies": ["core","memory","emotion","contracts","world"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion"],
+      "publishes": [],
+      "subscribes": [],
+      "generated": []
+    },
+    "behavior": {
+      "layer": 2,
+      "root": "src/behavior/",
+      "services": ["petBehavior"],
+      "dependencies": ["core","memory","emotion","contracts","world","behavior","life","economy"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion","petBehavior","petLife","petEconomy"],
+      "publishes": ["pet/behavior.changed"],
+      "subscribes": ["pet/core.changed","pet/emotion.changed","pet/emotion.expression","pet/life.changed"],
+      "generated": [
+        {"file":"src/behavior/animation-map.ts","sources":["scripts/build/build-animation-map.mjs"]}
+      ]
+    },
+    "life": {
+      "layer": 2,
+      "root": "src/life/",
+      "services": ["petLife"],
+      "dependencies": ["core","memory","emotion","contracts","world","behavior","life","economy"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion","petBehavior","petLife","petEconomy"],
+      "publishes": ["pet/life.changed","pet/life.review"],
+      "subscribes": ["pet/behavior.changed","pet/core.changed","pet/economy.fact","pet/life.changed"],
+      "generated": []
+    },
+    "economy": {
+      "layer": 2,
+      "root": "src/economy/",
+      "services": ["petEconomy"],
+      "dependencies": ["core","memory","emotion","contracts","world","behavior","life","economy"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion","petBehavior","petLife","petEconomy"],
+      "publishes": ["pet/economy.fact"],
+      "subscribes": ["tools/pre-execute","tools/result"],
+      "generated": []
+    },
+    "desktop": {
+      "layer": 3,
+      "root": "src/desktop/",
+      "services": ["petDesktop","petPlatform"],
+      "dependencies": ["core","memory","emotion","contracts","world","behavior","life","economy","desktop"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion","petBehavior","petLife","petEconomy","petDesktop","petPlatform"],
+      "publishes": [],
+      "subscribes": ["agent/assistant-stream","pet/behavior.changed","pet/core.changed","pet/emotion.expression","pet/life.changed","session/event"],
+      "generated": [
+        {"file":"src/desktop/platform/client.js","sources":["scripts/build/build-pet-platform.mjs","src/desktop/platform/browser-entry.js","src/console/client.js","scripts/lib/pet-hear-lifecycle.mjs","vendor/dsh-pet/platform/upstream/client.js","src/desktop/platform/playback-observer.js","src/desktop/platform/activity-playback.js","src/desktop/platform/presentation-lifecycle.js","src/behavior/playback.ts"]},
+        {"file":"src/desktop/helper/upstream/constants.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/constants.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/desktop-geometry.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/desktop-geometry.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/events.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/events.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/main/tray.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/main/tray.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/pointer-target.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/pointer-target.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/shared-core.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/src/client/pet/animation/animation.ts","vendor/dsh-pet/src/client/pet/animation/asset-loader.ts","vendor/dsh-pet/src/client/pet/animation/assets.ts","vendor/dsh-pet/src/client/pet/animation/cues.ts","vendor/dsh-pet/src/client/pet/animation/media.ts","vendor/dsh-pet/src/shared/avatar.ts","vendor/dsh-pet/src/shared/balance/handlers/custom.ts","vendor/dsh-pet/src/shared/balance/handlers/index.ts","vendor/dsh-pet/src/shared/balance/handlers/money.ts","vendor/dsh-pet/src/shared/balance/handlers/points.ts","vendor/dsh-pet/src/shared/balance/handlers/shape.ts","vendor/dsh-pet/src/shared/balance/handlers/windows.ts","vendor/dsh-pet/src/shared/balance/index.ts","vendor/dsh-pet/src/shared/balance/notice.ts","vendor/dsh-pet/src/shared/balance/parse.ts","vendor/dsh-pet/src/shared/balance/percent.ts","vendor/dsh-pet/src/shared/balance/tone.ts","vendor/dsh-pet/src/shared/balance/types.ts","vendor/dsh-pet/src/shared/balance/view.ts","vendor/dsh-pet/src/shared/bubble-hold.ts","vendor/dsh-pet/src/shared/chat/capture.ts","vendor/dsh-pet/src/shared/chat/dialog.ts","vendor/dsh-pet/src/shared/chat/dom.ts","vendor/dsh-pet/src/shared/chat/encode.ts","vendor/dsh-pet/src/shared/chat/enter.ts","vendor/dsh-pet/src/shared/chat/hear-control.ts","vendor/dsh-pet/src/shared/chat/hear-hold.ts","vendor/dsh-pet/src/shared/chat/hotkey.ts","vendor/dsh-pet/src/shared/chat/icons.ts","vendor/dsh-pet/src/shared/chat/image-pick.ts","vendor/dsh-pet/src/shared/chat/index.ts","vendor/dsh-pet/src/shared/chat/send.ts","vendor/dsh-pet/src/shared/chat/styles.ts","vendor/dsh-pet/src/shared/config.ts","vendor/dsh-pet/src/shared/constants.ts","vendor/dsh-pet/src/shared/display-hotkey.ts","vendor/dsh-pet/src/shared/displays.ts","vendor/dsh-pet/src/shared/focus-session.ts","vendor/dsh-pet/src/shared/fonts.ts","vendor/dsh-pet/src/shared/hear.ts","vendor/dsh-pet/src/shared/hotkey.ts","vendor/dsh-pet/src/shared/index.ts","vendor/dsh-pet/src/shared/menu.ts","vendor/dsh-pet/src/shared/menu/css.ts","vendor/dsh-pet/src/shared/menu/memes.ts","vendor/dsh-pet/src/shared/menu/mount.ts","vendor/dsh-pet/src/shared/menu/position.ts","vendor/dsh-pet/src/shared/menu/tree.ts","vendor/dsh-pet/src/shared/menu/types.ts","vendor/dsh-pet/src/shared/motion.ts","vendor/dsh-pet/src/shared/notify.ts","vendor/dsh-pet/src/shared/pet-size.ts","vendor/dsh-pet/src/shared/physics.ts","vendor/dsh-pet/src/shared/physics/collide.ts","vendor/dsh-pet/src/shared/physics/constants.ts","vendor/dsh-pet/src/shared/physics/contact.ts","vendor/dsh-pet/src/shared/physics/release.ts","vendor/dsh-pet/src/shared/physics/spring.ts","vendor/dsh-pet/src/shared/physics/squash.ts","vendor/dsh-pet/src/shared/physics/throw.ts","vendor/dsh-pet/src/shared/pickers.ts","vendor/dsh-pet/src/shared/playback.ts","vendor/dsh-pet/src/shared/score-popup.ts","vendor/dsh-pet/src/shared/score.ts","vendor/dsh-pet/src/shared/sleep-hotkey.ts","vendor/dsh-pet/src/shared/state.ts","vendor/dsh-pet/src/shared/todo/api.ts","vendor/dsh-pet/src/shared/todo/calendar.ts","vendor/dsh-pet/src/shared/todo/due-picker.ts","vendor/dsh-pet/src/shared/todo/format.ts","vendor/dsh-pet/src/shared/todo/hotkey.ts","vendor/dsh-pet/src/shared/todo/index.ts","vendor/dsh-pet/src/shared/todo/panel.ts","vendor/dsh-pet/src/shared/todo/render.ts","vendor/dsh-pet/src/shared/todo/styles.ts","vendor/dsh-pet/src/shared/todo/types.ts","vendor/dsh-pet/src/shared/tooltip.ts","vendor/dsh-pet/src/shared/types.ts","vendor/dsh-pet/src/shared/voice.ts","vendor/dsh-pet/src/shared/weights.ts","vendor/dsh-pet/src/shared/whisper.ts","vendor/dsh-pet/src/shared/work-status.ts","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/sprite/bubble.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/sprite/bubble.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/sprite/init.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/sprite/init.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/sprite/input.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/sprite/input.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/sprite/menu.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/sprite/menu.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/sprite/motion.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/sprite/motion.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/sprite/playback.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/sprite/playback.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/sprite/window-fit.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/sprite/window-fit.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/sprite.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/sprite.js","scripts/lib/compact-voice-lifecycle.mjs"]},
+        {"file":"src/desktop/helper/upstream/tray-platform.js","sources":["scripts/build/build-desktop-animation.mjs","vendor/dsh-pet/runtime/electron-helper/tray-platform.js","scripts/lib/compact-voice-lifecycle.mjs"]}
+      ]
+    },
+    "room": {
+      "layer": 3,
+      "root": "src/room/",
+      "services": ["petRoom"],
+      "dependencies": ["core","memory","emotion","contracts","world","behavior","life","economy","room"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion","petBehavior","petLife","petEconomy","petRoom"],
+      "publishes": [],
+      "subscribes": ["pet/behavior.changed","pet/core.changed"],
+      "generated": []
+    },
+    "channels": {
+      "layer": 3,
+      "root": "src/channels/",
+      "services": ["petChannels"],
+      "dependencies": ["core","memory","emotion","contracts","world","behavior","life","economy","channels"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion","petBehavior","petLife","petEconomy","petChannels"],
+      "publishes": ["pet/life.review"],
+      "subscribes": ["agent/pre-step","pet/core.changed","pet/life.changed","session/event"],
+      "generated": []
+    },
+    "voice": {
+      "layer": 3,
+      "root": "src/voice/",
+      "services": ["petVoice"],
+      "dependencies": ["core","memory","emotion","contracts","world","behavior","life","economy","voice"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion","petBehavior","petLife","petEconomy","petVoice"],
+      "publishes": [],
+      "subscribes": ["pet/core.changed"],
+      "generated": []
+    },
+    "console": {
+      "layer": 3,
+      "root": "src/console/",
+      "services": [],
+      "dependencies": ["core","memory","emotion","contracts","world","behavior","life","economy","console"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion","petBehavior","petLife","petEconomy"],
+      "publishes": [],
+      "subscribes": [],
+      "generated": []
+    }
+  }
+}
