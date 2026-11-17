@@ -5,17 +5,34 @@ do not create historical plan, handoff or audit-report collections.
 
 ## Local tools
 
-On Apple Silicon macOS, prepare the pinned tools once with
-`python3 scripts/setup-runtime.py` (requires `uv`), then:
+Install mise and uv and put mise's shims on PATH before working in this
+repository. See the “本机运行环境” section of
+`~/Developer/dev-kit/README.md` for local machine setup.
+In a fresh login shell, enter the repository directory; mise selects Node from
+`.node-version` and pnpm from `packageManager` in `package.json`. uv selects
+managed Python from `.python-version`.
+
+On first setup, after moving the checkout, or when `check:env` reports a stale
+environment, run this recovery command from the repository directory:
 
 ```sh
-source ./scripts/env.sh
-pnpm install --frozen-lockfile --ignore-scripts
-uv pip install --python .venv/bin/python -r vendor/mnemosyne/requirements-test.lock
+rm -rf .venv node_modules && mise install && uv venv --managed-python && uv pip install --python .venv/bin/python -r vendor/mnemosyne/requirements-test.lock && pnpm install --frozen-lockfile --ignore-scripts
 ```
 
-Source `scripts/env.sh` in each development shell. Do not replace global tools
-or the installed DSH application. Bundled upstream origins and licenses stay in
+This recreates both disposable dependency directories from the existing lock
+files, removing any manually installed extras. pnpm uses its default shared
+store. If the shell previously sourced `scripts/env.sh`, open a new terminal
+first so the old PATH and project-store override are gone. Do not change global
+runtime versions or the installed DSH application.
+
+`pnpm run check:env` compares Node, pnpm and virtual-environment Python versions
+with the project declarations, checks Python can run and checks that
+`.venv/bin/activate` points to this checkout's `.venv`. It checks versions, not
+the source of Node or pnpm, and does not establish that all locked Python
+dependencies are installed; the Python tests in `pnpm run verify` cover those.
+Shells without mise's shims may fail to find pnpm or select another Node.
+
+Bundled upstream origins and licenses stay in
 `references/manifest.json`, vendor records and `THIRD_PARTY_NOTICES.md`.
 
 ## Everyday checks
