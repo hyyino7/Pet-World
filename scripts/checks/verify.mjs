@@ -10,7 +10,7 @@ function run(command,args,env=process.env) {
   if(result.error)throw result.error;
   if(result.status!==0)throw Error(`${command} ${args.join(' ')} failed (${result.signal ?? result.status})`);
 }
-for(const name of ['check:env','check:types','build'])run('pnpm',['run',name]);
+for(const name of ['check:env','check:types','check:arch','build'])run('pnpm',['run',name]);
 const tests=[...new Set([...globSync('dist/tests/**/*.test.js'),...globSync('tests/**/*.test.mjs')])].sort();
 if(!tests.length)throw Error('No compiled or JavaScript tests found');
 run(process.execPath,['--test','--test-timeout=30000','--test-concurrency=4',...tests]);
