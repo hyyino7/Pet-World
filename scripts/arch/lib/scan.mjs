@@ -24,12 +24,14 @@ export function scan(root) {
   for(const row of storage.entries)for(const id of [row.owner,row.containerOwner,...row.writers])if(!layers.modules[id])throw Error(`存储模块 ID 不存在：${id}`);
   const generated=modules.flatMap(([,m])=>m.generated),skipped=generated.map(g=>g.file).sort();
   const paths=new Set(filesUnder(join(root,'src')).filter(p=>!skipped.includes(p.slice(root.length+1))));
+  const skippedVendorSources=new Set();
   for(const generatedFile of generated)for(const source of generatedFile.sources) {
+    if(source.startsWith('vendor/')){skippedVendorSources.add(source);continue;}
     if(!existsSync(join(root,source)))throw Error(`生成源不存在：${source}`);
     if(/\.(ts|js|mjs|cjs)$/.test(source))paths.add(join(root,source));
   }
   const ast=project(root,[...paths].sort());
   const rules=scanRules(ast,layers,readJson(join(root,'package.json')).imports??{});
   const vocabulary=scanVocabulary(ast),writers=scanStorage(ast,layers,storage);
-  return {rules:rules.reports,edges:rules.edges,vocabulary:vocabulary.reports,definitions:vocabulary.definitions,bare:vocabulary.bare,judgments:vocabulary.judgments,writers,skipped};
+  return {rules:rules.reports,edges:rules.edges,vocabulary:vocabulary.reports,definitions:vocabulary.definitions,bare:vocabulary.bare,judgments:vocabulary.judgments,writers,skipped,skippedVendorSources:[...skippedVendorSources].sort()};
 }

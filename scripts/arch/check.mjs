@@ -22,7 +22,8 @@ export function report(result,log=console.log) {
     const rows=result.judgments.filter(r=>r.target===name),src=rows.filter(r=>r.file.startsWith('src/'));
     log(`R8 ${name} 字符串判断：运行源码 ${src.length} 点/${new Set(src.map(r=>r.file)).size} 文件；扫描范围 ${rows.length} 点/${new Set(rows.map(r=>r.file)).size} 文件`);
   }
-  log(`跳过生成文件（${result.skipped.length}；生成源已扫描）：${result.skipped.join(', ')}`);
+  log(`跳过生成文件（${result.skipped.length}；自有生成源已扫描）：${result.skipped.join(', ')}`);
+  log(`跳过 vendor 生成源（${result.skippedVendorSources.length}）：${result.skippedVendorSources.join(', ')}`);
 }
 export function main(args=process.argv.slice(2),root=resolve(import.meta.dirname,'../..')) {
   const flags=args.filter(arg=>arg!=='--');
