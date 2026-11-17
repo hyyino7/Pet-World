@@ -19,7 +19,7 @@ for (const variant of variants) test(`${variant}: registry coverage and old Core
   assert.equal(existsSync(join(f.data,'core/photos/album.sqlite')),!old);
   assert.equal(existsSync(join(f.data,'life/photos/album.sqlite')),old);
   const report = inventory(f.installation);
-  assert.equal(report.coverage.length,50);
+  assert.equal(report.coverage.length,52);
   assert.deepEqual(report.coverage.map(row => row.id),storage.entries.map(row => row.id));
   assert.deepEqual(report.differences,{extra:[],missing:[]});
   assert.equal(report.coverage.filter(row => row.state === 'browser-check-required').length,2);

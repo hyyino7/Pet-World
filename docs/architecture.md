@@ -163,6 +163,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | Core 数据库：`channel-received / channel-reach / life-outlet-delivery / channel-usage / channel-usage-event` | **第三层·Channels** | Channels 直接写 | **搬出**到 Channels 自己的数据库（随 Channels 重写）；`life-outlet-delivery` 的归属另议，它连接生活与渠道 |
 | Core 数据库：`desktop-session` | **第三层·Desktop** | Desktop 直接写 | **搬出**到 Desktop 自己的存储（随 Desktop 重写） |
 | Core 数据库：`economy.initialized:*` 标记 | **第二层·钱包区** | Economy 写 | **搬出**到 `economy.sqlite`（随阶段 2 的钱包区） |
+| Core 数据库：`native-memory-view / native-memory-action` | 第一层（只保留） | 无：旧版本写入，当前 `src/` 不读不写 | 原样保留，是否清理另议；登记后盘点不再报未知 kind |
 | Mnemosyne 记忆库 `data/memory/data/memory.db` 等 | 第一层·记忆 | Mnemosyne 服务、Pet 接口 | 不变 |
 | 情绪 `data/emotion/state.json`；近期账本 `.chatpet/data/memory/recent-interactions.sqlite`（`src/emotion/recent.ts:11,17,47,55`） | 第一层·情绪 | Emotion | 近期账本虽在 Memory 目录，业务拥有者仍是 Emotion；初始化改为自己登记 |
 | 共享 home 会话身份记录 | 第一层·身份与绑定 | Core（目前在 `life.json` 里读写，`core/companion-foundation.ts:89` 一带） | 从 `life.json` 拆出归第一层，生活世界只读；这是一项真实迁移，**放在阶段 2（2a）**；在此之前 Core 对它的读写作为一条基线例外登记 |
@@ -177,6 +178,11 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | `data/pet-platform/*` | 第三层·PetPlatform | PetPlatform、迁移器 | 不变 |
 | `data/channels/*`；profile 下连接设置、令牌、语音缓存 | 第三层·Channels / Voice | Channels、Voice | 不变，设备相关 |
 | 浏览器 localStorage：`chatpet:economy:pending:*`、Room 的 `home-*` | 第二层·钱包区 / 第三层·Room | 控制台和 Room 前端 | 经济待确认请求迁入钱包区持久存储，迁移顺序见 7.3 |
+
+下面两类文件不进 `storage.json`，盘点把它们列在 `differences.extra` 里属于预期。它们只在部分安装里存在，登进去会让没有它们的安装报「缺失」：
+
+- `.chatpet/.gitignore`：安装脚本搬迁存储时追加 `/data/`，让 Git 忽略个人数据（`scripts/lib/repo-storage.mjs:228-232`）。不归业务模块。
+- `.chatpet/migrations/`：主人安装里一次性导入旧伙伴时留下的原始存档。只读，不归任何模块，迁移不处理它。
 
 ---
 
