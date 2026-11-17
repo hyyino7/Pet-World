@@ -57,7 +57,7 @@ export function scanVocabulary(project) {
     const a=definitions[i],b=definitions[j];
     if(a.file===b.file||!(subset(a.values,b.values)||subset(b.values,a.values)))continue;
     const relation=same(a.values,b.values)?'重复':'子集';
-    for(const [item,other] of [[a,b],[b,a]])duplicates.push({...item,target:JSON.stringify({values:item.values,other:{file:other.file,scope:other.scope,expression:other.expression}}),relation,other:{file:other.file,line:other.line}});
+    for(const [item,other] of [[a,b],[b,a]])duplicates.push({...item,target:JSON.stringify({file:other.file,scope:other.scope}),relation,other:{file:other.file,scope:other.scope,line:other.line}});
   }
   return {reports:[...duplicates,...bare],definitions,bare,judgments};
 }

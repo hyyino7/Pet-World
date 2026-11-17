@@ -3,6 +3,9 @@ import {existsSync,mkdirSync,writeFileSync} from 'node:fs';
 import {dirname} from 'node:path';
 
 export function identity(item) {
+  if(item.rule==='R8')return JSON.stringify(item.shape==='bare string'
+    ?[item.rule,item.file,item.scope,item.target]
+    :[item.rule,item.file,item.scope,item.shape,item.other.file,item.other.scope]);
   return JSON.stringify([item.rule,item.file,item.scope,item.target,item.expression]);
 }
 export function compareBaseline(current,baseline) {

@@ -47,3 +47,45 @@ test('R8 新增重复定义不能用同总数抵消',t=>{
   saveBaseline(work);work.write('src/life/b.ts','');work.write('src/room/c.ts',"const words=['a','b','c'];");
   assert.equal(check(work.root).status,1);
 });
+test('R8 已有重复集合改取值、增加状态或改标签文案保持身份',t=>{
+  const work=workspace(t,{
+    'src/core/a.ts':"type State='a'|'b'|'c'; const labels={x:'甲',y:'乙',z:'丙'};",
+    'src/life/b.ts':"type State='a'|'b'|'c'|'d'; const labels={x:'甲',y:'乙',z:'丙'};",
+  });
+  const before=saveBaseline(work);
+  assert.ok(before.vocabulary.length>0);
+  work.write('src/core/a.ts',"type State='a'|'b'|'c'|'e'; const labels={x:'新文案',y:'乙',z:'丙'};");
+  work.write('src/life/b.ts',"type State='a'|'b'|'c'|'d'|'e'; const labels={x:'甲',y:'乙',z:'丙'};");
+  const result=check(work.root);
+  assert.equal(result.status,0,result.stderr);
+});
+test('R8 完全重复的集合单方加值变为子集仍通过且不改基线',t=>{
+  const work=workspace(t,{
+    'src/core/a.ts':"type State='active'|'idle'|'sleeping';",
+    'src/life/b.ts':"const labels={active:'活动',idle:'空闲',sleeping:'睡眠'};",
+  });
+  const before=saveBaseline(work);
+  assert.equal(before.vocabulary.length,2);
+  assert.ok(before.vocabulary.every(item=>item.relation==='重复'));
+  const path=join(work.root,'arch/baseline/vocabulary.json'),baseline=readFileSync(path,'utf8');
+  assert.equal(check(work.root).status,0);
+  work.write('src/core/a.ts',"type State='active'|'idle'|'sleeping'|'paused';");
+  const after=work.scan().vocabulary;
+  assert.equal(after.length,2);
+  assert.ok(after.every(item=>item.relation==='子集'));
+  const result=check(work.root);
+  assert.equal(result.status,0,result.stderr);
+  assert.equal(readFileSync(path,'utf8'),baseline);
+});
+test('R8 新增一对重复或同一函数内增加一份重复仍阻断',t=>{
+  const work=workspace(t,{
+    'src/core/a.ts':"export function words(){return ['a','b','c'];}",
+    'src/life/b.ts':"export function words(){return ['a','b','c'];}",
+  });
+  saveBaseline(work);
+  work.write('src/room/c.ts',"export function words(){return ['a','b','c'];}");
+  assert.equal(check(work.root).status,1);
+  work.write('src/room/c.ts','');
+  work.write('src/core/a.ts',"export function words(){const extra=['a','b','c'];return ['a','b','c'];}");
+  assert.equal(check(work.root).status,1);
+});
