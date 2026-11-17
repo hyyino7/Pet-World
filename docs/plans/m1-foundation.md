@@ -897,6 +897,46 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
 - Claude 复查时在允许回环的本机重跑：`pnpm run build && pnpm run test:behavior-list` 自测 10/10、行为条目 16/16，B10 通过。
 - 保留原有审查文本；本轮共 5 个文件，交 Claude 以一个提交验收提交。未运行 `git add/commit/stash/reset/checkout`，未推送或合并；主人验收另行完成。
 
+### C 批（已合并）
+
+- `scripts/fixtures/synthetic-companion.mjs`：通过 `dist/src` 的 Core、Memory、Emotion、Body、Life、Economy、记录库、渠道、语音公开流程生成 current/legacy 互斥合成环境；浏览器数据单独留合成导出，不冒充已盘点浏览器。
+- `arch/storage.json` 只新增 `dataVersions`，原结构和 50 条登记不改；本轮未发现需回报 A 批的路径登记不一致。
+- `scripts/migrate/{companion-migrate,context,io,runner}.mjs`、`steps/0001-storage-manifest.mjs`：版本、日志、pid/token 锁、原备份校验续做及目标状态幂等；复用现有备份器和恢复器，正式代码不留测试钩子。
+- `scripts/migrate/{inventory,inventory-plan}.mjs`：按共享备份根输出文件、表名/行数、已知 kind 数量、未知 kind 个数、经济标记和差异；绑定元数据与 SQLite 盘点都在隔离镜像中读取。
+- `tests/migrate/*.mjs`：两种变体的六类演练和盘点检查；注入步骤/DSH 探测均在测试侧，Memory 召回和 SIGKILL 使用真实子进程。
+- 本轮只修 `scripts/migrate/inventory-plan.mjs:26`：用 `realpathSync` 规范化镜像根，绑定、注册表及备份计划的派生路径都从规范根构造，保留共享读取器的严格校验。
+- 新增 `tests/migrate/inventory-paths.test.mjs`：current/legacy 均用真实软链接临时父目录复现；修前 0 通过/2 失败，均在 `scripts/lib/repo-storage.mjs:46` 被拒绝；现有测试及断言未改。
+- 本轮快测 `pnpm run build && node --test tests/migrate/*.test.mjs` 只跑 1 轮：build 通过，60 通过/0 失败/0 跳过；正常迁移回退、真实召回/撤回、四断点续做、并发、结算恢复和拒绝演练均通过。
+- 两种布局的完整镜像备份计划（含全部根目录）与共享 `backupPlan` 深度相等；盘点前后整个合成环境（Repo、DSH home、注册表、回执）的文件清单及字节哈希相等，临时镜像均清理。
+- 保留发现：`inspectRepoBinding` 在 `scripts/lib/repo-storage.mjs:20` 使用只读 SQLite 连接仍会创建源 Core WAL/SHM；本轮对两种关闭后的合成副本独立调用，均实测新增且仅新增 `core.sqlite-shm`、`core.sqlite-wal`，故盘点不能直接对源调用它。
+- `pnpm run check:arch` 通过（规则 74、词表 1381，新增/消失均 0）；`git diff --check`、文档链接及范围检查通过；无未完成的 C 批实现项，未跑全量 verify、真实副本或已安装 DSH 验收。
+- 本轮除本节外只改 scripts/migrate/、新增 tests/migrate/ 回归；未访问外网、安装依赖或调用付费模型；网络仅用本机回环；测试模拟 DSH 探测，正式脚本保留真实探测并拒绝无法确认停写的环境；未运行 git add/commit，由 Claude 验收后按生成器、骨架、盘点、测试、最后本节文档分开提交。
+
+
+- 第一轮返工：按 Claude 的返工安排只修 1–3、5–7；保留既有方案改动，只改 `scripts/migrate/**`、`tests/migrate/**` 和本方案；第 4、8 条按下方登记后置，未改共享库、业务代码、上游、架构登记或其他测试。
+- 文件：`scripts/migrate/errors.mjs` 新增固定原因代码与安全说明；`companion-migrate.mjs`、`inventory.mjs` 输出固定 JSON 错误；`context.mjs`、`inventory-plan.mjs`、`io.mjs`、`runner.mjs` 在校验位置或共享调用边界分类，保留已分类错误，未读取或匹配原始错误文字；盘点根编号、Bank 路径归一和容器覆盖判断也在 `inventory.mjs`。
+- 测试：改 `tests/migrate/{helpers,dsh-probe,migration-child}.mjs` 支持 CLI 原因断言；改 `{refusals,inventory,inventory-paths,concurrency,normal}.test.mjs` 保留原断言并补分类、泄露、非默认 Bank、并发及回退锁；新增 `{cli-errors,inventory-review,metadata-normal}.test.mjs`、`offline-helpers.mjs`、`lock-gate.mjs` 验证实际 CLI、文件、真实独占锁及共享恢复器。
+- 原因覆盖（均在 `tests/migrate/refusals.test.mjs` 走 CLI 且检查 stdout/stderr 无身份、绑定、绝对路径和合成正文）：`receipt-invalid`＝未 installed/坏回执 JSON；`binding-changed`＝外来回执、坏身份 JSON/外来身份；`manifest-mismatch`＝坏版本 JSON、外来身份/模块版本；`journal-invalid`＝坏日志 JSON。
+- 原因覆盖（同一测试）：`dsh-running`＝DSH 探测仍在运行；`writer-running`＝Core/Economy/Memory 三种写入者；`symlink-or-hardlink`＝软/硬链接；`resume-journal-missing`＝无续做日志；`backup-invalid`＝原备份 manifest 哈希/载荷被改动；`unknown`＝文件系统参数无法分类；`usage`＝两种 CLI 参数错误；盘点另覆盖坏回执和软链接。
+- 原因覆盖：`lock-held`、`lock-invalid`＝`refusals.test.mjs` 的活锁/坏锁和 `cli-errors.test.mjs` 的真实租约；`usage` 另有 `cli-errors.test.mjs` 两种 CLI；`concurrency.test.mjs` 对第二个 resume 及两个全新 run 都断言 `lock-held`，后者只允许一个备份和一个成功结果。测试侧错开源 SQLite 预检，随后同时释放真实 `open(wx)` 屏障；正式脚本没有测试钩子。
+- 红绿实测：先补测试再修；原 current/legacy 夹具的修前复现受 Memory 启动阻塞。新增元数据专项用现有 Core/Memory 离线初始化建立真实 schema，不启动或替换 provider；用 `git show HEAD:…` 只读提取原实现到临时目录，运行同样的专项断言，0 通过/35 失败；当前实现对应专项 35 通过/0 失败（包含在下方全套结果内）。其中原因/锁 5、两个并发 2、盘点 3、状态回退 1、拒绝父项及子项 24；原源码回放中 plan 的断言先失败，当前实现另实测回退后的锁与备份一致。
+- 第 2、3 条专项验证：CLI 输出无 workspaceId/storageId；选中 `.chatpet` 非默认 Bank 时 memory/recent 均 present 且 extra 为空；未启用 Memory、默认目录只有空目录时 memory 为 missing。已配置 Bank 缺失仍沿用共享绑定校验拒绝，不放宽完整性检查。
+- 第 5、7 条：回退沿用共享恢复器，迁移锁会原样恢复，未自动删除；`normal.test.mjs` 两变体新增锁字节断言，`metadata-normal.test.mjs` 本环境实测通过；`lock-held` 固定说明要求先确认没有迁移进程，再手动删锁。`plan` 仅列 pending，迁移后为空；`status` 保留 complete。
+- 指定命令 `pnpm run build && node --test tests/migrate/*.test.mjs` 跑 1 轮：build 1 通过/0 失败，测试 35 通过/26 失败；`pnpm run check:arch` 1 通过/0 失败。26 个失败全部在真实 Memory 夹具启动阶段（readiness timeout/exit）；`.venv/bin/python` 绑定本机回环实测 PermissionError/errno 1，记为沙箱环境问题，原召回、SIGKILL 和两变体完整演练未跳过、未换 provider，待 Claude 在允许回环的本机重跑。
+- 第 4 条留 E 批登记：plan、status、锁外预检及版本不一致拒绝路径会因共享只读绑定检查创建源 Core WAL/SHM；本轮两个源 SQLite 预检并发还实测 ERR_SQLITE_ERROR/errcode 261（锁竞争），同列共享读取器问题，未改代码。第 8 条留 M3：增加第二个迁移前先确认完成日志归档或另起日志与备份的规则。
+- `git diff --check`、方案本地链接及范围检查通过；未运行全量门禁、联网、安装依赖、付费模型或 DSH，未读取真实数据，未运行 `git add/commit/stash/reset/checkout`。建议按原因分类、盘点、并发/状态/回退验证、方案记录拆为四个提交，由 Claude 复验验收后提交。
+
+- 本轮修法修正：`scripts/migrate/inventory.mjs:58` 恢复目录参与覆盖匹配；`:73` 按 `container` 去掉 `#…` 后是否含通配符区分目录型与具体容器，后者必须命中文件，多 `locations` 任一具体容器文件即可，保留 Bank 路径归一和表检查。
+- `tests/migrate/inventory-review.test.mjs` 保留非默认 Bank、空默认 Memory 两例；新增空语音目录仍 present、只有近期账本不能代替 Bank、具体容器在任一位置有文件才覆盖三例，最终专项 6 通过/0 失败。语音夹具复用共享 `backupPlan` 的 `roots` 中 `voice` 路径。
+- 本轮验证：`pnpm run build` 1 通过/0 失败；`pnpm run check:arch` 1 通过/0 失败（规则 81、词表 1073，新增/消失均 0）；`node --test --test-reporter=tap tests/migrate/*.test.mjs` 最终 38 通过/26 失败/0 跳过，其中不依赖 Memory 子进程的测试 38 通过/0 失败。26 个失败均为真实 Memory 夹具启动的 readiness timeout/exit；`.venv/bin/python` 回环 bind 探针实测 PermissionError/errno 1，记为沙箱环境问题；夹具失败导致其子用例未展开，本环境总数少于本机，待 Claude 在允许回环的本机复验。
+- 复测过程：前两轮各 37 通过/27 失败，除 26 个环境失败外，新增语音夹具先后误用 profile 父目录、未返回的 `voiceDirectory` 字段；按两轮规则经独立 Agent 只读复核并纠正，独立空语音探针 1 通过/0 失败，覆盖规则未发现遗漏。
+- 本轮仅改 `scripts/migrate/inventory.mjs`、`tests/migrate/inventory-review.test.mjs` 和本方案，其余既有未提交文件字节未变；未运行 `git add/commit/stash/reset/checkout`，未联网、安装依赖、调用付费模型或触碰 DSH；未运行全量 verify 或真实数据验收。
+
+- 第 1 条补修：`scripts/migrate/runner.mjs:48`、`:61` 先拒绝截断日志，再在锁外、锁内把有效的已有日志归为 `journal-exists`；`:15` 只把零条记录视为空日志，`null` 等无效头仍拒绝。`scripts/migrate/errors.mjs:11` 新增固定说明，提示 `status`、未完成用 `--resume`、已完成无需再跑，不提示恢复；损坏或混入其他迁移仍报 `journal-invalid`。
+- 新增 `tests/migrate/journal-exists.test.mjs:22`：current/legacy 各先成功跑 CLI `run`，再用新备份目录重跑，断言退出 1、`journal-exists`、未创建新备份及 `.chatpet` 文件哈希不变；`:30` 补有效未完成、坏头（含四种空值头）、坏 JSON、两种截断及混入其他迁移的分类断言。离线夹具先实测 0 通过/1 失败（误报 `journal-invalid`），补四种空值头后也均复现误归 `journal-exists`，修后专项最终 12 通过/0 失败。
+- 本轮验证：语法检查、`pnpm run build`、`pnpm run check:arch` 均通过；`node --test --test-reporter=tap tests/migrate/*.test.mjs` 首轮 46 通过/28 失败，补空值头后最终 50 通过/28 失败/0 跳过。28 个失败均为真实 Memory 夹具的 readiness timeout/exit，含新增两变体用例；`.venv/bin/python` 回环 bind 探针为 PermissionError/errno 1，记为沙箱环境问题，夹具失败导致部分子用例未展开，两变体需 Claude 在本机复验。
+- 本轮仅改 `scripts/migrate/{runner,errors}.mjs`、新增 `tests/migrate/journal-exists.test.mjs` 及本方案；其余既有工作区文件字节未变。未运行 `git add/commit/stash/reset/checkout`、全量 verify、联网、依赖安装、付费模型、DSH 或真实数据验收。
+
 ## 审查结论
 
 ### A 批（第一轮，审查基于 `4071d60`）
@@ -1026,5 +1066,79 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
 - B17：临时注释掉 `src/voice/plugin.ts:71` 的 effect 清理，重新编译后显示「执行 1 次，通过 0 次」；恢复后 `git diff --stat -- src` 为空。
 - B17 读 hear control 源码只经 `entries.ts` 的 `readHearControlSource()`。
 - 快测：build 通过，自测 10/10，行为条目 16/16（本机允许回环，B10 通过）。
+
+没有新的必须修。
+
+### C 批（第一轮，审查基于变基后的 `a98627b`）
+
+两层审查：Codex `codex exec review --base main`（只读；命令不接受同时带自定义说明，按默认口径跑）＋ Claude 核实。分支已变基到 main 的 `b2fee05`，只有本方案「执行结果」一处冲突，B、C 两节都保留。已经通过的：
+
+- 快测：build 通过，`tests/migrate` 60/60；`check:arch` 通过（新增、消失均为 0）。
+- 门禁：`pnpm run verify` 1271/1271，跑完工作区仍干净。
+- 范围：5 个提交共 21 个文件，都在允许修改的范围内，每个提交都没超阈值；`arch/storage.json` 只加了 `dataVersions` 一行；没有改现有测试和 `package.json`。
+- 迁移锁：`runner.mjs:47` 在备份之前取得锁，`:75` 在 `finally` 里释放，整个过程一直持有；锁里会重新读绑定、重查写入者和版本号文件（`:50`）。
+- 续做：`run --resume` 不做新备份，`verifySaved`（`runner.mjs:23-28`）先核对备份 manifest 的哈希，再调用 `verifyOfflineBackup`；日志缺失或备份被改动都会拒绝（`refusals.test.mjs:47-62`）。
+- 目标状态：`manifestComplete`（`context.mjs:28-32`）用 `isDeepStrictEqual` 要求完全一致；文件存在但内容不一致时拒绝，不覆盖。
+- 原子写：`io.mjs:20-30` 依次是临时文件、fsync、rename、fsync 目录；日志每次追加都整份原子重写，最后一行没有换行就当作截断丢弃，续做时记一行 `journal-repaired`。
+- 崩溃点：四个崩溃点都由真实子进程 `SIGKILL` 覆盖，两种变体各跑一遍（`crash.test.mjs`）；崩溃步骤只在 `tests/migrate/migration-child.mjs` 里注入，正式脚本里没有环境变量或测试开关，`runMigration` 的 `selected` 参数只是依赖注入，CLI 不暴露。
+- 拒绝：用真实 DSH 探测跑 `run`，在写任何文件之前就拒绝了（主人本机的 DSH 正在运行）。
+- 手动走查（合成副本，两种变体）：用生成器产出 current 和 legacy；用测试里的 DSH 模拟探测（`tests/migrate/dsh-probe.mjs`）跑 `run`，日志头一出现就 `SIGKILL`；然后 `run --resume` 成功，日志依次是 `migration → lock-takeover → start → done`，备份没有被重做；`status` 显示 complete；用 `restoreOfflineBackup` 回退后，版本号文件和日志都没有了。真实 DSH 探测的「已停止」分支没有走，等主人退出 DSH 后在 D 批里补。
+
+**必须修**
+
+1. **迁移和盘点命令把所有失败吞成同一句提示，D 批没法判断原因。**`scripts/migrate/companion-migrate.mjs:21-24` 和 `scripts/migrate/inventory.mjs:80-82` 捕获全部错误，只打印一句笼统的「Migration refused / Inventory refused」。实测：主人的 DSH 在运行时，真实原因是 `Quit DSH before backup or restore`，命令行上却只能看到笼统提示。D 批是主人在真实副本上跑、Agent 只看程序输出，DSH 没关、锁被占、备份校验失败、版本号文件不一致、日志损坏、参数错误这些情况会全部混在一起，只能去看数据才能查清原因，这违反真实数据规则。
+
+   修法：保留「不打印原始错误信息」（现有校验器的断言信息里可能带身份或内容），改成按原因分类输出：每类一个固定代码加一句固定说明，不带任何数据值，例如 `dsh-running`、`writer-running`（Core、经济、Memory）、`lock-held`、`lock-invalid`、`receipt-invalid`、`binding-changed`、`symlink-or-hardlink`、`manifest-mismatch`、`journal-invalid`、`resume-journal-missing`、`backup-invalid`、`usage`，判断不了的归 `unknown`。分类要在抛错的地方或者用错误类型来做，不要靠匹配原始信息里的文字。退出码仍然非 0。补测试：refusals 的每个用例走 CLI，断言输出的代码正确，并且 stdout 和 stderr 里不出现 companionId、路径和合成内容字符串。
+
+   已修：两种 CLI 输出固定 `{code,message}`，失败退出非 0；在抛错处或共享调用边界分类并保留错误类型，不匹配原始错误文字。全部拒绝用例补 CLI 代码和泄露断言；完整原因映射与实测见上方 C 批执行结果。日志头有效、未截断且非 `--resume` 时，锁外、锁内均改报 `journal-exists`，提示先用 `status` 查看、未完成用 `--resume`、已完成无需再跑，不提示恢复；损坏、截断或混入其他迁移仍报 `journal-invalid`（`scripts/migrate/runner.mjs:12`、`:48`、`:61`；固定说明见 `scripts/migrate/errors.mjs:11`）。
+
+2. **盘点输出里带了工作区 ID 这个绑定值。**`scripts/migrate/inventory.mjs:47,73` 直接用 `backupPlan` 的根 ID 当输出前缀，根 ID 里有 `sessions-<workspaceId>` 和 `cache-<sessionId>`。实测合成副本的盘点输出里，`synthetic-workspace-817` 出现了 4 次。方案要求：程序为了找到绑定会读身份和绑定字段，但不把这些值输出。`tests/migrate/inventory.test.mjs:15` 的泄露检查也没有把 workspaceId 和 storageId 列进去，所以没有拦住。
+
+   修法：输出里的根 ID 换成不带标识的形式，例如 `sessions`、`cache`，多个时按序号区分；根下面的相对路径和文件名不变（主人的规则允许 Agent 看文件名）。泄露检查加上 `f.target.id` 和 `f.storageId`。
+
+   已修：仅输出 sessions/cache 的顺序编号，保留根下相对路径；`inventory.test.mjs`、`inventory-paths.test.mjs` 和元数据专项增加 workspaceId/storageId 泄露检查，不改共享备份根。
+
+3. **Memory 目录在 `.chatpet` 里但不是默认位置时，盘点会算错。**`scripts/lib/offline-backup.mjs:111` 只在 Memory 目录不在 `.chatpet` 里时才单独加一个 `memory` 根，在里面时就算进 `companion` 根；而 `scripts/migrate/inventory.mjs:36` 把 `companion` 根下的路径原样映射成 `.chatpet/…`。结果是：真实 Bank 的文件被报成 `extra`，`memory` 这一行却还是 `present`。原因是 `:49` 把目录也放进了匹配表，`.chatpet/data/memory` 哪怕只是个空目录也算匹配上。这种布局是 `arch/storage.json` 的 `memory` 行登记过的（「memoryDirectory 可选择工作区内的已配置目录」）。盘点是 D 批的检查工具，在支持的布局上给出错误的覆盖结果，主人会被误导。（Codex 第一层报出，Claude 读代码核实。）
+
+   修法：先按 `plan.memoryDirectory` 把选中的 Bank 路径归一化成 `.chatpet/data/memory/…` 再去匹配登记表；覆盖判断只算文件，不算目录。补一个合成用例：Memory 目录配在 `.chatpet` 里的非默认位置时，`memory` 行是 present，`extra` 为空；默认目录只剩空目录、Bank 不在时，`memory` 行报 missing。
+
+   已修：按实际选中 `memoryDirectory` 将 Bank 文件归一化到登记路径；非默认 Bank 与空默认目录的专项保留。修法修正：目录型条目（`paths` / `container` 以 `/**` 结尾）恢复目录覆盖，空语音目录仍为 present；具体容器（`container` 去掉 `#…` 后无通配符）必须匹配到文件，多 `locations` 时任一具体容器文件存在即可；current/legacy 完整夹具测试保留待本机复验。
+
+**建议修（不影响合并）**
+
+4. 迁移预检直接对源库调用 `inspectRepoBinding`（`scripts/migrate/context.mjs:14,38`），只读的 `plan` / `status`，以及版本号文件不一致等拒绝路径，都会在源 Core 目录生成 `core.sqlite-wal` / `-shm`。这是 C 自己发现、定了留到 E 批登记的共享函数问题，生成的是附属文件而不是数据，`run` 本来也要写。建议：`plan`、`status` 和锁外的预检复用 `inventoryPlan` 的隔离镜像，这样只读命令就真正不写；或者在 E 批登记时把这几条路径一起写上。（Codex 第一层报出。）
+
+   未修：按 Claude 的返工安排不改代码，留 E 批登记 plan/status、锁外预检及拒绝路径创建源 Core WAL/SHM；本轮另确认并发预检会遇到共享 SQLite 只读锁竞争，一并登记。
+
+5. 迁移锁会被备份进去，回退之后还在。备份是持锁时做的，`.chatpet/data/migration.lock` 也在 `companion` 根里，所以 `restoreOfflineBackup` 会把它恢复回来（手动走查实测，两种变体都是这样）。下次迁移会当作过期锁接管，功能上没问题；但如果锁里记的 pid 后来被别的进程复用，迁移会一直被拒绝成「正在运行」。建议在 `normal.test.mjs` 回退后断言这把锁的去留，并在执行结果里写明；配合第 1 条，`lock-held` 的说明要告诉主人怎么确认没有迁移在跑、再手动删锁。
+
+   已修：在 `normal.test.mjs` 断言回退锁与原备份字节一致，并由 `metadata-normal.test.mjs` 在本环境实测；保持共享恢复行为，`lock-held` 说明先确认没有迁移进程再手动删锁，PID 复用的风险仍按此处理。
+
+6. `concurrency.test.mjs:17` 第二个进程用的是 `resume`，而且只断言了退出码 1，看不出是不是因为锁被拒绝的。方案写的是两个 `run` 同时启动。第 1 条有了原因代码之后，建议断言是 `lock-held`；再加一个「两个全新 `run` 同时启动」的用例：两个都通过锁外预检，只有一个能拿到锁。
+
+   已修：原 resume 争锁用例断言 `lock-held`；补两个全新 CLI run 同时启动、都到锁外预检后的真实独占打开，再同时争锁，断言一个成功、一个 lock-held 且只有一份备份。源 SQLite 预检在测试侧错开以隔离第 4 条，未改正式流程。
+
+7. `companion-migrate.mjs:18-19` 里 `plan` 和 `status` 的输出完全相同。方案的意思是 `plan` 列待做步骤、`status` 读版本号和日志。建议 `plan` 只列状态还是 pending 的步骤，或者在执行结果里说明两者有意合并。
+
+   已修：`plan` 只列 pending，`status` 保留完整步骤状态；迁移前两者 pending，迁移后 plan 为空、status 为 complete，专项实测通过。
+
+8. 一次迁移完成后，日志一直留在 `.chatpet/data/` 里；以后再跑 `run` 会被拒绝成「要用 --resume」，而 `--resume` 沿用的又是第一次的备份。M1 只有一步，没有影响；M3 加第二个迁移之前，要先定好「迁移完成后日志归档或另起一份」的规则。建议现在就记进执行结果，留给 M3。
+
+   未修：按 Claude 的返工安排不改代码，留 M3 在增加第二个迁移前确认完成日志归档或另起日志及备份的规则。
+
+**返工注意**
+
+- 只改 `scripts/migrate/**`、`tests/migrate/**` 和本节；不改 `scripts/lib/**`、`src/`、`arch/storage.json`。
+- 返工后重跑 `pnpm run build && node --test tests/migrate/*.test.mjs` 和 `pnpm run check:arch`，在执行结果里列出每类原因代码对应的测试。
+
+### C 批复查（第二轮）
+
+返工用 Codex CLI（workspace-write，沙箱不允许本机回环）做了三小轮，Claude 在允许回环的本机逐轮复验。三条必须修都确认修好了；建议修 5、6、7 已做，4、8 已登记后置。
+
+- 第 1 条：用真实 DSH 探测跑 CLI `run`，输出 `{"code":"dsh-running",…}`，退出码 1，没有创建备份。拒绝用例都走 CLI 断言原因代码，并检查输出里没有身份、路径和合成内容。复查时还发现：迁移完成后再跑 `run`，会报 `journal-invalid`，说明里写着「使用原备份恢复」，会误导主人去回退。已补一个 `journal-exists` 代码，提示先用 `status` 查看，有 `tests/migrate/journal-exists.test.mjs` 覆盖。
+- 第 2 条：重新生成合成副本跑盘点，根 ID 是 `sessions-1`、`cache-1`，输出里工作区 ID 出现 0 次，`differences` 为空。
+- 第 3 条：第一轮按审查结论「覆盖判断只算文件」改完后，本机复验有 4 条失败：空的语音目录被报成 missing。这是审查结论修法写得太粗，属于 Claude 的问题。已改成：目录型条目匹配到目录就算覆盖，登记了具体容器文件的条目必须有这个文件。非默认 Bank、空默认目录、空语音目录、只有近期账本、多位置容器都有专项用例。
+- 快测：build 通过，`tests/migrate` 124/124（本机允许回环），`check:arch` 通过。
+- 测试侧的闸门和探测（`tests/migrate/lock-gate.mjs`、`dsh-probe.mjs` 用环境变量切换）都在 `tests/` 里，用 `--import` 预加载；正式脚本里没有测试钩子。
 
 没有新的必须修。
