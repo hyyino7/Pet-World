@@ -297,10 +297,10 @@ For every new or revised clip, review the following before owner acceptance:
 7. Confirm source files, poster, catalog pairing, provenance and byte budget.
    Run the affected existing checks; these do not replace the visual review.
 
-Existing source/package checks for an implemented media change are:
+Existing source/package checks for an implemented media change, run from the
+repository directory, are:
 
 ```sh
-source ./scripts/env.sh
 node scripts/build/build-life-media.mjs --verify
 pnpm run build
 node --test tests/regressions/animation-media-timing.test.mjs tests/life/life-media.test.mjs

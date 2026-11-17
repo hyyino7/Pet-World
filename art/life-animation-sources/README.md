@@ -14,10 +14,9 @@ the encoder, intermediate frames and test previews do not ship in the package.
 The Room 2D sprite route serves those exact installed files; it does not copy
 another set into the Room template.
 
-To rebuild with a separately prepared compatible FFmpeg encoder:
+To rebuild from the repository directory with a separately prepared compatible FFmpeg encoder:
 
 ```sh
-source ./scripts/env.sh
 CHATPET_FFMPEG=/absolute/path/to/ffmpeg node scripts/build/build-life-media.mjs
 ```
 

@@ -2,5 +2,5 @@
   "extends": "./tsconfig.json",
   "compilerOptions": { "noEmit": false, "outDir": "dist", "rootDir": ".", "sourceMap": true, "declaration": true },
   "include": ["src/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["node_modules", "references", ".tools", ".venv", ".cache"]
+  "exclude": ["node_modules", "references", ".venv", ".cache"]
 }

@@ -9,9 +9,12 @@ handoff archives, package copies or audit-report collections unless requested.
 Confirmed requirements, implementation, verification and owner acceptance remain
 distinct. The owner installs/updates DSH; do not do so without explicit authority.
 
-Preserve unrelated changes. Do not commit or publish without request. Use the
-repo-local toolchain: source ./scripts/env.sh. Never replace global Node, Python,
-pnpm or the installed DSH application merely to build this project.
+Preserve unrelated changes. Do not commit or publish without request. Runtime
+versions come from `.node-version`, `.python-version` and `packageManager` in
+`package.json`, provided locally by mise (Node and pnpm) and uv (Python).
+See [development](docs/development.md#local-tools) for the recovery command.
+Never change global runtime versions or the installed DSH application merely to
+build this project.
 
 Reuse upstream code/workflows before designing replacements. Only source/runtime
 evidence establishes a functional gap; explain and agree on a custom business or

@@ -26,7 +26,6 @@ jobs:
           REQUESTED_VERSION: ${{ inputs.version }}
         shell: bash
         run: |
-          source ./scripts/env.sh
           node --input-type=module <<'JS'
           import {readFileSync,writeFileSync,appendFileSync} from 'node:fs';
           import semver from 'semver';
@@ -51,7 +50,6 @@ jobs:
         id: frozen
         shell: bash
         run: |
-          source ./scripts/env.sh
           pnpm run verify
           if [ "${REUSE_TAG:-0}" != 1 ]; then
             git config user.name github-actions[bot]
@@ -70,7 +68,6 @@ jobs:
       - name: Publish checked archive to npm through trusted publishing
         shell: bash
         run: |
-          source ./scripts/env.sh
           archive=".cache/release/her-world-$RELEASE_VERSION.tgz"
           expected="$(node -e 'const fs=require("fs"),c=require("crypto");console.log("sha512-"+c.createHash("sha512").update(fs.readFileSync(process.argv[1])).digest("base64"))' "$archive")"
           read_integrity() {

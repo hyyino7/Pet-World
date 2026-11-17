@@ -222,10 +222,9 @@ a backup. The command checks the desktop process, Core/Memory owner records and
 open native session lock files. An OS without the required process/lock inspection
 tools is refused rather than assumed offline.
 
-From a source checkout with the repo-local Node 24 toolchain:
+From a source checkout with the project Node version, in the repository directory:
 
 ```sh
-source ./scripts/env.sh
 node scripts/companion-backup.mjs plan --installation /absolute/path/installation.json
 node scripts/companion-backup.mjs create --installation /absolute/path/installation.json \
   --output /absolute/path/backups/fish-before-change

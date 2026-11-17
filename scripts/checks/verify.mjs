@@ -14,7 +14,7 @@ for(const name of ['check:env','check:types','build'])run('pnpm',['run',name]);
 const tests=[...new Set([...globSync('dist/tests/**/*.test.js'),...globSync('tests/**/*.test.mjs')])].sort();
 if(!tests.length)throw Error('No compiled or JavaScript tests found');
 run(process.execPath,['--test','--test-timeout=30000','--test-concurrency=4',...tests]);
-run('python',['tests/memory/memory_provider_test.py']);
+run('.venv/bin/python',['tests/memory/memory_provider_test.py']);
 run('pnpm',['run','check:release']);
 const manifest=JSON.parse(readFileSync('package.json','utf8'));
 const directory='.cache/release',archive=join(directory,`${manifest.name}-${manifest.version}.tgz`);
