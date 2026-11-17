@@ -166,6 +166,42 @@
       "reason": "依赖方向违规"
     },
     {
+      "rule": "R1",
+      "file": "src/console/settings.ts",
+      "line": 67,
+      "column": 28,
+      "scope": "settingsHandler/<callback>",
+      "target": "src/channels/plugin.js",
+      "expression": "import ( \"../channels/plugin.js\" ) . CompanionChannels",
+      "from": "console",
+      "to": "channels",
+      "reason": "依赖方向违规"
+    },
+    {
+      "rule": "R1",
+      "file": "src/console/settings.ts",
+      "line": 68,
+      "column": 28,
+      "scope": "settingsHandler/<callback>",
+      "target": "src/desktop/platform/plugin.js",
+      "expression": "import ( \"../desktop/platform/plugin.js\" ) . PetPlatform",
+      "from": "console",
+      "to": "desktop",
+      "reason": "依赖方向违规"
+    },
+    {
+      "rule": "R1",
+      "file": "src/console/settings.ts",
+      "line": 68,
+      "column": 150,
+      "scope": "settingsHandler/<callback>",
+      "target": "src/desktop/platform/plugin.js",
+      "expression": "import ( \"../desktop/platform/plugin.js\" ) . PetPlatform",
+      "from": "console",
+      "to": "desktop",
+      "reason": "依赖方向违规"
+    },
+    {
       "rule": "R2",
       "file": "src/core/companion-foundation.ts",
       "line": 141,
@@ -332,6 +368,16 @@
       "from": "core",
       "to": "life",
       "reason": "依赖方向违规"
+    },
+    {
+      "rule": "R1",
+      "file": "src/core/initialization.ts",
+      "line": 12,
+      "column": 19,
+      "scope": "<module>",
+      "target": "?",
+      "expression": "load ( join ( dirname ( load . resolve ( \"her-world/package.json\" ) ) , \"vendor/dsh-pet/platform/runtime.mjs\" ) )",
+      "reason": "无法静态判定本地依赖"
     },
     {
       "rule": "R2",
@@ -514,6 +560,16 @@
       "reason": "服务读取未获准或方向违规"
     },
     {
+      "rule": "R1",
+      "file": "src/desktop/features.ts",
+      "line": 14,
+      "column": 50,
+      "scope": "upstream",
+      "target": "?",
+      "expression": "import ( \"./upstream/host/\" + file + \".js\" )",
+      "reason": "无法静态判定本地依赖"
+    },
+    {
       "rule": "R2",
       "file": "src/desktop/features.ts",
       "line": 65,
@@ -544,6 +600,26 @@
       "target": "?",
       "expression": "context . get ( key )",
       "reason": "无法静态判定"
+    },
+    {
+      "rule": "R1",
+      "file": "src/desktop/platform/migration.ts",
+      "line": 28,
+      "column": 16,
+      "scope": "<module>",
+      "target": "?",
+      "expression": "require ( join ( root , \"vendor/dsh-pet/platform/runtime.mjs\" ) )",
+      "reason": "无法静态判定本地依赖"
+    },
+    {
+      "rule": "R1",
+      "file": "src/desktop/platform/plugin.ts",
+      "line": 37,
+      "column": 18,
+      "scope": "<module>",
+      "target": "?",
+      "expression": "load ( join ( vendor , \"runtime.mjs\" ) )",
+      "reason": "无法静态判定本地依赖"
     },
     {
       "rule": "R2",
@@ -736,6 +812,26 @@
       "reason": "服务读取未获准或方向违规"
     },
     {
+      "rule": "R1",
+      "file": "src/memory/client.ts",
+      "line": 53,
+      "column": 41,
+      "scope": "MemoryConnection/open",
+      "target": "?",
+      "expression": "import ( pathToFileURL ( TemplateHead:\"\" root LastTemplateToken:\"vendor/mnemosyne/src/memory-process.js\" ) . href )",
+      "reason": "无法静态判定本地依赖"
+    },
+    {
+      "rule": "R1",
+      "file": "src/memory/client.ts",
+      "line": 54,
+      "column": 36,
+      "scope": "MemoryConnection/open",
+      "target": "?",
+      "expression": "import ( pathToFileURL ( TemplateHead:\"\" root LastTemplateToken:\"vendor/mnemosyne/src/memory-client.js\" ) . href )",
+      "reason": "无法静态判定本地依赖"
+    },
+    {
       "rule": "R4",
       "file": "src/memory/plugin.ts",
       "line": 13,
@@ -835,11 +931,9 @@
       "line": 8,
       "column": 50,
       "scope": "upstream",
-      "target": "src/desktop/upstream/host/*.js",
+      "target": "?",
       "expression": "import ( \"../desktop/upstream/host/\" + part + \".js\" )",
-      "from": "voice",
-      "to": "desktop",
-      "reason": "依赖方向违规"
+      "reason": "无法静态判定本地依赖"
     },
     {
       "rule": "R1",
@@ -852,27 +946,6 @@
       "from": "voice",
       "to": "desktop",
       "reason": "依赖方向违规"
-    },
-    {
-      "rule": "R2",
-      "file": "vendor/dsh-pet/platform/upstream/client.js",
-      "line": 14977,
-      "column": 10,
-      "scope": "<callback>/createTransport/api",
-      "target": "petApi7340",
-      "expression": "ctx . get ( \"petApi7340\" )",
-      "from": "desktop",
-      "reason": "服务读取未获准或方向违规"
-    },
-    {
-      "rule": "R2",
-      "file": "vendor/dsh-pet/platform/upstream/client.js",
-      "line": 15113,
-      "column": 18,
-      "scope": "<callback>/mountBaifan/get",
-      "target": "?",
-      "expression": "ctx . get ( name )",
-      "reason": "无法静态判定"
     }
   ]
 }
