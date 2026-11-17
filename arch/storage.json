@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "dataVersions": {"behavior":1,"channels":1,"core":1,"desktop":1,"economy":1,"emotion":1,"life":1,"memory":1,"room":1,"voice":1},
   "moduleIds": ["core","memory","emotion","contracts","world","behavior","life","economy","desktop","room","channels","voice","console"],
   "locationSemantics": "paths 是实际位置的并集；container 和 containerOwner 是首选位置；有多个物理位置时，R5 按 locations 分别匹配，id 和业务拥有者不变。tables 用于核对 SQLite 建表，Core records 的 kind 仍按 selector 单独核对。",
   "entries": [

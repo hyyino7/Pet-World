@@ -1,0 +1,62 @@
+import assert from 'node:assert/strict';
+import { randomUUID, createHash } from 'node:crypto';
+import { closeSync, fsyncSync, lstatSync, openSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+
+export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+export const json = file => JSON.parse(readFileSync(file, 'utf8'));
+export function regular(file) {
+  const stat = lstatSync(file, {throwIfNoEntry:false});
+  assert.ok(!stat || stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1, 'Invalid regular file');
+  return stat;
+}
+export function inspectTree(path) {
+  const stat = lstatSync(path, {throwIfNoEntry:false});
+  if (!stat) return;
+  assert.ok(!stat.isSymbolicLink(), 'Symlink refused');
+  if (stat.isDirectory()) for (const name of readdirSync(path)) inspectTree(join(path, name));
+  else regular(path);
+}
+export function atomicWrite(file, text) {
+  regular(file);
+  const stage = file + '.' + randomUUID() + '.tmp';
+  try {
+    const fd = openSync(stage, 'wx', 0o600);
+    try { writeFileSync(fd, text); fsyncSync(fd); } finally { closeSync(fd); }
+    renameSync(stage, file);
+    const directory = openSync(dirname(file), 'r');
+    try { fsyncSync(directory); } finally { closeSync(directory); }
+  } finally { if (lstatSync(stage, {throwIfNoEntry:false})) unlinkSync(stage); }
+}
+export function readJournal(file) {
+  if (!regular(file)) return {rows:[], truncated:false};
+  const text = readFileSync(file, 'utf8'), lines = text.split('\n');
+  const tail = lines.pop();
+  // Only a non-newline-terminated final record may be a torn append.
+  return {rows:lines.map(line => JSON.parse(line)), truncated:tail.length > 0};
+}
+export function appendJournal(file, row) {
+  const {rows} = readJournal(file);
+  atomicWrite(file, [...rows, row].map(value => JSON.stringify(value) + '\n').join(''));
+}
+
+/** Match Core's pid/token ownership; an invalid or live lease is never replaced. */
+export function acquireLock(file) {
+  const token = `${process.pid}:${randomUUID()}`;
+  let stale = false;
+  const previous = regular(file);
+  if (previous) {
+    const saved = readFileSync(file, 'utf8'), pid = Number(saved.split(':')[0]);
+    assert.ok(Number.isSafeInteger(pid) && pid > 0, 'Invalid migration lock');
+    try { process.kill(pid, 0); throw Error('Migration already running'); }
+    catch (error) { if (error.code !== 'ESRCH') throw error; }
+    const current = regular(file);
+    assert.ok(current?.ino === previous.ino && current.dev === previous.dev && readFileSync(file, 'utf8') === saved, 'Lock changed');
+    unlinkSync(file); stale = true;
+  }
+  const fd = openSync(file, 'wx', 0o600);
+  try { writeFileSync(fd, token); fsyncSync(fd); } finally { closeSync(fd); }
+  return {stale, release() {
+    if (regular(file) && readFileSync(file, 'utf8') === token) unlinkSync(file);
+  }};
+}
