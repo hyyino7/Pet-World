@@ -537,6 +537,7 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
 - 无未完成的 A 批实现项；未运行全量 verify、构建、DSH 或付费模型，未访问个人数据，未改 src/、vendor/、原有测试或 B–E；正式文档同步留 E 批。
 - 本轮未运行 git add/commit，全部改动留给 Claude 按声明/实现、生成基线、样例、测试/接线、最后执行结果分开提交；未推送、未合并。
 - 验收注意：R5 只报告，仍有 150 条无法静态判定；84 组是同集统计而非业务重复确认数。全量门禁、Claude 验收及主人验收仍待各自执行。
+- 返工（C 批发现的存储登记问题，已修）：逐条核对原有 50 条并在 `arch/storage.json:6-55` 各行补 `evidence`；实质修正第 18、21、34-43、47-48 行：近期账本改为 Memory 目录容器、Emotion 业务拥有者（`src/core/index.ts:18`、`src/emotion/recent.ts:11,17,25,56,78`），身体/旧菜园、Life 各文件、记录库/相册新旧位置、Channels 设备目录用 `locations` 分别登记，补相册文件范围和建表清单，校正当前写入者（各处源码依据见对应行）；R5 修正精确路径优先级、分位置容器和建表归属，新增 `tests/arch/storage-locations.test.mjs`，保留全部现有测试；用 `scan()` 重生成 writers：324 条调用身份未变、18 条报告字段修正，现为 65 违规/109 一致/150 未知，rules/vocabulary 字节未变；快测 `node --test tests/arch/*.test.mjs` 24 通过/0 失败、`pnpm run check:arch` 通过；除本行执行记录外仅改 A 批允许目录，未运行全量门禁、真实副本或 git add/commit，由 Claude 验收及提交。
 
 ## 审查结论
 
