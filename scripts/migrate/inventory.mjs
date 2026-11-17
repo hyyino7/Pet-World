@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import assert from 'node:assert/strict';
+import { requireMigration, diagnostic } from './errors.mjs';
 import { lstatSync, readdirSync, mkdtempSync, cpSync, rmSync } from 'node:fs';
-import { join, relative, matchesGlob } from 'node:path';
+import { join, relative, matchesGlob, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
@@ -33,6 +33,9 @@ function sqliteMetadata(file, core) {
   } finally { rmSync(scratch, {recursive:true, force:true}); }
 }
 function logicalPath(context, root, path) {
+  const memory = context.plan.memoryDirectory;
+  if (memory && (path === memory || path.startsWith(memory + sep)))
+    return '.chatpet/data/memory/' + relative(memory,path);
   if (root.id === 'companion') return '.chatpet/' + relative(root.path, path);
   if (root.id === 'channels') return 'profile:chatpet-channels/' + relative(root.path, path);
   if (root.id === 'voice') return 'profile:chatpet-voice/' + relative(root.path, path);
@@ -42,9 +45,15 @@ function logicalPath(context, root, path) {
 }
 export function inventory(installation) {
   const context = inventoryPlan(installation), files = [], directories = [], logical = new Map();
+  const counts = new Map();
+  const roots = context.plan.roots.map(root => {
+    const base = root.id.startsWith('sessions-') ? 'sessions' : root.id.startsWith('cache-') ? 'cache' : root.id;
+    const count = (counts.get(base) ?? 0) + 1; counts.set(base,count);
+    return {...root, outputId:['sessions','cache'].includes(base) ? `${base}-${count}` : base};
+  });
   function visit(root, path) {
     const stat = lstatSync(path, {throwIfNoEntry:false}); if (!stat) return;
-    const name = root.id + (relative(root.path, path) ? '/' + relative(root.path, path) : '');
+    const name = root.outputId + (relative(root.path, path) ? '/' + relative(root.path, path) : '');
     const declared = logicalPath(context, root, path);
     if (declared) logical.set(name, declared);
     if (stat.isDirectory()) {
@@ -55,14 +64,19 @@ export function inventory(installation) {
       files.push({path:name, bytes:stat.size, ...metadata});
     }
   }
-  for (const root of context.plan.roots) visit(root, root.path);
+  for (const root of roots) visit(root, root.path);
   const metadataByPath = new Map(files.map(file => [file.path, file]));
   const coverage = storage.entries.map(entry => {
     if (entry.paths.every(path => path.startsWith('localStorage:'))) return {id:entry.id, state:'browser-check-required'};
     const matches = [...logical].filter(([,path]) => entry.paths.some(pattern => path === pattern.replace(/\/\*\*$/, '') || matchesGlob(path, pattern)));
+    // Directory entries may be empty; a named container still requires its file.
+    const containers = (entry.locations ?? [entry]).map(location => location.container.split('#')[0]).filter(path => !/[*?[\]{}()]/.test(path));
+    const present = containers.length
+      ? matches.some(([file,path]) => metadataByPath.has(file) && containers.includes(path))
+      : matches.length > 0;
     const tables = [...new Set(matches.flatMap(([path]) => metadataByPath.get(path)?.tables?.map(table => table.name) ?? []))];
     const missingTables = (entry.tables ?? (entry.selector?.table ? [entry.selector.table] : [])).filter(table => !tables.includes(table));
-    return {id:entry.id, state:matches.length && !missingTables.length ? 'present' : 'missing',
+    return {id:entry.id, state:present && !missingTables.length ? 'present' : 'missing',
       paths:matches.map(([path]) => path), ...(missingTables.length ? {missingTables} : {})};
   });
   const operational = ['.chatpet/README.md','.chatpet/data/storage-manifest.json','.chatpet/data/migrations.jsonl','.chatpet/data/migration.lock'];
@@ -70,15 +84,15 @@ export function inventory(installation) {
     const path = logical.get(file.path)?.replace(/-(?:wal|shm|journal)$/, '');
     return path && !operational.includes(path) && !storage.entries.some(entry => entry.paths.some(pattern => matchesGlob(path, pattern)));
   }).map(file => file.path);
-  return {roots:context.plan.roots.map(root => ({id:root.id, present:Boolean(lstatSync(root.path, {throwIfNoEntry:false}))})),
+  return {roots:roots.map(root => ({id:root.outputId, present:Boolean(lstatSync(root.path, {throwIfNoEntry:false}))})),
     directories, files, coverage, differences:{extra, missing:coverage.filter(row => row.state === 'missing').map(row => row.id)}};
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    assert.ok(process.argv.length === 4 && process.argv[2] === '--installation', 'Installation required');
+    requireMigration(process.argv.length === 4 && process.argv[2] === '--installation', 'usage');
     console.log(JSON.stringify(inventory(process.argv[3]), null, 2));
-  } catch {
-    console.error('Inventory refused. Check the installed receipt, binding, regular files and SQLite integrity.');
+  } catch (error) {
+    console.error(diagnostic(error));
     process.exitCode = 1;
   }
 }

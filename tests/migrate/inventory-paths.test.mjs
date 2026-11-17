@@ -23,7 +23,9 @@ for (const variant of variants) test(`${variant}: symlinked temporary parent pre
   try {
     plan = inventoryPlan(f.installation).plan;
     const report = inventory(f.installation);
-    assert.deepEqual(report.roots.map(({id}) => id), plan.roots.map(({id}) => id));
+    assert.equal(report.roots.length, plan.roots.length);
+    assert.equal(new Set(report.roots.map(({id}) => id)).size,plan.roots.length);
+    for (const secret of [f.target.id,f.storageId]) assert.ok(!JSON.stringify(report).includes(secret));
     assert.deepEqual(report.differences, {extra:[], missing:[]});
   } finally {
     assert.deepEqual(fileHashes(f.out), before, 'Repo, DSH home, registry and receipt retain every file and byte');
