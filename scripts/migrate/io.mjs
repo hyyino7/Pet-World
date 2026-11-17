@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+import { MigrationError, requireMigration, checked } from './errors.mjs';
 import { randomUUID, createHash } from 'node:crypto';
 import { closeSync, fsyncSync, lstatSync, openSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -7,13 +7,13 @@ export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 export const json = file => JSON.parse(readFileSync(file, 'utf8'));
 export function regular(file) {
   const stat = lstatSync(file, {throwIfNoEntry:false});
-  assert.ok(!stat || stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1, 'Invalid regular file');
+  requireMigration(!stat || stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1, 'symlink-or-hardlink');
   return stat;
 }
 export function inspectTree(path) {
   const stat = lstatSync(path, {throwIfNoEntry:false});
   if (!stat) return;
-  assert.ok(!stat.isSymbolicLink(), 'Symlink refused');
+  requireMigration(!stat.isSymbolicLink(), 'symlink-or-hardlink');
   if (stat.isDirectory()) for (const name of readdirSync(path)) inspectTree(join(path, name));
   else regular(path);
 }
@@ -33,7 +33,7 @@ export function readJournal(file) {
   const text = readFileSync(file, 'utf8'), lines = text.split('\n');
   const tail = lines.pop();
   // Only a non-newline-terminated final record may be a torn append.
-  return {rows:lines.map(line => JSON.parse(line)), truncated:tail.length > 0};
+  return {rows:lines.map(line => checked('journal-invalid', () => JSON.parse(line))), truncated:tail.length > 0};
 }
 export function appendJournal(file, row) {
   const {rows} = readJournal(file);
@@ -47,14 +47,19 @@ export function acquireLock(file) {
   const previous = regular(file);
   if (previous) {
     const saved = readFileSync(file, 'utf8'), pid = Number(saved.split(':')[0]);
-    assert.ok(Number.isSafeInteger(pid) && pid > 0, 'Invalid migration lock');
-    try { process.kill(pid, 0); throw Error('Migration already running'); }
-    catch (error) { if (error.code !== 'ESRCH') throw error; }
+    requireMigration(Number.isSafeInteger(pid) && pid > 0 && /^[1-9][0-9]*:[^:\s]+$/.test(saved), 'lock-invalid');
+    try { process.kill(pid, 0); throw new MigrationError('lock-held'); }
+    catch (error) {
+      if (error.code === 'EPERM') throw new MigrationError('lock-held');
+      if (error.code !== 'ESRCH') throw error;
+    }
     const current = regular(file);
-    assert.ok(current?.ino === previous.ino && current.dev === previous.dev && readFileSync(file, 'utf8') === saved, 'Lock changed');
+    requireMigration(current?.ino === previous.ino && current.dev === previous.dev && readFileSync(file, 'utf8') === saved, 'lock-invalid');
     unlinkSync(file); stale = true;
   }
-  const fd = openSync(file, 'wx', 0o600);
+  let fd;
+  try { fd = openSync(file, 'wx', 0o600); }
+  catch (error) { if (error.code === 'EEXIST') throw new MigrationError('lock-held'); throw error; }
   try { writeFileSync(fd, token); fsyncSync(fd); } finally { closeSync(fd); }
   return {stale, release() {
     if (regular(file) && readFileSync(file, 'utf8') === token) unlinkSync(file);

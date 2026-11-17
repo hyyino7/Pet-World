@@ -8,6 +8,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { backupPlan } from '../lib/offline-backup.mjs';
 import { inspectRepoBinding } from '../lib/repo-storage.mjs';
 import { inspectTree, json, regular } from './io.mjs';
+import { readInstallation } from './context.mjs';
+import { checked } from './errors.mjs';
 
 const within = (root, path) => path === root || path.startsWith(root + sep);
 // Native project path encoding, identical to offline-backup's path convention.
@@ -20,8 +22,11 @@ const copyDatabase = (source, target) => {
   }
 };
 export function inventoryPlan(installation) {
-  regular(installation); const receipt = json(installation);
-  assert.ok(receipt.status === 'installed' && receipt.packageInstalled === true && receipt.config?.dataDir && receipt.profileDir, 'Installed receipt required');
+  const receipt = readInstallation(installation);
+  return checked('binding-changed', () => buildInventoryPlan(receipt));
+}
+function buildInventoryPlan(receipt) {
+  inspectTree(receipt.config.dataDir);
   // Canonicalize before deriving any binding, registry or backup-plan paths.
   const scratch = realpathSync(mkdtempSync(join(tmpdir(), 'inventory-binding-')));
   try {

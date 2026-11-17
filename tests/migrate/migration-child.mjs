@@ -1,6 +1,7 @@
 import { existsSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { runMigration } from '../../scripts/migrate/runner.mjs';
+import { diagnostic } from '../../scripts/migrate/errors.mjs';
 import { atomicWrite, appendJournal, json, readJournal } from '../../scripts/migrate/io.mjs';
 
 const [installation, backup, point, resume] = process.argv.slice(2);
@@ -35,4 +36,4 @@ const fakeSteps = ['first','second','third'].map((id, index) => ({
 try {
   await runMigration({installation,backup:resume ? undefined : backup,resume:Boolean(resume)}, fakeSteps);
   if (process.connected) process.disconnect();
-} catch { process.exitCode = 1; if (process.connected) process.disconnect(); }
+} catch (error) { console.error(diagnostic(error)); process.exitCode = 1; if (process.connected) process.disconnect(); }

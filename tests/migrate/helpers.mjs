@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { mkdtempSync, realpathSync, rmSync, readFileSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { content } from '../../scripts/fixtures/synthetic-companion.mjs';
 import childProcess from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
 import { DatabaseSync } from 'node:sqlite';
@@ -59,4 +60,21 @@ export function memoryLogical(f) {
         db.prepare('SELECT * FROM "' + name.replaceAll('"', '""') + '"').all().map(row => JSON.stringify(row)).sort()]);
     } finally { db.close(); }
   } finally { rmSync(root, {recursive:true, force:true}); }
+}
+
+export function cli(f, args, {inventory = false, running = false} = {}) {
+  return childProcess.spawnSync(process.execPath, ['--import',resolve('tests/migrate/dsh-probe.mjs'),
+    resolve(inventory ? 'scripts/migrate/inventory.mjs' : 'scripts/migrate/companion-migrate.mjs'), ...args],
+    {encoding:'utf8', env:{...process.env, MIGRATE_TEST_DSH_RUNNING:running ? '1' : '0'}});
+}
+export function refusedCli(f, args, code, options) {
+  const result = cli(f,args,options);
+  assert.equal(result.status,1);
+  assert.equal(result.stdout,'');
+  const output = JSON.parse(result.stderr);
+  assert.equal(output.code,code);
+  assert.equal(typeof output.message,'string');
+  for (const secret of [...Object.values(content),f.config.companionId,f.config.scopeId,f.config.ownerActorId,
+    f.target.id,f.storageId,f.out,f.repo,f.home,f.installation]) assert.ok(!result.stderr.includes(secret),'Refusal exposes data');
+  return output;
 }

@@ -1,20 +1,19 @@
 import assert from 'node:assert/strict';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { backupPlan, assertDshStopped } from '../lib/offline-backup.mjs';
 import { inspectRepoBinding, assertStopped } from '../lib/repo-storage.mjs';
 import { inspectTree, json, regular } from './io.mjs';
+import { checked, requireMigration } from './errors.mjs';
 
 export const storage = json(new URL('../../arch/storage.json', import.meta.url));
 export function loadInstallation(file) {
-  file = resolve(file); regular(file);
-  const receipt = json(file);
-  assert.ok(receipt.status === 'installed' && receipt.packageInstalled === true, 'Completed installed receipt required');
-  assert.ok(receipt.config?.dataDir && receipt.profileDir, 'Trusted data/profile bindings required');
-  const binding = inspectRepoBinding(receipt.config);
-  assert.equal(binding.state, 'ready', 'Ready binding required');
-  const plan = backupPlan({repo:binding.root, workspaceId:binding.target.id, storageId:binding.storageId,
-    profileDir:receipt.profileDir, dshHome:dirname(dirname(receipt.profileDir)), config:receipt.config});
+  const receipt = readInstallation(file);
+  inspectTree(receipt.config.dataDir);
+  const binding = checked('binding-changed', () => inspectRepoBinding(receipt.config));
+  requireMigration(binding.state === 'ready', 'binding-changed');
+  const plan = checked('binding-changed', () => backupPlan({repo:binding.root, workspaceId:binding.target.id, storageId:binding.storageId,
+    profileDir:receipt.profileDir, dshHome:dirname(dirname(receipt.profileDir)), config:receipt.config}));
   for (const root of plan.roots) inspectTree(root.path);
   const data = join(plan.repo, '.chatpet', 'data');
   return {receipt, plan, data, manifestFile:join(data, 'storage-manifest.json'),
@@ -27,16 +26,28 @@ export function expectedManifest(context) {
 }
 export function manifestComplete(context) {
   if (!regular(context.manifestFile)) return false;
-  assert.ok(isDeepStrictEqual(json(context.manifestFile), expectedManifest(context)), 'Storage manifest differs; reconcile before migration');
+  requireMigration(isDeepStrictEqual(checked('manifest-mismatch', () => json(context.manifestFile)), expectedManifest(context)), 'manifest-mismatch');
   return true;
 }
 export function assertOffline(context) {
-  assertDshStopped(context.plan);
-  assertStopped(context.plan.coreDirectory, 'core');
-  assertStopped(join(context.data, 'economy'), 'economy');
-  if (context.plan.memoryDirectory) assertStopped(context.plan.memoryDirectory, 'memory');
-  const binding = inspectRepoBinding(context.receipt.config);
-  assert.equal(binding.state, 'ready');
-  assert.equal(binding.storageId, context.plan.storageId, 'Storage binding changed');
-  assert.equal(binding.root, context.plan.repo, 'Repo binding changed');
+  checked('dsh-running', () => assertDshStopped(context.plan));
+  checked('writer-running', () => assertStopped(context.plan.coreDirectory, 'core'));
+  checked('writer-running', () => assertStopped(join(context.data, 'economy'), 'economy'));
+  if (context.plan.memoryDirectory) checked('writer-running', () => assertStopped(context.plan.memoryDirectory, 'memory'));
+  checked('binding-changed', () => {
+    const binding = inspectRepoBinding(context.receipt.config);
+    assert.equal(binding.state, 'ready');
+    assert.equal(binding.storageId, context.plan.storageId, 'Storage binding changed');
+    assert.equal(binding.root, context.plan.repo, 'Repo binding changed');
+  });
+}
+
+export function readInstallation(file) {
+  return checked('receipt-invalid', () => {
+    regular(file); const receipt = json(file);
+    requireMigration(receipt?.status === 'installed' && receipt.packageInstalled === true &&
+      typeof receipt.config?.dataDir === 'string' && receipt.config.dataDir.length > 0 &&
+      typeof receipt.profileDir === 'string' && receipt.profileDir.length > 0, 'receipt-invalid');
+    return receipt;
+  });
 }

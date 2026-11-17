@@ -3,5 +3,6 @@ import childProcess from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
 const original = childProcess.spawnSync;
 childProcess.spawnSync = (command, args, options) => command === 'pgrep'
-  ? {status:1,stdout:'',stderr:''} : original(command, args, options);
+  ? {status:process.env.MIGRATE_TEST_DSH_RUNNING === '1' ? 0 : 1,
+      stdout:process.env.MIGRATE_TEST_DSH_RUNNING === '1' ? String(process.pid + 100000) : '',stderr:''} : original(command, args, options);
 syncBuiltinESMExports();

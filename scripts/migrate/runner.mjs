@@ -5,26 +5,31 @@ import { resolve } from 'node:path';
 import { createOfflineBackup, verifyOfflineBackup } from '../lib/offline-backup.mjs';
 import { loadInstallation, manifestComplete, assertOffline } from './context.mjs';
 import { acquireLock, appendJournal, hash, readJournal, regular } from './io.mjs';
+import { checked, requireMigration } from './errors.mjs';
 import manifestStep from './steps/0001-storage-manifest.mjs';
 
 export const steps = [manifestStep];
 function validateJournal(context) {
-  const journal = readJournal(context.journalFile), header = journal.rows[0];
-  if (!header) return journal;
-  assert.ok(header.event === 'migration' && typeof header.id === 'string' && typeof header.backup === 'string'
-    && /^[a-f0-9]{64}$/.test(header.manifestHash), 'Invalid migration header');
-  for (const row of journal.rows.slice(1)) {
-    assert.equal(row.migrationId, header.id, 'Mixed migration journal');
-    assert.ok(['start','skip','done','failed','lock-takeover','journal-repaired'].includes(row.event), 'Invalid journal event');
-    if (['start','skip','done','failed'].includes(row.event)) assert.equal(typeof row.step, 'string');
-  }
-  return journal;
+  return checked('journal-invalid', () => {
+    const journal = readJournal(context.journalFile), header = journal.rows[0];
+    if (!journal.rows.length) return journal;
+    assert.ok(header && header.event === 'migration' && typeof header.id === 'string' && typeof header.backup === 'string'
+      && /^[a-f0-9]{64}$/.test(header.manifestHash), 'Invalid migration header');
+    for (const row of journal.rows.slice(1)) {
+      assert.equal(row.migrationId, header.id, 'Mixed migration journal');
+      assert.ok(['start','skip','done','failed','lock-takeover','journal-repaired'].includes(row.event), 'Invalid journal event');
+      if (['start','skip','done','failed'].includes(row.event)) assert.equal(typeof row.step, 'string');
+    }
+    return journal;
+  });
 }
 function verifySaved(context, header) {
-  assert.ok(header, 'Resume journal missing; restore the pre-migration backup');
-  const file = resolve(header.backup, 'manifest.json'); regular(file);
-  assert.equal(hash(readFileSync(file)), header.manifestHash, 'Backup manifest changed; restore a verified pre-migration backup');
-  verifyOfflineBackup(header.backup, context.plan);
+  requireMigration(header, 'resume-journal-missing');
+  checked('backup-invalid', () => {
+    const file = resolve(header.backup, 'manifest.json'); regular(file);
+    assert.equal(hash(readFileSync(file)), header.manifestHash, 'Backup manifest changed; restore a verified pre-migration backup');
+    verifyOfflineBackup(header.backup, context.plan);
+  });
 }
 export function migrationStatus(installation, selected = steps) {
   const context = loadInstallation(installation), journal = validateJournal(context);
@@ -40,8 +45,9 @@ export async function runMigration({installation, backup, resume = false}, selec
   let journal = validateJournal(context);
   if (resume) verifySaved(context, journal.rows[0]);
   else {
-    assert.ok(!journal.rows.length && !journal.truncated, 'Use --resume with the existing migration journal');
-    assert.ok(backup, 'Specify a new backup directory');
+    requireMigration(!journal.truncated, 'journal-invalid');
+    requireMigration(!journal.rows.length, 'journal-exists');
+    requireMigration(backup, 'usage');
   }
   assertOffline(context);
   const lease = acquireLock(context.lockFile);
@@ -52,10 +58,13 @@ export async function runMigration({installation, backup, resume = false}, selec
     let header;
     if (resume) { header = journal.rows[0]; verifySaved(context, header); }
     else {
-      assert.equal(journal.rows.length, 0, 'Migration journal appeared');
+      requireMigration(!journal.truncated, 'journal-invalid');
+      requireMigration(!journal.rows.length, 'journal-exists');
       backup = resolve(backup);
-      createOfflineBackup(context.plan, backup);
-      verifyOfflineBackup(backup, context.plan);
+      checked('backup-invalid', () => {
+        createOfflineBackup(context.plan, backup);
+        verifyOfflineBackup(backup, context.plan);
+      });
       header = {event:'migration', id:randomUUID(), backup, manifestHash:hash(readFileSync(resolve(backup, 'manifest.json')))};
       appendJournal(context.journalFile, header);
     }
