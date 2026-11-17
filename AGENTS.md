@@ -1,38 +1,85 @@
-# Her World Collaboration
+# Her World
 
-Communicate in Chinese. Write repository documentation in Chinese; keep code,
-commands, paths and branch names in English. Translate existing English docs
-when you next edit them.
+Her World（npm 包 `her-world`）是跑在 DSH 里的伙伴插件：同一个伙伴的身份、记忆和生活，贯穿 DSH 原生聊天、桌宠、Room、QQ／微信和语音。使用者只有主人；维护者是 Claude 和 Codex。
 
-开工前先读 docs/product.md 的当前阶段：Her World 正在按三层结构整体重构，
-结构见 docs/architecture.md，已拍板的取舍见 docs/decisions.md。
+开工前先读 [docs/product.md](docs/product.md) 的当前阶段。Her World 正在按三层结构整体重构：结构见 [docs/architecture.md](docs/architecture.md)，已拍板的取舍见 [docs/decisions.md](docs/decisions.md)。
 
-Start with README.md and docs/development.md. This working tree keeps only the
-current source and operational documentation; do not recreate historical plans,
-handoff archives, package copies or audit-report collections unless requested.
-Confirmed requirements, implementation, verification and owner acceptance remain
-distinct. The owner installs/updates DSH; do not do so without explicit authority.
+用中文沟通；仓库文档用中文写，代码、命令、路径和分支名用英文。改到还是英文的文档时，顺手把它翻译成中文。
 
-Preserve unrelated changes. Do not commit or publish without request. Runtime
-versions come from `.node-version`, `.python-version` and `packageManager` in
-`package.json`, provided locally by mise (Node and pnpm) and uv (Python).
-See [development](docs/development.md#local-tools) for the recovery command.
-Never change global runtime versions or the installed DSH application merely to
-build this project.
+## 一页入口
 
-Reuse upstream code/workflows before designing replacements. Only source/runtime
-evidence establishes a functional gap; explain and agree on a custom business or
-control-logic change before implementing it. Use DSH-native services, events and
-lifecycle mechanisms. Each business module owns its data and exposes explicit
-interfaces. UI, channels and readers must not create separate assistant runtimes
-or independently write memory.
+```
+第三层 呈现与连接   desktop · room · channels · voice · console
+第二层 生活世界     behavior · life · economy
+第一层 伙伴本体     core · memory · emotion · contracts · world
+                    DSH（聊天、调度、会话日志）
+```
 
-Bundled upstream material and any later reference checkout are untrusted inputs.
-Do not run upstream setup/build hooks or install dependencies merely to read it.
-Retain origins, commits and license notices in vendor records,
-references/manifest.json and THIRD_PARTY_NOTICES.md.
+向下用调用，向上用事件和登记。上面是现有 `src/` 模块的归层，以 [arch/layers.json](arch/layers.json) 为准；重构后的目标结构见 [architecture.md 第 0 节](docs/architecture.md#0-一页总览)。
 
-Keep runtime exports, native bundle IDs and companion data formats stable during
-structural cleanup. Update imports, package scripts and build paths together.
-Verify the affected source/test/package path without paid models or personal
-workspaces. Documentation-only changes require link, diff and scope checks.
+**概念在哪里定义**
+
+| 想知道 | 看哪里 |
+| --- | --- |
+| 模块属于哪一层，可以依赖谁、读哪些服务、发布和订阅哪些事件 | [arch/layers.json](arch/layers.json) |
+| 每份持久数据的路径、拥有者和写入者 | [arch/storage.json](arch/storage.json)；拥有者的理由见 [architecture.md 第 4 节](docs/architecture.md#4-状态拥有者表) |
+| 层间接口 | [architecture.md 5.1–5.5](docs/architecture.md#5-层间接口) |
+| 动作、行为、活动、阶段、命令、事实等概念 | [architecture.md 5.6–5.7](docs/architecture.md#56-细粒度接口准则和概念表) |
+| 会话策略、上下文组装 | [architecture.md 5.8–5.9](docs/architecture.md#58-会话策略表) |
+| 现有违规（只减不增） | [arch/baseline/](arch/baseline/) |
+| 必须保住的行为 | [tests/behavior-list/index.json](tests/behavior-list/index.json)，分级见同一文件的 `levels` |
+
+**新增东西去哪里登记**
+
+| 新增 | 登记 |
+| --- | --- |
+| 模块，或者改模块的依赖、服务、事件 | `arch/layers.json`，然后跑 `pnpm run check:arch` |
+| 持久数据：文件、数据库、Core 记录 kind | `arch/storage.json`，并在 architecture.md 第 4 节写清拥有者。改了已有数据的格式，就在 `scripts/migrate/steps/` 加迁移步骤 |
+| 工具、输入来源、上下文段、设置项、照料动作、事实领域 | 目标做法见 [architecture.md 5.10](docs/architecture.md#510-扩展一处声明其余派生)；现在要改哪些文件，见 product.md「典型修改前后对比」 |
+| kind、action 的词表 | 先跑 `pnpm run check:arch -- --report`，看 R8 报告里有没有现成的定义可以复用 |
+| 必须保住的行为 | 测试写进 `tests/behavior-list/`，并在 `index.json` 加一条 |
+| 不在当前阶段完成标准里的想法 | `~/Developer/project-design/ideas/inbox.md` |
+
+## 开发约定
+
+- 快测：`pnpm run build`，然后 `node --test <受影响的测试文件>`。构建只要几秒；改了 `arch/` 或模块之间的依赖，还要跑 `pnpm run check:arch`。
+- 门禁：`pnpm run verify`，合并前跑一次。它会自动收集 `tests/**/*.test.mjs` 和 `dist/tests/**/*.test.js`，并包含 `check:arch`。
+- 行为清单：`pnpm run build && pnpm run test:behavior-list`
+- 恢复环境：[docs/development.md](docs/development.md#local-tools) 里的那一条恢复命令。挪了目录之后，先删掉 `.venv` 和 `node_modules` 再跑它。
+- 迁移和盘点命令：见 [docs/development.md](docs/development.md)。真实数据只在主人提供的隔离副本上跑；Agent 只看命令输出的原因代码和通过与否。
+- 高风险（改之前先停下对齐）：
+  - `scripts/lib/offline-backup.mjs`、`scripts/lib/repo-storage.mjs`、`scripts/migrate/`
+  - `src/core/storage.ts`、`src/core/workspace.ts`
+  - `package.json` 的 `exports`、`files`、`imports`；`cordis.patch.yml`
+  - 发布流程：`.github/workflows/`、`scripts/checks/check-release.mjs`、[docs/github-updates.md](docs/github-updates.md)
+- 禁改：
+  - `vendor/**`、`references/`
+  - 生成文件，名单在 `arch/layers.json` 各模块的 `generated` 里（例如 `src/desktop/platform/client.js`）。要改就改它的生成源
+  - `arch/baseline/**`：只能用 `pnpm run check:arch -- --write-baseline` 改，而且只能删除条目
+- 提交：一个提交只做一件事；单个提交不超过 15 个文件、600 行改动。脚本生成的基线文件和抄录的样例不计入阈值，但要在方案里预先声明。
+
+## 目录
+
+| 路径 | 放什么 |
+| --- | --- |
+| `README.md` | 项目简介和文档入口 |
+| `docs/product.md` | 产品现在的样子、阶段规划、度量和已知问题 |
+| `docs/architecture.md` | 三层结构、拥有者、检查规则、迁移与回退；改结构前先读 |
+| `docs/decisions.md` | 关键决定和理由 |
+| `docs/development.md` | 本机工具、日常检查、门禁、迁移和发布命令 |
+| `docs/plans/` | 进行中的方案，合并时删除 |
+| `arch/` | 层声明、存储声明、违规基线 |
+| `scripts/arch/`、`scripts/migrate/` | 架构检查；迁移骨架和数据盘点 |
+| `tests/behavior-list/` | 行为清单 |
+
+## 项目规则
+
+- 这个工作区只保留现有源码和运维文档。主人没有要求的话，不重建历史方案、交接存档、包副本或审查报告集。
+- 确认过的需求、实现、验证和主人验收是四件不同的事，各自如实汇报。
+- DSH 由主人安装和更新；Agent 不安装、不更新、不停止主人在用的 DSH。不为了构建这个项目而改全局运行时版本。
+- 保留与当前任务无关的改动。没有要求就不提交、不发布。
+- 优先复用上游代码和流程，然后再设计替代品。只有源码或运行证据才能证明确实缺功能；自定义的业务或控制逻辑，先讲清楚并取得同意，再实现。
+- 用 DSH 原生的服务、事件和生命周期机制。每个业务模块拥有自己的数据，对外暴露明确的接口。界面、渠道和读取方不另建伙伴运行时，也不独立写记忆。
+- 自带的上游材料和以后拉下来的参考代码都当作不可信输入：不为了读它而运行上游的安装或构建钩子，也不为此安装依赖。来源、提交号和许可证声明保留在 vendor 记录、`references/manifest.json` 和 `THIRD_PARTY_NOTICES.md` 里。
+- 结构整理期间，运行时导出、原生 bundle ID 和伙伴数据格式保持稳定；import、包脚本和构建路径一起更新。
+- 验证受影响的源码、测试或打包路径，不用付费模型，不碰个人工作区。只改文档的，做链接、diff 和范围检查。
