@@ -2816,7 +2816,7 @@
       "access": "写",
       "container": ".chatpet/data/core/core.sqlite#records",
       "containerOwner": "core",
-      "owner": "channels",
+      "owner": "core",
       "violation": false,
       "reason": "创建表"
     },
@@ -4038,8 +4038,8 @@
       "expression": "readFileSync ( home , \"utf8\" )",
       "writer": "economy",
       "access": "读",
-      "container": ".chatpet/data/behavior/home.json",
-      "containerOwner": "behavior",
+      "container": ".chatpet/data/life/home.json",
+      "containerOwner": "life",
       "owner": "behavior",
       "violation": true,
       "storageId": "body",
@@ -4073,7 +4073,7 @@
       "writer": "economy",
       "access": "读",
       "container": ".chatpet/data/life/garden.json",
-      "containerOwner": "behavior",
+      "containerOwner": "life",
       "owner": "economy",
       "violation": true,
       "storageId": "legacy-garden",
@@ -4089,7 +4089,7 @@
       "expression": "readFileSync ( sourcePath )",
       "writer": "economy",
       "access": "读",
-      "container": ".chatpet/data/life/garden.json",
+      "container": ".chatpet/data/behavior/garden.json",
       "containerOwner": "behavior",
       "owner": "economy",
       "violation": true,
@@ -4106,8 +4106,8 @@
       "expression": "readFileSync ( home , \"utf8\" )",
       "writer": "economy",
       "access": "读",
-      "container": ".chatpet/data/behavior/home.json",
-      "containerOwner": "behavior",
+      "container": ".chatpet/data/life/home.json",
+      "containerOwner": "life",
       "owner": "behavior",
       "violation": true,
       "storageId": "body",
@@ -4305,10 +4305,11 @@
       "expression": "this . db . exec ( \"PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;\\n        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY,quantity INTEGER NOT NULL CHECK(quantity>=0));\\n        CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL,kind TEXT NOT NULL,at INTEGER NOT NULL,money_delta INTEGER NOT NULL,balance INTEGER NOT NULL,item_deltas TEXT NOT NULL,note TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS garden_receipts (request_id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS uses (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS readings (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS bookmarks (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS reading_operations (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS interaction_facts (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL,acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)));\" )",
       "writer": "economy",
       "access": "写",
-      "container": "economy:sqlite#meta",
+      "container": ".chatpet/data/economy/economy.sqlite#meta",
       "containerOwner": "economy",
       "owner": "economy",
       "violation": false,
+      "storageId": "economy",
       "reason": "创建表"
     },
     {
@@ -4321,10 +4322,11 @@
       "expression": "this . db . exec ( \"PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;\\n        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY,quantity INTEGER NOT NULL CHECK(quantity>=0));\\n        CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL,kind TEXT NOT NULL,at INTEGER NOT NULL,money_delta INTEGER NOT NULL,balance INTEGER NOT NULL,item_deltas TEXT NOT NULL,note TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS garden_receipts (request_id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS uses (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS readings (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS bookmarks (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS reading_operations (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS interaction_facts (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL,acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)));\" )",
       "writer": "economy",
       "access": "写",
-      "container": "economy:sqlite#items",
+      "container": ".chatpet/data/economy/economy.sqlite#items",
       "containerOwner": "economy",
       "owner": "economy",
       "violation": false,
+      "storageId": "economy",
       "reason": "创建表"
     },
     {
@@ -4337,10 +4339,11 @@
       "expression": "this . db . exec ( \"PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;\\n        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY,quantity INTEGER NOT NULL CHECK(quantity>=0));\\n        CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL,kind TEXT NOT NULL,at INTEGER NOT NULL,money_delta INTEGER NOT NULL,balance INTEGER NOT NULL,item_deltas TEXT NOT NULL,note TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS garden_receipts (request_id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS uses (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS readings (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS bookmarks (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS reading_operations (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS interaction_facts (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL,acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)));\" )",
       "writer": "economy",
       "access": "写",
-      "container": "economy:sqlite#requests",
+      "container": ".chatpet/data/economy/economy.sqlite#requests",
       "containerOwner": "economy",
       "owner": "economy",
       "violation": false,
+      "storageId": "economy",
       "reason": "创建表"
     },
     {
@@ -4353,10 +4356,11 @@
       "expression": "this . db . exec ( \"PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;\\n        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY,quantity INTEGER NOT NULL CHECK(quantity>=0));\\n        CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL,kind TEXT NOT NULL,at INTEGER NOT NULL,money_delta INTEGER NOT NULL,balance INTEGER NOT NULL,item_deltas TEXT NOT NULL,note TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS garden_receipts (request_id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS uses (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS readings (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS bookmarks (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS reading_operations (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS interaction_facts (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL,acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)));\" )",
       "writer": "economy",
       "access": "写",
-      "container": "economy:sqlite#ledger",
+      "container": ".chatpet/data/economy/economy.sqlite#ledger",
       "containerOwner": "economy",
       "owner": "economy",
       "violation": false,
+      "storageId": "economy",
       "reason": "创建表"
     },
     {
@@ -4369,10 +4373,11 @@
       "expression": "this . db . exec ( \"PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;\\n        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY,quantity INTEGER NOT NULL CHECK(quantity>=0));\\n        CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL,kind TEXT NOT NULL,at INTEGER NOT NULL,money_delta INTEGER NOT NULL,balance INTEGER NOT NULL,item_deltas TEXT NOT NULL,note TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS garden_receipts (request_id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS uses (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS readings (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS bookmarks (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS reading_operations (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS interaction_facts (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL,acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)));\" )",
       "writer": "economy",
       "access": "写",
-      "container": "economy:sqlite#garden_receipts",
+      "container": ".chatpet/data/economy/economy.sqlite#garden_receipts",
       "containerOwner": "economy",
       "owner": "economy",
       "violation": false,
+      "storageId": "economy",
       "reason": "创建表"
     },
     {
@@ -4385,10 +4390,11 @@
       "expression": "this . db . exec ( \"PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;\\n        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY,quantity INTEGER NOT NULL CHECK(quantity>=0));\\n        CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL,kind TEXT NOT NULL,at INTEGER NOT NULL,money_delta INTEGER NOT NULL,balance INTEGER NOT NULL,item_deltas TEXT NOT NULL,note TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS garden_receipts (request_id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS uses (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS readings (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS bookmarks (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS reading_operations (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS interaction_facts (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL,acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)));\" )",
       "writer": "economy",
       "access": "写",
-      "container": "economy:sqlite#uses",
+      "container": ".chatpet/data/economy/economy.sqlite#uses",
       "containerOwner": "economy",
       "owner": "economy",
       "violation": false,
+      "storageId": "economy",
       "reason": "创建表"
     },
     {
@@ -4401,10 +4407,11 @@
       "expression": "this . db . exec ( \"PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;\\n        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY,quantity INTEGER NOT NULL CHECK(quantity>=0));\\n        CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL,kind TEXT NOT NULL,at INTEGER NOT NULL,money_delta INTEGER NOT NULL,balance INTEGER NOT NULL,item_deltas TEXT NOT NULL,note TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS garden_receipts (request_id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS uses (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS readings (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS bookmarks (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS reading_operations (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS interaction_facts (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL,acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)));\" )",
       "writer": "economy",
       "access": "写",
-      "container": "economy:sqlite#readings",
+      "container": ".chatpet/data/economy/economy.sqlite#readings",
       "containerOwner": "economy",
       "owner": "economy",
       "violation": false,
+      "storageId": "economy",
       "reason": "创建表"
     },
     {
@@ -4417,10 +4424,11 @@
       "expression": "this . db . exec ( \"PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;\\n        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY,quantity INTEGER NOT NULL CHECK(quantity>=0));\\n        CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL,kind TEXT NOT NULL,at INTEGER NOT NULL,money_delta INTEGER NOT NULL,balance INTEGER NOT NULL,item_deltas TEXT NOT NULL,note TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS garden_receipts (request_id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS uses (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS readings (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS bookmarks (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS reading_operations (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS interaction_facts (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL,acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)));\" )",
       "writer": "economy",
       "access": "写",
-      "container": "economy:sqlite#bookmarks",
+      "container": ".chatpet/data/economy/economy.sqlite#bookmarks",
       "containerOwner": "economy",
       "owner": "economy",
       "violation": false,
+      "storageId": "economy",
       "reason": "创建表"
     },
     {
@@ -4433,10 +4441,11 @@
       "expression": "this . db . exec ( \"PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;\\n        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY,quantity INTEGER NOT NULL CHECK(quantity>=0));\\n        CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL,kind TEXT NOT NULL,at INTEGER NOT NULL,money_delta INTEGER NOT NULL,balance INTEGER NOT NULL,item_deltas TEXT NOT NULL,note TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS garden_receipts (request_id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS uses (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS readings (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS bookmarks (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS reading_operations (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS interaction_facts (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL,acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)));\" )",
       "writer": "economy",
       "access": "写",
-      "container": "economy:sqlite#reading_operations",
+      "container": ".chatpet/data/economy/economy.sqlite#reading_operations",
       "containerOwner": "economy",
       "owner": "economy",
       "violation": false,
+      "storageId": "economy",
       "reason": "创建表"
     },
     {
@@ -4449,10 +4458,11 @@
       "expression": "this . db . exec ( \"PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;\\n        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY,quantity INTEGER NOT NULL CHECK(quantity>=0));\\n        CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL,kind TEXT NOT NULL,at INTEGER NOT NULL,money_delta INTEGER NOT NULL,balance INTEGER NOT NULL,item_deltas TEXT NOT NULL,note TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS garden_receipts (request_id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS uses (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS readings (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS bookmarks (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS reading_operations (id TEXT PRIMARY KEY,value TEXT NOT NULL);\\n        CREATE TABLE IF NOT EXISTS interaction_facts (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL,acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)));\" )",
       "writer": "economy",
       "access": "写",
-      "container": "economy:sqlite#interaction_facts",
+      "container": ".chatpet/data/economy/economy.sqlite#interaction_facts",
       "containerOwner": "economy",
       "owner": "economy",
       "violation": false,
+      "storageId": "economy",
       "reason": "创建表"
     },
     {
@@ -4626,10 +4636,11 @@
       "expression": "db . exec ( \"PRAGMA busy_timeout=2000; CREATE TABLE IF NOT EXISTS recent (workspace TEXT PRIMARY KEY, body TEXT NOT NULL)\" )",
       "writer": "emotion",
       "access": "写",
-      "container": "emotion:sqlite#recent",
-      "containerOwner": "emotion",
+      "container": ".chatpet/data/memory/recent-interactions.sqlite#recent",
+      "containerOwner": "memory",
       "owner": "emotion",
-      "violation": false,
+      "violation": true,
+      "storageId": "emotion-recent",
       "reason": "创建表"
     },
     {
@@ -4658,10 +4669,11 @@
       "expression": "db . exec ( \"PRAGMA busy_timeout=2000; CREATE TABLE IF NOT EXISTS recent (workspace TEXT PRIMARY KEY, body TEXT NOT NULL); BEGIN IMMEDIATE\" )",
       "writer": "emotion",
       "access": "写",
-      "container": "emotion:sqlite#recent",
-      "containerOwner": "emotion",
+      "container": ".chatpet/data/memory/recent-interactions.sqlite#recent",
+      "containerOwner": "memory",
       "owner": "emotion",
-      "violation": false,
+      "violation": true,
+      "storageId": "emotion-recent",
       "reason": "创建表"
     },
     {
@@ -4820,7 +4832,7 @@
       "expression": "readFileSync ( file , \"utf8\" )",
       "writer": "life",
       "access": "读",
-      "container": ".chatpet/data/life/control.json",
+      "container": ".chatpet/data/life/life.json",
       "containerOwner": "life",
       "owner": "life",
       "violation": false,
