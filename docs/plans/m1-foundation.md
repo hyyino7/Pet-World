@@ -885,6 +885,18 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
 
 </details>
 
+### B 批（已合并）
+- 本轮文件：`tests/behavior-list/families.test.mjs` 修 B07 本地时间和 B17 生命周期验证；`fixture.mjs` 删除绕过生命周期的卸载入口、说明合成存档预置依赖。
+- `entries.ts` 集中读取 hear control 源码并移除未使用的 `createCore` 导出；`domains.test.mjs` 删除离线额度测试中被忽略的第三个参数并修正注释。本文件只回填 B 批执行结果及六条审查项的「已修」说明。
+- B07 修前已在 `TZ=UTC` 复现「自主回顾到达原生入口」失败；修后用仅含 B07 的临时索引交给 `node scripts/checks/run-behavior-list.mjs <临时索引>`，在 `TZ=UTC`、`TZ=Asia/Ho_Chi_Minh`、`TZ=America/Los_Angeles` 下分别 1 通过、0 失败。
+- B17 单项正常运行 1 通过、0 失败；临时注释 `src/voice/plugin.ts:71` 的 effect 清理并重新编译后，1 失败、0 通过，失败在「插件卸载必须经 effect 取消在途识别」，退出码 1。
+- 故障注入后立即逐字节恢复源码并重新编译；最终 B17 通过，`git diff --stat -- src` 为空。B17 的 hear control 源码读取只经 `entries.ts`，测试沿用 vm 夹具。
+- 最终命令 `pnpm run build && pnpm run test:behavior-list`：build 通过；索引/runner 自测 10 通过、0 失败；行为条目 15 通过、1 失败，无跳过；命令退出码 1。
+- 唯一失败 B10：真实 Memory 子进程 `readiness timeout/exit`；`src/memory/main.py` 仅绑定 `127.0.0.1`，用 `.venv/bin/python` 实测 `socket.bind(('127.0.0.1', 0))` 被沙箱拒绝，`PermissionError: [Errno 1] Operation not permitted`。按环境问题保留失败，未跳过或替换真实 provider，待允许回环的环境复验。
+- 未运行全量门禁；未安装依赖、联网、启动或更新 DSH、调用付费模型、读取真实数据。除已恢复的临时故障注入外，未改 `src/`、`vendor/`、其他测试、`package.json` 或生成文件。
+- Claude 复查时在允许回环的本机重跑：`pnpm run build && pnpm run test:behavior-list` 自测 10/10、行为条目 16/16，B10 通过。
+- 保留原有审查文本；本轮共 5 个文件，交 Claude 以一个提交验收提交。未运行 `git add/commit/stash/reset/checkout`，未推送或合并；主人验收另行完成。
+
 ## 审查结论
 
 ### A 批（第一轮，审查基于 `4071d60`）
@@ -956,3 +968,63 @@ Codex 只读挑刺（基于 HEAD `3a6f908`）提出 13 条主要意见，另附�
    修法：身份去掉 `relation`，保留「规则 + 本方文件 + 本方函数路径 + 形状 + 对方文件 + 对方函数路径」。基线存的是条目，身份在比对时现算，所以 `vocabulary.json` 不用重新生成。在 `tests/arch/ratchet.test.mjs` 加一条测试：两个文件里原本完全相同的集合，一方加一个值、变成子集后，`check:arch` 仍然通过。
 
    已修：`scripts/arch/lib/ratchet.mjs` 仅从 R8 重复关系的身份中移除 `relation`，关系仍保留作报告信息；`tests/arch/ratchet.test.mjs` 新增完全重复的状态联合与标签表单方加值变成子集的回归，确认修前新增 2/消失 2 而失败、修后检查通过且基线字节不变。现有新增重复对和同函数增加重复的阻断测试仍通过；未重生成基线。
+
+### B 批（第一轮，审查基于 `c62930a`）
+
+两层审查：Codex `codex exec review --base main`（只读，命令不接受同时带自定义说明，按默认口径跑）＋ Claude 核实。已经通过的：
+
+- 快测：build 通过，自测 10/10，行为条目 16/16。
+- 门禁：`pnpm run verify` 1211/1211。
+- 范围：4 个提交共 11 个文件，都在允许修改的范围内，每个提交都没超阈值。
+- 运行脚本：把 B16 的名字改错，以退出码 1 失败；skip、todo、取消、零匹配、重复执行、嵌套冒充、suite 和加载失败都有反例自测。
+- 分级：测试只调用 `petX` 服务的公开成员（`restState`、`inspectPlanned`、`pendingFacts`、`memory.connection` 等都是公开成员）。B03 在文件系统边界移走钱包库，没有用触发器。
+- 4 个家族都从插件入口或原生工具进入，都经过落盘、查询和重启。
+
+**必须修**
+
+1. **B07 依赖本机时区，CI 上必然失败。**`tests/behavior-list/families.test.mjs:61-66` 用 `2026-11-15T15:59Z` 加 61 秒去越过本地 `23:00` 的回顾时间，只有在 UTC+7 才成立。本机正好是 UTC+7，所以本地全绿。在 `TZ=UTC` 和 `TZ=America/Los_Angeles` 下复现过：B07 失败在「自主回顾到达原生入口」，其余 15 条都通过。`.github/workflows/ci.yml:16` 跑 `pnpm run verify` 时没有设 `TZ`，而 verify 会自动收集这个文件，合并后 CI 和发版流程都会红。
+
+   修法：按宿主本地时间构造「回顾前一分钟」的假时间（例如用本地日期加 `22:59` 换算出 `now`），不要靠固定 UTC 时刻。也可以在测试里固定时区，但前提是 Life 读到的时区来自可注入的边界，不能改 `process.env.TZ` 去影响同进程的其他测试。验收：B07 在 `TZ=UTC`、`TZ=Asia/Ho_Chi_Minh`、`TZ=America/Los_Angeles` 下都通过。
+
+   已修：`families.test.mjs` 用宿主本地 `2026-11-15 22:59` 构造假时间，不修改 `process.env.TZ`。修前 `TZ=UTC` 单项复现失败；修后用仅含 B07 的临时索引交给 `scripts/checks/run-behavior-list.mjs`，`TZ=UTC`、`TZ=Asia/Ho_Chi_Minh`、`TZ=America/Los_Angeles` 各 1 通过、0 失败，最终行为清单中的 B07 也通过。
+
+2. **B17 没有真正守住「插件关闭会取消识别」。**`families.test.mjs:113` 先调用 `second.dispose()`。呈现端的 hear control 关闭时，本身就会中止传给识别器的 signal（已有的 `tests/regressions/audit-r7-pet-hear.test.mjs` 就是这么断言的），所以执行到 `captured.aborted` 时它早已是 true。而 `fixture.mjs:157` 的 `unloadVoice()` 直接调用 `release()`，没走插件在 `src/voice/plugin.ts:71` 用 `ctx.effect` 注册的清理。结果是删掉插件的卸载清理，这条测试照样通过。家族要求的是「关闭后晚到的录音与取消」，现在这条只守住了界面关闭那一半。
+
+   修法：把界面关闭和插件卸载分开测。识别请求还在途时（不先 `dispose()` 控件），经假宿主执行插件注册的 effect 清理（例如让夹具单独停掉语音插件的 effect，或者走 `f.restart()` 的关闭阶段），再断言 signal 已中止、晚到结果不写入输入框。删掉夹具里绕过生命周期的 `unloadVoice()`。验收：临时注释掉 `src/voice/plugin.ts:71`，B17 必须失败（不提交）。
+
+   已修：`families.test.mjs` 分别实测控件关闭和插件卸载；新增识别在途且控件存活时的 `f.restart()`，由假宿主执行插件注册的 effect，再断言 signal 中止、晚到结果不写输入框或持久化日志；删除 `fixture.mjs` 的 `unloadVoice()`。B17 正常单项 1 通过、0 失败；临时注释 `src/voice/plugin.ts:71` 并重新编译后，1 失败、0 通过，退出码 1，明确失败在「插件卸载必须经 effect 取消在途识别」。测后立即逐字节恢复源码并重新编译，`git diff --stat -- src` 为空，最终行为清单中的 B17 通过。
+
+3. **B17 绕过 `entries.ts` 直接读 `src/`。**`families.test.mjs:98` 用 `readFileSync('src/desktop/platform/client.js')` 抽取 `createHearControl`。方案要求新测试对 `src/` 的引用全部集中在 `tests/behavior-list/entries.ts`，以后重写时只改这一个文件；这里换成读源码文本，效果上一样是引用，呈现端搬家时就得来改测试本身。
+
+   修法：在 `entries.ts` 里导出 hear control 的载体，也就是源码路径或一个读取函数（注意 `entries.ts` 编译后在 `dist/tests/behavior-list/`，路径要相对编译产物来解析），测试只从这里取。抽取方式沿用 audit-r7 的 vm 夹具，这是方案指定的复用，不算违反分级。
+
+   已修：`entries.ts` 新增 `readHearControlSource()`，按编译产物 `dist/tests/behavior-list/entries.js` 的位置解析源码路径，B17 只调用此导出，保留 vm 抽取方式。`rg` 核对 `tests/behavior-list/` 中 hear control 源码路径仅存在于 `entries.ts`；重新编译、B17 单项及最终行为清单中的 B17 均通过。
+
+**建议修（不影响合并）**
+
+- `fixture.mjs:93-99` 用 vendor 的 `emptyHomeState`、`createGarden` 手写初始的 `home.json`、`garden.json`，没有走身体模块的初始化。写数据文件属于允许的外部面，但这是一份手调的状态（需求值、关闭自动照料），建议注释写明为什么要预置、哪些字段是测试依赖的。
+
+  已修：`fixture.mjs` 说明基于上游默认结构预置非睡眠、无在途动作的合成起点，needs 用于投喂和离线额度断言，关闭菜园自动照料以固定种植驱动；未改预置值。最终行为清单中依赖这些状态的 B03、B04、B05、B06 均通过。
+- `domains.test.mjs:63,65` 的 `setAutonomy('world',true,true)` 传了第三个参数，但 `src/behavior/plugin.ts:290` 只接两个，第三个被忽略。:61 的注释暗示是它触发了离线额度，实际上起作用的是持久化的花园时钟状态（`src/behavior/room.ts:229-231`）。建议去掉第三个参数并改准注释。
+
+  已修：`domains.test.mjs` 两处 `setAutonomy` 均只传两个参数，注释说明持久化花园时钟启用状态是重启恢复离线额度的依据；最终 B06 通过，仍验证 72 小时停机只扣默认 4 小时、再次重启不重复扣。
+- `entries.ts:2` 导出了 `createCore`，但行为清单的测试都没有用到。建议删掉，或者在用到时再加。
+
+  已修：删除 `entries.ts` 未使用的 `createCore` 导出；检索确认行为清单内无该引用，TypeScript 编译和最终 build 通过。最终索引自测 10 通过、0 失败，行为条目 15 通过、1 失败；唯一失败 B10 为本机回环受沙箱拒绝的环境问题，与本项无关。
+
+**返工注意**
+
+- 只改 `tests/behavior-list/**` 和本节；不改 `src/`。
+- 返工后在执行结果里写明三种时区下 B07 的结果，以及「注释掉 `plugin.ts:71` 后 B17 失败」的实测。
+- C 批合并后，B 还要变基一次（`package.json` 的 `scripts` 和方案的执行结果两处，按两边都保留解决）。
+
+### B 批复查（第二轮）
+
+三条必须修都已确认修好，三条建议修也做了。Claude 在 B 的 worktree 里实测：
+
+- B07：`TZ=UTC`、`TZ=Asia/Ho_Chi_Minh`、`TZ=America/Los_Angeles` 下各跑一次，都通过。
+- B17：临时注释掉 `src/voice/plugin.ts:71` 的 effect 清理，重新编译后显示「执行 1 次，通过 0 次」；恢复后 `git diff --stat -- src` 为空。
+- B17 读 hear control 源码只经 `entries.ts` 的 `readHearControlSource()`。
+- 快测：build 通过，自测 10/10，行为条目 16/16（本机允许回环，B10 通过）。
+
+没有新的必须修。
