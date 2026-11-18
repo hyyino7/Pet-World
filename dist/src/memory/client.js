@@ -37,7 +37,8 @@ export class MemoryConnection {
             if (existsSync(parent) && lstatSync(parent).isSymbolicLink())
                 throw new Error('Workspace Memory directory contains a symbolic link');
         }
-        const next = this.transition.then(() => this.open(scope, directory));
+        const snapshot = Object.freeze({ ...scope });
+        const next = this.transition.then(() => this.open(snapshot, directory));
         this.transition = next.catch(() => { });
         return next;
     }

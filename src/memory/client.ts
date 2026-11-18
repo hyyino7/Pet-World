@@ -21,7 +21,7 @@ export interface RecalledMemory { memory: { id: string; version: number; content
 export class MemoryConnection {
   private host: any;
   private client: any;
-  private scope?: { memory: MemoryScope; provider: MemoryProviderScope };
+  private scope?: { memory: Readonly<MemoryScope>; provider: MemoryProviderScope };
   private directory?: string;
   private transition: Promise<void> = Promise.resolve();
   constructor(readonly config: MemoryConfig) {
@@ -43,11 +43,12 @@ export class MemoryConnection {
       parent = join(parent, part);
       if (existsSync(parent) && lstatSync(parent).isSymbolicLink()) throw new Error('Workspace Memory directory contains a symbolic link');
     }
-    const next = this.transition.then(() => this.open(scope, directory));
+    const snapshot = Object.freeze({ ...scope });
+    const next = this.transition.then(() => this.open(snapshot, directory));
     this.transition = next.catch(() => {});
     return next;
   }
-  private async open(scope: MemoryScope, directory: string): Promise<void> {
+  private async open(scope: Readonly<MemoryScope>, directory: string): Promise<void> {
     if (this.connected() && directory === this.directory && JSON.stringify(scope) === JSON.stringify(this.scope?.memory)) return;
     if (this.host) await this.stop();
     const root = fileURLToPath(new URL('../../../', import.meta.url));
