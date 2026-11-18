@@ -47,7 +47,8 @@ export class SourceAdapterTable {
     }
     classify(message) {
         for (const { value: adapter, lease } of this.table.entries()) {
-            if (!lease.isCurrent() || !adapter.sources.includes(message.source.kind))
+            const sources = adapter.sources;
+            if (!lease.isCurrent() || !sources.includes(message.source.kind))
                 continue;
             try {
                 const branch = adapter.classify?.(message);
@@ -70,7 +71,8 @@ export class SourceAdapterTable {
     }
     admit(input) {
         for (const { value: adapter, lease } of this.table.entries()) {
-            if (!lease.isCurrent() || !adapter.sources.includes(input.message.source.kind))
+            const sources = adapter.sources;
+            if (!lease.isCurrent() || !sources.includes(input.message.source.kind))
                 continue;
             try {
                 const decision = adapter.admit(input);

@@ -62,7 +62,8 @@ export class SourceAdapterTable<Selected = unknown> {
 
   classify(message: SourceInput['message']): SourceClassificationResult {
     for (const { value: adapter, lease } of this.table.entries()) {
-      if (!lease.isCurrent() || !adapter.sources.includes(message.source.kind)) continue;
+      const sources: readonly string[] = adapter.sources;
+      if (!lease.isCurrent() || !sources.includes(message.source.kind)) continue;
       try {
         const branch = adapter.classify?.(message);
         if (branch === undefined || !lease.isCurrent()) continue;
@@ -83,7 +84,8 @@ export class SourceAdapterTable<Selected = unknown> {
 
   admit(input: SourceInput): SourceAdmission<Selected> {
     for (const { value: adapter, lease } of this.table.entries()) {
-      if (!lease.isCurrent() || !adapter.sources.includes(input.message.source.kind)) continue;
+      const sources: readonly string[] = adapter.sources;
+      if (!lease.isCurrent() || !sources.includes(input.message.source.kind)) continue;
       try {
         const decision = adapter.admit(input);
         lease.assertCurrent();
