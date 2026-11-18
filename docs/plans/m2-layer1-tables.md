@@ -429,6 +429,24 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - Codex 沙箱不能写 worktree 的 `index.lock`，由 Claude 原样提交为 `8955bb4`（实现、测试和构建产物），执行结果另行提交。
 - 首轮返工补齐伙伴工具声明表，并让撤销等待所有作用域清理后汇总错误。构建通过，专项测试通过 16 项、失败 0 项，架构检查通过（R8 新增 0）。完整门禁由验收者在沙箱外执行。
 
+### C · 能力状态表
+
+**C1 改逻辑**
+
+- `src/core/{runtime,index,plugin}.ts` 接入 `CapabilityTable`；独立 Core 保留基础 9 行，DSH 插件追加情绪行，状态仍由 Core 计算。
+- `src/console/client.js` 将缺席拥有者显示为「不可用」，保留哔哩哔哩和 Memory 的显示规则；构建重新生成桌宠客户端。
+- `tests/core/capabilities.test.mjs` 在 `ceb3529` 上固定逐行输出，覆盖 360 个组合，集中维护模块缺席的期望，并单独断言两份客户端的设置页显示。
+- `mise exec -- pnpm run build` 通过；`mise exec -- node --test tests/core/capabilities.test.mjs dist/tests/core/core.test.js` 通过 10 项、失败 0 项；`mise exec -- pnpm run check:arch` 通过，新增违规 0。
+- 保留 Core 对应构建产物；已还原构建造成的三份 Channels 声明联合类型顺序差异。完整门禁及提交由验收者处理。
+
+**C2 搬家**
+
+- Life、Desktop、Room、Channels、Voice、Console、Emotion 依次接管能力行，随入口登记和撤销。Core 保留会话行、记忆行和 `petMemory` 缺席覆盖。
+- 对照测试覆盖 408 个组合，含 Console 实际卸载和重载。全部加载时的行、顺序、契约版本与 C1 一致。
+- 七步构建和专项测试均通过（每步 10 项、失败 0）。工作区架构检查逐步核对待删条目，同源临时副本收紧基线后逐步通过。
+- 批末在工作区运行 `check:arch -- --write-baseline`，按身份核对删除 7 条 R2（57、66、67、68、72、77、85），R8 条目身份无变化，最终架构检查通过。
+- 提交：Codex 沙箱写不了 index，Claude 按 Codex 的累积快照逐步重放提交（C1 `a7986aa`，C2 `7869678`、`724bf38`、`bbf1763`、`60aefa0`、`48a7522`、`73f30b4`、`6cc4798`）。和方案的差异：基线不在批末一次删除，而是每个模块的提交里用 `--write-baseline` 删去该步消失的条目，保证每个提交 `check:arch` 都通过；合计删除的仍是上面 7 条，最终文件和 Codex 的批末快照逐字节一致。
+
 ## 审查结论
 
 ### A 批第一轮（Claude 核实 Codex 审查，返工）
