@@ -65,7 +65,7 @@ function expected({bound, desktopOpen, qq, hear, missing}) {
   };
   const absent = {
     petMemory: {'memory.lifecycle': disabledMemory},
-    petLife: {'life.pursuits': nativeUnavailable},
+    petLife: {'life.pursuits': null},
     petDesktop: {
       'desktop.presentation': [...(bound ? closedDesktop : unboundDesktop), operations.presentation],
       'desktop.body': [...(bound ? closedDesktop : unboundDesktop), operations.body],
@@ -90,12 +90,12 @@ function temporaryCore() {
   };
 }
 
-test('独立 createCore 保留基础九行', async t => {
+test('独立 createCore 只返回当前由 Core 登记的能力', async t => {
   const temp = temporaryCore();
   const host = createCore(temp.config);
   t.after(async () => {try {await host.close();} finally {temp.cleanup();}});
   const actual = value(await host.services.core.listCapabilities(host.operator.request('capabilities'), {}));
-  assert.deepEqual(actual, rows(rowOrder.slice(0, 9), {}));
+  assert.deepEqual(actual, rows(rowOrder.slice(0, 9), {'life.pursuits': null}));
 });
 
 async function pluginFixture(t) {

@@ -59,15 +59,6 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
       if (!status || ctx.get('petMemory')) return status;
       return {...status, state:'disabled', reason:'Memory is off for the next turn in every conversation; retained Bank and native logs remain'};
     };
-    statuses['life.pursuits'] = () => {
-      const bound = isBound();
-      if (!ctx.get('petLife')) return;
-      return {
-        state: bound ? ctx.get('petLife')!.running() ? 'ready' : 'disabled' : 'unavailable',
-        reason: bound ? ctx.get('petLife')!.running() ? null : 'Life is paused' : 'Bind a workspace to start Life',
-        supportedOperations: ['start', 'stop', 'inspect', 'interact'],
-      };
-    };
     for (const [id, supportedOperations] of [
       ['desktop.presentation', ['send', 'stop', 'fold', 'reopen']],
       ['desktop.body', ['open', 'close', 'drag', 'play']],

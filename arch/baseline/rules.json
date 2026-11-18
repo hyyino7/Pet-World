@@ -478,8 +478,8 @@
     {
       "rule": "R2",
       "file": "src/core/plugin.ts",
-      "line": 57,
-      "column": 23,
+      "line": 68,
+      "column": 25,
       "scope": "apply/ctx . effect:callback0/<callback>",
       "target": "petDesktop",
       "expression": "ctx . get ( \"petDesktop\" )",
@@ -490,44 +490,8 @@
     {
       "rule": "R2",
       "file": "src/core/plugin.ts",
-      "line": 66,
-      "column": 19,
-      "scope": "apply/ctx . effect:callback0/<callback>",
-      "target": "petLife",
-      "expression": "ctx . get ( \"petLife\" )",
-      "from": "core",
-      "to": "life",
-      "reason": "服务读取未获准或方向违规"
-    },
-    {
-      "rule": "R2",
-      "file": "src/core/plugin.ts",
-      "line": 67,
-      "column": 24,
-      "scope": "apply/ctx . effect:callback0/<callback>",
-      "target": "petLife",
-      "expression": "ctx . get ( \"petLife\" )",
-      "from": "core",
-      "to": "life",
-      "reason": "服务读取未获准或方向违规"
-    },
-    {
-      "rule": "R2",
-      "file": "src/core/plugin.ts",
-      "line": 68,
-      "column": 25,
-      "scope": "apply/ctx . effect:callback0/<callback>",
-      "target": "petLife",
-      "expression": "ctx . get ( \"petLife\" )",
-      "from": "core",
-      "to": "life",
-      "reason": "服务读取未获准或方向违规"
-    },
-    {
-      "rule": "R2",
-      "file": "src/core/plugin.ts",
-      "line": 72,
-      "column": 19,
+      "line": 75,
+      "column": 12,
       "scope": "apply/ctx . effect:callback0/<callback>",
       "target": "petRoom",
       "expression": "ctx . get ( \"petRoom\" )",
@@ -538,7 +502,7 @@
     {
       "rule": "R2",
       "file": "src/core/plugin.ts",
-      "line": 77,
+      "line": 83,
       "column": 24,
       "scope": "apply/ctx . effect:callback0/<callback>",
       "target": "petChannels",
@@ -550,7 +514,7 @@
     {
       "rule": "R2",
       "file": "src/core/plugin.ts",
-      "line": 85,
+      "line": 91,
       "column": 21,
       "scope": "apply/ctx . effect:callback0/<callback>",
       "target": "petVoice",
@@ -714,7 +678,7 @@
     {
       "rule": "R4",
       "file": "src/life/plugin.ts",
-      "line": 54,
+      "line": 55,
       "column": 5,
       "scope": "CompanionLife/constructor",
       "target": "host.native.lifeAdmission",
@@ -726,7 +690,7 @@
     {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 124,
+      "line": 125,
       "column": 27,
       "scope": "CompanionLife/publishRest",
       "target": "petDesktop",
@@ -738,7 +702,7 @@
     {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 173,
+      "line": 174,
       "column": 5,
       "scope": "CompanionLife/startRuntime",
       "target": "petDesktop",
@@ -750,7 +714,7 @@
     {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 281,
+      "line": 282,
       "column": 25,
       "scope": "CompanionLife/startRuntime/send",
       "target": "petDesktop",
@@ -762,7 +726,7 @@
     {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 287,
+      "line": 288,
       "column": 31,
       "scope": "CompanionLife/startRuntime/send",
       "target": "petChannels",
@@ -774,7 +738,7 @@
     {
       "rule": "R4",
       "file": "src/life/plugin.ts",
-      "line": 528,
+      "line": 529,
       "column": 5,
       "scope": "CompanionLife/close",
       "target": "this.host.native.lifeAdmission",

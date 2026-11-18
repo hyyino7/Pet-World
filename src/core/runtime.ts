@@ -105,7 +105,6 @@ export class CoreRuntime {
     const rows:[number,CapabilityStatus['id'],CapabilityStatus['owner']][]=[
       [1,'core.conversation','core'],
       [2,'memory.lifecycle','memory'],
-      [3,'life.pursuits','life'],
       [4,'desktop.presentation','desktop'],
       [5,'desktop.body','desktop'],
       [6,'desktop.room','desktop'],

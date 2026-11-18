@@ -12,6 +12,7 @@ import { installLifeReview, REVIEW_ALARM_FILE } from './review.js';
 import { PersistentLifePlan, parsePlanDraft } from './plan.js';
 import { registerPlanTools } from './plan-tools.js';
 import { presentFacts } from '../core/interaction-presentation.js';
+import { CONTRACT_VERSION } from '../contracts/version.js';
 import { readFactReferences } from './facts.js';
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
 /** The upstream fact layer is the only state writer. World owns scheduling,
@@ -643,8 +644,21 @@ export class CompanionLife {
 export const name = '40-Life';
 export const inject = ['petCore', 'petWorld', 'agents', 'sessions', 'tools', 'systemPrompt'];
 export function apply(ctx, config = {}) {
-    const life = new CompanionLife(ctx, ctx.petCore, config.agentPreset ?? 'standard');
+    const host = ctx.petCore;
+    const life = new CompanionLife(ctx, host, config.agentPreset ?? 'standard');
     ctx.provide('petLife', life);
     ctx.effect(() => () => life.close());
+    ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+        id: 'life.pursuits', owner: 'life', contractVersion: CONTRACT_VERSION, order: 3,
+        status: () => {
+            const bound = host.workspace.status().state === 'ready';
+            const running = bound && life.running();
+            return {
+                state: bound ? running ? 'ready' : 'disabled' : 'unavailable',
+                reason: bound ? running ? null : 'Life is paused' : 'Bind a workspace to start Life',
+                supportedOperations: ['start', 'stop', 'inspect', 'interact'],
+            };
+        },
+    }).revoke);
 }
 //# sourceMappingURL=plugin.js.map
