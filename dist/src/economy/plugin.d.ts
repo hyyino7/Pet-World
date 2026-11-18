@@ -4,6 +4,23 @@ import type { RoomEconomyPort } from '../behavior/room.js';
 import { EconomyStore } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
 import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
+export declare const economyStateToolDeclaration: {
+    name: string;
+    sources: readonly ("owner" | "life" | "review")[];
+    historyOverview(_args: unknown, value: unknown): (Omit<import("./types.js").EconomySnapshot & {
+        ledger: import("./types.js").LedgerEntry[];
+    }, "configuration" | "migration" | "ledger" | "inventory"> & {
+        view: string;
+        configurationRevision: number;
+        inventory: import("./types.js").InventoryItem[];
+        stockNote: string;
+        ledgerCount: number;
+        details: {
+            tool: string;
+            view: string;
+        };
+    }) | undefined;
+};
 /** One synchronous ledger per active Core binding. Body owns effect receipts;
  * this service owns money/items and never creates another assistant runtime. */
 export declare class CompanionEconomy {

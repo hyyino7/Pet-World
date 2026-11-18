@@ -4,12 +4,30 @@ import { lstatSync, readFileSync } from 'node:fs';
 import { RoomWindow } from './window.js';
 import { digest } from '../core/storage.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
+import { isHistoryObject } from '../core/native/history-maintenance.js';
 import { CONTRACT_VERSION } from '../contracts/version.js';
 import { RoomChat } from './chat.js';
 import { roomPhoto } from './photo.js';
 import { roomAsset, roomPrefix } from './assets.js';
 const roleActions = ['command', 'pet', 'poke', 'feed', 'water', 'play', 'talk', 'sleep', 'wake', 'lamp'];
 const output = { schema: { type: 'string' }, render: (_, text) => [{ type: 'text', text }] };
+const roomStateDeclaration = {
+    name: 'room_state', sources: OWNER_LIFE_TOOL_SOURCES,
+    historyOverview(_args, value) {
+        if (isHistoryObject(value) && isHistoryObject(value.layout) && Array.isArray(value.layout.rooms)
+            && isHistoryObject(value.layout.spots) && isHistoryObject(value.her) && isHistoryObject(value.body))
+            return roomOverview(value);
+    },
+};
+const roomGardenDeclaration = {
+    name: 'room_garden', sources: OWNER_LIFE_TOOL_SOURCES,
+    historyOverview(args, value) {
+        if (isHistoryObject(args) && args.type === 'state' && isHistoryObject(value) && isHistoryObject(value.garden)
+            && Array.isArray(value.garden.plots) && isHistoryObject(value.garden.care))
+            return gardenOverview(value);
+    },
+};
+export const roomHistoryTools = [roomStateDeclaration, roomGardenDeclaration];
 export class Room {
     ctx;
     chat;
@@ -106,7 +124,7 @@ export class Room {
     }
     tools() {
         const behavior = this.ctx.petBehavior;
-        const state = defineTool({ name: 'room_state', description: '查看自己的真实房间状态、所在位置、身体需要和同一世界可去的房间/家具标识。', parameters: { view: stateViewParameter, factIds: factIdsParameter }, output,
+        const state = defineTool({ name: roomStateDeclaration.name, description: '查看自己的真实房间状态、所在位置、身体需要和同一世界可去的房间/家具标识。', parameters: { view: stateViewParameter, factIds: factIdsParameter }, output,
             execute: async ({ view, factIds }, exec) => {
                 const id = this.checked(exec);
                 if (factIds) {
@@ -130,7 +148,7 @@ export class Room {
                     actor: { kind: 'companion', id: this.ctx.petCore.workspace.runtime.config.companionId, channel: 'dsh', sessionId: exec.agent.id } });
                 return JSON.stringify({ changed: result.changed, event: result.event, her: result.home.her, body: result.home.body });
             } });
-        const garden = defineTool({ name: 'room_garden', description: '查看菜园，自己走去照料某块田或管理自主照料。state 返回作物、田块、库房和任务。control 按真实时间排队，读取结果确认是否完成。', parameters: {
+        const garden = defineTool({ name: roomGardenDeclaration.name, description: '查看菜园，自己走去照料某块田或管理自主照料。state 返回作物、田块、库房和任务。control 按真实时间排队，读取结果确认是否完成。', parameters: {
                 view: stateViewParameter,
                 type: { type: 'string', enum: ['state', 'visit', 'careNow', 'auto', 'till', 'plant', 'water', 'fertilize', 'harvest', 'sell', 'buySeed', 'buyCompost'], required: true },
                 plotId: { type: 'integer' }, cropId: { type: 'string' }, quantity: { type: 'integer' }, enabled: { type: 'boolean' }, decision: { type: 'string', enum: ['force', 'defer'] }
@@ -172,8 +190,8 @@ export function apply(ctx) {
     const tools = ctx.tools;
     for (const tool of room.tools()) {
         tools.register(tool, { when: ({ agent }) => !!room.toolScope(agent) });
-        const sources = tool.name === 'room_state' || tool.name === 'room_garden' ? OWNER_LIFE_TOOL_SOURCES : ['owner'];
-        ctx.effect(() => host.native.toolTable.register({ name: tool.name, sources }).revoke);
+        const declaration = roomHistoryTools.find(({ name }) => name === tool.name) ?? { name: tool.name, sources: ['owner'] };
+        ctx.effect(() => host.native.toolTable.register(declaration).revoke);
     }
     ctx.inject(['webServer'], scope => {
         const server = scope.webServer;

@@ -1,24 +1,14 @@
-import { roomOverview, gardenOverview } from '../../room/tool-context.js';
-import { economyOverview } from '../../economy/tool-context.js';
-import { planOverview } from '../../life/tool-context.js';
-const object = (value) => !!value && typeof value === 'object' && !Array.isArray(value);
+export const isHistoryObject = (value) => !!value && typeof value === 'object' && !Array.isArray(value);
 /** Reuse module-owned structured projections, never middle-slice JSON or prose.
  * Explicit full/detail/receipt reads and already-small results are immutable. */
-export function historicalStateOverview(name, args, value) {
-    if (!object(args) || !object(value) || args.view === 'full' || value.view !== undefined || value.ok === false
+function projectHistory(declaration, args, value) {
+    if (!isHistoryObject(args) || !isHistoryObject(value) || args.view === 'full' || value.view !== undefined || value.ok === false
         || 'factIds' in args || 'section' in args)
         return;
-    if (name === 'room_state' && object(value.layout) && Array.isArray(value.layout.rooms)
-        && object(value.layout.spots) && object(value.her) && object(value.body))
-        return roomOverview(value);
-    if (name === 'room_garden' && args.type === 'state' && object(value.garden) && Array.isArray(value.garden.plots)
-        && object(value.garden.care))
-        return gardenOverview(value);
-    if (name === 'pet_economy_state' && object(value.configuration) && Array.isArray(value.inventory)
-        && Array.isArray(value.ledger) && Array.isArray(value.catalog))
-        return economyOverview(value);
-    if (name === 'life_plan_read' && typeof value.revision === 'number' && (value.plan === null || object(value.plan)))
-        return planOverview(value);
+    return declaration?.historyOverview?.(args, value);
+}
+export function historicalStateOverview(tools, name, args, value) {
+    return projectHistory(tools.get(name), args, value);
 }
 // Native logs store these model-facing projections as user/message events too.
 const historyContextSources = new Set(['runtime-context', 'chatpet-recall', 'compact-checkpoint']);
@@ -69,7 +59,7 @@ export function lifeHistoryCandidates(events, nodes, classify, warn = console.wa
 /** Idle maintenance is read-only. Native persistence requires replacement
  * tool results inside an open turn, so landing waits for the next real request.
  * This does not wake a session or consume/acknowledge any domain facts. */
-export async function prepareLifeHistory(agent, isCurrent, classify) {
+export async function prepareLifeHistory(agent, isCurrent, classify, tools) {
     if (agent.status !== 'idle' || agent.inbox.nextTurn.length || agent.inbox.nextStep.length || !isCurrent())
         return [];
     return agent.runMaintenance(async (signal) => {
@@ -79,6 +69,9 @@ export async function prepareLifeHistory(agent, isCurrent, classify) {
             signal.throwIfAborted();
             if (!isCurrent())
                 return [];
+            const declaration = tools.get(call.name);
+            if (!declaration?.historyOverview)
+                continue;
             const original = agent.session.deriveEventMessage(event);
             if (!original || original.content.length !== 1 || original.content[0]?.type !== 'text')
                 continue;
@@ -90,12 +83,15 @@ export async function prepareLifeHistory(agent, isCurrent, classify) {
             catch {
                 continue;
             }
-            const view = historicalStateOverview(call.name, args, value);
+            const view = projectHistory(declaration, args, value);
             if (view === undefined)
                 continue;
             const text = JSON.stringify(view);
+            // The table freezes a separate sources array for each registration.
             if (text.length < original.content[0].text.length)
-                changes.push({ event, text, lease });
+                changes.push({
+                    event, text, lease, isToolCurrent: () => tools.get(call.name)?.sources === declaration.sources,
+                });
         }
         return changes;
     });
@@ -106,8 +102,8 @@ export async function prepareLifeHistory(agent, isCurrent, classify) {
 export function applyLifeHistory(agent, changes, meter) {
     const result = { replaced: 0, charsBefore: 0, charsAfter: 0 }, session = agent.session;
     const visible = new Set(session.surface.nodes);
-    for (const { event, text, lease } of changes) {
-        if (!lease.isCurrent() || !visible.has(event.seq))
+    for (const { event, text, lease, isToolCurrent } of changes) {
+        if (!lease.isCurrent() || !isToolCurrent() || !visible.has(event.seq))
             continue; // Native compaction may have superseded the prepared span.
         const original = session.deriveEventMessage(event);
         if (!original || original.content.length !== 1 || original.content[0]?.type !== 'text')

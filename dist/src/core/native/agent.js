@@ -123,7 +123,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         historyReady.delete(agent);
         if (!sameScope(agent.id, scope) || scope.guest)
             return;
-        void watch(prepareLifeHistory(agent, () => !historyClosing && sameScope(agent.id, scope), message => host.native.sourceTable.classify(message)).then(changes => {
+        void watch(prepareLifeHistory(agent, () => !historyClosing && sameScope(agent.id, scope), message => host.native.sourceTable.classify(message), host.native.toolTable).then(changes => {
             if (changes.length && !historyClosing && sameScope(agent.id, scope))
                 historyPrepared.set(agent, { scope, changes });
         }).catch(error => {

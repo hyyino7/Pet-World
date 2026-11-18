@@ -1,8 +1,16 @@
 import { planOverview } from './tool-context.js';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
+import { isHistoryObject } from '../core/native/history-maintenance.js';
 import { registerLifeToolPolicy } from './tool-policy.js';
 const output = { schema: { type: 'string' }, render: (_, value) => [{ type: 'text', text: value }] };
+export const lifePlanReadToolDeclaration = {
+    name: 'life_plan_read', sources: OWNER_LIFE_TOOL_SOURCES,
+    historyOverview(_args, value) {
+        if (isHistoryObject(value) && typeof value.revision === 'number' && (value.plan === null || isHistoryObject(value.plan)))
+            return planOverview(value);
+    },
+};
 const activityFields = {
     id: { type: 'string', required: true, description: 'Stable activity identifier: 1–48 letters, numbers, underscores, dots or hyphens.' },
     activity: { type: 'string', required: true, description: 'Short activity label, at most 80 characters; it does not replace the required executable fields.' },
@@ -64,7 +72,7 @@ export function registerPlanTools(ctx, host, life) {
                 throw Error('Life conversation or workspace admission changed'); } };
     };
     const catalog = [
-        defineTool({ name: 'life_plan_read', description: '读取同一个伙伴跨会话保存的当前生活计划、版本、活动和进度。无计划也是有效状态。', parameters: { view: { type: 'string', enum: ['overview', 'full'], description: 'Autonomous turns default to overview; full retains the original snapshot.' } }, output,
+        defineTool({ name: lifePlanReadToolDeclaration.name, description: '读取同一个伙伴跨会话保存的当前生活计划、版本、活动和进度。无计划也是有效状态。', parameters: { view: { type: 'string', enum: ['overview', 'full'], description: 'Autonomous turns default to overview; full retains the original snapshot.' } }, output,
             execute: async ({ view }, exec) => {
                 const guard = admission(exec.agent, exec.signal);
                 const state = await life.readPlan(guard.id, guard.validate);
@@ -134,7 +142,8 @@ export function registerPlanTools(ctx, host, life) {
     registerLifeToolPolicy(ctx, host.native.toolTable);
     return catalog.map(tool => {
         const dispose = registration.register(tool, { when: ({ agent }) => !!scope(agent) });
-        ctx.effect(() => host.native.toolTable.register({ name: tool.name, sources: OWNER_LIFE_TOOL_SOURCES }).revoke);
+        const declaration = tool.name === lifePlanReadToolDeclaration.name ? lifePlanReadToolDeclaration : { name: tool.name, sources: OWNER_LIFE_TOOL_SOURCES };
+        ctx.effect(() => host.native.toolTable.register(declaration).revoke);
         return dispose;
     });
 }

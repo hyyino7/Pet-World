@@ -18,8 +18,11 @@ import {SourceAdapterTable} from '../../src/core/tables/sources.js';
 import {CoreNative} from '../../src/core/native/conversation.js';
 import type {CoreRuntime} from '../../src/core/runtime.js';
 import {createChannelSourceAdapter} from '../../src/channels/sessions.js';
+import {roomHistoryTools} from '../../src/room/plugin.js';
+import {lifePlanReadToolDeclaration} from '../../src/life/plan-tools.js';
 
-const table=new CoreNative({} as CoreRuntime).sourceTable;
+const {sourceTable:table,toolTable}=new CoreNative({} as CoreRuntime);
+for(const declaration of [...roomHistoryTools,lifePlanReadToolDeclaration])toolTable.register(declaration);
 table.register(createLifeSourceAdapter({} as Context,{} as PetCoreHost,()=>false));
 const offline=()=>{throw Error('Saved history must not consult live admission');};
 table.register(createChannelSourceAdapter({guest:offline,ownerActorId:offline,admit:offline}));
@@ -58,7 +61,7 @@ test('native maintenance projects only older successful default Life states, pre
   const f=fixture(),first=f.appendTurn({additionalSource:{kind:'runtime-context',form:'snapshot',sections:[{name:'fixture',text:'Runtime context'}]}});
   f.appendTurn();
   const originals=structuredClone(f.session.snapshotEvents());
-  const prepared=await prepareLifeHistory(f.agent,()=>true,classify);
+  const prepared=await prepareLifeHistory(f.agent,()=>true,classify,toolTable);
   assert.deepEqual(f.session.snapshotEvents(),originals,'Idle maintenance only prepares; it never writes outside a turn');
   f.openRequest();
   const result=applyLifeHistory(f.agent,prepared,f.meter);
@@ -101,7 +104,7 @@ test('a failed source classification protects its whole turn and later Life turn
   const eligibleResult=f.appendTurn();f.appendTurn();
   const original=structuredClone(protectedResult);
 
-  const prepared=await prepareLifeHistory(f.agent,()=>true,message=>sources.classify(message));
+  const prepared=await prepareLifeHistory(f.agent,()=>true,message=>sources.classify(message),toolTable);
   assert.deepEqual(prepared.map(change=>change.event.seq),[eligibleResult.seq]);
   assert.equal(f.warnings.length,1);
   assert.match(f.warnings[0],/synthetic-tv/);
@@ -117,7 +120,7 @@ test('owner input, takeover, review, failure, explicit full, receipts, other too
   const f=fixture();
   for(const options of [{owner:true},{takeover:true},{review:true},{failed:true},{full:true},{error:true},{receipt:true},{tool:'life_read_segment'},{}])f.appendTurn(options);
   const before=structuredClone(f.session.snapshotEvents());
-  assert.equal((await prepareLifeHistory(f.agent,()=>true,classify)).length,0);
+  assert.equal((await prepareLifeHistory(f.agent,()=>true,classify,toolTable)).length,0);
   assert.deepEqual(f.session.snapshotEvents(),before);
 });
 
@@ -140,7 +143,7 @@ test('read-only policies protect native owner and channel takeovers and QQ nudge
   const report=JSON.parse(execFileSync(process.execPath,[script,log],{encoding:'utf8'}));
   assert.equal(report.maintenance.results,1);
 
-  const prepared=await prepareLifeHistory(f.agent,()=>true,classify);
+  const prepared=await prepareLifeHistory(f.agent,()=>true,classify,toolTable);
   assert.deepEqual(prepared.map(change=>change.event.seq),[eligible.seq]);
   f.openRequest();
   assert.equal(applyLifeHistory(f.agent,prepared,f.meter).replaced,1);
@@ -159,9 +162,9 @@ test('saved QQ inputs protect their Life turns after the channel adapter is revo
   f.appendTurn({additionalSource:{kind:'dsh-world-reply-nudge'}});
   f.appendTurn();
 
-  assert.equal((await prepareLifeHistory(f.agent,()=>true,classifySaved)).length,0);
+  assert.equal((await prepareLifeHistory(f.agent,()=>true,classifySaved,toolTable)).length,0);
   await registration.revoke();
-  assert.equal((await prepareLifeHistory(f.agent,()=>true,classifySaved)).length,0);
+  assert.equal((await prepareLifeHistory(f.agent,()=>true,classifySaved,toolTable)).length,0);
 });
 
 test('queued interaction, active turn and changed workspace never enter maintenance',async()=>{
@@ -169,13 +172,13 @@ test('queued interaction, active turn and changed workspace never enter maintena
     const f=fixture();f.appendTurn();f.appendTurn();
     if(condition==='queued')(f.agent.inbox.nextTurn as any[]).push({});
     if(condition==='running')Object.assign(f.agent,{status:'running'});
-    assert.equal((await prepareLifeHistory(f.agent,()=>condition!=='changed',classify)).length,0);
+    assert.equal((await prepareLifeHistory(f.agent,()=>condition!=='changed',classify,toolTable)).length,0);
     assert.equal(f.counts().maintenanceCalls,0);
   }
 });
 
 test('a native compaction that supersedes a prepared result makes the stale projection a no-op',async()=>{
-  const f=fixture();f.appendTurn();f.appendTurn();const prepared=await prepareLifeHistory(f.agent,()=>true,classify);
+  const f=fixture();f.appendTurn();f.appendTurn();const prepared=await prepareLifeHistory(f.agent,()=>true,classify,toolTable);
   const source=prepared[0].event;f.openRequest();
   f.session.append('tool/result',source.data,{surfaceOp:{op:'replace',startSeq:source.seq,endSeq:source.seq},sourceEventSeqs:[source.seq]});
   const before=structuredClone(f.session.snapshotEvents());
@@ -184,11 +187,11 @@ test('a native compaction that supersedes a prepared result makes the stale proj
 });
 
 test('structured history maintenance leaves reading, malformed and partial payloads untouched and preserves open plan state',()=>{
-  assert.equal(historicalStateOverview('room_state',{}, {body:{}}),undefined);
-  assert.equal(historicalStateOverview('room_state',{}, {ok:false}),undefined);
-  assert.equal(historicalStateOverview('life_read_segment',{}, {text:'Original reading'}),undefined);
+  assert.equal(historicalStateOverview(toolTable,'room_state',{}, {body:{}}),undefined);
+  assert.equal(historicalStateOverview(toolTable,'room_state',{}, {ok:false}),undefined);
+  assert.equal(historicalStateOverview(toolTable,'life_read_segment',{}, {text:'Original reading'}),undefined);
   const plan={revision:9,id:'accepted',goal:'Read and eat',cursor:1,steps:[{id:'read',kind:'read'}],
     execution:{status:'waiting',operationId:'reading-offer'},pauseReason:'owner',replanReason:'receipt pending'};
-  const view=historicalStateOverview('life_plan_read',{}, {revision:9,plan}) as any;
+  const view=historicalStateOverview(toolTable,'life_plan_read',{}, {revision:9,plan}) as any;
   assert.deepEqual(view.plan,plan);
 });

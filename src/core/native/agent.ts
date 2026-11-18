@@ -119,7 +119,8 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     if(historyClosing||!scope||agent.status!=='idle')return;
     historyReady.delete(agent);
     if(!sameScope(agent.id,scope)||scope.guest)return;
-    void watch(prepareLifeHistory(agent,()=>!historyClosing&&sameScope(agent.id,scope),message=>host.native.sourceTable.classify(message)).then(changes=>{
+    void watch(prepareLifeHistory(agent,()=>!historyClosing&&sameScope(agent.id,scope),
+      message=>host.native.sourceTable.classify(message),host.native.toolTable).then(changes=>{
       if(changes.length&&!historyClosing&&sameScope(agent.id,scope))historyPrepared.set(agent,{scope,changes});
     }).catch(error=>{
       ctx.logger('chatpet-context').warn('History maintenance pending; original events retained',error);

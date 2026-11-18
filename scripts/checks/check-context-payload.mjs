@@ -12,6 +12,9 @@ import {lifeHistoryCandidates,historicalStateOverview} from '../../dist/src/core
 import {CoreNative} from '../../dist/src/core/native/conversation.js';
 import {createLifeSourceAdapter} from '../../dist/src/life/tool-policy.js';
 import {createChannelSourceAdapter} from '../../dist/src/channels/sessions.js';
+import {roomHistoryTools} from '../../dist/src/room/plugin.js';
+import {economyStateToolDeclaration} from '../../dist/src/economy/plugin.js';
+import {lifePlanReadToolDeclaration} from '../../dist/src/life/plan-tools.js';
 
 const args=process.argv.slice(2);if(args[0]==='--')args.shift();
 const [file,...options]=args;
@@ -46,7 +49,8 @@ const visible={requests:0,allToolTextBefore:0,allToolTextAfter:0,candidateTextBe
 const maintenance={results:0,resultCharsBefore:0,resultCharsAfter:0,requestBodyBefore:0,requestBodyAfter:0,
   toolHistoryBefore:0,toolHistoryAfter:0,summaryCallsAdded:0};
 const maintained=new Map();
-const sources=new CoreNative({}).sourceTable;
+const {sourceTable:sources,toolTable}=new CoreNative({});
+for(const declaration of [...roomHistoryTools,economyStateToolDeclaration,lifePlanReadToolDeclaration])toolTable.register(declaration);
 sources.register(createLifeSourceAdapter({},{},()=>false));
 const offline=()=>{throw Error('History analysis does not admit live channel input');};
 sources.register(createChannelSourceAdapter({guest:offline,ownerActorId:offline,admit:offline}));
@@ -57,7 +61,7 @@ for(let index=0;index<events.length;index++){
     for(const {event,call} of lifeHistoryCandidates(prefix,surface.nodes,classify)) {
       if(maintained.has(event.seq)||event.data.message.content.length!==1||event.data.message.content[0].type!=='text')continue;
       let args,value;try{args=JSON.parse(call.arguments);value=JSON.parse(text(event.data.message));}catch{continue;}
-      const view=historicalStateOverview(call.name,args,value);if(view===undefined)continue;
+      const view=historicalStateOverview(toolTable,call.name,args,value);if(view===undefined)continue;
       const projected=JSON.stringify(view),before=text(event.data.message).length;if(projected.length>=before)continue;
       maintained.set(event.seq,projected);maintenance.results++;
       maintenance.resultCharsBefore+=before;maintenance.resultCharsAfter+=projected.length;
