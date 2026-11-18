@@ -496,8 +496,8 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - 五个提交单位均通过 `check:types`、`build`、`check:arch`，定向快测依次通过 66、179、166、144、196 项。架构基线零增删。
 - Memory 回归 24 项、Python provider 22 项通过。两个合成工作区重启前后各自召回。合成 `current` 和 `legacy` 均退出 0，行为索引 11 项和清单 52 条通过。
 - 额外 P2 进程测试通过 2 项，1 项因沙箱拒绝 `/bin/ps` 受阻。完整 `verify` 由验收者在沙箱外执行。
-- 累计快照在 `/private/tmp/her-world-m2-g/`。改动留在工作区，待验收者按快照重放提交。
 - 提交：Claude 按 Codex 的累积快照重放提交（`0463154`、`9c1b930`、`38ca255`、`c2adde9`、`182ddff`），每步先重新构建再跑 Core、Emotion、Memory 和回归快测（588 项）与 `check:arch`。
+- 返工结果：Memory 启动固定作用域快照，真实 provider 回归确认复用对象换库后无法读取旧库记录。构建通过，Node 快测 697 项、Python provider 22 项均通过，失败和跳过均为 0；`check:arch` 通过，基线零增删。
 
 ## 审查结论
 
@@ -669,4 +669,22 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - 第 1 条：已修。计划工具在定义处逐个声明 `sources`，没写的只给 `owner`；新测试用一个没写来源的工具，验证它不进 Life 名单。
 - 第 2 条：已修。`CoreNative.tools()` 的五个记忆工具在定义处带 `sources`，`agent.ts` 注册时直接使用，名字清单已删；新测试验证改名后 Life 和回顾仍能使用召回工具。
 - Life 普通名单 21 项、回顾名单 23 项，仍和改动前双向相等。快测 235 项通过；`check:arch` 新增 0。返工由 Claude 原样提交，完整门禁见合并前记录。
+
+### G 批第一轮（Claude 核实 Codex 审查，返工）
+
+已核实：
+- 改动只是改名。传给 Python 的进程环境和请求 `scope` 转换后仍是 `{companionId, scopeId, workspaceId}`，键的顺序不变；事件名、服务名、存储写入都没动。
+- 5 个步骤各自提交，每步先重新构建再跑快测（588 项）和 `check:arch`，基线零增删。
+- 沙箱外 `pnpm run verify` 通过（141 个测试文件，模型调用 0），行为清单 52 条全部通过，其中方案要求 G 合并后再跑的 L1（M2A-22）也通过。
+
+下面 1 条要修：
+
+1. **Memory 作用域的复核被削弱了。** `src/memory/client.ts:60` 一带把调用方传入的 `MemoryScope` 对象原样存为 `this.scope.memory`，复用判断和 `expectedBankId` 校验读的是它，请求发的却是启动时转换好的 `provider` 快照。如果调用方复用同一个对象、把 `bankId` 从 A 改成 B 再 `start()`，连接会以为已经在用 B 而不重启，请求仍按 A 发送，Python 照常接受，结果是把 A 库的结果当作 B 返回。旧代码请求里发的是同一个被改过的对象，Python 会按启动时的环境变量识别出不一致并拒绝。仓库内目前没有调用方会改这个对象，但纯搬家不该削弱这层保护（方案「必须复用」里的绑定复核）。改法：启动时存一份不可变拷贝，复用判断、Bank 校验和请求都读这一份。补一条复用对象换库的回归测试。
+
+   已修：`MemoryConnection.start()` 入队前复制并冻结作用域，连接复用和 Bank 校验读取快照，Python 启动环境和请求共用由它转换的 `{companionId, scopeId, workspaceId}`。新增真实 provider 回归，验证复用对象切到 B 后拒绝读取 A 的合成记录，切回 A 后恢复读取。
+
+### G 批复查（第二轮，通过）
+
+- 第 1 条：已修。`MemoryConnection.start()` 先复制并冻结作用域，复用判断、Bank 校验和发给 Python 的作用域都来自这份快照，Python 收到的字段和顺序不变。新测试用真实 Python provider 复现「复用对象换库」：修复前切到 B 仍读出 A 的记录，修复后 B 的读取被拒绝，切回 A 能读到原记录。
+- 复跑：Node 快测 697 项、Python provider 22 项通过；`check:arch` 基线零增删。返工由 Claude 原样提交，完整门禁见合并前记录。
 
