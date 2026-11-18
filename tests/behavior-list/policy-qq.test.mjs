@@ -192,6 +192,26 @@ test('QQ 真实收件在 Life 后续步接管，回顾日记和 Memory 来源跨
   assert.equal(await memory.connection.validate({sources:[received,reply].map(row=>({id:row.sourceId,revision:'1'})),memories:[]},bank),'eligible');
 });
 
+async function channelClose(t,speakerId) {
+  const {f,send,receive}=await setup(t);
+  send(speakerId,'close-in-flight','Synthetic QQ input before shutdown');
+  const {agent,message}=await receive('close-in-flight',()=>f.agents());
+  if(speakerId==='200')assert.equal(agent.id,(await f.home()).id);
+  else assert.match(agent.id,/^chatpet-guest-/);
+  const active=await f.begin(agent.id,message);
+  try {
+    assert.equal(agent.status,'running');
+    assert.equal(f.host.native.acceptsInput(agent.id,message),true);
+    assert.deepEqual(f.cancellations,[]);
+    await f.service('petChannels').close();
+    assert.deepEqual(f.cancellations,[{id:agent.id,reason:{kind:'user'}}]);
+    assert.equal(f.host.native.acceptsInput(agent.id,message),false);
+  } finally {await f.end(active,'aborted');}
+}
+
+test('关闭渠道取消 home 里已准入的 QQ 主人轮次',async t=>channelClose(t,'200'));
+test('关闭渠道取消已准入的 QQ guest 轮次',async t=>channelClose(t,'300'));
+
 async function startNudge(t) {
   const scenario=await setup(t);
   const {f,send,receive}=scenario,home=await f.home();

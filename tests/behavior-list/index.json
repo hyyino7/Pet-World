@@ -556,7 +556,6 @@
         "5.8.2#2/选择",
         "5.8.2#2/生命周期",
         "5.8.2#3/生命周期",
-        "5.8.2#5/生命周期",
         "5.8.3#2/工具",
         "5.8.3#2/记忆",
         "5.8.3#3/记忆",
@@ -712,6 +711,30 @@
       "families": [],
       "policyCells": [
         "5.8.2#9/绑定"
+      ]
+    },
+    {
+      "id": "M2A-35",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-qq.test.mjs",
+      "name": "关闭渠道取消 home 里已准入的 QQ 主人轮次",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#5/生命周期"
+      ]
+    },
+    {
+      "id": "M2A-36",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-qq.test.mjs",
+      "name": "关闭渠道取消已准入的 QQ guest 轮次",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#6/生命周期"
       ]
     }
   ]
