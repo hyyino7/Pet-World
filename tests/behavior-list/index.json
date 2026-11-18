@@ -17,6 +17,11 @@
       "l1Stage": "M1",
       "families": [
         "计划推进与完成契约"
+      ],
+      "policyCells": [
+        "5.8.2#3/来源",
+        "5.8.2#3/选择",
+        "5.8.3#3/工具"
       ]
     },
     {
@@ -88,6 +93,12 @@
       "l1Stage": "M1",
       "families": [
         "日记与回顾"
+      ],
+      "policyCells": [
+        "5.8.2#4/来源",
+        "5.8.2#4/选择",
+        "5.8.2#4/生命周期",
+        "5.8.3#4/工具"
       ]
     },
     {
@@ -110,7 +121,13 @@
       "file": "tests/behavior-list/native.test.mjs",
       "name": "送达确认后另一个会话经真实 Memory 召回原事实",
       "l1Stage": "阶段 1",
-      "families": []
+      "families": [],
+      "policyCells": [
+        "5.8.2#1/来源",
+        "5.8.2#1/选择",
+        "5.8.3#1/记忆",
+        "5.8.4#owner/历史"
+      ]
     },
     {
       "id": "B11",
@@ -132,7 +149,12 @@
       "file": "tests/behavior-list/channels.test.mjs",
       "name": "QQ 渠道入口收件后重启不丢失且不重复送达",
       "l1Stage": "阶段 3",
-      "families": []
+      "families": [],
+      "policyCells": [
+        "5.8.2#5/来源",
+        "5.8.2#5/选择",
+        "5.8.2#5/生命周期"
+      ]
     },
     {
       "id": "B13",
@@ -143,7 +165,10 @@
       "file": "tests/behavior-list/channels.test.mjs",
       "name": "换目录使在途渠道请求失效且不写旧目录",
       "l1Stage": "阶段 3",
-      "families": []
+      "families": [],
+      "policyCells": [
+        "5.8.2#5/绑定"
+      ]
     },
     {
       "id": "B14",
@@ -221,6 +246,451 @@
       "name": "real Settings/Core/Economy/Body record sleeping inventory refusal without interrupting the accepted sleep plan or reserving stock",
       "l1Stage": "阶段 2",
       "families": []
+    },
+    {
+      "id": "M2A-01",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-room.test.mjs",
+      "name": "Room 私聊复用最大未归档编号且同一请求只投递一次，界面回放最近 80 条",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#8-chat/来源",
+        "5.8.2#8-chat/选择",
+        "5.8.3#8-chat/工具",
+        "5.8.3#8-chat/情绪",
+        "5.8.4#room/历史",
+        "5.8.4#room/组装"
+      ]
+    },
+    {
+      "id": "M2A-02",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-room.test.mjs",
+      "name": "Room 电视和私聊共用原生日志，电视只准当前画面且所有可见工具均不能执行",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#8-tv/来源",
+        "5.8.2#8-tv/选择",
+        "5.8.2#8-tv/绑定",
+        "5.8.3#8-tv/工具",
+        "5.8.4#room/历史",
+        "5.8.4#room/组装"
+      ]
+    },
+    {
+      "id": "M2A-03",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-room.test.mjs",
+      "name": "Room 电视达到自主步数上限，并在自主时限取消原生轮次",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#8-tv/生命周期",
+        "5.8.3#8-tv/工具"
+      ]
+    },
+    {
+      "id": "M2A-04",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-room.test.mjs",
+      "name": "Room 调用方取消会传到原生轮次",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#8-chat/生命周期"
+      ]
+    },
+    {
+      "id": "M2A-05",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-room.test.mjs",
+      "name": "Room 接入及首步恢复会话副本与桌面和房间图片",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#8-chat/生命周期",
+        "5.8.4#room/历史"
+      ]
+    },
+    {
+      "id": "M2A-06",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-room.test.mjs",
+      "name": "Room 私聊与电视按 owner 和伙伴身份进入 Memory",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.3#8-chat/记忆",
+        "5.8.3#8-tv/记忆"
+      ]
+    },
+    {
+      "id": "M2A-07",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-room.test.mjs",
+      "name": "Room 电视 footer 写共享情绪（现状，待主人决定）",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.3#8-tv/情绪"
+      ]
+    },
+    {
+      "id": "M2A-08",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-room.test.mjs",
+      "name": "Room 在途回复重新校验绑定并拒绝旧工作区",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#8-chat/绑定"
+      ]
+    },
+    {
+      "id": "M2A-09",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-desktop.test.mjs",
+      "name": "Desktop 聊天复用 owner 权限、组装和 Memory，新建前先保存旧会话",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#7/来源",
+        "5.8.2#7/选择",
+        "5.8.2#7/生命周期",
+        "5.8.3#7/工具",
+        "5.8.3#7/记忆",
+        "5.8.3#7/情绪",
+        "5.8.4#desktop/历史",
+        "5.8.4#desktop/组装",
+        "5.8.3#1/工具",
+        "5.8.4#owner/组装"
+      ]
+    },
+    {
+      "id": "M2A-10",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-desktop.test.mjs",
+      "name": "普通主人会话可执行情绪工具并拒绝过期版本",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.3#1/情绪"
+      ]
+    },
+    {
+      "id": "M2A-11",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-desktop.test.mjs",
+      "name": "碎碎念和梦话只用伙伴身份，梦话带上游指令且不触发 Memory 或情绪",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#9/来源",
+        "5.8.2#9/选择",
+        "5.8.2#9/绑定",
+        "5.8.3#9/工具",
+        "5.8.3#9/记忆",
+        "5.8.3#9/情绪",
+        "5.8.4#whisper/历史",
+        "5.8.4#whisper/组装"
+      ]
+    },
+    {
+      "id": "M2A-12",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-life.test.mjs",
+      "name": "Life 自主轮次在下一步超过步数上限且 footer 在完成时生效",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.3#3/工具",
+        "5.8.3#3/情绪"
+      ]
+    },
+    {
+      "id": "M2A-13",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-life.test.mjs",
+      "name": "Life 自主工具调用达到次数上限",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.3#3/工具"
+      ]
+    },
+    {
+      "id": "M2A-14",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-life.test.mjs",
+      "name": "Life 自主时限到点取消原生轮次",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#3/生命周期",
+        "5.8.3#3/工具"
+      ]
+    },
+    {
+      "id": "M2A-15",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-life.test.mjs",
+      "name": "主人原生 steering 在 Life 后续步解除工具和自主限额",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#3/生命周期",
+        "5.8.3#3/工具"
+      ]
+    },
+    {
+      "id": "M2A-16",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-life.test.mjs",
+      "name": "回顾 footer 生效且符合条件的回顾提前压缩恰好一次",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#4/生命周期",
+        "5.8.3#4/情绪",
+        "5.8.4#home/历史"
+      ]
+    },
+    {
+      "id": "M2A-17",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-life.test.mjs",
+      "name": "回顾压缩设置关闭、Memory 关闭、非 home 或无待处理轮次时不压缩",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.4#home/历史"
+      ]
+    },
+    {
+      "id": "M2A-18",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-life.test.mjs",
+      "name": "Life 自主输入只准 home，途中绑定变化使下一步被拒",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#3/绑定"
+      ]
+    },
+    {
+      "id": "M2A-19",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-qq.test.mjs",
+      "name": "QQ 主人私聊进 home，同一收件可重查且不能授权另一消息",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#5/来源",
+        "5.8.2#5/选择",
+        "5.8.3#5/工具",
+        "5.8.3#5/记忆",
+        "5.8.3#5/情绪",
+        "5.8.3#2/工具",
+        "5.8.3#2/情绪"
+      ]
+    },
+    {
+      "id": "M2A-20",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-qq.test.mjs",
+      "name": "guest 预设屏蔽继承和晚登记工具，仅组装公开角色卡、身份、情绪与召回",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#6/来源",
+        "5.8.2#6/选择",
+        "5.8.2#6/绑定",
+        "5.8.3#6/工具",
+        "5.8.3#6/记忆",
+        "5.8.4#guest/历史",
+        "5.8.4#guest/组装"
+      ]
+    },
+    {
+      "id": "M2A-21",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-qq.test.mjs",
+      "name": "guest footer 写共享情绪（现状，待主人决定）",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.3#6/情绪"
+      ]
+    },
+    {
+      "id": "M2A-22",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/policy-qq.test.mjs",
+      "name": "QQ 真实收件在 Life 后续步接管，回顾日记和 Memory 来源跨重启保留",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#2/来源",
+        "5.8.2#2/选择",
+        "5.8.2#2/生命周期",
+        "5.8.2#3/生命周期",
+        "5.8.2#5/生命周期",
+        "5.8.3#2/工具",
+        "5.8.3#2/记忆",
+        "5.8.3#3/记忆",
+        "5.8.3#4/记忆",
+        "5.8.4#home/历史"
+      ]
+    },
+    {
+      "id": "M2A-23",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-qq.test.mjs",
+      "name": "QQ 补答重查原消息，同名换绑后旧授权失效",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#5/来源",
+        "5.8.2#5/绑定",
+        "5.8.2#2/绑定"
+      ]
+    },
+    {
+      "id": "M2A-24",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-qq.test.mjs",
+      "name": "QQ 补答在途关闭渠道，晚到回复不能送出",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#5/生命周期"
+      ]
+    },
+    {
+      "id": "M2A-25",
+      "categories": [],
+      "level": "L2",
+      "file": "dist/tests/core/companion-foundation.test.js",
+      "name": "foreground owner home reuses one native session without Life or autonomous wakeups",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#2/选择",
+        "5.8.2#2/生命周期",
+        "5.8.4#home/历史"
+      ]
+    },
+    {
+      "id": "M2A-26",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/regressions/audit-r6-memory-scope.test.mjs",
+      "name": "R6-02: actual native admission strips recalled text if binding changes while next middleware awaits",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#1/绑定"
+      ]
+    },
+    {
+      "id": "M2A-27",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/regressions/audit-r6-memory-scope.test.mjs",
+      "name": "R6-02: archived logs mark only their captured Bank and cannot commit a late archive flag",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#1/生命周期"
+      ]
+    },
+    {
+      "id": "M2A-28",
+      "categories": [],
+      "level": "L2",
+      "file": "dist/tests/life/life-review-files.test.js",
+      "name": "native review file guard resolves cwd, rechecks aliases and releases on owner takeover",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#4/绑定",
+        "5.8.3#4/工具"
+      ]
+    },
+    {
+      "id": "M2A-29",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/regressions/audit-qq-recovery.test.mjs",
+      "name": "guest input recovers as a guest, while a closed component preserves it until re-enabled",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#6/生命周期"
+      ]
+    },
+    {
+      "id": "M2A-30",
+      "categories": [],
+      "level": "L2",
+      "file": "dist/tests/life/life-core-integration.test.js",
+      "name": "two owner conversations assemble the same identity, self, accepted plan and committed body facts with Life/Memory off",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.4#home/组装",
+        "5.8.4#owner/组装"
+      ]
+    },
+    {
+      "id": "M2A-31",
+      "categories": [],
+      "level": "L2",
+      "file": "dist/tests/desktop/desktop.test.js",
+      "name": "stale workspace cannot show messages or target a previous session",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#7/绑定"
+      ]
+    },
+    {
+      "id": "M2A-32",
+      "categories": [],
+      "level": "L2",
+      "file": "dist/tests/desktop/desktop-features.test.js",
+      "name": "settings, Life ownership, busy and quiet changes rearm one deadline without a parallel inference chain",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#9/生命周期"
+      ]
     }
   ]
 }
