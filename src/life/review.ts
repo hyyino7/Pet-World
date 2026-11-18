@@ -4,6 +4,7 @@ import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools';
 import { fileURLToPath } from 'node:url';
 import type { PetCoreHost } from '../core/index.js';
 import { check } from '../core/storage.js';
+import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
 import type { ReviewScope } from './review-writing.js';
 export { readLifeWriting, type ReviewScope } from './review-writing.js';
 
@@ -36,4 +37,5 @@ export function installLifeReview(ctx: Context, host: PetCoreHost, getScope: () 
   });
   const tools = ctx.tools as unknown as {register(value: ToolDefinition, options: {when(context: {agent?: Agent}): boolean}): () => void};
   tools.register(tool, {when: ({agent}) => Boolean(agent && getScope()?.isHome(agent.id) && host.native.memoryFor(agent.id))});
+  ctx.effect(() => host.native.toolTable.register({name:tool.name,sources:OWNER_LIFE_TOOL_SOURCES}).revoke);
 }

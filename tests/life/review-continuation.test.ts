@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
-import {createLifeSourceAdapter} from '../../src/life/tool-policy.js';
+import {createLifeSourceAdapter,registerLifeToolPolicy} from '../../src/life/tool-policy.js';
 import {apply} from '../../src/core/native/agent.js';
 import {CoreNative} from '../../src/core/native/conversation.js';
 import type {CoreRuntime} from '../../src/core/runtime.js';
@@ -18,9 +18,10 @@ function fixture() {
   });
   const status={state:'ready',target:{id:'world',path:'/fixture'}};
   const host={native,workspace:{status:()=>status,storageId:()=>storageId}} as unknown as PetCoreHost;
-  const ctx={on(name:string,fn:Function){handlers.set(name,[...(handlers.get(name)??[]),fn]);return()=>{};},effect(){},get(){return undefined;},
+  const ctx={on(name:string,fn:Function){handlers.set(name,[...(handlers.get(name)??[]),fn]);return()=>{};},effect(factory:()=>void){factory();},get(){return undefined;},
     tools:{definitions:()=>['read','write','bash','life_plan_read'].map(name=>({name})),register:()=>()=>{},guard(fn:Function){guards.push(fn);return()=>{};}},
     agents:new Map([[agent.id,agent]]),logger:()=>({debug(){},warn(){}})} as unknown as Context;
+  registerLifeToolPolicy(ctx,native.toolTable);
   native.sourceTable.register(createLifeSourceAdapter(ctx,host,()=>true));
   const stop=apply(ctx,host,{sessionStatus:()=>status} as any);
   let turn=0;

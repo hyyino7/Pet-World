@@ -1,17 +1,19 @@
 import { companionWritingScope } from '../core/companion-foundation.js';
 import { assertLifeReviewFile, lifeReviewFileAccessKey } from './review-files.js';
 import { matchesNativeScope } from '../core/native/conversation.js';
+import { upstreamAlbumToolNames } from './album-tools.js';
+const reviewFileTools = new Set(['read', 'write']);
+const upstreamLifeTools = ['plan_next', 'check_alarm', 'cancel_alarm', 'reach_out', ...upstreamAlbumToolNames];
+export function registerLifeToolPolicy(ctx, table) {
+    // DSH owns the local alarm, home and preset registrations.
+    for (const name of upstreamLifeTools)
+        ctx.effect(() => table.register({ name, sources: ['life', 'review'] }).revoke);
+    for (const name of reviewFileTools)
+        ctx.effect(() => table.register({ name, sources: ['review'] }).revoke);
+}
 /** Capability names, never phrase matching or command-string filtering. */
-const lifeCapabilities = new Set([
-    'life_plan_read', 'life_plan_update', 'life_plan_keep', 'life_activity_control',
-    'life_read_segment', 'life_read_confirm', 'room_state', 'room_garden', 'pet_economy_state',
-    'pet_memory_read', 'pet_memory_recall', 'pet_memory_remember',
-    'pet_emotion_update',
-    'plan_next', 'check_alarm', 'cancel_alarm', 'reach_out', 'keep_photo', 'list_photos', 'forget_photo',
-    'read_review_dialogue',
-]);
-export function lifeToolAllowed(name, review = false) {
-    return lifeCapabilities.has(name) || review && (name === 'read' || name === 'write');
+export function lifeToolAllowed(table, name, review = false) {
+    return table.get(name)?.sources.includes(review ? 'review' : 'life') ?? false;
 }
 /** File tools belong to the native preset, not the global registry. Life only
  * registers its own domain tools locally: never pass those local names to
@@ -19,12 +21,12 @@ export function lifeToolAllowed(name, review = false) {
 export function lifeInheritedToolNames(tools, agent, review = false) {
     return [...new Set([
             ...tools.definitions().map(tool => tool.name),
-            ...(review ? tools.definitions(agent).filter(tool => tool.name === 'read' || tool.name === 'write').map(tool => tool.name) : []),
+            ...(review ? tools.definitions(agent).filter(tool => reviewFileTools.has(tool.name)).map(tool => tool.name) : []),
         ])];
 }
 /** Native scoped restrictions have exact disposers; ordinary turns are restored. */
-export function restrictLifeTools(scoped, inheritedNames, review = false) {
-    return scoped.restrict({ allow: inheritedNames.filter(name => lifeToolAllowed(name, review)) });
+export function restrictLifeTools(table, scoped, inheritedNames, review = false) {
+    return scoped.restrict({ allow: inheritedNames.filter(name => lifeToolAllowed(table, name, review)) });
 }
 export function createLifeSourceAdapter(ctx, host, accepts) {
     const interrupted = new Map();
@@ -38,8 +40,8 @@ export function createLifeSourceAdapter(ctx, host, accepts) {
         return {
             turnKind: 'background', toolSource: kind,
             toolPolicy: {
-                install: agent => restrictLifeTools(agent.ctx.tools, lifeInheritedToolNames(ctx.tools, agent, review), review),
-                allows: exec => lifeToolAllowed(exec.name, review),
+                install: agent => restrictLifeTools(host.native.toolTable, agent.ctx.tools, lifeInheritedToolNames(ctx.tools, agent, review), review),
+                allows: exec => lifeToolAllowed(host.native.toolTable, exec.name, review),
                 denial: review
                     ? '自主回顾不能使用 bash、edit 或编程工具；请改用已开放的 read 读取记录目录/素材、write 写入指定日期日记和自述。此次拒绝不表示 read/write 无权限。'
                     : '自主生活仅使用当前生活能力；普通主人对话仍沿用原生工具权限',

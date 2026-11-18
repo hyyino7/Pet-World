@@ -1,5 +1,7 @@
 import { planOverview } from './tool-context.js';
 import { defineTool } from '@deepseek-ai/dsh-tools';
+import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
+import { registerLifeToolPolicy } from './tool-policy.js';
 const output = { schema: { type: 'string' }, render: (_, value) => [{ type: 'text', text: value }] };
 const activityFields = {
     id: { type: 'string', required: true, description: 'Stable activity identifier: 1–48 letters, numbers, underscores, dots or hyphens.' },
@@ -129,6 +131,11 @@ export function registerPlanTools(ctx, host, life) {
             }, output, execute: async (args, exec) => { const guard = admission(exec.agent, exec.signal); return JSON.stringify(await life.controlPlan(guard.id, args.expectedRevision, args.action, args.reason, guard.validate)); } }),
     ];
     const registration = ctx.tools;
-    return catalog.map(tool => registration.register(tool, { when: ({ agent }) => !!scope(agent) }));
+    registerLifeToolPolicy(ctx, host.native.toolTable);
+    return catalog.map(tool => {
+        const dispose = registration.register(tool, { when: ({ agent }) => !!scope(agent) });
+        ctx.effect(() => host.native.toolTable.register({ name: tool.name, sources: OWNER_LIFE_TOOL_SOURCES }).revoke);
+        return dispose;
+    });
 }
 //# sourceMappingURL=plan-tools.js.map

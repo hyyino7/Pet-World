@@ -1,7 +1,10 @@
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { canonical, check, digest, now, reject } from '../storage.js';
+import { COMPANION_TOOL_SOURCES } from '../../contracts/tables.js';
 import { SourceAdapterTable } from '../tables/sources.js';
 import { RegistrationTable } from '../tables/registry.js';
+import { CompanionToolTable } from '../tables/tools.js';
+export const OWNER_LIFE_TOOL_SOURCES = Object.freeze(COMPANION_TOOL_SOURCES.filter(source => source === 'owner' || source === 'life' || source === 'review'));
 export function matchesNativeScope(current, expected) {
     return !!current && current.workspaceId === expected.workspaceId && current.path === expected.path
         && current.storageId === expected.storageId && current.guest === expected.guest;
@@ -38,6 +41,7 @@ export class CoreNative {
     memory;
     memoryEnabled = true;
     sourceTable = new SourceAdapterTable();
+    toolTable = new CompanionToolTable();
     playbackProviders = new RegistrationTable();
     resolveScope;
     attachGuest;

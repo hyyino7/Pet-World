@@ -7,6 +7,7 @@ import { lstatSync, readFileSync } from 'node:fs';
 import type {} from '../behavior/plugin.js';
 import { RoomWindow } from './window.js';
 import { digest } from '../core/storage.js';
+import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
 import { CONTRACT_VERSION } from '../contracts/version.js';
 import { RoomChat } from './chat.js';
 import { roomPhoto, type PhotoLook, type PhotoView } from './photo.js';
@@ -143,7 +144,11 @@ export function apply(ctx:Context) {
   ctx.provide('petRoom',room);
   const host = ctx.petCore;
   const tools = ctx.tools as unknown as {register(tool:ToolDefinition,options:{when(ctx:{agent?:Agent}):boolean}):()=>void};
-  for (const tool of room.tools()) tools.register(tool,{when:({agent})=>!!room.toolScope(agent)});
+  for (const tool of room.tools()) {
+    tools.register(tool,{when:({agent})=>!!room.toolScope(agent)});
+    const sources = tool.name === 'room_state' || tool.name === 'room_garden' ? OWNER_LIFE_TOOL_SOURCES : ['owner'] as const;
+    ctx.effect(() => host.native.toolTable.register({name:tool.name,sources}).revoke);
+  }
   ctx.inject(['webServer' as never], scope => {
     const server = (scope as unknown as {webServer:{register(route:{kind:'prefix';path:string;resource:typeof roomAsset}):()=>void}}).webServer;
     scope.effect(() => server.register({kind:'prefix',path:roomPrefix,resource:roomAsset}));

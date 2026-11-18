@@ -8,9 +8,14 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 import type { NativeMemory } from './memory.js';
 import { canonical, check, digest, now, reject } from '../storage.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
-import type { RegistrationLease, SessionPolicyRow, SourceAdmission, TurnKind } from '../../contracts/tables.js';
+import { COMPANION_TOOL_SOURCES, type RegistrationLease, type SessionPolicyRow, type SourceAdmission, type TurnKind } from '../../contracts/tables.js';
 import { SourceAdapterTable } from '../tables/sources.js';
 import { RegistrationTable } from '../tables/registry.js';
+import { CompanionToolTable } from '../tables/tools.js';
+
+export const OWNER_LIFE_TOOL_SOURCES = Object.freeze(COMPANION_TOOL_SOURCES.filter(
+  source => source === 'owner' || source === 'life' || source === 'review',
+));
 
 export interface NativeScope { workspaceId: string; path: string; storageId: string; guest: boolean }
 export function matchesNativeScope(current: NativeScope | undefined, expected: NativeScope): boolean {
@@ -80,6 +85,7 @@ export class CoreNative {
   memory?: NativeMemory;
   private memoryEnabled = true;
   readonly sourceTable = new SourceAdapterTable<NativeSourceContext>();
+  readonly toolTable = new CompanionToolTable();
   private readonly playbackProviders = new RegistrationTable<ResolvePlaybackEvidence>();
   resolveScope?: (sessionId: string) => NativeScope | undefined;
   attachGuest?: (context: Context) => void;

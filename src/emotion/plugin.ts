@@ -1,5 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../core/index.js';
+import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
 import { registerWorldPrompt, registerWorldContext } from '../core/native/prompt.js';
 import { COMPANION_FEELINGS, decideExpression, expressionStream, readRoomMood, type ExpressionAsset, type ExpressionEvent, type PlaybackReceipt, type ReplyIntent } from './index.js';
 import { RecentLedger, type RecentExperience } from './recent.js';
@@ -217,6 +218,7 @@ export function installEmotion(ctx: Context, host: PetCoreHost): void {
       return JSON.stringify(saved);
     }});
   ctx.tools.register(updateTool,{when:({agent})=>Boolean(agent && bound(agent.session) && !bound(agent.session)?.guest)});
+  ctx.effect(() => host.native.toolTable.register({name:updateTool.name,sources:OWNER_LIFE_TOOL_SOURCES}).revoke);
   const promptState = new Map<string, string>();
   const attached = new WeakSet<Context>();
   const prompts: ReturnType<typeof registerWorldPrompt>[] = [];

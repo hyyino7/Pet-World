@@ -4,6 +4,8 @@ import type { Agent } from '@deepseek-ai/dsh-agent';
 import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools';
 import type { PetCoreHost } from '../core/index.js';
 import type { CompanionLife } from './plugin.js';
+import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
+import { registerLifeToolPolicy } from './tool-policy.js';
 
 const output={schema:{type:'string' as const},render:(_:unknown,value:string)=>[{type:'text' as const,text:value}]};
 const activityFields={
@@ -125,5 +127,10 @@ export function registerPlanTools(ctx:Context,host:PetCoreHost,life:CompanionLif
     },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.controlPlan(guard.id,args.expectedRevision,args.action,args.reason,guard.validate));}}),
   ];
   const registration=ctx.tools as unknown as {register(tool:ToolDefinition,options:{when(context:{agent?:Agent}):boolean}):()=>void};
-  return catalog.map(tool=>registration.register(tool,{when:({agent})=>!!scope(agent)}));
+  registerLifeToolPolicy(ctx,host.native.toolTable);
+  return catalog.map(tool=>{
+    const dispose=registration.register(tool,{when:({agent})=>!!scope(agent)});
+    ctx.effect(() => host.native.toolTable.register({name:tool.name,sources:OWNER_LIFE_TOOL_SOURCES}).revoke);
+    return dispose;
+  });
 }

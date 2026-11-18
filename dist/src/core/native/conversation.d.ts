@@ -5,8 +5,10 @@ import type { UserMessage, SessionEvent } from '@deepseek-ai/dsh-session';
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
 import type { NativeMemory } from './memory.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
-import type { SourceAdmission } from '../../contracts/tables.js';
+import { type SourceAdmission } from '../../contracts/tables.js';
 import { SourceAdapterTable } from '../tables/sources.js';
+import { CompanionToolTable } from '../tables/tools.js';
+export declare const OWNER_LIFE_TOOL_SOURCES: readonly ("owner" | "life" | "review")[];
 export interface NativeScope {
     workspaceId: string;
     path: string;
@@ -34,6 +36,7 @@ export declare class CoreNative {
     memory?: NativeMemory;
     private memoryEnabled;
     readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
+    readonly toolTable: CompanionToolTable;
     private readonly playbackProviders;
     resolveScope?: (sessionId: string) => NativeScope | undefined;
     attachGuest?: (context: Context) => void;

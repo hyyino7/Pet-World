@@ -3,6 +3,7 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 import { lstatSync, readFileSync } from 'node:fs';
 import { RoomWindow } from './window.js';
 import { digest } from '../core/storage.js';
+import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
 import { CONTRACT_VERSION } from '../contracts/version.js';
 import { RoomChat } from './chat.js';
 import { roomPhoto } from './photo.js';
@@ -169,8 +170,11 @@ export function apply(ctx) {
     ctx.provide('petRoom', room);
     const host = ctx.petCore;
     const tools = ctx.tools;
-    for (const tool of room.tools())
+    for (const tool of room.tools()) {
         tools.register(tool, { when: ({ agent }) => !!room.toolScope(agent) });
+        const sources = tool.name === 'room_state' || tool.name === 'room_garden' ? OWNER_LIFE_TOOL_SOURCES : ['owner'];
+        ctx.effect(() => host.native.toolTable.register({ name: tool.name, sources }).revoke);
+    }
     ctx.inject(['webServer'], scope => {
         const server = scope.webServer;
         scope.effect(() => server.register({ kind: 'prefix', path: roomPrefix, resource: roomAsset }));

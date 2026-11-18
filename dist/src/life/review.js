@@ -1,6 +1,7 @@
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { fileURLToPath } from 'node:url';
 import { check } from '../core/storage.js';
+import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
 export { readLifeWriting } from './review-writing.js';
 // Only the daily review section is adapted. World supplies the original alarm
 // text and fallback for every other section.
@@ -29,5 +30,6 @@ export function installLifeReview(ctx, host, getScope) {
     });
     const tools = ctx.tools;
     tools.register(tool, { when: ({ agent }) => Boolean(agent && getScope()?.isHome(agent.id) && host.native.memoryFor(agent.id)) });
+    ctx.effect(() => host.native.toolTable.register({ name: tool.name, sources: OWNER_LIFE_TOOL_SOURCES }).revoke);
 }
 //# sourceMappingURL=review.js.map
