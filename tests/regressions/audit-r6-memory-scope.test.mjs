@@ -64,7 +64,7 @@ async function fixture(t) {
   const prepare=async(session='owner')=>{
     const before=token();await memory.prepare(session,scope());return before;
   };
-  const connect=()=>memory.connection.start({companionId:'fish',scopeId:'owner',workspaceId:scope().storageId},scope().path,selected==='A');
+  const connect=()=>memory.connection.start({companionId:'fish',scopeId:'owner',bankId:scope().storageId},scope().path,selected==='A');
   const gate=operation=>{const entry={entered:deferred(),release:deferred()};gates.set(operation,entry);return entry;};
   const source=id=>{runtime.store.put('source',id,{sourceId:id,origin:'owner_statement',actorId:'human',recordedAt:new Date().toISOString(),rootSourceIds:[],text:'Original source'});
     runtime.store.put('memory-source-work',id,{sourceId:id,workspaceId:scope().storageId,state:'queued',observationId:null});};
@@ -81,7 +81,7 @@ test('R6-02: a prepared A recall refuses a B connection even after the visible b
 });
 test('R6-02: logical Bank guard rejects a wrong connection without any revision change',async t=>{
   const f=await fixture(t),binding=await f.prepare();
-  await f.memory.connection.start({companionId:'fish',scopeId:'owner',workspaceId:'bank-B'},join(f.root,'b'),false);
+  await f.memory.connection.start({companionId:'fish',scopeId:'owner',bankId:'bank-B'},join(f.root,'b'),false);
   await assert.rejects(f.memory.recall('owner','question',false,binding),error=>error.code==='STALE_BINDING');
   assert.equal(f.requests.length,0);assert.equal(f.memory.context('owner'),'');
 });
@@ -148,10 +148,10 @@ test('R6-02: closing Memory rejects an in-flight context and clears previous vis
 });
 test('R6-02: the actual connection rejects late replies after replacing A with a new A client',async t=>{
   const f=await fixture(t);const c=new MemoryConnection(f.memory.connection.config);t.after(()=>c.close());
-  await c.start({companionId:'fish',scopeId:'owner',workspaceId:'bank-A'},f.scope().path,true);
+  await c.start({companionId:'fish',scopeId:'owner',bankId:'bank-A'},f.scope().path,true);
   const gate=f.gate('context'),pending=c.call('context',{},'bank-A');await gate.entered.promise;
-  await c.start({companionId:'fish',scopeId:'owner',workspaceId:'bank-B'},join(f.root,'b'),false);
-  await c.start({companionId:'fish',scopeId:'owner',workspaceId:'bank-A'},f.scope().path,true);
+  await c.start({companionId:'fish',scopeId:'owner',bankId:'bank-B'},join(f.root,'b'),false);
+  await c.start({companionId:'fish',scopeId:'owner',bankId:'bank-A'},f.scope().path,true);
   gate.release.resolve();await assert.rejects(pending,error=>error.code==='STALE_BINDING');
 });
 

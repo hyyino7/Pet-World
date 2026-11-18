@@ -8,7 +8,8 @@ export function memoryDirectory(config: MemoryConfig, workspacePath: string, use
   return useConfiguredDirectory && configured && configured !== '..' && !configured.startsWith('..' + sep) && !isAbsolute(configured)
     ? config.dataDir : join(workspacePath, '.chatpet', 'data', 'memory');
 }
-export interface MemoryScope { companionId: string; scopeId: string; workspaceId: string }
+export interface MemoryScope { companionId: string; scopeId: string; bankId: string }
+interface MemoryProviderScope { companionId: string; scopeId: string; workspaceId: string }
 export interface SourceDependency { id: string; revision: string }
 export interface Dependencies { sources: SourceDependency[]; memories: SourceDependency[] }
 export type Decision = 'eligible' | 'ineligible' | 'unknown';
@@ -20,7 +21,7 @@ export interface RecalledMemory { memory: { id: string; version: number; content
 export class MemoryConnection {
   private host: any;
   private client: any;
-  private scope?: MemoryScope;
+  private scope?: { memory: MemoryScope; provider: MemoryProviderScope };
   private directory?: string;
   private transition: Promise<void> = Promise.resolve();
   constructor(readonly config: MemoryConfig) {
@@ -47,25 +48,26 @@ export class MemoryConnection {
     return next;
   }
   private async open(scope: MemoryScope, directory: string): Promise<void> {
-    if (this.connected() && directory === this.directory && JSON.stringify(scope) === JSON.stringify(this.scope)) return;
+    if (this.connected() && directory === this.directory && JSON.stringify(scope) === JSON.stringify(this.scope?.memory)) return;
     if (this.host) await this.stop();
     const root = fileURLToPath(new URL('../../../', import.meta.url));
     const { MemoryProcessHost } = await import(pathToFileURL(`${root}vendor/mnemosyne/src/memory-process.js`).href);
     const { MemoryClient } = await import(pathToFileURL(`${root}vendor/mnemosyne/src/memory-client.js`).href);
+    const provider: MemoryProviderScope = { companionId: scope.companionId, scopeId: scope.scopeId, workspaceId: scope.bankId };
     this.host = new MemoryProcessHost({ serviceRoot: `${root}vendor/mnemosyne/service`, serviceEntry: this.config.serviceEntry ?? `${root}src/memory/main.py`,
       dataDir: directory, python: this.config.python,
-      serviceEnv: { CHATPET_MEMORY_SCOPE: JSON.stringify(scope), PYTHONDONTWRITEBYTECODE: '1' } });
-    this.scope = scope;
+      serviceEnv: { CHATPET_MEMORY_SCOPE: JSON.stringify(provider), PYTHONDONTWRITEBYTECODE: '1' } });
+    this.scope = { memory: scope, provider };
     this.directory = directory;
     this.client = new MemoryClient(await this.host.start({ timeoutMs: 10000 }));
   }
-  async call<T>(operation: string, args: Record<string, unknown>, expectedWorkspaceId?: string): Promise<T> {
+  async call<T>(operation: string, args: Record<string, unknown>, expectedBankId?: string): Promise<T> {
     if (!this.connected() || !this.scope) throw new Error('Memory provider unavailable');
-    if (expectedWorkspaceId !== undefined && this.scope.workspaceId !== expectedWorkspaceId)
+    if (expectedBankId !== undefined && this.scope.memory.bankId !== expectedBankId)
       throw Object.assign(new Error('Memory workspace changed'), { code: 'STALE_BINDING' });
     const client=this.client,scope=this.scope;
     try {
-      const result=await client.request('POST', `/pet/v1/${operation}`, { scope, ...args });
+      const result=await client.request('POST', `/pet/v1/${operation}`, { scope: scope.provider, ...args });
       // A stopped/replaced connection cannot return a late result as the new
       // Bank, including A→B→A where the logical Bank name is equal again.
       if(!this.connected() || this.client!==client || this.scope!==scope)
@@ -78,8 +80,8 @@ export class MemoryConnection {
       throw error;
     }
   }
-  async validate(dependencies: Dependencies, expectedWorkspaceId?: string): Promise<Decision> {
-    try { return (await this.call<{ decision: Decision }>('validate', { ...dependencies }, expectedWorkspaceId)).decision; }
+  async validate(dependencies: Dependencies, expectedBankId?: string): Promise<Decision> {
+    try { return (await this.call<{ decision: Decision }>('validate', { ...dependencies }, expectedBankId)).decision; }
     catch { return 'unknown'; }
   }
   async close(): Promise<void> {

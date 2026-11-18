@@ -42,28 +42,29 @@ export class MemoryConnection {
         return next;
     }
     async open(scope, directory) {
-        if (this.connected() && directory === this.directory && JSON.stringify(scope) === JSON.stringify(this.scope))
+        if (this.connected() && directory === this.directory && JSON.stringify(scope) === JSON.stringify(this.scope?.memory))
             return;
         if (this.host)
             await this.stop();
         const root = fileURLToPath(new URL('../../../', import.meta.url));
         const { MemoryProcessHost } = await import(pathToFileURL(`${root}vendor/mnemosyne/src/memory-process.js`).href);
         const { MemoryClient } = await import(pathToFileURL(`${root}vendor/mnemosyne/src/memory-client.js`).href);
+        const provider = { companionId: scope.companionId, scopeId: scope.scopeId, workspaceId: scope.bankId };
         this.host = new MemoryProcessHost({ serviceRoot: `${root}vendor/mnemosyne/service`, serviceEntry: this.config.serviceEntry ?? `${root}src/memory/main.py`,
             dataDir: directory, python: this.config.python,
-            serviceEnv: { CHATPET_MEMORY_SCOPE: JSON.stringify(scope), PYTHONDONTWRITEBYTECODE: '1' } });
-        this.scope = scope;
+            serviceEnv: { CHATPET_MEMORY_SCOPE: JSON.stringify(provider), PYTHONDONTWRITEBYTECODE: '1' } });
+        this.scope = { memory: scope, provider };
         this.directory = directory;
         this.client = new MemoryClient(await this.host.start({ timeoutMs: 10000 }));
     }
-    async call(operation, args, expectedWorkspaceId) {
+    async call(operation, args, expectedBankId) {
         if (!this.connected() || !this.scope)
             throw new Error('Memory provider unavailable');
-        if (expectedWorkspaceId !== undefined && this.scope.workspaceId !== expectedWorkspaceId)
+        if (expectedBankId !== undefined && this.scope.memory.bankId !== expectedBankId)
             throw Object.assign(new Error('Memory workspace changed'), { code: 'STALE_BINDING' });
         const client = this.client, scope = this.scope;
         try {
-            const result = await client.request('POST', `/pet/v1/${operation}`, { scope, ...args });
+            const result = await client.request('POST', `/pet/v1/${operation}`, { scope: scope.provider, ...args });
             // A stopped/replaced connection cannot return a late result as the new
             // Bank, including A→B→A where the logical Bank name is equal again.
             if (!this.connected() || this.client !== client || this.scope !== scope)
@@ -77,9 +78,9 @@ export class MemoryConnection {
             throw error;
         }
     }
-    async validate(dependencies, expectedWorkspaceId) {
+    async validate(dependencies, expectedBankId) {
         try {
-            return (await this.call('validate', { ...dependencies }, expectedWorkspaceId)).decision;
+            return (await this.call('validate', { ...dependencies }, expectedBankId)).decision;
         }
         catch {
             return 'unknown';
