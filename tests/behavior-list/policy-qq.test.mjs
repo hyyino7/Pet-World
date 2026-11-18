@@ -106,11 +106,14 @@ test('guest footer 写共享情绪（现状，待主人决定）',async t=>{
 });
 
 test('QQ 真实收件在 Life 后续步接管，回顾日记和 Memory 来源跨重启保留',async t=>{
+  let createSession;
   const {f,send,transport}=await setup(t,{
     now:new Date(2026,10,15,22,59).toISOString(),memory:true,life:true,limits:{maxDurationMs:30_000},
+    configure(services){createSession=t.mock.method(services.get('sessionController'),'create');},
   });
   await f.enable();
   const home=await f.home();
+  assert.equal(createSession.mock.callCount(),1,'初次打开 home 时创建原生会话');
   await prepareMemory(f,home.id);
   const autonomous=createUserMessage({source:{kind:'dsh-world-life'},content:[{type:'text',text:'Synthetic autonomous work'}]});
   // 在假宿主的空闲通知与 QQ 投递之间调度一次已就绪的 Life 首步。
@@ -139,6 +142,7 @@ test('QQ 真实收件在 Life 后续步接管，回顾日记和 Memory 来源跨
   await f.end(life);
   await until(()=>transport.sent.length===1);
   assert.equal(home.session.snapshotEvents().filter(event=>event.type==='turn/start').length,1);
+  assertObservation(f,home.id,autonomous.id,'virtual_action','fish');
   const review=await nextReview(f,t);
   assert.equal(review.home.id,home.id);
   const day=review.message.source.reviewDay,path=join(f.repo,'.chatpet/diary',day+'.md');
@@ -151,6 +155,7 @@ test('QQ 真实收件在 Life 后续步接管，回顾日记和 Memory 来源跨
   assert.equal(reply.text,'Synthetic review recorded in Memory');
   await f.restart();
   assert.equal((await f.home()).id,home.id);
+  assert.equal(createSession.mock.callCount(),0,'重启后打开 home 只解析已存在的原生会话');
   assert.equal(readFileSync(path,'utf8'),'Synthetic diary after QQ.');
   await prepareMemory(f,home.id);
   assert.deepEqual(assertObservation(f,home.id,null,'model_interpretation','fish'),reply);
