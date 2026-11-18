@@ -417,6 +417,17 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - 首轮返工补强 `policy-qq.test.mjs`、`policy-life.test.mjs`、`policy-room.test.mjs` 的现状断言，更新 `index.json` 的绑定和生命周期覆盖。每项结果见下方审查条目。
 - 首轮返工在临时副本运行 `pnpm run build`、`node --test tests/behavior-list/policy-{life,qq,room,desktop}.test.mjs dist/tests/regressions/audit-desktop.test.js`，构建通过，专项测试 44 项通过、0 项失败。`pnpm run test:behavior-list` 的索引检查 11 项通过（82 格覆盖），行为清单 52 项通过，均为 0 项失败。
 
+### B · 登记口骨架
+
+- `src/contracts/tables.ts` 定义登记与租约、能力状态、来源策略和伙伴工具声明类型，`src/contracts/index.ts` 仅增加类型导出。
+- `src/core/tables/registry.ts` 实现显式排序、按登记代次撤销、租约校验和原生作用域附着；`capabilities.ts` 校验公开能力及拥有者 ID 并按需计算状态；`sources.ts` 按来源判定并绑定选中分支的回调与租约。
+- `tests/core/tables*.test.ts` 覆盖排序、重复登记、四种判定、旧句柄、在途写入失效、真实 DSH 工具作用域及策略分支。提交包含 `dist/src/**` 构建产物，按拍板点 9 排除在提交阈值计数之外。
+- 通过 `mise exec -- pnpm run build` 和 `mise exec -- node --test dist/tests/core/tables*.test.js`，专项测试 13 项通过、0 项失败。
+- `mise exec -- pnpm run check:arch -- --report` 未找到三组新词表的同值集合。`mise exec -- pnpm run check:arch` 通过，R8 新增 0。
+- `mise exec -- pnpm run verify` 的 Node 测试 1,378 项通过、1 项失败。Memory 服务启动后，`tests/memory/memory-process.test.mjs:81` 调用 `/bin/ps` 被沙箱拒绝（`EPERM`），独立调用复现。门禁未通过，后续 Python 测试和打包检查未执行。
+- 现有入口继续走原路径。B 批只增加登记口及契约，登记完成屏障按拍板点 10 留到 M3。
+- Codex 沙箱不能写 worktree 的 `index.lock`，由 Claude 原样提交为 `8955bb4`（实现、测试和构建产物），执行结果另行提交。
+
 ## 审查结论
 
 ### A 批第一轮（Claude 核实 Codex 审查，返工）
