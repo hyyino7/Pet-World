@@ -478,19 +478,7 @@
     {
       "rule": "R2",
       "file": "src/core/plugin.ts",
-      "line": 68,
-      "column": 25,
-      "scope": "apply/ctx . effect:callback0/<callback>",
-      "target": "petDesktop",
-      "expression": "ctx . get ( \"petDesktop\" )",
-      "from": "core",
-      "to": "desktop",
-      "reason": "服务读取未获准或方向违规"
-    },
-    {
-      "rule": "R2",
-      "file": "src/core/plugin.ts",
-      "line": 75,
+      "line": 63,
       "column": 12,
       "scope": "apply/ctx . effect:callback0/<callback>",
       "target": "petRoom",
@@ -502,7 +490,7 @@
     {
       "rule": "R2",
       "file": "src/core/plugin.ts",
-      "line": 83,
+      "line": 71,
       "column": 24,
       "scope": "apply/ctx . effect:callback0/<callback>",
       "target": "petChannels",
@@ -514,7 +502,7 @@
     {
       "rule": "R2",
       "file": "src/core/plugin.ts",
-      "line": 91,
+      "line": 79,
       "column": 21,
       "scope": "apply/ctx . effect:callback0/<callback>",
       "target": "petVoice",

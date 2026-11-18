@@ -66,10 +66,7 @@ function expected({bound, desktopOpen, qq, hear, missing}) {
   const absent = {
     petMemory: {'memory.lifecycle': disabledMemory},
     petLife: {'life.pursuits': null},
-    petDesktop: {
-      'desktop.presentation': [...(bound ? closedDesktop : unboundDesktop), operations.presentation],
-      'desktop.body': [...(bound ? closedDesktop : unboundDesktop), operations.body],
-    },
+    petDesktop: {'desktop.presentation': null, 'desktop.body': null},
     petRoom: {'desktop.room': nativeUnavailable},
     petChannels: {'channel.qq': nativeUnavailable},
     petVoice: {'voice.speech': nativeUnavailable},
@@ -95,7 +92,9 @@ test('独立 createCore 只返回当前由 Core 登记的能力', async t => {
   const host = createCore(temp.config);
   t.after(async () => {try {await host.close();} finally {temp.cleanup();}});
   const actual = value(await host.services.core.listCapabilities(host.operator.request('capabilities'), {}));
-  assert.deepEqual(actual, rows(rowOrder.slice(0, 9), {'life.pursuits': null}));
+  assert.deepEqual(actual, rows(rowOrder.slice(0, 9), {
+    'life.pursuits': null, 'desktop.presentation': null, 'desktop.body': null,
+  }));
 });
 
 async function pluginFixture(t) {

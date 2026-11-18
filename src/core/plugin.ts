@@ -59,18 +59,6 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
       if (!status || ctx.get('petMemory')) return status;
       return {...status, state:'disabled', reason:'Memory is off for the next turn in every conversation; retained Bank and native logs remain'};
     };
-    for (const [id, supportedOperations] of [
-      ['desktop.presentation', ['send', 'stop', 'fold', 'reopen']],
-      ['desktop.body', ['open', 'close', 'drag', 'play']],
-    ] as const) {
-      statuses[id] = () => {
-        const bound = isBound();
-        const running = ctx.get('petDesktop')?.status().running ?? false;
-        return {state: running ? 'ready' : bound ? 'disabled' : 'unavailable',
-          reason: running ? null : bound ? 'Desktop window is closed' : 'Bind a workspace to open the desktop',
-          supportedOperations: [...supportedOperations]};
-      };
-    }
     statuses['desktop.room'] = () => {
       if (!ctx.get('petRoom')) return;
       const bound = isBound();
