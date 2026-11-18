@@ -35,21 +35,16 @@ export function lifeHistoryCandidates(events, nodes, classify, warn = console.wa
         if (!state)
             continue;
         if (event.type === 'user/message') {
-            const source = event.data.source;
-            if (source.kind === 'user' || source.kind === 'dsh-world-reply-nudge')
+            const classification = classify(event.data);
+            if (classification && 'kind' in classification) {
                 state.protected = true;
+                warn(`History classification failed for ${event.data.source.kind} (adapter ${classification.adapterId}); retaining turn ${turn}`);
+            }
             else {
-                const classification = classify(event.data);
-                if (classification && 'kind' in classification) {
+                if (classification?.historyProjection?.participates)
+                    state.lease = classification.lease;
+                if (classification?.historyProjection?.protectsTurn)
                     state.protected = true;
-                    warn(`History classification failed for ${source.kind} (adapter ${classification.adapterId}); retaining turn ${turn}`);
-                }
-                else {
-                    if (classification?.historyProjection?.participates)
-                        state.lease = classification.lease;
-                    if (classification?.historyProjection?.protectsTurn)
-                        state.protected = true;
-                }
             }
         }
         if (event.type === 'turn/end') {

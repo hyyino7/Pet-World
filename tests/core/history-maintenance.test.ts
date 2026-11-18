@@ -15,9 +15,14 @@ import type {PetCoreHost} from '../../src/core/index.js';
 import {createLifeSourceAdapter} from '../../src/life/tool-policy.js';
 import {prepareLifeHistory,applyLifeHistory,historicalStateOverview} from '../../src/core/native/history-maintenance.js';
 import {SourceAdapterTable} from '../../src/core/tables/sources.js';
+import {CoreNative} from '../../src/core/native/conversation.js';
+import type {CoreRuntime} from '../../src/core/runtime.js';
+import {createChannelSourceAdapter} from '../../src/channels/sessions.js';
 
-const table=new SourceAdapterTable();
+const table=new CoreNative({} as CoreRuntime).sourceTable;
 table.register(createLifeSourceAdapter({} as Context,{} as PetCoreHost,()=>false));
+const offline=()=>{throw Error('Saved history must not consult live admission');};
+table.register(createChannelSourceAdapter({guest:offline,ownerActorId:offline,admit:offline}));
 const classify:Parameters<typeof prepareLifeHistory>[2]=message=>table.classify(message);
 
 function fixture() {
@@ -113,6 +118,32 @@ test('owner input, takeover, review, failure, explicit full, receipts, other too
   const before=structuredClone(f.session.snapshotEvents());
   assert.equal((await prepareLifeHistory(f.agent,()=>true,classify)).length,0);
   assert.deepEqual(f.session.snapshotEvents(),before);
+});
+
+test('read-only policies protect native owner and channel takeovers and QQ nudges in earlier Life turns',async t=>{
+  const f=fixture();
+  const identity={channel:'qq',accountId:'fixture',conversationId:'private',conversationType:'private',speakerId:'qq:owner'};
+  const channelSource={kind:'user' as const,identity};
+  const protectedResults=[
+    f.appendTurn({takeover:true}),
+    f.appendTurn({additionalSource:channelSource}),
+    f.appendTurn({additionalSource:{kind:'dsh-world-reply-nudge'}}),
+  ];
+  const eligible=f.appendTurn();
+  f.appendTurn();
+  const directory=mkdtempSync(join(tmpdir(),'context-payload-mixed-'));
+  t.after(()=>rmSync(directory,{recursive:true,force:true}));
+  const log=join(directory,'events.jsonl');
+  writeFileSync(log,f.session.snapshotEvents().map(event=>JSON.stringify(event)).join('\n'));
+  const script=fileURLToPath(new URL('../../../scripts/checks/check-context-payload.mjs',import.meta.url));
+  const report=JSON.parse(execFileSync(process.execPath,[script,log],{encoding:'utf8'}));
+  assert.equal(report.maintenance.results,1);
+
+  const prepared=await prepareLifeHistory(f.agent,()=>true,classify);
+  assert.deepEqual(prepared.map(change=>change.event.seq),[eligible.seq]);
+  f.openRequest();
+  assert.equal(applyLifeHistory(f.agent,prepared,f.meter).replaced,1);
+  for(const result of protectedResults)assert.ok(f.session.surface.nodes.includes(result.seq));
 });
 
 test('queued interaction, active turn and changed workspace never enter maintenance',async()=>{
