@@ -48,54 +48,67 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
     const stopAdapter=installNativeAdapter(ctx, host, world);
     const stopBatch=world.modules.compaction.installMemoryBatch(ctx, host);
     const runtime = host.workspace.runtime;
-    const coreCapabilities = runtime.capabilities;
-    runtime.capabilities = () => {
-      const rows = coreCapabilities();
-      const bound = host.workspace.status().state === 'ready';
-      const conversation=rows.find(row=>row.id==='core.conversation');
-      if(conversation)Object.assign(conversation,{state:bound?'ready':'unavailable',reason:bound?'Native DSH owns ordinary conversation execution':'Bind a workspace to use the companion',supportedOperations:bound?['native-chat']:[]});
-      const running = ctx.get('petDesktop')?.status().running ?? false;
-      for (const row of rows) {
-        if (row.id !== 'desktop.presentation' && row.id !== 'desktop.body') continue;
-        Object.assign(row, { state: running ? 'ready' : bound ? 'disabled' : 'unavailable',
-          reason: running ? null : bound ? 'Desktop window is closed' : 'Bind a workspace to open the desktop',
-          supportedOperations: row.id === 'desktop.body' ? ['open', 'close', 'drag', 'play'] : ['send', 'stop', 'fold', 'reopen'] });
-      }
-      const memory = rows.find(row=>row.id==='memory.lifecycle');
-      const life = rows.find(row => row.id === 'life.pursuits');
-      if (life && ctx.get('petLife')) Object.assign(life, {
+    const isBound = () => host.workspace.status().state === 'ready';
+    const statuses = runtime.capabilityStatuses;
+    statuses['core.conversation'] = () => isBound()
+      ? {state:'ready', reason:'Native DSH owns ordinary conversation execution', supportedOperations:['native-chat']}
+      : {state:'unavailable', reason:'Bind a workspace to use the companion', supportedOperations:[]};
+    const memoryStatus = statuses['memory.lifecycle'];
+    if (memoryStatus) statuses['memory.lifecycle'] = () => {
+      const status = memoryStatus();
+      if (!status || ctx.get('petMemory')) return status;
+      return {...status, state:'disabled', reason:'Memory is off for the next turn in every conversation; retained Bank and native logs remain'};
+    };
+    statuses['life.pursuits'] = () => {
+      const bound = isBound();
+      if (!ctx.get('petLife')) return;
+      return {
         state: bound ? ctx.get('petLife')!.running() ? 'ready' : 'disabled' : 'unavailable',
         reason: bound ? ctx.get('petLife')!.running() ? null : 'Life is paused' : 'Bind a workspace to start Life',
         supportedOperations: ['start', 'stop', 'inspect', 'interact'],
-      });
-      const room = rows.find(row => row.id === 'desktop.room');
-      if (room && ctx.get('petRoom')) Object.assign(room, {
+      };
+    };
+    for (const [id, supportedOperations] of [
+      ['desktop.presentation', ['send', 'stop', 'fold', 'reopen']],
+      ['desktop.body', ['open', 'close', 'drag', 'play']],
+    ] as const) {
+      statuses[id] = () => {
+        const bound = isBound();
+        const running = ctx.get('petDesktop')?.status().running ?? false;
+        return {state: running ? 'ready' : bound ? 'disabled' : 'unavailable',
+          reason: running ? null : bound ? 'Desktop window is closed' : 'Bind a workspace to open the desktop',
+          supportedOperations: [...supportedOperations]};
+      };
+    }
+    statuses['desktop.room'] = () => {
+      if (!ctx.get('petRoom')) return;
+      const bound = isBound();
+      return {
         state: bound ? 'ready' : 'unavailable', reason: bound ? null : 'Bind a workspace to open the room',
         supportedOperations: bound ? ['view', 'garden', 'history'] : [],
-      });
-      const qq = rows.find(row => row.id === 'channel.qq');
-      const channels = ctx.get('petChannels');
-      if (qq && channels) {
-        const state = channels.qqConnection();
-        Object.assign(qq, {state: state === 'online' ? 'ready' : state === 'off' ? 'disabled' : 'unavailable',
-          reason: state === 'online' ? null : state === 'off' ? 'QQ is off' : 'QQ is disconnected',
-          supportedOperations: state === 'online' ? ['receive', 'reply'] : []});
-      }
-      const speech = rows.find(row => row.id === 'voice.speech');
-      const voice = ctx.get('petVoice');
-      if (speech && voice) {
-        const hear = bound && voice.canTranscribe();
-        Object.assign(speech, {state: !bound ? 'unavailable' : hear ? 'ready' : 'degraded',
-          reason: !bound ? 'Bind a workspace to use speech' : hear ? null : 'Speech recognition provider is unavailable',
-          supportedOperations: !bound ? [] : hear ? ['speak', 'hear'] : ['speak']});
-      }
-      if(memory && host.native.memory && !ctx.get('petMemory')) Object.assign(memory,{state:'disabled',reason:'Memory is off for the next turn in every conversation; retained Bank and native logs remain'});
-      const expression = bound && (ctx.get('petEmotion')?.catalog.actions.length ?? 0) > 0;
-      rows.push({ id: 'emotion.expression', owner: 'emotion', contractVersion: CONTRACT_VERSION,
-        state: expression ? 'ready' : 'unavailable', reason: expression ? null : 'Requires a bound workspace and expression assets',
-        supportedOperations: expression ? ['express', 'recordPlayback'] : [] });
-      return rows;
+      };
     };
+    statuses['channel.qq'] = () => {
+      const channels = ctx.get('petChannels');
+      if (!channels) return;
+      const state = channels.qqConnection();
+      return {state: state === 'online' ? 'ready' : state === 'off' ? 'disabled' : 'unavailable',
+        reason: state === 'online' ? null : state === 'off' ? 'QQ is off' : 'QQ is disconnected',
+        supportedOperations: state === 'online' ? ['receive', 'reply'] : []};
+    };
+    statuses['voice.speech'] = () => {
+      const voice = ctx.get('petVoice');
+      if (!voice) return;
+      const bound = isBound(), hear = bound && voice.canTranscribe();
+      return {state: !bound ? 'unavailable' : hear ? 'ready' : 'degraded',
+        reason: !bound ? 'Bind a workspace to use speech' : hear ? null : 'Speech recognition provider is unavailable',
+        supportedOperations: !bound ? [] : hear ? ['speak', 'hear'] : ['speak']};
+    };
+    runtime.capabilityTable.register({id:'emotion.expression', owner:'emotion', contractVersion:CONTRACT_VERSION, order:10,
+      status: () => isBound() && (ctx.get('petEmotion')?.catalog.actions.length ?? 0) > 0
+        ? {state:'ready', reason:null, supportedOperations:['express', 'recordPlayback']}
+        : {state:'unavailable', reason:'Requires a bound workspace and expression assets', supportedOperations:[]},
+    });
     return async () => {
       try {
         await stopBatch(); await stopAdapter(); await host.native.close();

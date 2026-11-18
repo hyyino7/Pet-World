@@ -18026,7 +18026,7 @@ registerCompanion({
         const capabilityState = (owner) => {
           if (owner === 'memory') return memoryProviderLabels[snapshot.memory?.provider] ?? '未配置';
           const labels = snapshot.capabilities.filter(item => item.owner === owner).map(item => capabilityLabels[item.state] ?? '未知');
-          return [...new Set(labels)].join(' / ') || '未报告';
+          return [...new Set(labels)].join(' / ') || (owner === 'bilibili' ? '未报告' : capabilityLabels.unavailable);
         };
         const numberField = (key, label, max, min = 0) => field(label, { type: 'number', min, max,
           value: draft.companion[key] ?? '', placeholder:'未配置', onChange: value => setDraft(old => ({ ...old, companion: {

@@ -1,9 +1,11 @@
 import {CONTRACT_VERSION} from '../contracts/version.js';
 import type {CapabilityStatus, ServiceCall} from '../contracts/common.js';
 import type {AttentionPolicy, CompanionIdentity, CoreService} from '../contracts/core.js';
+import type {CapabilityRegistration} from '../contracts/tables.js';
 import {CoreAuthority} from './authority.js';
 import {conversationOptions, type ConversationOptions} from './options.js';
 import {canonical, check, CoreStore, id, reject, Rejection, revision, text, timestamp} from './storage.js';
+import {CapabilityTable} from './tables/capabilities.js';
 
 export interface CoreConfig {
   dataDir:string; companionId:string; scopeId:string; ownerActorId:string;
@@ -23,7 +25,12 @@ export class CoreRuntime {
   fileEffect=false;
   private stopped=false;
   onChange:(operation:string,value:unknown)=>void=()=>{};
-  capabilities:()=>CapabilityStatus[]=()=>this.baseCapabilities();
+  readonly capabilityTable=new CapabilityTable();
+  // Core supplies live status for its initial registrations.
+  readonly capabilityStatuses:Partial<Record<CapabilityStatus['id'],()=>ReturnType<CapabilityRegistration['status']>|undefined>>={};
+  capabilities=():CapabilityStatus[]=>this.capabilityTable.list().map(({id,owner,contractVersion,status})=>({
+    id,owner,contractVersion,...status(),
+  }));
 
   constructor(readonly config:CoreConfig) {
     this.defaultConversation=conversationOptions(config.conversation);
@@ -45,6 +52,7 @@ export class CoreRuntime {
         // Retired activity/execution/contact rows remain untouched historical data.
         // Opening the companion never reconciles, runs or mutates those records.
       });
+      this.registerBaseCapabilities();
       this.core={
         getIdentity:this.call('getIdentity',false,()=>this.identity()),
         reviseIdentity:this.call('reviseIdentity',true,input=>{
@@ -93,9 +101,24 @@ export class CoreRuntime {
       }
     };
   }
-  baseCapabilities():CapabilityStatus[] {
-    const rows:[CapabilityStatus['id'],CapabilityStatus['owner']][]=[['core.conversation','core'],['memory.lifecycle','memory'],['life.pursuits','life'],['desktop.presentation','desktop'],['desktop.body','desktop'],['desktop.room','desktop'],['channel.qq','qq'],['voice.speech','voice'],['console.operations','console']];
-    return rows.map(([id,owner])=>({id,owner,contractVersion:CONTRACT_VERSION,state:'unavailable',reason:'Native component is not available',supportedOperations:[]}));
+  private registerBaseCapabilities() {
+    const rows:[number,CapabilityStatus['id'],CapabilityStatus['owner']][]=[
+      [1,'core.conversation','core'],
+      [2,'memory.lifecycle','memory'],
+      [3,'life.pursuits','life'],
+      [4,'desktop.presentation','desktop'],
+      [5,'desktop.body','desktop'],
+      [6,'desktop.room','desktop'],
+      [7,'channel.qq','qq'],
+      [8,'voice.speech','voice'],
+      [9,'console.operations','console'],
+    ];
+    for(const [order,id,owner] of rows) {
+      this.capabilityTable.register({
+        id,owner,contractVersion:CONTRACT_VERSION,order,
+        status:()=>this.capabilityStatuses[id]?.()??{state:'unavailable',reason:'Native component is not available',supportedOperations:[]},
+      });
+    }
   }
   close(){if(this.stopped)return;this.stopped=true;this.store.close();}
 }

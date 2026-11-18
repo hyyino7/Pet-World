@@ -2,6 +2,7 @@ import { CONTRACT_VERSION } from '../contracts/version.js';
 import { CoreAuthority } from './authority.js';
 import { conversationOptions } from './options.js';
 import { canonical, check, CoreStore, id, reject, Rejection, revision, text, timestamp } from './storage.js';
+import { CapabilityTable } from './tables/capabilities.js';
 /** Companion configuration and native integration storage. DSH owns execution. */
 export class CoreRuntime {
     config;
@@ -15,7 +16,12 @@ export class CoreRuntime {
     fileEffect = false;
     stopped = false;
     onChange = () => { };
-    capabilities = () => this.baseCapabilities();
+    capabilityTable = new CapabilityTable();
+    // Core supplies live status for its initial registrations.
+    capabilityStatuses = {};
+    capabilities = () => this.capabilityTable.list().map(({ id, owner, contractVersion, status }) => ({
+        id, owner, contractVersion, ...status(),
+    }));
     constructor(config) {
         this.config = config;
         this.defaultConversation = conversationOptions(config.conversation);
@@ -39,6 +45,7 @@ export class CoreRuntime {
                 // Retired activity/execution/contact rows remain untouched historical data.
                 // Opening the companion never reconciles, runs or mutates those records.
             });
+            this.registerBaseCapabilities();
             this.core = {
                 getIdentity: this.call('getIdentity', false, () => this.identity()),
                 reviseIdentity: this.call('reviseIdentity', true, input => {
@@ -111,9 +118,24 @@ export class CoreRuntime {
             }
         };
     }
-    baseCapabilities() {
-        const rows = [['core.conversation', 'core'], ['memory.lifecycle', 'memory'], ['life.pursuits', 'life'], ['desktop.presentation', 'desktop'], ['desktop.body', 'desktop'], ['desktop.room', 'desktop'], ['channel.qq', 'qq'], ['voice.speech', 'voice'], ['console.operations', 'console']];
-        return rows.map(([id, owner]) => ({ id, owner, contractVersion: CONTRACT_VERSION, state: 'unavailable', reason: 'Native component is not available', supportedOperations: [] }));
+    registerBaseCapabilities() {
+        const rows = [
+            [1, 'core.conversation', 'core'],
+            [2, 'memory.lifecycle', 'memory'],
+            [3, 'life.pursuits', 'life'],
+            [4, 'desktop.presentation', 'desktop'],
+            [5, 'desktop.body', 'desktop'],
+            [6, 'desktop.room', 'desktop'],
+            [7, 'channel.qq', 'qq'],
+            [8, 'voice.speech', 'voice'],
+            [9, 'console.operations', 'console'],
+        ];
+        for (const [order, id, owner] of rows) {
+            this.capabilityTable.register({
+                id, owner, contractVersion: CONTRACT_VERSION, order,
+                status: () => this.capabilityStatuses[id]?.() ?? { state: 'unavailable', reason: 'Native component is not available', supportedOperations: [] },
+            });
+        }
     }
     close() { if (this.stopped)
         return; this.stopped = true; this.store.close(); }
