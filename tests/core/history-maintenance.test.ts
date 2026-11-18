@@ -15,11 +15,16 @@ import type {PetCoreHost} from '../../src/core/index.js';
 import {createLifeSourceAdapter} from '../../src/life/tool-policy.js';
 import {prepareLifeHistory,applyLifeHistory,historicalStateOverview} from '../../src/core/native/history-maintenance.js';
 import {SourceAdapterTable} from '../../src/core/tables/sources.js';
+import {CompanionToolTable} from '../../src/core/tables/tools.js';
 import {CoreNative} from '../../src/core/native/conversation.js';
 import type {CoreRuntime} from '../../src/core/runtime.js';
 import {createChannelSourceAdapter} from '../../src/channels/sessions.js';
 import {roomHistoryTools} from '../../src/room/plugin.js';
 import {lifePlanReadToolDeclaration} from '../../src/life/plan-tools.js';
+
+declare module '../../src/contracts/tables.js' {
+  interface CompanionToolSourceMap { 'fixture-history':true }
+}
 
 const {sourceTable:table,toolTable}=new CoreNative({} as CoreRuntime);
 for(const declaration of [...roomHistoryTools,lifePlanReadToolDeclaration])toolTable.register(declaration);
@@ -184,6 +189,36 @@ test('a native compaction that supersedes a prepared result makes the stale proj
   const before=structuredClone(f.session.snapshotEvents());
   assert.equal(applyLifeHistory(f.agent,prepared,f.meter).replaced,0);
   assert.deepEqual(f.session.snapshotEvents(),before);
+});
+
+test('revoking an extra tool source preserves Life history projection but replacing the tool invalidates it',async()=>{
+  const f=fixture(),tools=new CompanionToolTable();
+  const extension=tools.registerSource('fixture-history');
+  const roomState=roomHistoryTools.find(tool=>tool.name==='room_state');
+  assert.ok(roomState);
+  const declaration={...roomState,sources:['life','fixture-history']} as const;
+  const tool=tools.register(declaration);
+  const original=f.appendTurn();
+  f.appendTurn();
+  const before=await prepareLifeHistory(f.agent,()=>true,classify,tools);
+  assert.equal(before.length,1);
+  await extension.revoke();
+  const after=await prepareLifeHistory(f.agent,()=>true,classify,tools);
+  assert.equal(after.length,1);
+  f.openRequest();
+  assert.equal(applyLifeHistory(f.agent,after,f.meter).replaced,1);
+  assert.ok(before[0].isToolCurrent());
+  assert.ok(!f.session.surface.nodes.includes(original.seq));
+
+  const later=fixture(),stale=later.appendTurn();
+  later.appendTurn();
+  const pending=await prepareLifeHistory(later.agent,()=>true,classify,tools);
+  assert.equal(pending.length,1);
+  await tool.revoke();
+  tools.register({...declaration,sources:['life']});
+  later.openRequest();
+  assert.equal(applyLifeHistory(later.agent,pending,later.meter).replaced,0);
+  assert.ok(later.session.surface.nodes.includes(stale.seq));
 });
 
 test('structured history maintenance leaves reading, malformed and partial payloads untouched and preserves open plan state',()=>{

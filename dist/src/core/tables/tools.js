@@ -26,16 +26,19 @@ export class CompanionToolTable {
             throw new Error(`Duplicate registration: ${source}`);
         return this.extensions.register(source, true);
     }
+    /** Built-in sources have no lease; an absent extension has no admission. */
+    sourceLease(source) {
+        return builtinSources.has(source) ? null : this.extensions.get(source)?.lease;
+    }
     register(declaration) {
         const sources = Object.freeze([...declaration.sources]);
         const sourceLeases = new Map();
         for (const source of sources) {
-            if (builtinSources.has(source))
-                continue;
-            const registration = this.extensions.get(source);
-            if (!registration)
+            const lease = this.sourceLease(source);
+            if (lease === undefined)
                 throw new Error(`Unknown companion tool source: ${source}`);
-            sourceLeases.set(source, registration.lease);
+            if (lease)
+                sourceLeases.set(source, lease);
         }
         return this.table.register(declaration.name, {
             declaration: { ...declaration, sources, historyOverview: declaration.historyOverview?.bind(declaration) },
@@ -43,8 +46,11 @@ export class CompanionToolTable {
         });
     }
     get(name) {
+        return this.getRegistration(name)?.declaration;
+    }
+    getRegistration(name) {
         const entry = this.table.get(name);
-        return entry && readDeclaration(entry.value, entry.lease);
+        return entry && { declaration: readDeclaration(entry.value, entry.lease), lease: entry.lease };
     }
     list(source) {
         return this.table.entries()

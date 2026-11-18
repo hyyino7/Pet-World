@@ -3,11 +3,23 @@ import type {
   SourceBranch, SourceClassificationResult, SourceInput, TableRegistration,
 } from '../../contracts/tables.js';
 import { RegistrationTable } from './registry.js';
+import { CompanionToolTable } from './tools.js';
 
 type NativeSourceAdapter<Selected> = SourceAdapter<Selected> & {
   isGuest?(sessionId: string): boolean;
   beforeFirstStep?(): Promise<void>;
 };
+
+function bindToolSource(adapter: RegistrationLease, source: RegistrationLease): RegistrationLease {
+  return Object.freeze({
+    generation: Symbol('native source admission'),
+    isCurrent: () => adapter.isCurrent() && source.isCurrent(),
+    assertCurrent() { adapter.assertCurrent(); source.assertCurrent(); },
+    guard<Args extends unknown[], Output>(callback: (...args: Args) => Output) {
+      return adapter.guard(source.guard(callback));
+    },
+  });
+}
 
 function guardBranch<Selected>(
   branch: SourceBranch<Selected>, context: Selected, lease: RegistrationLease,
@@ -35,6 +47,17 @@ export class SourceAdapterTable<Selected = unknown> {
     order: adapter => adapter.order,
     overlaps: (left, right) => left.sources.some(source => right.sources.includes(source)),
   });
+  private readonly admissions = new WeakMap<RegistrationLease, WeakMap<RegistrationLease, RegistrationLease>>();
+
+  constructor(private readonly tools = new CompanionToolTable()) {}
+
+  private admissionLease(adapter: RegistrationLease, source: RegistrationLease): RegistrationLease {
+    let bySource = this.admissions.get(adapter);
+    if (!bySource) this.admissions.set(adapter, bySource = new WeakMap());
+    let admission = bySource.get(source);
+    if (!admission) bySource.set(source, admission = bindToolSource(adapter, source));
+    return admission;
+  }
 
   register(adapter: NativeSourceAdapter<Selected>): TableRegistration {
     return this.table.register(adapter.id, {
@@ -94,8 +117,14 @@ export class SourceAdapterTable<Selected = unknown> {
         if (!Object.hasOwn(adapter.branches, decision.branch)) {
           throw new Error(`Unknown branch from source adapter ${adapter.id}: ${decision.branch}`);
         }
-        const branch = guardBranch(adapter.branches[decision.branch], decision.context, lease);
-        return { ...decision, branch, lease };
+        const selected = adapter.branches[decision.branch];
+        const toolSourceLease = this.tools.sourceLease(selected.toolSource);
+        if (toolSourceLease === undefined) {
+          return { kind: 'rejected', reason: `Unknown companion tool source: ${selected.toolSource}` };
+        }
+        const admission = toolSourceLease ? this.admissionLease(lease, toolSourceLease) : lease;
+        const branch = guardBranch(selected, decision.context, admission);
+        return { ...decision, branch, lease: admission, ...(toolSourceLease && { toolSourceLease }) };
       } catch (error) {
         return { kind: 'failed', error };
       }

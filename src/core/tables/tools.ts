@@ -37,14 +37,18 @@ export class CompanionToolTable {
     return this.extensions.register(source, true);
   }
 
+  /** Built-in sources have no lease; an absent extension has no admission. */
+  sourceLease(source: CompanionToolSource): RegistrationLease | null | undefined {
+    return builtinSources.has(source) ? null : this.extensions.get(source)?.lease;
+  }
+
   register(declaration: CompanionToolDeclaration): TableRegistration {
     const sources = Object.freeze([...declaration.sources]);
     const sourceLeases = new Map<CompanionToolSource, RegistrationLease>();
     for (const source of sources) {
-      if (builtinSources.has(source)) continue;
-      const registration = this.extensions.get(source);
-      if (!registration) throw new Error(`Unknown companion tool source: ${source}`);
-      sourceLeases.set(source, registration.lease);
+      const lease = this.sourceLease(source);
+      if (lease === undefined) throw new Error(`Unknown companion tool source: ${source}`);
+      if (lease) sourceLeases.set(source, lease);
     }
     return this.table.register(declaration.name, {
       declaration: { ...declaration, sources, historyOverview: declaration.historyOverview?.bind(declaration) },
@@ -53,8 +57,12 @@ export class CompanionToolTable {
   }
 
   get(name: string): CompanionToolDeclaration | undefined {
+    return this.getRegistration(name)?.declaration;
+  }
+
+  getRegistration(name: string): { declaration: CompanionToolDeclaration; lease: RegistrationLease } | undefined {
     const entry = this.table.get(name);
-    return entry && readDeclaration(entry.value, entry.lease);
+    return entry && { declaration: readDeclaration(entry.value, entry.lease), lease: entry.lease };
   }
 
   list(source: CompanionToolSource): CompanionToolDeclaration[] {

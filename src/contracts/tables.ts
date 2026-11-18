@@ -36,14 +36,10 @@ export interface CompanionToolSourceMap extends Record<typeof COMPANION_TOOL_SOU
 export type CompanionToolSource = Extract<keyof CompanionToolSourceMap, string>;
 // Native logs also store these model-facing projections as user/message events.
 export const NATIVE_HISTORY_CONTEXT_SOURCES = Object.freeze(['runtime-context', 'chatpet-recall', 'compact-checkpoint'] as const);
-/** Modules augment this map for the native message kinds their adapters claim. */
-export interface NativeSourceKindMap extends Record<typeof NATIVE_HISTORY_CONTEXT_SOURCES[number], true> {
-  user: true;
-  'dsh-world-life': true;
-  'dsh-world-reply-nudge': true;
-  'chatpet-room-tv': true;
-}
-export type NativeSourceKind = Extract<keyof NativeSourceKindMap, string>;
+type BuiltinNativeSourceKind = typeof NATIVE_HISTORY_CONTEXT_SOURCES[number]
+  | 'user' | 'dsh-world-life' | 'dsh-world-reply-nudge' | 'chatpet-room-tv';
+/** Extension kinds come from the producer's DSH MessageSourceMap declaration. */
+export type NativeSourceKind = BuiltinNativeSourceKind | UserMessage['source']['kind'];
 
 export type AdmissionDecision<Accepted> =
   | { kind: 'unclaimed' }
@@ -141,7 +137,9 @@ export interface AdmittedSourceBranch extends Omit<SourceBranch<unknown>, 'toolP
 export type SourceAdmission<Selected> = AdmissionDecision<{
   branch: AdmittedSourceBranch;
   context: Selected;
+  /** The admission lease includes the tool source's generation when present. */
   lease: RegistrationLease;
+  toolSourceLease?: RegistrationLease;
 }>;
 
 export interface CompanionToolDeclaration {

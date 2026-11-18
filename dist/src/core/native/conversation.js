@@ -40,8 +40,8 @@ export class CoreNative {
     runtime;
     memory;
     memoryEnabled = true;
-    sourceTable = new SourceAdapterTable();
     toolTable = new CompanionToolTable();
+    sourceTable = new SourceAdapterTable(this.toolTable);
     playbackProviders = new RegistrationTable();
     resolveNativeScope;
     attachGuest;

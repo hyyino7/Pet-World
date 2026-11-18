@@ -32,7 +32,9 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
     };
     host.native.resolveNativeScope = nativeScopeFor;
     const sameNativeScope = (id, expected) => matchesNativeScope(nativeScopeFor(id), expected);
+    const currentExtensions = (saved) => [...saved.extensionAdmissions].every(lease => lease.isCurrent());
     const currentTurn = (id, saved) => sameNativeScope(id, saved.scope)
+        && currentExtensions(saved)
         && (!saved.background || !saved.lifePolicy || saved.lifePolicy.lease.isCurrent())
         && (!saved.persistentToolGuard || saved.persistentToolGuard.lease.isCurrent());
     const clearContinuation = (id) => {
@@ -88,6 +90,12 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
             const selection = interactive.get(message) ?? selectSource(agent, message);
             return selection ? [{ message, selection }] : [];
         });
+    };
+    const trackExtensions = (saved, accepted) => {
+        for (const { selection } of accepted)
+            if (selection.toolSourceLease)
+                saved.extensionAdmissions.add(selection.lease);
+        return currentExtensions(saved);
     };
     // DSH resolves schemas before pre-step. Install the native mask while its
     // trusted inbox input is queued, and recheck at step admission below.
@@ -219,6 +227,8 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         const saved = turns.get(exec.agent.id);
         if (!sameNativeScope(exec.agent.id, saved.scope))
             return '会话已离开原绑定工作区';
+        if (!currentExtensions(saved))
+            return '自主轮次的来源登记已撤销';
         for (const policy of [saved.persistentToolGuard, saved.background && saved.lifePolicy]) {
             if (!policy)
                 continue;
@@ -252,8 +262,10 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
                 return { kind: 'reject' };
             const selections = accepted.map(({ selection }) => selection);
             const foreground = selections.some(selection => selection.branch.turnKind === 'foreground');
-            saved = { turn: payload.turn, scope, background: !foreground,
+            saved = { turn: payload.turn, scope, background: !foreground, extensionAdmissions: new Set(),
                 persistentToolGuard: selections.find(selection => selection.context.guardDuringTakeover) };
+            if (!trackExtensions(saved, accepted))
+                return { kind: 'reject' };
             turns.set(payload.agent.id, saved);
             if (foreground) {
                 clearContinuation(payload.agent.id);
@@ -275,11 +287,11 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
             }
             host.native.observeInputs(payload.agent.id, payload.turn, accepted.map(({ message }) => message), scope);
         }
-        if (!sameNativeScope(payload.agent.id, saved.scope))
+        if (!sameNativeScope(payload.agent.id, saved.scope) || !currentExtensions(saved))
             return { kind: 'reject' };
         if (!first) {
             const admitted = selectStepSources(payload.agent, payload.messages);
-            if (!admitted)
+            if (!admitted || !trackExtensions(saved, admitted))
                 return { kind: 'reject' };
             if (admitted.length)
                 host.native.observeInputs(payload.agent.id, payload.turn, admitted.map(({ message }) => message), saved.scope);

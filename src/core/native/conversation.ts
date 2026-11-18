@@ -84,8 +84,8 @@ interface Work {
 export class CoreNative {
   memory?: NativeMemory;
   private memoryEnabled = true;
-  readonly sourceTable = new SourceAdapterTable<NativeSourceContext>();
   readonly toolTable = new CompanionToolTable();
+  readonly sourceTable = new SourceAdapterTable<NativeSourceContext>(this.toolTable);
   private readonly playbackProviders = new RegistrationTable<ResolvePlaybackEvidence>();
   resolveNativeScope?: (sessionId: string) => NativeScope | undefined;
   attachGuest?: (context: Context) => void;

@@ -5,6 +5,7 @@ import type {} from '../plugin.js';
 import type {} from '@deepseek-ai/dsh-system-prompt';
 import type {} from '@deepseek-ai/dsh-tools';
 import type { LlmCallConfig } from '@deepseek-ai/dsh-llm';
+import type { RegistrationLease } from '../../contracts/tables.js';
 import { nativeResult } from './result.js';
 import type { PetCoreHost } from '../index.js';
 import { registerWorldPrompt, retireLegacyPrompt, retireDynamicContext } from './prompt.js';
@@ -21,6 +22,7 @@ interface WorkspaceView { id: string; path: string; sessionIds: readonly string[
 interface ManagedTurn {
   turn:number;scope:NativeScope;background:boolean;lifePolicy?:NativeSourceSelection;
   persistentToolGuard?:NativeSourceSelection;
+  extensionAdmissions:Set<RegistrationLease>;
 }
 interface NativeServices {
   get(name: 'workspaceRegistry'): { get(id: string): WorkspaceView | undefined; archivedSessionIds: readonly string[] } | undefined;
@@ -50,7 +52,9 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   };
   host.native.resolveNativeScope=nativeScopeFor;
   const sameNativeScope=(id:string,expected:NativeScope)=>matchesNativeScope(nativeScopeFor(id),expected);
+  const currentExtensions=(saved:ManagedTurn)=>[...saved.extensionAdmissions].every(lease=>lease.isCurrent());
   const currentTurn=(id:string,saved:ManagedTurn)=>sameNativeScope(id,saved.scope)
+    && currentExtensions(saved)
     && (!saved.background||!saved.lifePolicy||saved.lifePolicy.lease.isCurrent())
     && (!saved.persistentToolGuard||saved.persistentToolGuard.lease.isCurrent());
   const clearContinuation=(id:string)=>{
@@ -92,6 +96,10 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
       const selection=interactive.get(message) ?? selectSource(agent,message);
       return selection ? [{message,selection}] : [];
     });
+  };
+  const trackExtensions=(saved:ManagedTurn,accepted:readonly {selection:NativeSourceSelection}[])=>{
+    for(const {selection} of accepted)if(selection.toolSourceLease)saved.extensionAdmissions.add(selection.lease);
+    return currentExtensions(saved);
   };
   // DSH resolves schemas before pre-step. Install the native mask while its
   // trusted inbox input is queued, and recheck at step admission below.
@@ -191,6 +199,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     if(!exec.agent || !turns.has(exec.agent.id))return;
     const saved=turns.get(exec.agent.id)!;
     if(!sameNativeScope(exec.agent.id,saved.scope))return '会话已离开原绑定工作区';
+    if(!currentExtensions(saved))return '自主轮次的来源登记已撤销';
     for(const policy of [saved.persistentToolGuard,saved.background && saved.lifePolicy]) {
       if(!policy)continue;
       const {branch,lease}=policy;
@@ -213,8 +222,9 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
       if(!accepted?.length)return {kind:'reject'};
       const selections=accepted.map(({selection})=>selection);
       const foreground=selections.some(selection=>selection.branch.turnKind==='foreground');
-      saved={turn:payload.turn,scope,background:!foreground,
+      saved={turn:payload.turn,scope,background:!foreground,extensionAdmissions:new Set(),
         persistentToolGuard:selections.find(selection=>selection.context.guardDuringTakeover)};
+      if(!trackExtensions(saved,accepted))return {kind:'reject'};
       turns.set(payload.agent.id,saved);
       if(foreground){clearContinuation(payload.agent.id);releaseLifePolicy(payload.agent);}else {
         for(const selection of selections)if(!selection.context.guardDuringTakeover)constrainLife(payload.agent,selection);
@@ -228,10 +238,10 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
       }
       host.native.observeInputs(payload.agent.id,payload.turn,accepted.map(({message})=>message),scope);
     }
-    if(!sameNativeScope(payload.agent.id,saved!.scope))return {kind:'reject'};
+    if(!sameNativeScope(payload.agent.id,saved!.scope)||!currentExtensions(saved!))return {kind:'reject'};
     if(!first) {
       const admitted=selectStepSources(payload.agent,payload.messages);
-      if(!admitted)return {kind:'reject'};
+      if(!admitted||!trackExtensions(saved!,admitted))return {kind:'reject'};
       if(admitted.length)host.native.observeInputs(payload.agent.id,payload.turn,admitted.map(({message})=>message),saved!.scope);
       if(saved!.background && admitted.some(({selection})=>selection.branch.turnKind==='foreground')) {
         // A real owner input takes over this native turn; autonomous limits do

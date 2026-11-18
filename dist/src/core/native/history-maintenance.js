@@ -69,8 +69,8 @@ export async function prepareLifeHistory(agent, isCurrent, classify, tools) {
             signal.throwIfAborted();
             if (!isCurrent())
                 return [];
-            const declaration = tools.get(call.name);
-            if (!declaration?.historyOverview)
+            const tool = tools.getRegistration(call.name);
+            if (!tool?.declaration.historyOverview)
                 continue;
             const original = agent.session.deriveEventMessage(event);
             if (!original || original.content.length !== 1 || original.content[0]?.type !== 'text')
@@ -83,14 +83,13 @@ export async function prepareLifeHistory(agent, isCurrent, classify, tools) {
             catch {
                 continue;
             }
-            const view = projectHistory(declaration, args, value);
+            const view = projectHistory(tool.declaration, args, value);
             if (view === undefined)
                 continue;
             const text = JSON.stringify(view);
-            // The table freezes a separate sources array for each registration.
             if (text.length < original.content[0].text.length)
                 changes.push({
-                    event, text, lease, isToolCurrent: () => tools.get(call.name)?.sources === declaration.sources,
+                    event, text, lease, isToolCurrent: tool.lease.isCurrent,
                 });
         }
         return changes;

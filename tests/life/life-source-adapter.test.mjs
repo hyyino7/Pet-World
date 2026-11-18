@@ -28,6 +28,43 @@ for(const kind of ['unclaimed','rejected','failed'])test(`Life ${kind} denies a 
   assert.equal(native.isAutonomous(agent.id),false);
 });
 
+test('an extension tool source must stay registered for native admission and in-flight execution',async t=>{
+  const f=await fixture(t,{policy:true,economy:false});
+  await f.enable();
+  const home=await f.home(),{sourceTable,toolTable}=f.host.native;
+  const source='fixture-reminder';
+  const reminder=()=>createUserMessage({source:{kind:'fixture-background'},content:[{type:'text',text:'Synthetic reminder'}]});
+  const ownerRow=sourceTable.policyRows().find(row=>row.row===1);
+  assert.ok(ownerRow);
+  const adapter=sourceTable.register({id:source,order:0,sources:['fixture-background'],branches:{reminder:{
+    turnKind:'background',toolSource:source,toolPolicy:null,memoryObservation:null,
+    emotionUpdate:{footer:false,tool:false},policyRow:{...ownerRow,row:10,branch:'reminder'},
+  }},admit:()=>({kind:'accepted',branch:'reminder',context:{policyKey:'reminder'}})});
+  const denied=()=>sourceTable.admit({sessionId:home.id,message:reminder()}).kind;
+  const enter=(turn,step,messages)=>f.middleware('agent/pre-step',[{agent:home,turn,step,messages,signal:signal()}],
+    async()=>({kind:'enter',messages:[]}));
+
+  assert.equal(denied(),'rejected');
+  const registration=toolTable.registerSource(source);
+  const active=await f.begin(home.id,reminder());
+  assert.equal(f.host.native.isAutonomous(home.id),true);
+  await registration.revoke();
+
+  assert.equal(adapter.lease.isCurrent(),true);
+  assert.equal(denied(),'rejected');
+  await assert.rejects(f.tool(active,'check_alarm',{}),/来源登记已撤销/);
+  assert.equal((await enter(active.turn,2,[])).kind,'reject');
+  const reloaded=toolTable.registerSource(source);
+  assert.equal(denied(),'accepted');
+  assert.equal((await enter(active.turn,2,[])).kind,'reject');
+  await f.end(active,'aborted');
+  const fresh=await f.begin(home.id,reminder());
+  await f.end(fresh);
+  await reloaded.revoke();
+  assert.equal((await enter(fresh.turn+1,1,[reminder()])).kind,'reject');
+  assert.equal(f.host.native.isAutonomous(home.id),false);
+});
+
 test('a review file already resolving is denied if Life unloads before native dispatch',async t=>{
   const resolving=Promise.withResolvers(),resume=Promise.withResolvers();
   const f=await fixture(t,{policy:true,economy:false,configure(services){

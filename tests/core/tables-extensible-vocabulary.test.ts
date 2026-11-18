@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
-import { COMPANION_TOOL_SOURCES } from '../../src/contracts/tables.js';
+import { COMPANION_TOOL_SOURCES, type SourceAdapter } from '../../src/contracts/tables.js';
 import { CoreNative } from '../../src/core/native/conversation.js';
 import type { CoreRuntime } from '../../src/core/runtime.js';
 
@@ -12,13 +12,14 @@ declare module '@deepseek-ai/dsh-llm' {
 }
 
 declare module '../../src/contracts/tables.js' {
-  interface NativeSourceKindMap {
-    'fixture-background': true;
-  }
   interface CompanionToolSourceMap {
     'fixture-reminder': true;
   }
 }
+
+type AdapterSource<Kind extends SourceAdapter<unknown>['sources'][number]> = Kind;
+// @ts-expect-error Only the kind declared by the producer is valid in the adapter.
+type MisspelledSource = AdapterSource<'fixture-backgruond'>;
 
 test('a module can register and revoke its native input and companion tool sources', async () => {
   const native = new CoreNative({} as CoreRuntime);

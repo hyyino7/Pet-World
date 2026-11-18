@@ -35,8 +35,8 @@ export declare class CoreNative {
     readonly runtime: CoreRuntime;
     memory?: NativeMemory;
     private memoryEnabled;
-    readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
     readonly toolTable: CompanionToolTable;
+    readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
     private readonly playbackProviders;
     resolveNativeScope?: (sessionId: string) => NativeScope | undefined;
     attachGuest?: (context: Context) => void;
