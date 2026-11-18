@@ -86,7 +86,7 @@ M2 复测第 5 类没达到门槛，按 M1 评审定下的规则在 M3 开始前
 | A. 发版准备（Codex） | `docs/release/notes.md` 改写成 0.2.0 的中文更新说明：主要场景不变；M2 已拍板的行为变化；`PetCoreHost` 的接口变化及替代写法；直接升级、迁移、回退怎么做。`v0.1.8..main` 的兼容面逐项核对结果（`package.json` 的 `exports / files / imports`、`cordis.patch.yml`、Cordis 服务名、配置字段、Bundle ID、`PetCoreHost` 字段）写进本方案「执行结果」，不另建报告文件。`pnpm run verify`（含 `check:package` 的归档和包内运行检查）、`pnpm run build && pnpm run test:behavior-list` 全绿 |
 | B. 文档收口（Claude） | 把 B 之后的现状写进 `docs/architecture.md` 第 0、2.2、5.1、5.9、5.10、7.4、9、10 节（初始化表改为「保留 `registerInitializer`，不再把写死的容器改成登记」；提示词表剩余部分砍掉；P2c 改写；目录名只在第二层合并时定）；`product.md` 的成功标准、总表和 MVP 一致；`AGENTS.md` 里指向 5.10 的入口说明不再承诺已砍的部分 |
 | C. 预发布与打包验证（主人） | 推送 `main`（另行确认）后发 `0.2.0-rc.1`。在隔离的已安装 DSH 里：起点是 **npm 安装的 0.1.8**；用更新按钮（勾选预发布）装上 RC 并实际激活，插件名、Bundle ID、入口、服务名、配置字段正常；用合成或临时数据跑 `pnpm run test:native-services`、`test:native-room`、`test:native-channel-homes`，验证 DSH 原生接缝（这三条从源码检出加载 `dist/src`，证明的是接缝，不证明更新按钮装对了包）；盘点主人已安装环境里有没有别的插件或脚本用到 `her-world/core` 的被删字段，有就在隔离环境验证它的实际入口 |
-| D. 真实副本演练（主人，独立设备，复用 M1 流程，`docs/development.md:113`） | 源码检出固定在 RC 的提交。① 直接升级：0.1.8 → RC，不跑迁移，聊天、跨会话召回、桌宠、Room 正常。② 迁移：0.1.8 上停写，`companion-migrate.mjs plan` → `run --backup <新目录>`，通过后升级到 RC 正常使用。③ 回退：在同一设备同一路径**先换回与备份指纹一致的 0.1.8**，确认 DSH 和写入者已退出，再 `companion-backup.mjs restore --installation … --backup … --before <新目录>`，最后启动旧版：聊天和召回正常；升级后新增的聊天回退后看不到；送达和额度回执保留；升级前已撤回的记忆仍不可见；伙伴身份和便携存储 ID 升级前后不变（隔离机的 DSH 工作区 ID 可以不同）。④ 崩溃续做：真实副本上无法可靠控制断点，证据用合成副本上的 `tests/migrate/crash.test.mjs`（按合成步骤控制断点）加 M1 已通过的真实副本续做记录，并在执行结果里写明这个边界。Agent 只看原因代码、退出码、`restored` 字段和主人回报的通过与否，恢复命令的原始输出留在本机 |
+| D. 真实副本演练（主人，独立设备，复用 M1 流程，`docs/development.md:113`） | 源码检出固定在 RC 的提交。⓪ 准备：M1 流程用 `dafeiyu-setup` 装的 0.1.8 把 Core 配置写在包内，换包会丢（`product.md` 已知问题 8）。所以在做备份之前，先退出 DSH，把安装回执里的 Core 配置追加为 profile 层覆盖，在版本页换成 npm 版 0.1.8，确认聊天和召回正常；之后的备份、升级和③里的「换回 0.1.8」都以这个 npm 版 0.1.8 为准。① 直接升级：0.1.8 → RC，不跑迁移，聊天、跨会话召回、桌宠、Room 正常。② 迁移：0.1.8 上停写，`companion-migrate.mjs plan` → `run --backup <新目录>`，通过后升级到 RC 正常使用。③ 回退：在同一设备同一路径**先换回与备份指纹一致的 0.1.8**，确认 DSH 和写入者已退出，再 `companion-backup.mjs restore --installation … --backup … --before <新目录>`，最后启动旧版：聊天和召回正常；升级后新增的聊天回退后看不到；送达和额度回执保留；升级前已撤回的记忆仍不可见；伙伴身份和便携存储 ID 升级前后不变（隔离机的 DSH 工作区 ID 可以不同）。④ 崩溃续做：真实副本上无法可靠控制断点，证据用合成副本上的 `tests/migrate/crash.test.mjs`（按合成步骤控制断点）加 M1 已通过的真实副本续做记录，并在执行结果里写明这个边界。Agent 只看原因代码、退出码、`restored` 字段和主人回报的通过与否，恢复命令的原始输出留在本机 |
 | E. 正式发版（主人） | 在 RC 冻结后的 `main` 上发 `0.2.0`；核对正式版与 RC 的源码差异只有版本元数据；门禁全绿；在隔离环境用更新按钮装一次正式包确认能激活，再升级日常机器。0.1.8 的安装包和回退步骤留好 |
 
 **主人的验收动作**：日常机器装 0.2.0 正常用，聊天、记忆、桌宠、Room、QQ 都正常。回退只在 D 的隔离副本上验证，不在日常机器上做（回退会丢掉新版期间的聊天，`decisions.md:29`）。日常升级不附带跑元数据迁移（理由见拍板点 4）。
@@ -213,6 +213,8 @@ B 的原文（`product.md:274`）：保留检查和棘轮、概念统一，在�
 - 临时副本执行 `mise exec -- pnpm run build` 通过；随后 `mise exec -- pnpm run test:behavior-list` 的索引测试 11 条、行为清单 52 条均通过，失败 0 条，含本机回环 Memory 测试。
 - 门禁：在合并结果（main `6edef28` + 本分支 `442aeab`）上 `pnpm run verify` 全绿（1417 个测试全过，含 Memory 回环测试、`check:release`、`check:package`），`pnpm run build && pnpm run test:behavior-list` 索引 11 条、行为清单 52 条全过。已安装环境的外部调用、真实副本升级与回退留待 C、D 批验收。
 - 第一轮审查返工补齐正式版与预发布版的升级指引、播放证据与能力行的登记限制，以及离线备份的安装回执要求和升级顺序。
+- C 批（进行中）：`0.2.0-rc.1` 已发布，冻结提交 `852030a`，与 `fd70ea2` 只差版本元数据；第一次尝试有 1 项测试失败，主人确认是 GitHub 侧问题，第三次尝试通过。三条原生检查在 `852030a` 上通过（付费调用 0）；日常 profile 里除 her-world 自身的副本外，没有代码用到被删字段。
+- C 批隔离环境升级后 `00-Core` 报 `Invalid companionId`：主人复现确认是 setup 版换成 npm 版就会发生（同版本 0.1.8 也一样），不是 RC 回归，登记为已知问题 8；隔离环境改为 npm 版 0.1.8 加 profile 层覆盖后重做升级。
 
 ## 审查结论
 
