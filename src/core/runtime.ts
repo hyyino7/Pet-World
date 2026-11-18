@@ -8,7 +8,10 @@ import {canonical, check, CoreStore, id, reject, Rejection, revision, text, time
 import {CapabilityTable} from './tables/capabilities.js';
 
 export interface CoreConfig {
-  dataDir:string; companionId:string; scopeId:string; ownerActorId:string;
+  dataDir:string; companionId:string;
+  /** Scope of the companion identity. */
+  scopeId:string;
+  ownerActorId:string;
   displayName:string; character:string; conversation?:Partial<ConversationOptions>;
   memory?:import('../memory/client.js').MemoryConfig;
 }

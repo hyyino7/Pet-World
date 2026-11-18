@@ -194,7 +194,7 @@ export function installEmotion(ctx, host) {
         if (shared)
             return { id: shared.workspaceId, path: shared.path, guest: shared.guest };
         const status = ctx.petWorld.sessionStatus(session);
-        return status?.state === 'ready' && status.target ? { ...status.target, guest: false } : undefined;
+        return status?.state === 'ready' && status.target ? { id: status.target.id, path: status.target.path, guest: false } : undefined;
     }
     const warn = (error) => ctx.logger('chatpet-emotion').warn('Recent expression unavailable', error instanceof Error ? error.message : 'unknown');
     // Keep the existing anonymous callback's vocabulary scope stable for R8.
