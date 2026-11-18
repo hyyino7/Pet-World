@@ -6,7 +6,7 @@ import type {Context} from '@deepseek-ai/cordis';
 import type {Agent} from '@deepseek-ai/dsh-agent';
 import {homeView,emptyHomeState} from '#feiyu-home';
 import type {PetCoreHost} from '../../src/core/index.js';
-import {createLifeSourceAdapter} from '../../src/core/life-tool-policy.js';
+import {createLifeSourceAdapter} from '../../src/life/tool-policy.js';
 import {prepareLifeHistory,applyLifeHistory,historicalStateOverview} from '../../src/core/native/history-maintenance.js';
 import {SourceAdapterTable} from '../../src/core/tables/sources.js';
 

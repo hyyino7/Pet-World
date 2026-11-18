@@ -21,7 +21,7 @@ import {presentFacts} from '../core/interaction-presentation.js';
 import type { CompanionFact, CompanionFactSource } from '../contracts/interaction.js';
 import { CONTRACT_VERSION } from '../contracts/version.js';
 import {readFactReferences} from './facts.js';
-import {createLifeSourceAdapter} from '../core/life-tool-policy.js';
+import {createLifeSourceAdapter} from './tool-policy.js';
 import type {TableRegistration} from '../contracts/tables.js';
 
 type Runtime = ReturnType<typeof createLifeRuntime>;

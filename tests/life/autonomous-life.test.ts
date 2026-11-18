@@ -9,7 +9,7 @@ import {CompanionRoom,type RoomEconomyPort} from '../../src/behavior/room.js';
 import {PersistentLifePlan,parsePlanDraft} from '../../src/life/plan.js';
 import type {CompanionBehavior} from '../../src/behavior/plugin.js';
 import {CoreNative} from '../../src/core/native/conversation.js';
-import {createLifeSourceAdapter} from '../../src/core/life-tool-policy.js';
+import {createLifeSourceAdapter} from '../../src/life/tool-policy.js';
 import type {PetCoreHost} from '../../src/core/index.js';
 import type {Context} from '@deepseek-ai/cordis';
 import type {CoreRuntime} from '../../src/core/runtime.js';

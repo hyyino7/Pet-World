@@ -1,6 +1,6 @@
-import { companionWritingScope } from './companion-foundation.js';
-import { assertLifeReviewFile, lifeReviewFileAccessKey } from './life-review-files.js';
-import { matchesNativeScope } from './native/conversation.js';
+import { companionWritingScope } from '../core/companion-foundation.js';
+import { assertLifeReviewFile, lifeReviewFileAccessKey } from './review-files.js';
+import { matchesNativeScope } from '../core/native/conversation.js';
 /** Capability names, never phrase matching or command-string filtering. */
 const lifeCapabilities = new Set([
     'life_plan_read', 'life_plan_update', 'life_plan_keep', 'life_activity_control',
@@ -105,4 +105,4 @@ export function createLifeSourceAdapter(ctx, host, accepts) {
         },
     };
 }
-//# sourceMappingURL=life-tool-policy.js.map
+//# sourceMappingURL=tool-policy.js.map

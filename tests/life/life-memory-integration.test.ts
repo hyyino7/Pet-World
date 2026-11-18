@@ -7,7 +7,7 @@ import {tmpdir} from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {CoreRuntime} from '../../src/core/runtime.js';
 import {CoreNative, type NativeScope} from '../../src/core/native/conversation.js';
-import {createLifeSourceAdapter} from '../../src/core/life-tool-policy.js';
+import {createLifeSourceAdapter} from '../../src/life/tool-policy.js';
 import type {PetCoreHost} from '../../src/core/index.js';
 import type {Context} from '@deepseek-ai/cordis';
 import {NativeMemory} from '../../src/core/native/memory.js';

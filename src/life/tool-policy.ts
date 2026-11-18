@@ -1,10 +1,10 @@
 import type {Context} from '@deepseek-ai/cordis';
 import type {UserMessage} from '@deepseek-ai/dsh-session';
 import type {SourceAdapter,SourceBranch} from '../contracts/tables.js';
-import type {PetCoreHost} from './index.js';
-import {companionWritingScope} from './companion-foundation.js';
-import {assertLifeReviewFile,lifeReviewFileAccessKey,type LifeReviewFileAccess} from './life-review-files.js';
-import {matchesNativeScope,type NativeScope,type NativeSourceContext} from './native/conversation.js';
+import type {PetCoreHost} from '../core/index.js';
+import {companionWritingScope} from '../core/companion-foundation.js';
+import {assertLifeReviewFile,lifeReviewFileAccessKey,type LifeReviewFileAccess} from './review-files.js';
+import {matchesNativeScope,type NativeScope,type NativeSourceContext} from '../core/native/conversation.js';
 
 /** Capability names, never phrase matching or command-string filtering. */
 const lifeCapabilities = new Set([

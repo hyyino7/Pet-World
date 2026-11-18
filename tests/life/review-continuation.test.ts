@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
-import {createLifeSourceAdapter} from '../../src/core/life-tool-policy.js';
+import {createLifeSourceAdapter} from '../../src/life/tool-policy.js';
 import {apply} from '../../src/core/native/agent.js';
 import {SourceAdapterTable} from '../../src/core/tables/sources.js';
 import {createUserMessage} from '@deepseek-ai/dsh-llm';
