@@ -59,14 +59,6 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
       if (!status || ctx.get('petMemory')) return status;
       return {...status, state:'disabled', reason:'Memory is off for the next turn in every conversation; retained Bank and native logs remain'};
     };
-    statuses['desktop.room'] = () => {
-      if (!ctx.get('petRoom')) return;
-      const bound = isBound();
-      return {
-        state: bound ? 'ready' : 'unavailable', reason: bound ? null : 'Bind a workspace to open the room',
-        supportedOperations: bound ? ['view', 'garden', 'history'] : [],
-      };
-    };
     statuses['channel.qq'] = () => {
       const channels = ctx.get('petChannels');
       if (!channels) return;

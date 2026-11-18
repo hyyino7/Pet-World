@@ -416,13 +416,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/behavior/playback.ts\",\"scope\":\"resolveActivityPlayback\"}",
@@ -1031,13 +1031,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/behavior/plugin.ts\",\"scope\":\"<module>\"}",
@@ -2206,13 +2206,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 111
+        "line": 112
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 111,
+      "line": 112,
       "column": 32,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/behavior/room.ts\",\"scope\":\"<module>\"}",
@@ -2618,13 +2618,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/behavior/room.ts\",\"scope\":\"<module>\"}",
@@ -5105,13 +5105,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/behavior/room.ts\",\"scope\":\"CompanionRoom/dispatchExecution\"}",
@@ -6071,13 +6071,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/behavior/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
@@ -7004,13 +7004,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/behavior/room.ts\",\"scope\":\"CompanionRoom/animationContext\"}",
@@ -7056,13 +7056,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/behavior/room.ts\",\"scope\":\"CompanionRoom/animationContext\"}",
@@ -8356,13 +8356,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/request",
-        "line": 75
+        "line": 76
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 75,
+      "line": 76,
       "column": 67,
       "scope": "Room/request",
       "target": "{\"file\":\"src/behavior/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -8483,13 +8483,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 111
+        "line": 112
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 111,
+      "line": 112,
       "column": 32,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/behavior/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -13569,13 +13569,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/request",
-        "line": 66
+        "line": 67
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 66,
+      "line": 67,
       "column": 10,
       "scope": "Room/request",
       "target": "{\"file\":\"src/console/plugin.ts\",\"scope\":\"apply\"}",
@@ -14219,13 +14219,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/request",
-        "line": 66
+        "line": 67
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 66,
+      "line": 67,
       "column": 10,
       "scope": "Room/request",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -14704,13 +14704,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -15662,13 +15662,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -19133,13 +19133,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
@@ -19392,13 +19392,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 138
+        "line": 139
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 138,
+      "line": 139,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/desktop/plugin.ts\",\"scope\":\"<module>\"}",
@@ -20571,13 +20571,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 111
+        "line": 112
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 111,
+      "line": 112,
       "column": 32,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/life/plan-tools.ts\",\"scope\":\"<module>\"}",
@@ -20672,13 +20672,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 111
+        "line": 112
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 111,
+      "line": 112,
       "column": 32,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/life/plan-tools.ts\",\"scope\":\"<module>\"}",
@@ -20769,13 +20769,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 111
+        "line": 112
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 111,
+      "line": 112,
       "column": 32,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/life/plan-tools.ts\",\"scope\":\"<module>\"}",
@@ -21186,13 +21186,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/life/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -21575,13 +21575,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/request",
-        "line": 75
+        "line": 76
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 75,
+      "line": 76,
       "column": 67,
       "scope": "Room/request",
       "target": "{\"file\":\"src/life/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -21754,13 +21754,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 111
+        "line": 112
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 111,
+      "line": 112,
       "column": 32,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/life/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -21897,13 +21897,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/life/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -22399,13 +22399,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/request",
-        "line": 75
+        "line": 76
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 75,
+      "line": 76,
       "column": 67,
       "scope": "Room/request",
       "target": "{\"file\":\"src/life/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -22604,13 +22604,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/life/plugin.ts\",\"scope\":\"<module>\"}",
@@ -22653,13 +22653,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/request",
-        "line": 75
+        "line": 76
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 75,
+      "line": 76,
       "column": 67,
       "scope": "Room/request",
       "target": "{\"file\":\"src/life/plugin.ts\",\"scope\":\"CompanionLife/controlPlan\"}",
@@ -22695,13 +22695,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/request",
-        "line": 75
+        "line": 76
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 75,
+      "line": 76,
       "column": 67,
       "scope": "Room/request",
       "target": "{\"file\":\"src/life/plugin.ts\",\"scope\":\"CompanionLife/controlPlan\"}",
@@ -22736,13 +22736,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 14,
+      "line": 15,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/life/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
@@ -22824,13 +22824,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 121
+        "line": 122
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 121,
+      "line": 122,
       "column": 32,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/room/photo.ts\",\"scope\":\"<module>\"}",
@@ -22904,13 +22904,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 121
+        "line": 122
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 121,
+      "line": 122,
       "column": 78,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/room/photo.ts\",\"scope\":\"<module>\"}",
@@ -22984,13 +22984,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 121
+        "line": 122
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 121,
+      "line": 122,
       "column": 32,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/room/photo.ts\",\"scope\":\"roomPhoto\"}",
@@ -23064,13 +23064,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 121
+        "line": 122
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 121,
+      "line": 122,
       "column": 78,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/room/photo.ts\",\"scope\":\"roomPhoto\"}",
@@ -23130,7 +23130,7 @@
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 55,
+      "line": 56,
       "column": 12,
       "scope": "Room/request",
       "target": "{\"file\":\"src/room/voice-client.js\",\"scope\":\"voiceFetch\"}",
@@ -23166,13 +23166,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/request",
-        "line": 55
+        "line": 56
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 66,
+      "line": 67,
       "column": 10,
       "scope": "Room/request",
       "target": "{\"file\":\"src/room/window-main.cjs\",\"scope\":\"<module>\"}",
@@ -23214,13 +23214,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/request",
-        "line": 66
+        "line": 67
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 66,
+      "line": 67,
       "column": 10,
       "scope": "Room/request",
       "target": "{\"file\":\"src/room/window-preload.cjs\",\"scope\":\"<module>\"}",
@@ -23262,13 +23262,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/request",
-        "line": 66
+        "line": 67
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 66,
+      "line": 67,
       "column": 10,
       "scope": "Room/request",
       "target": "{\"file\":\"src/room/window.ts\",\"scope\":\"<module>\"}",
@@ -23310,13 +23310,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/request",
-        "line": 66
+        "line": 67
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 121,
+      "line": 122,
       "column": 32,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/room/shot-browser.cjs\",\"scope\":\"main\"}",
@@ -23350,13 +23350,13 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 121
+        "line": 122
       }
     },
     {
       "rule": "R8",
       "file": "src/room/plugin.ts",
-      "line": 121,
+      "line": 122,
       "column": 78,
       "scope": "Room/tools",
       "target": "{\"file\":\"src/room/shot-browser.cjs\",\"scope\":\"main\"}",
@@ -23390,7 +23390,7 @@
       "other": {
         "file": "src/room/plugin.ts",
         "scope": "Room/tools",
-        "line": 121
+        "line": 122
       }
     },
     {
