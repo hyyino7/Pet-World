@@ -212,7 +212,26 @@ B 的原文（`product.md:274`）：保留检查和棘轮、概念统一，在�
 - `workspace.runtime` 删 `baseCapabilities()`，由 `capabilityTable` 与 `capabilityStatuses` 提供能力状态（`src/core/runtime.ts:31`）。`native.memory.connection.start()` 的范围字段改为 `bankId`（`src/memory/client.ts:11`、`src/core/native/memory.ts:53`）。`./contracts` 新增登记类型（`src/contracts/index.ts:9`）。
 - 临时副本执行 `mise exec -- pnpm run build` 通过；随后 `mise exec -- pnpm run test:behavior-list` 的索引测试 11 条、行为清单 52 条均通过，失败 0 条，含本机回环 Memory 测试。
 - 按 A 批此次指示未跑 `verify`。已安装环境的外部调用、真实副本升级与回退留待对应批次验收。
+- 第一轮审查返工补齐正式版与预发布版的升级指引、播放证据与能力行的登记限制，以及离线备份的安装回执要求和升级顺序。
 
 ## 审查结论
 
-<Claude 验收时填写必须修的问题>
+A 批第一轮（Codex 审查 + Claude 核实）。兼容面结论核实属实：`v0.1.8..89b3f37` 中 `package.json` 只改了 `scripts`，`cordis.patch.yml`、各模块 `Config`、`ctx.provide` 服务名都没变；`PetCoreHost` 顶层字段不变；更新说明的四项行为变化和 `docs/decisions.md` 2026-11-18 的「模块没加载时没有能力行」「来源适配表分实时准入和只读分类」一致；三个链接锚点都存在。
+
+**必须修（Codex，只改 `docs/release/notes.md`）**
+
+1. `docs/release/notes.md:27` 只写了「选择 0.2.0 更新」。发布工作流会把这份文件原样作为 `0.2.0-rc.1` 和 `0.2.0` 的 Release 说明（`.github/workflows/release.yml:109` 的 `--notes-file`），E 批又要求正式版与 RC 只差版本元数据，所以 RC 之后不能再改这份文件，它必须对两个版本都成立。改为：正式版选 `0.2.0`；`0.2.0-rc.1` 是预发布版，只用于隔离环境验证，要在版本页勾选预发布才能看到，日常机器等正式版（`docs/github-updates.md:11-13`）。
+2. `docs/release/notes.md:17,20` 两条替代写法遇到冲突会抛错，说明里要写清限制：
+   - `registerPlaybackEvidence` 用固定键 `playback`，只允许一个提供者（`src/core/native/conversation.ts:96-98`、`src/core/tables/registry.ts:21`）；内置 Emotion 已经登记（`src/emotion/plugin.ts:179`），所以它不能用来覆盖仍在运行的内置提供者，这一点和旧的赋值不同。
+   - `capabilityTable.register(row)` 只能登记自己模块提供、尚未登记的能力行，卸载时撤销；`core.conversation`、`memory.lifecycle` 由 Core 预先登记（`src/core/runtime.ts:107-116`），重复登记会抛错。读取和提供分开写。
+
+**门禁阻塞（不是本分支引入，不交给 Codex）**
+
+3. `pnpm run verify` 在 `check:package` 失败：`Missing packaged dependency docs/development.md -> product.md`。`docs/development.md:118` 的 `[product.md](product.md#典型修改前后对比)` 指向不在包里的文件（`package.json` 的 `files` 只放了 `docs/settings.md`、`portability.md`、`development.md`、`github-updates.md`），由 main 上的 `072ecca` 引入，main 同样会失败。扫描整个包，只有这一处断链。已由 Claude 在 main 上单独修复（`6edef28`，改成源码检出中的路径加小节名），本分支不用改；A 批要等合并后的结果跑通 `verify` 才算完成。verify 其余部分已通过：1417 个测试全过，Memory provider 测试和 `check:release` 都通过。
+
+**建议修（不影响合并）**
+
+- `docs/release/notes.md:27` 离线备份需要已完成的安装回执（`scripts/companion-backup.mjs:29-31`）；只用 DSH 原生管理器装过、没跑过 `dafeiyu-setup` 的环境可能没有回执。建议补一句「备份需要已完成的安装回执，备份成功后再升级」。
+- 执行结果最后一行在门禁跑通后改成实际结果。
+
+复查（第二轮）：必须修第 1、2 条和建议修第 1 条已修好（`docs/release/notes.md:17,20-21,27`）；门禁在合并结果上重跑。
