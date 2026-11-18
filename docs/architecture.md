@@ -72,24 +72,27 @@
 5. **记录库**：自述、历史、日记、相册。
 6. **五张表**（本层提供，上层登记）：
 
-| 表 | 作用 | 现在的做法（要替换的） |
+| 表 | 作用 | 现状（M2 后） |
 | --- | --- | --- |
-| **初始化表** | 各模块登记自己的目录、文件、数据库如何建、如何校验、清单里写什么 | `core/initialization.ts` 里写死 13 个目录、桌宠配置、Life 控制文件、情绪文件 |
-| **提示词与历史投影表** | 各模块登记提示词片段，以及「当前状态」在历史里怎么投影、怎么替换旧快照 | `registerWorldPrompt` 已有；`core/native/history-maintenance.ts` 直接 import Room、Economy、Life 的投影函数 |
-| **来源适配表** | 一种「原生输入来源」登记一整套适配：准入、工具限制、守卫、历史投影、图片恢复 | `host.native.lifeAdmission / roomAdmission / channelBoundary` 的赋值；`core/native/agent.ts` 里写死的 Life 工具限制、回顾守卫、Desktop 图片恢复 |
-| **能力状态表** | 各模块登记自己的状态行（只有状态和操作名，不能被调用） | `core/plugin.ts` 里约 50 行主动读 6 个上层服务来拼 |
-| **运维操作表** | 设置页要执行的操作（开房间、授权访问、改平台设置、操作 Channels）由各模块登记，控制台只调用这张表 | 控制台直接认识 Desktop、Room、Life、Emotion、Economy、Channels |
+| **初始化表** | 各模块登记自己的目录、文件、数据库如何建、如何校验、清单里写什么 | 未做，移到 M3（[decisions.md](decisions.md) 2026-11-18）：`core/initialization.ts` 里仍写死 13 个目录、桌宠配置、Life 控制文件、情绪文件 |
+| **提示词与历史投影表** | 各模块登记提示词片段，以及「当前状态」在历史里怎么投影、怎么替换旧快照 | 提示词片段仍用 `registerWorldPrompt`，段登记和状态快照退休留到 M3；历史投影已改由工具声明的 `historyOverview` 派生（`core/tables/tools.ts`），Core 不再 import 各模块的投影函数 |
+| **来源适配表** | 一种「原生输入来源」登记一整套适配：准入、工具限制、守卫、历史投影、图片恢复 | 已落地：`core/tables/sources.ts`，挂在 `host.native.sourceTable`。Core 登记主人原生输入，Life、Room、Channels 各自登记适配器，Desktop 登记首步前的图片恢复和第 7、9 行声明（5.8）。判定分 `unclaimed / rejected / accepted / failed`，另有只读分类供历史投影。登记完成屏障未实现，见下面的契约 |
+| **能力状态表** | 各模块登记自己的状态行（只有状态和操作名，不能被调用） | 已落地：`core/tables/capabilities.ts`。Core 只登记会话和记忆两行，其余由提供它的模块在入口登记、卸载时撤销；模块缺席即无行，设置页对这类拥有者显示「不可用」 |
+| **运维操作表** | 设置页要执行的操作（开房间、授权访问、改平台设置、操作 Channels）由各模块登记，控制台只调用这张表 | 未做（阶段 3）：控制台直接认识 Desktop、Room、Life、Emotion、Economy、Channels |
 
-**每张表的契约（实施方案里写成文档并配测试）：**
+另有伙伴工具声明表（`core/tables/tools.ts`，挂在 `host.native.toolTable`）：各模块在工具定义旁声明可用来源和可选的历史概览，Life 名单和历史瘦身由它派生。三个登记口共用 `core/tables/registry.ts` 的登记表。
+
+**每张表的契约（契约测试在 `tests/core/tables*.test.ts`）：**
 
 - 重复登记：同一键重复登记是错误，不是覆盖。
 - 优先级和顺序：需要顺序的表（提示词、来源适配）显式写排序键，不靠加载先后。
 - 「没有适配器认领」和「适配器拒绝」是两种结果，不能都当成 `false`。
-- 登记完成屏障：第一层在所有登记完成之前，对来源适配表返回「未就绪」，不是「放行」。
+- 登记完成屏障：第一层在所有登记完成之前，对来源适配表返回「未就绪」，不是「放行」。**M2 未实现**：没有找到可用的宿主接点，硬加会让启动窗口里的主人输入被拒；现在没登记的来源返回 `unclaimed` 并拒绝，和 M2 前一致，屏障留到 M3。
 - 撤销：模块卸载时撤销登记；撤销之后，在途调用必须失效或被取消，不能继续用旧回调。
 - 异常：适配器抛错只影响它负责的来源，不拖垮其他来源，也不放行。
 - 授权边界：owner、guest、Life、电视画面这几种输入的授权互相独立；渠道准入还要核验原消息和一次性授权，所以准入不是一个布尔回调，而是带上下文的结构化判定。
-- 实时准入和只读分类分开：来源适配表的准入只判断「现在这条输入能不能进」；历史投影等事后读取已保存消息时，用只读分类按消息字段选出分支，不看当前运行状态、不消耗授权。
+- 实时准入和只读分类分开：来源适配表的准入只判断「现在这条输入能不能进」；历史投影等事后读取已保存消息时，用只读分类按消息字段选出分支，不看当前运行状态、不消耗授权。没有被任何适配器认领的已保存输入，一律保护所在轮次不瘦身。
+- 词表可扩展：`source.kind` 和工具来源的内置取值在 `contracts/tables.ts` 声明；新来源的 kind 在 DSH 的 `MessageSourceMap` 声明一次即可，新的工具来源用 `toolTable.registerSource` 登记，拼错或未登记的被拒绝，撤销后旧授权立即失效。
 
 ### 2.3 第二层「生活世界」管什么
 
@@ -293,16 +296,26 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 - 取消、归档、恢复、owner 接管的行为；
 - 绑定代次。
 
-会话种类：普通 owner 会话、共享 home、Life 自主轮次、回顾轮次、渠道里的主人私聊、guest 私聊或群聊、Desktop 聊天、Room 私聊与电视观看、Desktop 碎碎念与梦话（没有原生会话，也要写出来）。每行的内容来自对现有源码的盘点，**不由适配器的回调隐含**；来源适配表落地后，每一行由登记声明，下面的表就是登记要保持的行为。
+会话种类：普通 owner 会话、共享 home、Life 自主轮次、回顾轮次、渠道里的主人私聊、guest 私聊或群聊、Desktop 聊天、Room 私聊与电视观看、Desktop 碎碎念与梦话（没有原生会话，也要写出来）。每行的内容来自对现有源码的盘点，**不由适配器的回调隐含**；M2 起每一行由下面「登记者」表里的模块声明，下面的表就是登记要保持的行为。
 
-下面四张表写现状。行号以 `main` 的 `9a0d1dd` 为准。「测试」只算 `pnpm run verify` 会跑的测试；`scripts/checks/check-native-*.mjs` 是门禁外的手动检查，单独标出，不算有测试。
+下面四张表写行为现状，M2 后行为不变，只是声明改由登记者提供。表里的行号是盘点时 `9a0d1dd` 的位置；准入、工具策略、记忆观察和情绪更新的现行代码以登记处为准。「测试」只算 `pnpm run verify` 会跑的测试；`scripts/checks/check-native-*.mjs` 是门禁外的手动检查，单独标出，不算有测试。每格由哪些测试覆盖，以 `tests/behavior-list/index.json` 的 `policyCells` 为准，`tests/behavior-list/index.test.mjs` 检查 5.8.2–5.8.4 每一格至少有一条非 L3 条目；表里「见行为清单」后的编号是其中的条目。
+
+| 行 | 登记者 | 登记处 |
+| --- | --- | --- |
+| 1、2 | Core 的 `core-owner`（第 2 行只声明、不判定） | `src/core/native/conversation.ts`，`CoreNative` 构造时登记，`order` 排在其他认领 `user` 的适配器前面 |
+| 3、4 | Life 的 `life`（`life`、`review` 两个分支） | `src/life/tool-policy.ts` 的 `createLifeSourceAdapter`；`src/life/plugin.ts` 登记和撤销 |
+| 5、6 | Channels 的 `channels`（`owner`、`guest` 两个分支，含 QQ 补答） | `src/channels/sessions.ts` |
+| 7、9 | Desktop 的 `desktop`（只声明，第 7 行沿用第 1 行；另登记首步前的图片恢复） | `src/desktop/plugin.ts` |
+| 8 | Room 的 `room`（私聊、电视两个分支） | `src/room/chat.ts` 的 `sourceAdapter()`；`src/room/plugin.ts` 登记 |
+
+播放证据由 Emotion 登记（`src/emotion/plugin.ts`，`host.native.registerPlaybackEvidence`）；footer 在轮次结束时按各来源声明取授权快照。工具能给哪些来源用，由工具在定义处声明、登记到工具声明表。
 
 #### 5.8.1 会话来源的概念表
 
 | 概念 | 定义处 | 取值或形状 | 同名不同义、转换点 |
 | --- | --- | --- | --- |
 | 输入来源 `source.kind` | DSH 的 `MessageSourceMap`；本地补充声明在 `room/chat.ts:11-13`（`chatpet-room-tv`）、`core/native/recall.ts:5`（`chatpet-recall`）、`core/native/prompt.ts:10`（`runtime-context`） | 本地识别 7 种：`user`、`dsh-world-life`、`dsh-world-reply-nudge`、`chatpet-room-tv`，以及不作为输入的 `chatpet-recall`、`runtime-context`、`compact-checkpoint`（`core/native/conversation.ts:170`）。上游的完整集合未知（见第 11 节） | `user` 同时承载主人原生输入、Desktop/Room 私聊（带 `rpcId`）和渠道输入（带 `identity`）三种来源，靠附加字段区分（`core/native/conversation.ts:38`）；回顾不是独立 kind，而是 `dsh-world-life` 加 `purpose: 'review'`（`core/native/agent.ts:63-65`） |
-| 准入 `admission` | `core/native/conversation.ts:37-41` 的 `acceptsInput` | 布尔：无 `identity` 的 `user` 直接放行；其余依次问 `lifeAdmission`、`roomAdmission`、`channelBoundary.admit`（`:24-26`，分别由 `life/plugin.ts:54`、`room/plugin.ts:144`、`channels/sessions.ts:93` 赋值） | 「没有适配器认领」和「适配器拒绝」都返回 `false`；任一适配器认领即放行，不区分是谁认领的 |
+| 准入 `admission` | `core/native/conversation.ts` 的 `acceptsInput`，判定来自来源适配表（`core/tables/sources.ts`） | 结构化判定 `unclaimed / rejected / accepted / failed`，只有 `accepted` 放行；不带 `identity` 的 `user` 由 Core 的 `core-owner` 准入；另有只读 `classify` 供历史投影 | 同一 `source.kind` 按 `order` 依次判定，只有 `unclaimed` 交给下一个；适配器抛错返回 `failed`，该 kind 后面的适配器不再判定，所以 `core-owner` 排在最前 |
 | 原生会话作用域 `NativeScope` | `core/native/conversation.ts:12` | `{workspaceId, path, storageId, guest}`，由 `core/native/agent.ts:42-49` 算出 | guest 会话的 `workspaceId` 也取主人当前绑定的工作区（`core/native/agent.ts:48`），不是 guest 自己所在的渠道工作区；Emotion 另算一份 `{id, path, guest}`（`emotion/plugin.ts:166-171`） |
 | 记忆作用域 `MemoryScope` | `memory/client.ts:11` | `{companionId, scopeId, workspaceId}` | 其中 `workspaceId` 实际传入 `storageId`（`core/native/memory.ts:53`，已知问题 2） |
 | `scopeId` | `core/runtime.ts:9` 的 Core 配置 | 伙伴身份的作用域字符串，存进 Core 元数据 `scope`（`core/runtime.ts:38-42`） | 授权上下文用它（`core/authority.ts:11,25`），Memory 启动参数和会话副本也带它（`core/native/memory.ts:53`、`core/native/transcripts.ts:22`）；与上面两种「scope」无关 |
@@ -315,29 +328,29 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | --- | --- | --- | --- | --- | --- |
 | 1 | 普通 owner 会话 | DSH 原生输入，`user` 无 `identity`，直接准入（`core/native/conversation.ts:38`）；证据记为 `owner_statement`，actor 是 `ownerActorId`（`:74-75`） | 当前绑定工作区里任一就绪会话（`core/native/agent.ts:45-47`）；历史是这个会话自己的；预设由主人在 DSH 里选 | 取消、权限由 DSH 原生负责（`core/native/agent.ts:160-161`）；工作区归档后把会话交给 Memory 归档（`:108-128`）；首步前恢复 Desktop 图片和会话副本（`:189-193`） | `sameScope` 比较 `workspaceId/path/storageId/guest`（`core/native/agent.ts:51`）；没有实例代次 |
 | 2 | 共享 home | 容器，不是来源：主人输入、Life 输入、渠道主人输入都落在这里，授权面随输入来源走（第 1、3、4、5 行） | 每个 Core 一个，缓存后复用（`core/companion-foundation.ts:74-133`）；home 的会话 ID 记在 `life.json`（`:60-62`）；预设取 Life 的 `agentPreset`，否则 DSH 组合预设，否则 `standard`（`:94`）；标题随伙伴名刷新（`:183-196`） | 归档的 home 由上游 `createHome` 识别（`:125`）；打开前先恢复会话副本（`:76`）；前台打开不要求 Life 启用（`:64`） | 打开时比较绑定的 `id/path`（`:90-93`）；R7 外的换绑由第 1 行规则负责 |
-| 3 | Life 自主轮次 | `dsh-world-life`，由 `lifeAdmission` 准入：Life 运行中、会话是 home、事实批次被接受（`life/plugin.ts:54-55`）；actor 是伙伴，有事实时是 `system:companion-world`（`core/native/conversation.ts:75`） | 只在 home（同上）；后台轮次（`core/native/agent.ts:184`） | 时长上限到点取消（`core/native/conversation.ts:191`）；卸载 Life 撤销准入，后台轮次一律拒绝（`life/plugin.ts:528`、`core/native/conversation.ts:23`）；主人输入入队即解除 Life 限制（`core/native/agent.ts:76-82`），轮中接管结束自主计数（`:201-208`） | 同第 1 行；Life 自己另比 `storageId` 和 `companionId`（`life/plugin.ts:166-170`） |
+| 3 | Life 自主轮次 | `dsh-world-life`，由 Life 来源适配器准入：Life 运行中、会话是 home、事实批次被接受（`life/plugin.ts` 的 `registerSource`）；actor 是伙伴，有事实时是 `system:companion-world`（`core/native/conversation.ts:75`） | 只在 home（同上）；后台轮次（`core/native/agent.ts:184`） | 时长上限到点取消（`core/native/conversation.ts:191`）；卸载 Life 撤销准入，后台轮次一律拒绝（`life/plugin.ts:528`、`core/native/conversation.ts:23`）；主人输入入队即解除 Life 限制（`core/native/agent.ts:76-82`），轮中接管结束自主计数（`:201-208`） | 同第 1 行；Life 自己另比 `storageId` 和 `companionId`（`life/plugin.ts:166-170`） |
 | 4 | 回顾轮次 | `dsh-world-life` 加 `purpose: 'review'` 和 `reviewDay`（`core/native/agent.ts:63-65`），准入同第 3 行 | 只在 home；中断的回顾把权限带到下一次 Life 输入（`:36,60-62,248-249`） | 同第 3 行；主人输入结束回顾权限（`:78-79`）；回顾完成且开启压缩时发 `pet/life.review`（`life/plugin.ts:194-196`），Memory 订阅它（`memory/batch.ts:14`，M3 改为向下调用） | 同第 3 行；回顾文件守卫按访问键复核（`core/life-review-files.ts:83-89`） |
-| 5 | 渠道里的主人私聊 | QQ/微信私聊且 `speakerId` 等于设置的主人（`channels/messaging-settings.ts:50-53`、`channels/sessions.ts:46`）；`user` 带 `identity`，由 `channelBoundary.admit` 准入，每条收件只能用一次（`channels/sessions.ts:76-89`）；QQ 补答 `dsh-world-reply-nudge` 只准一次且核验原消息（`:68-75,168-178`、`core/native/conversation.ts:64-70`），actor 是 `system:qq-reply`（`:75`） | 路由到共享 home（`channels/plugin.ts:52-56`、`channels/sessions.ts:152`）；前台轮次（`core/native/agent.ts:73,182`） | 关闭渠道时取消已准入的主人轮次（`channels/sessions.ts:185`）；补答授权随关闭撤销（`:177,186`） | 准入时存下 `scopeFor` 的 JSON，补答时逐字比较（`channels/sessions.ts:74,88,172`） |
+| 5 | 渠道里的主人私聊 | QQ/微信私聊且 `speakerId` 等于设置的主人（`channels/messaging-settings.ts:50-53`、`channels/sessions.ts:46`）；`user` 带 `identity`，由渠道来源适配器准入，每条收件只能用一次（`channels/sessions.ts:76-89`）；QQ 补答 `dsh-world-reply-nudge` 只准一次且核验原消息（`:68-75,168-178`、`core/native/conversation.ts:64-70`），actor 是 `system:qq-reply`（`:75`） | 路由到共享 home（`channels/plugin.ts:52-56`、`channels/sessions.ts:152`）；前台轮次（`core/native/agent.ts:73,182`） | 关闭渠道时取消已准入的主人轮次（`channels/sessions.ts:185`）；补答授权随关闭撤销（`:177,186`） | 准入时存下 `scopeFor` 的 JSON，补答时逐字比较（`channels/sessions.ts:74,88,172`） |
 | 6 | guest 私聊或群聊 | 渠道里不是主人的已登记身份（`channels/sessions.ts:55-59`）；准入同第 5 行的一次性收件；证据记为 `external_content`，actor 是发言人 `speakerId`（`core/native/conversation.ts:74-75`） | 私聊按发言人、群聊按会话分开（`channels/sessions.ts:29`）；每个对话一个独立工作区目录（`:100-104,119`），会话前缀 `chatpet-guest-<digest>-`（`:103`）；预设固定 `chatpet-channel-guest`，不符就拒绝（`:127,135-136`、`channels/guest.ts:5`） | 关闭渠道时取消在途 guest 轮次（`channels/sessions.ts:184`）；取最新未归档会话（`:112`）；Memory 的归档同步只遍历主人工作区（`core/native/agent.ts:112-115`），guest 会话不经过它 | 同第 5 行；另要求会话 `cwd` 和组合预设不变（`channels/sessions.ts:57-58`） |
 | 7 | Desktop 聊天 | `user` 带 `rpcId`，无 `identity`，按主人输入准入（`desktop/conversation.ts:181`）；同一 `rpcId` 不重复投递（`:173`） | 每个存储绑定记一个会话 ID，存在 Core 的 `desktop-session`（`desktop/index.ts:44-45`、`desktop/conversation.ts:138-141`）；可打开工作区里任一未归档会话（`:142-145`）；新建会话 `chatpet-<uuid>`，用 DSH 默认预设（`:159`） | 停止走原生取消（`:184-189`）；「新建」先保存再归档旧会话（`:147-157`）；关闭小窗只撤销排队命令，不停原生会话（`:81-85`） | `sameBinding` 比较 `id/path/storageId`，另有小窗代次 `revision`（`desktop/conversation.ts:37-39,128`） |
-| 8 | Room 私聊与电视观看 | 私聊：`user` 带 `rpcId`，按主人输入准入（`room/chat.ts:130`）。电视：`chatpet-room-tv`，由 `roomAdmission` 只准当前这一条（`room/chat.ts:78-82,133-134,149`），证据记为 `virtual_action`、actor 是伙伴（`core/native/conversation.ts:74-75`） | 同一个会话：`chatpet-room-<storageId 摘要>-N` 取最新未归档（`room/chat.ts:67-73`），没有就新建，DSH 默认预设（`:89-95`）。私聊是前台轮次，电视是后台轮次（`core/native/agent.ts:73,184`） | 同时只处理一条（`room/chat.ts:111-112`）；调用方取消或 300 秒超时即取消原生轮次（`:113,135-136`）；关闭 Room 等在途轮次结束（`:151-154`）；先恢复会话副本和图片（`:86-87`） | `binding()` 比较 `id/path`（`room/chat.ts:61-66`），回复前后复核会话没换（`:128,145`） |
+| 8 | Room 私聊与电视观看 | 私聊：`user` 带 `rpcId`，按主人输入准入（`room/chat.ts:130`）。电视：`chatpet-room-tv`，由 Room 来源适配器只准当前这一条（`room/chat.ts:78-82,133-134,149`），证据记为 `virtual_action`、actor 是伙伴（`core/native/conversation.ts:74-75`） | 同一个会话：`chatpet-room-<storageId 摘要>-N` 取最新未归档（`room/chat.ts:67-73`），没有就新建，DSH 默认预设（`:89-95`）。私聊是前台轮次，电视是后台轮次（`core/native/agent.ts:73,184`） | 同时只处理一条（`room/chat.ts:111-112`）；调用方取消或 300 秒超时即取消原生轮次（`:113,135-136`）；关闭 Room 等在途轮次结束（`:151-154`）；先恢复会话副本和图片（`:86-87`） | `binding()` 比较 `id/path`（`room/chat.ts:61-66`），回复前后复核会话没换（`:128,145`） |
 | 9 | Desktop 碎碎念与梦话 | 没有原生会话和输入：一次性调用模型，不建 Agent、不写会话记录、不写 Memory（`desktop/features.ts:204-206,213-231`） | 系统提示只有伙伴身份（`:208`）；梦话加上游的说梦话指令（`:229`） | 自动触发要求：同一绑定、不忙、非安静模式、Life 不接管自主、设置开启、睡着与否和梦话一致（`:86-91`）；条件变化即中止（`:271-274`），时长上限（`:211`），Life 启动时暂停（`:308`、`life/plugin.ts:173`） | `same(target)` 复核绑定（`desktop/features.ts:220,232`） |
 
-本表各行的测试：第 1 行 `tests/regressions/audit-r6-memory-scope.test.mjs:183`（等待期间绑定变化即撤下召回）、`tests/core/history-maintenance.test.ts:65`（换工作区不进历史维护）；第 2 行 `tests/core/companion-foundation.test.ts:87`；第 3、4 行 `tests/behavior-list/families.test.mjs:17,61`、`tests/life/review-continuation.test.ts:37`、`tests/life/life-review-runtime.test.mjs:128`；第 5 行 `tests/regressions/audit-qq-recovery.test.mjs:121`、`tests/regressions/audit-r7-channel-nudge.test.ts:71,86`、`tests/behavior-list/channels.test.mjs:14,39`；第 6 行 `tests/regressions/audit-qq-recovery.test.mjs:144`；第 7 行 `tests/desktop/desktop.test.ts:26,49`；第 8 行**无测试**（门禁外有 `scripts/checks/check-native-room.mjs`）；第 9 行 `tests/desktop/desktop-features.test.ts:13,157`、`tests/regressions/audit-desktop.test.ts:160`、`tests/regressions/audit-r2-desktop-policy.test.ts:61`。
+本表各行的测试：第 1 行 `tests/regressions/audit-r6-memory-scope.test.mjs:183`（等待期间绑定变化即撤下召回）、`tests/core/history-maintenance.test.ts:65`（换工作区不进历史维护）；第 2 行 `tests/core/companion-foundation.test.ts:87`；第 3、4 行 `tests/behavior-list/families.test.mjs:17,61`、`tests/life/review-continuation.test.ts:37`、`tests/life/life-review-runtime.test.mjs:128`；第 5 行 `tests/regressions/audit-qq-recovery.test.mjs:121`、`tests/regressions/audit-r7-channel-nudge.test.ts:71,86`、`tests/behavior-list/channels.test.mjs:14,39`；第 6 行 `tests/regressions/audit-qq-recovery.test.mjs:144`；第 7 行 `tests/desktop/desktop.test.ts:26,49`；第 8 行见行为清单 M2A-01、M2A-04、M2A-05、M2A-08、M2A-02、M2A-03（门禁外有 `scripts/checks/check-native-room.mjs`）；第 9 行 `tests/desktop/desktop-features.test.ts:13,157`、`tests/regressions/audit-desktop.test.ts:160`、`tests/regressions/audit-r2-desktop-policy.test.ts:61`。
 
 #### 5.8.3 会话策略表：三个授权面
 
 | # | 会话 | 工具权限 | 记忆观察 | 情绪更新 |
 | --- | --- | --- | --- | --- |
-| 1 | 普通 owner 会话 | 预设的原生工具，加上 Core 的 `pet_memory_*`（非 guest 且 Memory 开启，`core/native/agent.ts:154-158`）和各模块登记的工具；DSH 原生权限照常，不加计数（`:160-161`）。测试：`tests/life/life-tool-policy.test.ts:10`（解除限制后恢复主人工具） | 首步召回（`core/native/agent.ts:215-227`）；输入记为 `owner_statement` 排进 Memory（`core/native/conversation.ts:74-75,86-88`），完成的回复也排进（`:133-141`）；Memory 总开关对所有会话一起生效（`:42-45`）。测试：`tests/behavior-list/native.test.mjs:21`、`tests/life/life-memory-integration.test.ts:117,168` | 回复末尾的 `pet-expression` 在轮次完成时写入（`emotion/plugin.ts:265-269,273-278`）；`pet_emotion_update` 工具（`:195-207`）。测试：footer 由 `tests/infrastructure/emotion.test.ts:23`、`tests/emotion/emotion-state.test.ts:10` 覆盖；工具本身**无测试** |
+| 1 | 普通 owner 会话 | 预设的原生工具，加上 Core 的 `pet_memory_*`（非 guest 且 Memory 开启，`core/native/agent.ts:154-158`）和各模块登记的工具；DSH 原生权限照常，不加计数（`:160-161`）。测试：`tests/life/life-tool-policy.test.ts:10`（解除限制后恢复主人工具） | 首步召回（`core/native/agent.ts:215-227`）；输入记为 `owner_statement` 排进 Memory（`core/native/conversation.ts:74-75,86-88`），完成的回复也排进（`:133-141`）；Memory 总开关对所有会话一起生效（`:42-45`）。测试：`tests/behavior-list/native.test.mjs:21`、`tests/life/life-memory-integration.test.ts:117,168` | 回复末尾的 `pet-expression` 在轮次完成时写入（`emotion/plugin.ts:265-269,273-278`）；`pet_emotion_update` 工具（`:195-207`）。测试：footer 由 `tests/infrastructure/emotion.test.ts:23`、`tests/emotion/emotion-state.test.ts:10` 覆盖；工具本身见行为清单 M2A-10 |
 | 2 | 共享 home | 随输入来源（第 1、3、4、5 行） | 随输入来源 | 随输入来源 |
-| 3 | Life 自主轮次 | 只留 Life 能力名单（`core/life-tool-policy.ts:2-9`）：入队时装限制（`core/native/agent.ts:55-70,76-82`），执行时再查（`:166-167`）；另有步数、工具次数、时长上限（`core/native/conversation.ts:182-204`）。Memory 工具只有读、召回、记住，没有更正和撤回（`core/life-tool-policy.ts:5`）。测试：`tests/life/life-tool-policy.test.ts:10,48`；步数和次数上限**无测试** | 召回同第 1 行；输入信封记为 `virtual_action` 排进 Memory（`core/native/conversation.ts:74-75,86-88`），附带的事实逐条登记（`:61-62,103-122`）；完成的非回顾轮次之后把旧生活状态投影进历史（`core/native/agent.ts:254-255,93-103,143-147`）。测试：`tests/life/life-memory-integration.test.ts:94,195`、`tests/life/autonomous-life.test.ts:198,211`、`tests/core/history-maintenance.test.ts:34,57` | `pet_emotion_update` 在名单内（`core/life-tool-policy.ts:6`）；footer 同第 1 行，不按来源排除。测试：工具在名单内由 `tests/life/life-tool-policy.test.ts:48` 覆盖；footer 在 Life 轮次生效**无测试** |
-| 4 | 回顾轮次 | 名单加 `read`、`write`（`core/life-tool-policy.ts:11-13,23`）；回顾文件守卫只许读材料和记录、只许写自述和未封存的日记日（`core/life-review-files.ts:64-93`）。测试：`tests/life/life-review-files.test.ts:25,44,63`、`tests/life/review-continuation.test.ts:50`、`tests/behavior-list/families.test.mjs:61` | 同第 3 行；回顾轮次不做历史投影（`core/native/agent.ts:254`，`core/native/history-maintenance.ts:43`）；压缩批次由 `pet/life.review` 触发（`memory/batch.ts:14`）。测试：`tests/core/history-maintenance.test.ts:57` | 同第 3 行。测试：**无测试** |
-| 5 | 渠道里的主人私聊 | 前台主人轮次，权限同第 1 行（`core/native/agent.ts:73,182-185`），没有 Life 限制和自主计数。测试：**无测试**（门禁外有 `scripts/checks/check-native-channel-homes.mjs`） | 输入记为 `owner_statement`，actor 是 `ownerActorId`，归属带渠道身份（`core/native/conversation.ts:71-75,88`）；补答把原消息加入证据根（`:64-70`）。测试：`tests/regressions/audit-r7-channel-nudge.test.ts:71`（补答核验原消息）；主人渠道输入进 Memory **无测试** | 同第 1 行。测试：**无测试** |
-| 6 | guest 私聊或群聊 | 预设屏蔽所有继承工具（`channels/guest.ts:13`）；`pet_memory_*`、`pet_emotion_update` 不对 guest 登记（`core/native/agent.ts:157`、`emotion/plugin.ts:207`）；自主工具校验拒绝 guest（`core/native/conversation.ts:197-200`）；看不到主人档案和私有环境事实（`core/native/agent.ts:135`、`core/companion-foundation.ts:149-155`）。测试：`tests/behavior-list/families.test.mjs:19`（guest 调 Life 工具被拒）、`tests/life/life-core-integration.test.ts:94`；预设屏蔽全部工具**无测试**（门禁外有 `scripts/checks/check-native-services.mjs:99`） | 召回同一个共享 Bank（`core/native/agent.ts:215-227`，作用域见 5.8.1）；输入记为 `external_content`、actor 是发言人，排进 Memory（`core/native/conversation.ts:74-75,86-88`）；回复归属记为 `external`（`:138`）；拒绝主人私有事实（`:104`）；不做历史投影（`core/native/agent.ts:97`）。测试：`tests/regressions/audit-r6-memory-scope.test.mjs:200`、`tests/life/life-memory-integration.test.ts:181`、`tests/life/autonomous-life.test.ts:227` | 没有工具；**footer 会写共享情绪**（`emotion/plugin.ts:166-170,265-269,273-278`，已知问题 1）。测试：**无测试**（门禁外 `scripts/checks/check-native-services.mjs:104` 断言的就是这个现状） |
-| 7 | Desktop 聊天 | 同第 1 行。测试：**无测试**（第 1 行的测试不经过 Desktop 入口） | 同第 1 行；附带的图片在首步前恢复（`core/native/agent.ts:190`）。测试：**无测试** | 同第 1 行。测试：**无测试** |
-| 8 | Room 私聊与电视观看 | 私聊：同第 1 行，另加 Room 工具（`room/plugin.ts:146`）。电视：所有工具被 Room 的守卫拒绝（`room/plugin.ts:149`），另受自主步数和时长上限（`core/native/conversation.ts:182-196`）。测试：**无测试**（门禁外有 `scripts/checks/check-native-room.mjs`） | 私聊：同第 1 行。电视：画面输入记为 `virtual_action`、actor 是伙伴，排进 Memory（`core/native/conversation.ts:74-75,86-88`），完成的观后感也排进（`:133-141`）。测试：**无测试** | 私聊：同第 1 行。电视：没有工具，**footer 会写共享情绪**（已知问题 1）。测试：**无测试** |
-| 9 | Desktop 碎碎念与梦话 | 没有工具（`desktop/features.ts:227-231`）。测试：`tests/desktop/desktop-features.test.ts:13`（原生一次性调用） | 不读不写 Memory（`desktop/features.ts:204-206`）。测试：**无测试** | 不读不写情绪，只发布 `say` 事件（`desktop/features.ts:233`）。测试：**无测试** |
+| 3 | Life 自主轮次 | 只留 Life 能力名单（`core/life-tool-policy.ts:2-9`）：入队时装限制（`core/native/agent.ts:55-70,76-82`），执行时再查（`:166-167`）；另有步数、工具次数、时长上限（`core/native/conversation.ts:182-204`）。Memory 工具只有读、召回、记住，没有更正和撤回（`core/life-tool-policy.ts:5`）。测试：`tests/life/life-tool-policy.test.ts:10,48`；步数和次数上限见行为清单 B01、M2A-12、M2A-13、M2A-14、M2A-15 | 召回同第 1 行；输入信封记为 `virtual_action` 排进 Memory（`core/native/conversation.ts:74-75,86-88`），附带的事实逐条登记（`:61-62,103-122`）；完成的非回顾轮次之后把旧生活状态投影进历史（`core/native/agent.ts:254-255,93-103,143-147`）。测试：`tests/life/life-memory-integration.test.ts:94,195`、`tests/life/autonomous-life.test.ts:198,211`、`tests/core/history-maintenance.test.ts:34,57` | `pet_emotion_update` 在名单内（`core/life-tool-policy.ts:6`）；footer 同第 1 行，不按来源排除。测试：工具在名单内由 `tests/life/life-tool-policy.test.ts:48` 覆盖；footer 在 Life 轮次生效见行为清单 M2A-12 |
+| 4 | 回顾轮次 | 名单加 `read`、`write`（`core/life-tool-policy.ts:11-13,23`）；回顾文件守卫只许读材料和记录、只许写自述和未封存的日记日（`core/life-review-files.ts:64-93`）。测试：`tests/life/life-review-files.test.ts:25,44,63`、`tests/life/review-continuation.test.ts:50`、`tests/behavior-list/families.test.mjs:61` | 同第 3 行；回顾轮次不做历史投影（`core/native/agent.ts:254`，`core/native/history-maintenance.ts:43`）；压缩批次由 `pet/life.review` 触发（`memory/batch.ts:14`）。测试：`tests/core/history-maintenance.test.ts:57` | 同第 3 行。测试：见行为清单 M2A-16 |
+| 5 | 渠道里的主人私聊 | 前台主人轮次，权限同第 1 行（`core/native/agent.ts:73,182-185`），没有 Life 限制和自主计数。测试：见行为清单 M2A-19（门禁外有 `scripts/checks/check-native-channel-homes.mjs`） | 输入记为 `owner_statement`，actor 是 `ownerActorId`，归属带渠道身份（`core/native/conversation.ts:71-75,88`）；补答把原消息加入证据根（`:64-70`）。测试：`tests/regressions/audit-r7-channel-nudge.test.ts:71`（补答核验原消息）；主人渠道输入进 Memory 见行为清单 M2A-19 | 同第 1 行。测试：见行为清单 M2A-19 |
+| 6 | guest 私聊或群聊 | 预设屏蔽所有继承工具（`channels/guest.ts:13`）；`pet_memory_*`、`pet_emotion_update` 不对 guest 登记（`core/native/agent.ts:157`、`emotion/plugin.ts:207`）；自主工具校验拒绝 guest（`core/native/conversation.ts:197-200`）；看不到主人档案和私有环境事实（`core/native/agent.ts:135`、`core/companion-foundation.ts:149-155`）。测试：`tests/behavior-list/families.test.mjs:19`（guest 调 Life 工具被拒）、`tests/life/life-core-integration.test.ts:94`；预设屏蔽全部工具见行为清单 M2A-20（门禁外有 `scripts/checks/check-native-services.mjs:99`） | 召回同一个共享 Bank（`core/native/agent.ts:215-227`，作用域见 5.8.1）；输入记为 `external_content`、actor 是发言人，排进 Memory（`core/native/conversation.ts:74-75,86-88`）；回复归属记为 `external`（`:138`）；拒绝主人私有事实（`:104`）；不做历史投影（`core/native/agent.ts:97`）。测试：`tests/regressions/audit-r6-memory-scope.test.mjs:200`、`tests/life/life-memory-integration.test.ts:181`、`tests/life/autonomous-life.test.ts:227` | 没有工具；**footer 会写共享情绪**（`emotion/plugin.ts:166-170,265-269,273-278`，已知问题 1）。测试：见行为清单 M2A-21（门禁外 `scripts/checks/check-native-services.mjs:104` 断言的就是这个现状） |
+| 7 | Desktop 聊天 | 同第 1 行。测试：见行为清单 M2A-09（第 1 行的测试不经过 Desktop 入口） | 同第 1 行；附带的图片在首步前恢复（`core/native/agent.ts:190`）。测试：见行为清单 M2A-09 | 同第 1 行。测试：见行为清单 M2A-09 |
+| 8 | Room 私聊与电视观看 | 私聊：同第 1 行，另加 Room 工具（`room/plugin.ts:146`）。电视：所有工具被 Room 的守卫拒绝（`room/plugin.ts:149`），另受自主步数和时长上限（`core/native/conversation.ts:182-196`）。测试：见行为清单 M2A-01、M2A-02、M2A-03（门禁外有 `scripts/checks/check-native-room.mjs`） | 私聊：同第 1 行。电视：画面输入记为 `virtual_action`、actor 是伙伴，排进 Memory（`core/native/conversation.ts:74-75,86-88`），完成的观后感也排进（`:133-141`）。测试：见行为清单 M2A-06 | 私聊：同第 1 行。电视：工具对模型可见，但执行一律被 Room 拒绝；**footer 会写共享情绪**（已知问题 1）。测试：见行为清单 M2A-01、M2A-07 |
+| 9 | Desktop 碎碎念与梦话 | 没有工具（`desktop/features.ts:227-231`）。测试：`tests/desktop/desktop-features.test.ts:13`（原生一次性调用） | 不读不写 Memory（`desktop/features.ts:204-206`）。测试：见行为清单 M2A-11 | 不读不写情绪，只发布 `say` 事件（`desktop/features.ts:233`）。测试：见行为清单 M2A-11 |
 
 #### 5.8.4 会话策略表：按会话身份的历史策略和组装方案
 
@@ -351,12 +364,12 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 | 会话身份 | 会话策略（现状） | 组装方案（现状） | 测试 |
 | --- | --- | --- | --- |
-| 主人 home | 一个固定会话反复用，不轮换（`core/companion-foundation.ts:74-133`）；在这里跑完的回顾如果开了「回顾后压缩」，就提前触发压缩（`life/plugin.ts:194-196`、`memory/batch.ts:93`）；完成的非回顾 Life 轮次之后，把较早的生活状态在历史里投影成短版本，原始事件保留（`core/native/agent.ts:93-103,143-147,254-255`） | 前缀段：`chatpet.profile` 身份加主人档案（`core/native/agent.ts:130-137`）、`chatpet.foundation`（`core/companion-foundation.ts:197`）、`chatpet.records`（`:249-253`）、`chatpet.expression-guide`（`emotion/plugin.ts:218`）、`chatpet.life`（仅 Life 运行时，`life/plugin.ts:63-67`）、`chatpet.self`（`core/companion-foundation.ts:254-263`）。尾部动态段：`chatpet.environment`（`:200-244`）、`chatpet.interactions`（`:245-248`）、`chatpet.expression-state`（`emotion/plugin.ts:219-233`）、`chatpet.economy`（`economy/plugin.ts:239-243`）。再加召回 | `tests/core/companion-foundation.test.ts:87`（复用一个会话）；`tests/core/history-maintenance.test.ts:34`（生活状态投影）；`tests/life/life-core-integration.test.ts:81,122`（两个主人会话组装出相同的身份、自述、计划和事实；尾部变化不动前缀）；`tests/world/world-recall.test.ts:6`；`tests/core/dynamic-context.test.ts:12`；`tests/memory/memory-batch.test.ts:11`。「回顾后提前压缩」**无测试** |
+| 主人 home | 一个固定会话反复用，不轮换（`core/companion-foundation.ts:74-133`）；在这里跑完的回顾如果开了「回顾后压缩」，就提前触发压缩（`life/plugin.ts:194-196`、`memory/batch.ts:93`）；完成的非回顾 Life 轮次之后，把较早的生活状态在历史里投影成短版本，原始事件保留（`core/native/agent.ts:93-103,143-147,254-255`） | 前缀段：`chatpet.profile` 身份加主人档案（`core/native/agent.ts:130-137`）、`chatpet.foundation`（`core/companion-foundation.ts:197`）、`chatpet.records`（`:249-253`）、`chatpet.expression-guide`（`emotion/plugin.ts:218`）、`chatpet.life`（仅 Life 运行时，`life/plugin.ts:63-67`）、`chatpet.self`（`core/companion-foundation.ts:254-263`）。尾部动态段：`chatpet.environment`（`:200-244`）、`chatpet.interactions`（`:245-248`）、`chatpet.expression-state`（`emotion/plugin.ts:219-233`）、`chatpet.economy`（`economy/plugin.ts:239-243`）。再加召回 | `tests/core/companion-foundation.test.ts:87`（复用一个会话）；`tests/core/history-maintenance.test.ts:34`（生活状态投影）；`tests/life/life-core-integration.test.ts:81,122`（两个主人会话组装出相同的身份、自述、计划和事实；尾部变化不动前缀）；`tests/world/world-recall.test.ts:6`；`tests/core/dynamic-context.test.ts:12`；`tests/memory/memory-batch.test.ts:11`。「回顾后提前压缩」见行为清单 M2A-16、M2A-17、M2A-22、M2A-25 |
 | 普通 owner 会话 | 由主人在 DSH 里新建、切换、归档，Her World 不轮换；只有共用改写 | 同主人 home，但没有 `chatpet.life`（只对 home 输出，`life/plugin.ts:65`） | 同上一行的组装和共用改写测试 |
-| Desktop 聊天会话 | 每个存储绑定记一个会话；主人点「新建」才归档旧的、开新的（`desktop/conversation.ts:140-161`）；只有共用改写 | 同普通 owner 会话 | `tests/desktop/desktop.test.ts:26`（重开与归档）；组装**无测试** |
-| Room 会话 | 每个存储绑定一个，取编号最大的未归档会话，没有就新建（`room/chat.ts:67-73,89-95`）；Her World 不轮换；界面只回放最近 80 条（`:47`）；私聊和电视共用这一条历史 | 同普通 owner 会话；电视轮次的输入是固定提示加一帧图片（`room/chat.ts:17,116-118,126`） | **无测试** |
-| guest 会话 | 每个私聊对象、每个群各一个，复用最新未归档会话（`channels/sessions.ts:29,112`）；Memory 开启时同样按轮数或闲置压缩（`memory/batch.ts:24`）；不做生活状态投影（`core/native/agent.ts:97`） | 预设前缀换成公开角色卡（`channels/guest.ts:6,14-17`），并关闭可选的运行时上下文（`:18`）。只挂上三段：`chatpet.profile`，只有身份、没有主人档案（`core/native/agent.ts:135,242`）；`chatpet.expression-guide` 和 `chatpet.expression-state`（`emotion/plugin.ts:284-287`；后者是必需动态段，关闭运行时上下文后仍保留，见 `tests/core/dynamic-context.test.ts:27-30`）。再加召回。其余段只登记在插件作用域，没有挂到 guest 预设（`channels/guest.ts:19-22`），各段自己也排除 guest（如 `core/companion-foundation.ts:150`） | `tests/world/world-modules.test.mjs:73`（私聊与群分开路由）；`tests/life/life-core-integration.test.ts:94`（拿不到私有环境事实）；guest 的完整组装**无测试**（门禁外有 `scripts/checks/check-native-services.mjs`） |
-| Desktop 碎碎念与梦话 | 没有会话、不留历史（`desktop/features.ts:204-206`） | 系统提示只有伙伴身份（`desktop/features.ts:208`），可选带一张贴图（`:219,230`），梦话加说梦话指令（`:229`） | `tests/desktop/desktop-features.test.ts:13`；组装内容**无测试** |
+| Desktop 聊天会话 | 每个存储绑定记一个会话；主人点「新建」才归档旧的、开新的（`desktop/conversation.ts:140-161`）；只有共用改写 | 同普通 owner 会话 | `tests/desktop/desktop.test.ts:26`（重开与归档）；组装见行为清单 M2A-09 |
+| Room 会话 | 每个存储绑定一个，取编号最大的未归档会话，没有就新建（`room/chat.ts:67-73,89-95`）；Her World 不轮换；界面只回放最近 80 条（`:47`）；私聊和电视共用这一条历史 | 同普通 owner 会话；电视轮次的输入是固定提示加一帧图片（`room/chat.ts:17,116-118,126`） | 见行为清单 M2A-01、M2A-02、M2A-05 |
+| guest 会话 | 每个私聊对象、每个群各一个，复用最新未归档会话（`channels/sessions.ts:29,112`）；Memory 开启时同样按轮数或闲置压缩（`memory/batch.ts:24`）；不做生活状态投影（`core/native/agent.ts:97`） | 预设前缀换成公开角色卡（`channels/guest.ts:6,14-17`），并关闭可选的运行时上下文（`:18`）。只挂上三段：`chatpet.profile`，只有身份、没有主人档案（`core/native/agent.ts:135,242`）；`chatpet.expression-guide` 和 `chatpet.expression-state`（`emotion/plugin.ts:284-287`；后者是必需动态段，关闭运行时上下文后仍保留，见 `tests/core/dynamic-context.test.ts:27-30`）。再加召回。其余段只登记在插件作用域，没有挂到 guest 预设（`channels/guest.ts:19-22`），各段自己也排除 guest（如 `core/companion-foundation.ts:150`） | `tests/world/world-modules.test.mjs:73`（私聊与群分开路由）；`tests/life/life-core-integration.test.ts:94`（拿不到私有环境事实）；guest 的完整组装见行为清单 M2A-20（门禁外有 `scripts/checks/check-native-services.mjs`） |
+| Desktop 碎碎念与梦话 | 没有会话、不留历史（`desktop/features.ts:204-206`） | 系统提示只有伙伴身份（`desktop/features.ts:208`），可选带一张贴图（`:219,230`），梦话加说梦话指令（`:229`） | `tests/desktop/desktop-features.test.ts:13`；组装内容见行为清单 M2A-11 |
 
 #### 5.8.5 盘点发现
 
@@ -390,15 +403,15 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 | 要做的事 | 一处声明 | 派生出来的 |
 | --- | --- | --- |
-| 新增工具 | 工具定义里同时声明「哪些来源可用」 | Life 白名单、历史瘦身识别、来源适配的限制 |
-| 新增输入来源 | 一个来源适配器登记（来源适配表） | 准入、工具限制、投影、会话策略一行 |
+| 新增工具 | 工具定义旁声明 `sources`（没写的只给主人），需要历史瘦身时再声明 `historyOverview`，登记到工具声明表 `host.native.toolTable`（M2 已落地） | Life 和回顾名单、历史瘦身识别、来源适配的工具限制 |
+| 新增输入来源 | 在模块里写一个来源适配器（准入、分支、`turnKind`、工具策略、记忆观察、情绪更新、历史投影、会话策略行），在入口登记到 `host.native.sourceTable`；新的 `source.kind` 在 DSH 的 `MessageSourceMap` 声明，新的工具来源用 `toolTable.registerSource` 登记（M2 已落地） | 入队和首步准入、工具限制、记忆观察、情绪 footer、历史投影、会话策略一行 |
 | 新增上下文段 | 一条段声明（5.9） | `order` 唯一性检查、预算度量、退休 |
 | 新增设置项 | 一份字段声明 | 页面控件、保存键集合、校验、实际消费的接线 |
 | 新增设置页操作 | 运维操作表的一条登记 | 路由清单、处理分支、客户端调用 |
 | 新增照料动作 | 第二层的 `BodyAction` 基础表 | 主人入口、角色工具枚举、计划类型与校验、计划 schema、设置页白名单、按钮 |
 | 新增事实领域 | 一份事实领域声明 | 类型、提示词投影、Life 读取、Python 侧识别清单 |
 
-现状要改几个文件，是重构前的基线，见 [product.md](product.md) 的「典型修改前后对比」。
+重构前的基线和 M2 后的复测见 [product.md](product.md) 的「典型修改前后对比」。
 
 ---
 
