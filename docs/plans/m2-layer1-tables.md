@@ -403,6 +403,18 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 
 （Codex 完成各批后填写，每批 15 行以内）
 
+### A · 补现状测试
+
+- `entries.ts` 接入 Room、Desktop、Emotion 和 guest，`fixture.mjs` 增加原生步进、流和便携日志恢复，`policy-host.mjs` 接入真实 DSH 工具和提示词作用域。
+- `channels.test.mjs` 与 `qq-transport.mjs` 复用 QQ 假传输，`families.test.mjs` 复用同一计划写入夹具，`policy-evidence.mjs` 提供回顾、情绪与 Memory 证据断言。
+- `policy-room.test.mjs`、`policy-desktop.test.mjs`、`policy-life.test.mjs`、`policy-qq.test.mjs` 分别覆盖 Room、桌面、Life 与回顾、QQ 与 guest。两条共享情绪 footer 测试均标「现状，待主人决定」。
+- `index.json` 登记 `policyCells`，`index.test.mjs` 检查 5.8.2–5.8.4 的 82 格均由非 L3 条目覆盖。
+- 临时副本中 `pnpm run build` 通过，`node --test tests/behavior-list/policy-{room,desktop,life,qq}.test.mjs` 通过 27 项，失败 0 项。Memory 本机回环可用。
+- `pnpm run test:behavior-list` 的索引检查通过 11 项，行为清单通过 48 项，失败 0 项。合并前门禁由 Claude 执行。
+- 与方案的差异是 Room 电视仍可见 `pet_emotion_update` 等工具 schema，Room 执行守卫拒绝可见工具的调用。测试按此现状断言。
+- L1 用合成宿主复现空闲通知与 QQ 投递之间开始 Life 首步的顺序。接管走真实 Life 入队监听器，重启后核验同一 home、日记和 Memory 来源。
+- `git diff --stat 15057f8 -- src dist` 为空。首组 9 个文件、595 行已暂存，`git commit` 因沙箱拒绝创建 `index.lock` 失败，提交待完成。
+
 ## 审查结论
 
 （Claude 验收时填写必须修的问题）
