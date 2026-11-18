@@ -211,8 +211,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
       }
       const input=accepted[0];if(input)inputs.set(payload.agent.id,input.id);
       if(!scope.guest) {
-        await ctx.get('petDesktop')?.features?.restoreImages();
-        if(!currentTurn(payload.agent.id,saved))return {kind:'reject'};
+        if(!await host.native.sourceTable.beforeFirstStep(()=>currentTurn(payload.agent.id,saved!)))return {kind:'reject'};
         await ctx.get('petTranscripts')?.restore();
         if(!currentTurn(payload.agent.id,saved))return {kind:'reject'};
       }

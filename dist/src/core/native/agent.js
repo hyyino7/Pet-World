@@ -262,8 +262,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
             if (input)
                 inputs.set(payload.agent.id, input.id);
             if (!scope.guest) {
-                await ctx.get('petDesktop')?.features?.restoreImages();
-                if (!currentTurn(payload.agent.id, saved))
+                if (!await host.native.sourceTable.beforeFirstStep(() => currentTurn(payload.agent.id, saved)))
                     return { kind: 'reject' };
                 await ctx.get('petTranscripts')?.restore();
                 if (!currentTurn(payload.agent.id, saved))

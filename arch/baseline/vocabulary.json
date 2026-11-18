@@ -10723,13 +10723,13 @@
       "other": {
         "file": "src/desktop/plugin.ts",
         "scope": "<module>",
-        "line": 6
+        "line": 7
       }
     },
     {
       "rule": "R8",
       "file": "src/desktop/plugin.ts",
-      "line": 6,
+      "line": 7,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/channels/plugin.ts\",\"scope\":\"<module>\"}",
@@ -19086,7 +19086,7 @@
     {
       "rule": "R8",
       "file": "src/desktop/plugin.ts",
-      "line": 6,
+      "line": 7,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/life/plugin.ts\",\"scope\":\"<module>\"}",
@@ -19125,13 +19125,13 @@
       "other": {
         "file": "src/desktop/plugin.ts",
         "scope": "<module>",
-        "line": 6
+        "line": 7
       }
     },
     {
       "rule": "R8",
       "file": "src/desktop/plugin.ts",
-      "line": 6,
+      "line": 7,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"<module>\"}",
@@ -19172,7 +19172,7 @@
       "other": {
         "file": "src/desktop/plugin.ts",
         "scope": "<module>",
-        "line": 6
+        "line": 7
       }
     },
     {

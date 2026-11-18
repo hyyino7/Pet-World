@@ -356,18 +356,6 @@
       "reason": "无法静态判定本地依赖"
     },
     {
-      "rule": "R2",
-      "file": "src/core/native/agent.ts",
-      "line": 214,
-      "column": 15,
-      "scope": "apply/onStep",
-      "target": "petDesktop",
-      "expression": "ctx . get ( \"petDesktop\" )",
-      "from": "core",
-      "to": "desktop",
-      "reason": "服务读取未获准或方向违规"
-    },
-    {
       "rule": "R1",
       "file": "src/core/native/history-maintenance.ts",
       "line": 5,
