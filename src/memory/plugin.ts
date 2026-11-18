@@ -10,7 +10,7 @@ declare module '@deepseek-ai/cordis' { interface Context { petMemory: NativeMemo
 export function apply(ctx: Context): void {
   const native = ctx.petCore.native;
   if (!native.memory) return;
-  native.memoryEnabledForNewSessions = true;
+  native.setMemoryEnabledForNewSessions(true);
   ctx.provide('petMemory', native.memory);
-  ctx.effect(() => () => { native.memoryEnabledForNewSessions = false; });
+  ctx.effect(() => () => { native.setMemoryEnabledForNewSessions(false); });
 }

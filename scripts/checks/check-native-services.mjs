@@ -147,10 +147,10 @@ try{
   // Toggle applies to this retained session and removes its previous recall block.
   const activeRecall=()=>b.agent.session.surface.nodes.some(seq=>{const event=b.agent.session.eventAt(seq);return event?.type==='user/message' && event.data.source.kind==='chatpet-recall';});
   const beforeOff=b.agent.session.snapshotEvents();
-  host.native.memoryEnabledForNewSessions=false;
+  host.native.setMemoryEnabledForNewSessions(false);
   program=async function*(options){assert.equal(activeRecall(),false,'No prior recall block remains after Memory is disabled');yield* say('Chat without Memory.');};
   await send(b,'PRIVATE_OFF_ORIGINAL: continue without Memory.');
-  host.native.memoryEnabledForNewSessions=true;
+  host.native.setMemoryEnabledForNewSessions(true);
   const recall=host.native.memory.recall.bind(host.native.memory);host.native.memory.recall=async()=>{throw Error('Synthetic Memory outage');};
   program=async function*(options){assert.equal(activeRecall(),false);yield* say('Chat despite Memory outage.');};
   await send(b,'Continue despite the service outage.');host.native.memory.recall=recall;

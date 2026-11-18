@@ -18,7 +18,7 @@ function fixture(guest=false,group=false) {
   let active=true,permit=true,storageId='bank-a',guestHook:any;
   const native=new CoreNative({} as any);
   native.resolveScope=()=>({workspaceId:'owner',path:directory,storageId,guest});
-  const host={native,workspace:{sessionStatus:()=>({state:'ready'})}} as unknown as PetCoreHost;
+  const host={native,workspace:{runtime:native.runtime,sessionStatus:()=>({state:'ready'})}} as unknown as PetCoreHost;
   const registry={get:(id:string)=>workspaces.get(id),archivedSessionIds:[] as string[],async create(path:string){const previous=[...workspaces.values()].find(w=>w.path===path);if(previous)return previous;const w={id:'guest-ws',path,sessionIds:[] as string[]};workspaces.set(w.id,w);return w;}};
   const ctx:any={on(name:string,fn:Function){if(name==='agent/pre-step')guestHook=fn;else listeners.add(fn);return()=>listeners.delete(fn);},
     tools:{restrict(){}},systemPrompt:{section(){},getSectionOrder(){return 1;},suppressRuntimeContext(){}},inject(){},

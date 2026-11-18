@@ -35,7 +35,7 @@ test('settings distinguish the current-turn Memory switch from its on-demand pro
   const signal = new AbortController().signal;
   try {
     for (const enabled of [true, false]) {
-      host.native.memoryEnabledForNewSessions = enabled;
+      host.native.setMemoryEnabledForNewSessions(enabled);
       const response = await handler('snapshot', { requestId: `memory-${enabled}`, input: {} },
         signal, { principal: { kind: 'owner' }, signal });
       assert.ok(response.ok);

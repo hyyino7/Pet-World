@@ -18,7 +18,7 @@ declare module '@deepseek-ai/cordis' {
 export async function apply(ctx: Context, config: Config): Promise<void> {
   // No profile/account discovery or implicit installation. Paths and model route are host config.
   const host = createCore(config);
-  host.native.memoryEnabledForNewSessions = false;
+  host.native.setMemoryEnabledForNewSessions(false);
   // Startup only inspects the saved binding. Missing documents are prepared by
   // the owner's explicit initialization action, never restored by a restart.
   const prefs = await host.services.preferences.read(host.operator.request('startup.preferences'), {});

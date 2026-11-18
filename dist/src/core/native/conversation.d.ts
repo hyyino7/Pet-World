@@ -32,7 +32,7 @@ type ResolvePlaybackEvidence = (sessionId: string, playbackId: string) => {
 export declare class CoreNative {
     readonly runtime: CoreRuntime;
     memory?: NativeMemory;
-    memoryEnabledForNewSessions: boolean;
+    private memoryEnabled;
     readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
     private readonly playbackProviders;
     resolveScope?: (sessionId: string) => NativeScope | undefined;
@@ -45,9 +45,10 @@ export declare class CoreNative {
     emotionAllowed(sessionId: string, turn: number, permission: 'footer' | 'tool'): boolean;
     private current;
     acceptsInput(sessionId: string, message: UserMessage): boolean;
+    setMemoryEnabledForNewSessions(enabled: boolean): void;
+    memoryEnabledForNewSessions(): boolean;
     memoryFor(_sessionId: string): NativeMemory | undefined;
-    /** Native DSH owns the turn. Core retains only its attributed input identifiers,
-     * not an execution/activity, allowance, serial slot or cancellation timer. */
+    /** Native DSH owns the turn. Core retains only input references and selected policy metadata. */
     observeInputs(sessionId: string, turn: number, messages: readonly UserMessage[], scope?: NativeScope): string[];
     /** Called only by scoped native input/prompt adapters, never a model tool. */
     clearPreparedFacts(sessionId: string): void;

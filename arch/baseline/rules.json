@@ -664,30 +664,6 @@
       "reason": "无法静态判定本地依赖"
     },
     {
-      "rule": "R4",
-      "file": "src/memory/plugin.ts",
-      "line": 13,
-      "column": 3,
-      "scope": "apply",
-      "target": "ctx.petCore.native.memoryEnabledForNewSessions",
-      "expression": "native . memoryEnabledForNewSessions = true",
-      "from": "memory",
-      "to": "core",
-      "reason": "直接改写 Core 的原生接缝"
-    },
-    {
-      "rule": "R4",
-      "file": "src/memory/plugin.ts",
-      "line": 15,
-      "column": 28,
-      "scope": "apply/ctx . effect:callback0/<callback>",
-      "target": "ctx.petCore.native.memoryEnabledForNewSessions",
-      "expression": "native . memoryEnabledForNewSessions = false",
-      "from": "memory",
-      "to": "core",
-      "reason": "直接改写 Core 的原生接缝"
-    },
-    {
       "rule": "R1",
       "file": "src/room/chat.ts",
       "line": 8,

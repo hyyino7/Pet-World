@@ -4,7 +4,8 @@ import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
 import {createLifeSourceAdapter} from '../../src/life/tool-policy.js';
 import {apply} from '../../src/core/native/agent.js';
-import {SourceAdapterTable} from '../../src/core/tables/sources.js';
+import {CoreNative} from '../../src/core/native/conversation.js';
+import type {CoreRuntime} from '../../src/core/runtime.js';
 import {createUserMessage} from '@deepseek-ai/dsh-llm';
 
 function fixture() {
@@ -12,17 +13,15 @@ function fixture() {
   let storageId='bank',allowed:string[]|undefined;
   const agent:any={id:'home',status:'idle',session:{id:'home',header:{cwd:'/fixture',agentPreset:'standard'},snapshotEvents:()=>events},
     ctx:{tools:{restrict({allow}:any){allowed=allow;return()=>{allowed=undefined;};}}}};
-  const native:any={acceptsInput:(_id:string,message:any)=>message.source.kind==='user'||message.source.kind==='dsh-world-life',
-    tools:()=>[],observeInputs(){},begin:async()=>{},finish(){},finishTurn:async()=>{},memoryFor:()=>undefined,guardTool(){}};
+  const native=Object.assign(new CoreNative({} as CoreRuntime),{
+    tools:()=>[],observeInputs:()=>[],begin:async()=>{},finish(){},finishTurn:async()=>{},memoryFor:()=>undefined,guardTool(){},
+  });
   const status={state:'ready',target:{id:'world',path:'/fixture'}};
   const host={native,workspace:{status:()=>status,storageId:()=>storageId}} as unknown as PetCoreHost;
   const ctx={on(name:string,fn:Function){handlers.set(name,[...(handlers.get(name)??[]),fn]);return()=>{};},effect(){},get(){return undefined;},
     tools:{definitions:()=>['read','write','bash','life_plan_read'].map(name=>({name})),register:()=>()=>{},guard(fn:Function){guards.push(fn);return()=>{};}},
-    agents:new Map([[agent.id,agent]])} as unknown as Context;
-  native.scopeFor=(id:string)=>native.resolveScope(id);
-  native.sourceTable=new SourceAdapterTable();
-  native.isGuest=(id:string)=>native.sourceTable.isGuest(id);
-  native.sourceTable.register(createLifeSourceAdapter(ctx,host,native.acceptsInput));
+    agents:new Map([[agent.id,agent]]),logger:()=>({debug(){},warn(){}})} as unknown as Context;
+  native.sourceTable.register(createLifeSourceAdapter(ctx,host,()=>true));
   const stop=apply(ctx,host,{sessionStatus:()=>status} as any);
   let turn=0;
   async function start(source:any) {

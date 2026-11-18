@@ -29,8 +29,8 @@ export function createCore(config:CoreConfig) {
     if(!memory)return;
     const lifecycle=memory.connection.lifecycle;
     const ready=lifecycle==='ready';
-    return {state:!native.memoryEnabledForNewSessions?'disabled':ready?'ready':'degraded',
-      reason:!native.memoryEnabledForNewSessions?'Memory is disabled for subsequent turns; native chat remains available':ready?'Shared Bank available for native observation and recall':`Memory provider ${lifecycle}; chat continues without recall on failure`,
+    return {state:!native.memoryEnabledForNewSessions()?'disabled':ready?'ready':'degraded',
+      reason:!native.memoryEnabledForNewSessions()?'Memory is disabled for subsequent turns; native chat remains available':ready?'Shared Bank available for native observation and recall':`Memory provider ${lifecycle}; chat continues without recall on failure`,
       supportedOperations:ready?['observe','recall','correct','withdraw','validate']:[]};
   };
   return {

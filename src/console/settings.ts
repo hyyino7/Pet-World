@@ -252,7 +252,7 @@ export function settingsHandler(getHost: () => PetCoreHost | undefined, getWorks
           desktop: getDesktop?.(host)?.status() ?? null,
           platformAvailable:Boolean(getPlatform?.()),
           presentation:getPlatform?.()?.status?.() ?? null,
-          memory: { enabled: Boolean(host.native.memory && host.native.memoryEnabledForNewSessions),
+          memory: { enabled: Boolean(host.native.memory && host.native.memoryEnabledForNewSessions()),
             provider: host.native.memory?.connection.lifecycle ?? null,
             error: host.native.memory?.lastError ?? null },
           worldModules: getWorldModules?.() ?? [],
