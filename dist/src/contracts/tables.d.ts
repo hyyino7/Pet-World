@@ -26,9 +26,14 @@ export interface CapabilityRegistration extends CapabilityIdentity {
 }
 export type TurnKind = 'foreground' | 'background';
 export declare const COMPANION_TOOL_SOURCES: readonly ["owner", "life", "review", "guest", "tv"];
-export type CompanionToolSource = typeof COMPANION_TOOL_SOURCES[number];
+/** Modules augment this map and register their tool sources at runtime. */
+export interface CompanionToolSourceMap extends Record<typeof COMPANION_TOOL_SOURCES[number], true> {
+}
+export type CompanionToolSource = Extract<keyof CompanionToolSourceMap, string>;
 export declare const NATIVE_HISTORY_CONTEXT_SOURCES: readonly ["runtime-context", "chatpet-recall", "compact-checkpoint"];
-export type NativeSourceKind = 'user' | 'dsh-world-life' | 'dsh-world-reply-nudge' | 'chatpet-room-tv' | typeof NATIVE_HISTORY_CONTEXT_SOURCES[number];
+type BuiltinNativeSourceKind = typeof NATIVE_HISTORY_CONTEXT_SOURCES[number] | 'user' | 'dsh-world-life' | 'dsh-world-reply-nudge' | 'chatpet-room-tv';
+/** Extension kinds come from the producer's DSH MessageSourceMap declaration. */
+export type NativeSourceKind = BuiltinNativeSourceKind | UserMessage['source']['kind'];
 export type AdmissionDecision<Accepted> = {
     kind: 'unclaimed';
 } | {
@@ -135,7 +140,9 @@ export interface AdmittedSourceBranch extends Omit<SourceBranch<unknown>, 'toolP
 export type SourceAdmission<Selected> = AdmissionDecision<{
     branch: AdmittedSourceBranch;
     context: Selected;
+    /** The admission lease includes the tool source's generation when present. */
     lease: RegistrationLease;
+    toolSourceLease?: RegistrationLease;
 }>;
 export interface CompanionToolDeclaration {
     readonly name: string;

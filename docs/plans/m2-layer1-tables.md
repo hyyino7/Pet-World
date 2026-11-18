@@ -513,9 +513,17 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 
 5a 碰到第一层的原因：`contracts/tables.ts` 里的 `source.kind` 声明类型（G 批）和 `COMPANION_TOOL_SOURCES` 都是封闭词表，新增一类来源两处都要加一项。Life 里的两个文件分别是适配器声明和入口登记。Core 没有改动，`check:arch` 新增 0。5b 按拍板点 1 不建分支，沿用读码下限（至少 5 个文件），本批未改变它的结构。
 
-**拍板点 12 之后重测 5a**：起点是可扩展词表分支 `codex/m2-vocab-extensible` 的 `754a0a5`（尚未合并），重测分支 `codex/m2-retest-5-source-v2` 的 `9be0496`。手写 `src/` 2 个：`src/life/tool-policy.ts`（扩展词表，声明提醒的准入、工具、记忆和情绪策略）、`src/life/plugin.ts`（随闹钟运行时登记和撤销适配器）；只动第二层 `life`，第一层 0 个；测试 1 个、`dist/src` 4 个；`check:arch` 新增 0。判定：只动一层已满足，文件数 3 → 2，没达到减半（最多 1 个），**仍未达标**。按拍板点 12，在 M3 前转为缩小，由主人在 M2 验收时确认。
+**拍板点 12 之后重测 5a**：起点是可扩展词表分支 `codex/m2-vocab-extensible` 的 `754a0a5`（该分支返工后已合并，返工后 5a 仍是同样两个文件），重测分支 `codex/m2-retest-5-source-v2` 的 `9be0496`。手写 `src/` 2 个：`src/life/tool-policy.ts`（扩展词表，声明提醒的准入、工具、记忆和情绪策略）、`src/life/plugin.ts`（随闹钟运行时登记和撤销适配器）；只动第二层 `life`，第一层 0 个；测试 1 个、`dist/src` 4 个；`check:arch` 新增 0。判定：只动一层已满足，文件数 3 → 2，没达到减半（最多 1 个），**仍未达标**。按拍板点 12，在 M3 前转为缩小，由主人在 M2 验收时确认。
 
-可扩展词表分支的第一轮审查有 3 条必须修，都是这次新引入的：扩展工具来源被撤销后原生准入不跟着失效；只撤销扩展来源时，同一工具在 Life 上的历史投影被误停（比较的是过滤后数组的引用）；新来源的 kind 在 DSH 的 `MessageSourceMap` 和 `NativeSourceKindMap` 两处分别声明，彼此没有类型关联，拼错查不出来。该分支是否修完再合并，由主人决定。
+可扩展词表分支的第一轮审查有 3 条必须修，都是这次新引入的：扩展工具来源被撤销后原生准入不跟着失效；只撤销扩展来源时，同一工具在 Life 上的历史投影被误停（比较的是过滤后数组的引用）；新来源的 kind 在 DSH 的 `MessageSourceMap` 和 `NativeSourceKindMap` 两处分别声明，彼此没有类型关联，拼错查不出来。主人决定修完再合并，三条已修好（见审查结论里的拍板点 12 复查）。
+### 拍板点 12 · 可扩展词表
+
+- `src/contracts/tables.ts` 用 `NativeSourceKindMap` 和 `CompanionToolSourceMap` 支持模块声明合并。来源适配表沿用原登记口，`OWNER_LIFE_TOOL_SOURCES` 继续从内置值派生。
+- `src/core/tables/tools.ts` 用 `registerSource` 单独登记工具来源。Life 现有入口先登记工具，再登记来源适配器，独立登记可沿用此顺序和各自的撤销入口。扩展授权绑定登记代次，撤销立即生效。
+- `tests/core/tables-extensible-vocabulary.test.ts` 验证内置来源、扩展认领、拼错和未登记拒绝、撤销及重载；`dist/src/` 已随构建更新。
+- 构建通过，指定快测 227 项通过，行为清单 52 条及索引自测 11 项通过，失败均为 0。架构规则及 R8 新增均为 0。完整门禁由验收者运行。
+- 5a 预计在第二层 `src/life/tool-policy.ts` 一处完成两份类型扩展、工具来源登记和共享 home 的提醒分支，另加行为测试。实际文件数以独立复测为准。
+- 返工结果：三条已修。构建、类型和架构检查通过（架构与 R8 新增均为 0），指定快测 238 项、行为清单 52 条及索引 11 项通过，失败均为 0。临时副本复测 5a 构建及 2 项行为测试通过，仍为第二层 2 个手写源码文件。
 
 ## 审查结论
 
@@ -706,3 +714,31 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - 第 1 条：已修。`MemoryConnection.start()` 先复制并冻结作用域，复用判断、Bank 校验和发给 Python 的作用域都来自这份快照，Python 收到的字段和顺序不变。新测试用真实 Python provider 复现「复用对象换库」：修复前切到 B 仍读出 A 的记录，修复后 B 的读取被拒绝，切回 A 能读到原记录。
 - 复跑：Node 快测 697 项、Python provider 22 项通过；`check:arch` 基线零增删。返工由 Claude 原样提交，完整门禁见合并前记录。
 
+
+### 拍板点 12 可扩展词表第一轮（Claude 核实 Codex 审查，返工）
+
+已核实：
+- 改动在拍板点 12 允许的范围内。
+- 内置取值仍在第一层声明；扩展的工具来源要先登记，拼错或没登记的会被拒绝。
+- 沙箱外 `pnpm run verify` 通过（143 个测试文件，模型调用 0），行为清单 52 条全部通过。
+- 在这个分支上重测 5a，结果是 2 个文件、只动第二层（见 `main` 上的 H 复测记录）。
+
+下面 3 条要修：
+
+1. **扩展工具来源被撤销后，原生准入不跟着失效。** `src/core/tables/tools.ts:34-37` 只在工具声明上过滤已撤销的来源，而 `SourceAdapterTable.admit()` 和 `agent.ts` 的在途检查只看适配器租约。所以分支的 `toolSource` 如果从没登记，或者来源先于适配器被撤销，准入照样返回 `accepted`，之前准入的租约也仍然有效；分支如果 `toolPolicy` 为 `null`，DSH 的原生工具权限也不会被收紧。改法：扩展分支的 `toolSource` 必须是已登记的来源才能准入，准入结果和在途检查同时绑定这个来源的登记代次。补测试：只撤销来源、不撤销适配器，新输入被拒，在途轮次的下一步也被拒。
+
+   已修：原生准入要求扩展工具来源已登记，并绑定适配器和工具来源各自的登记代次。单独撤销来源会拒绝新输入、在途后续步和工具执行。重登只恢复新准入，旧轮次仍失效。
+2. **只撤销扩展来源，会误停同一工具在 Life 上的历史投影。** `tools.ts:14-17` 在部分来源被撤销后，每次 `get()` 都生成新的 `sources` 数组，而 F 批的 `prepareLifeHistory()` 用这个数组的引用判断工具登记是否仍有效（`isToolCurrent`）。结果撤销扩展来源之后，新准备的 Life 投影也全部被跳过：准备了 1 条，实际替换 0 条，Codex 已用合成会话复现。改法：历史投影改为检查工具登记的代次，不比较过滤后数组的引用。补测试：一个带 `historyOverview` 的工具同时授权给 `life` 和一个扩展来源，只撤销扩展来源后，Life 投影照常落地。
+
+   已修：历史投影准备时捕获工具登记租约，落地前检查该代次。新增回归覆盖撤销扩展来源后 Life 投影照常替换，以及撤销并重登工具后旧投影保留原事件。
+3. **新来源的 kind 在两处分别声明，拼错查不出来。** 新增一类来源要分别扩展 DSH 的 `MessageSourceMap` 和 `src/contracts/tables.ts:39-46` 的 `NativeSourceKindMap`，两者没有类型关联。生产端用 `fixture-background`、适配端误写成 `fixture-backgruond` 时，类型检查和登记都能通过，正确发出的消息却一直是 `unclaimed`。改法：扩展的 kind 从 DSH 消息的 `source.kind` 派生，或者约束扩展键必须存在于 DSH 的 `MessageSourceMap`；内置取值照旧在第一层声明。最好由此减少新增来源要声明的地方。补一条 `@ts-expect-error` 类型测试，证明拼错的键过不了类型检查。
+
+   已修：第一层保留内置 kind，扩展 kind 直接取自 DSH 用户消息的 `source.kind`。测试只登记 `MessageSourceMap` 即可认领正确消息，拼错的 kind 由 `@ts-expect-error` 验证会被拒绝。
+
+### 拍板点 12 可扩展词表复查（第二轮，通过）
+
+- 第 1 条：已修。准入时，扩展分支的 `toolSource` 必须已经登记，准入租约同时绑定适配器和工具来源两个代次；在途轮次每一步和工具执行都复核。只撤销来源时，新输入、下一步、工具执行都被拒。
+- 第 2 条：已修。历史投影改为检查工具登记的代次（`getRegistration().lease`），只撤销扩展来源时 Life 投影照常落地，撤销工具后旧投影失效。
+- 第 3 条：已修。扩展的 kind 直接从 DSH `UserMessage` 的 `source.kind` 派生，只需在 DSH 的 `MessageSourceMap` 声明一次；拼错的键过不了类型检查，有 `@ts-expect-error` 测试。
+- 修完后 5a 仍是 2 个手写文件、只动第二层（`life/tool-policy.ts` 少写了一处声明）。
+- 建议（不影响合并）：`SourceAdapterTable` 的构造参数默认新建一张 `CompanionToolTable`，只在单独测试来源表时用到；生产代码由 `CoreNative` 显式传入，字段顺序正确（`src/core/native/conversation.ts:87-88`）。以后可以去掉默认值，让测试显式传入。

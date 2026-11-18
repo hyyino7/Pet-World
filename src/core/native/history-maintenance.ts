@@ -76,17 +76,16 @@ export async function prepareLifeHistory(
       message=>agent.ctx.logger('chatpet-context').warn(message));
     for(const {event,call,lease} of candidates) {
       signal.throwIfAborted();if(!isCurrent())return [];
-      const declaration=tools.get(call.name);
-      if(!declaration?.historyOverview)continue;
+      const tool=tools.getRegistration(call.name);
+      if(!tool?.declaration.historyOverview)continue;
       const original=agent.session.deriveEventMessage(event);
       if(!original||original.content.length!==1||original.content[0]?.type!=='text')continue;
       let args:unknown,value:unknown;
       try{args=JSON.parse(call.arguments);value=JSON.parse(original.content[0].text);}catch{continue;}
-      const view=projectHistory(declaration,args,value);if(view===undefined)continue;
+      const view=projectHistory(tool.declaration,args,value);if(view===undefined)continue;
       const text=JSON.stringify(view);
-      // The table freezes a separate sources array for each registration.
       if(text.length<original.content[0].text.length)changes.push({
-        event,text,lease,isToolCurrent:()=>tools.get(call.name)?.sources===declaration.sources,
+        event,text,lease,isToolCurrent:tool.lease.isCurrent,
       });
     }
     return changes;
