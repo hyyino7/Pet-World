@@ -69,7 +69,7 @@ M2 的大部分工作直接对应 product.md M2 表里的一行（见「M2 表�
   - A：`tests/behavior-list/**`（含 `entries.ts`、`fixture.mjs`、`index.json`、`index.test.mjs`）、`tests/**` 下新增的测试文件
   - B：`src/contracts/tables.ts`（新）、`src/contracts/index.ts`、`src/core/tables/**`（新）、`tests/core/tables*.test.ts`（新）
   - C：`src/core/{plugin,index,runtime}.ts`；登记能力行的模块入口 `src/{desktop,life,room,channels,voice,emotion,console}/plugin.ts`；`src/console/client.js` 和经生成器重新生成的 `src/desktop/platform/client.js`；能力对照测试
-  - E1：`src/core/native/{agent,conversation,history-maintenance}.ts`、`src/core/life-tool-policy.ts`、`src/core/life-review-files.ts`（第二步迁到 `src/life/`）、`src/life/plugin.ts`；对应测试（含 import 路径）
+  - E1：`src/core/native/{agent,conversation,history-maintenance}.ts`、`src/core/life-tool-policy.ts`、`src/core/life-review-files.ts`（第二步迁到 `src/life/`）、`src/life/plugin.ts`；只读分类契约（拍板点 11）涉及的 `src/contracts/tables.ts`、`src/core/tables/sources.ts`、`tests/core/tables-sources.test.ts`；`scripts/checks/check-native-services.mjs`、`scripts/checks/check-native-life.mjs`；对应测试（含 import 路径）
   - E2：`src/core/native/{agent,conversation}.ts`、`src/core/plugin.ts`、`src/room/{plugin,chat}.ts`、`src/channels/{sessions,guest,plugin,messaging}.ts`、`src/desktop/{index,plugin}.ts`、`src/emotion/plugin.ts`、`src/memory/{plugin,batch}.ts`、`src/console/settings.ts`；读 `channelBoundary` 的 `src/economy/plugin.ts:223`、`src/life/plan-tools.ts:47`、`src/life/plugin.ts:172,199`、`src/core/companion-foundation.ts:150`；受影响的门禁测试；`scripts/checks/check-native-{services,room,channel-homes}.mjs`
   - F：`src/core/native/history-maintenance.ts`；工具登记处 `src/room/plugin.ts:146`、`src/economy/plugin.ts:229`、`src/life/plan-tools.ts:128`、`src/life/review.ts:38`、`src/emotion/plugin.ts:207`、`src/core/native/agent.ts:154`、`src/core/plugin.ts:40` 和 `src/life/album-tools.ts`；迁到 `src/life/` 的工具策略
   - G：持有 `NativeScope`、`MemoryScope` 和 `source.kind` 类型的文件（见 G 批），`scripts/fixtures/synthetic-companion.mjs`、上面三个原生检查脚本
@@ -213,8 +213,9 @@ M2 的大部分工作直接对应 product.md M2 表里的一行（见「M2 表�
 - 工具限制：入队时装限制、执行时再查、主人接管立即释放、轮次结束和关闭时清理，时机和顺序都照旧（`core/native/agent.ts:52-82,162-169,252,262-277`）。Core 继续持有本轮状态（`turns`、`lifePolicies`），只把「装什么限制、拒绝文案、释放动作」交给适配器。
 - 回顾：识别 `purpose: 'review'` 和 `reviewDay`、中断后把权限带到下一次 Life 输入（`core/native/agent.ts:36,60-66,248-250`），归适配器的回顾分支。
 - 回顾文件守卫：订阅 `tools/pre-execute`、`tools/result` 的机制留在 Core（`core/life-review-files.ts:64-93` 的守卫骨架），路径判断（`assertLifeReviewFile`）由适配器的 `fileAccess` 提供。守卫已开始解析文件时 Life 被卸载，要拒绝而不是放行。
-- 历史投影：保住「轮后排队、空闲时准备、下次打开请求时替换」（`core/native/agent.ts:93-106,140-147,254-255`）。`history-maintenance.ts:38-44` 里按来源的判断改读适配器的 `historyProjection` 声明。
-- 删掉 `CoreNative.lifeAdmission`（`core/native/conversation.ts:24`），同批更新直接用到它的测试和 `scripts/checks/check-native-services.mjs:67`。
+- 只读分类（拍板点 11）：来源适配器另提供 `classify(message)`，只按已保存消息的字段选出分支，不看当前运行状态、不扣减一次性授权、不能有副作用；来源表提供对应的只读查询，适配器缺席或不认领时返回「无分支」。`admit()` 仍只用于实时准入。
+- 历史投影：保住「轮后排队、空闲时准备、下次打开请求时替换」（`core/native/agent.ts:93-106,140-147,254-255`）。`history-maintenance.ts:38-44` 里 Life 和回顾的判断改为经只读分类取分支的 `historyProjection` 声明；`user`、`dsh-world-reply-nudge` 的「保护所在轮次」本批仍写死，E2 登记这两个来源后再换。Life 未加载时，Life 轮次不再做历史瘦身，原始事件照旧保留（拍板点 11）。
+- 删掉 `CoreNative.lifeAdmission`（`core/native/conversation.ts:24`），同批更新直接用到它的测试、`scripts/checks/check-native-services.mjs:67` 和 `scripts/checks/check-native-life.mjs:104`（后者直接断言旧字段，删字段后会空过，要改成断言新登记）。
 
 **E1b 搬家**：`core/life-tool-policy.ts` 和 `assertLifeReviewFile` 所在的路径规则迁到 `life/`，Life 的 import 跟着改，Core 不再 import 它们。测试的 import 路径随迁移改（`tests/life/life-tool-policy.test.ts:8`、`tests/life/life-review-files.test.ts:8`），断言不改。
 
@@ -223,6 +224,7 @@ M2 的大部分工作直接对应 product.md M2 表里的一行（见「M2 表�
 - `pnpm run build && node --test dist/tests/life/*.test.js dist/tests/core/history-maintenance.test.js tests/life/*.test.mjs`
 - `pnpm run test:behavior-list`（A 批的第 3、6、9、10 条和 B01、B07 必须全绿）
 - 新增结构化判定测试：Life 未登记时 `unclaimed`、Life 拒绝时 `rejected`、适配器抛错时 `failed`，三者都拒绝后台轮次
+- 新增只读分类测试：实时准入已拒绝的旧 Life 事实批次，仍能经只读分类参与历史投影；分类不改变适配器状态、不消耗授权
 - `pnpm run check:arch -- --write-baseline` 删 2 条
 - `pnpm run verify`
 
@@ -364,6 +366,7 @@ product.md 要求 `source.kind`、`NativeScope`、`MemoryScope`、`scopeId` 分�
 8. **「回退后找回新版期间聊天」不做。** 推荐不做：它是可选项，M2 不发版，M3 发版前再评估。决定：按推荐（主人 2026-11-18）。
 9. **构建产物不计入提交阈值。** 推荐：`dist/src/**` 由 `pnpm run build` 生成，和脚本收紧的基线一样不计入每提交 15 个文件、600 行，但提交里照常包含，提交说明写明。按这个口径，C2、E2 按模块逐个提交可以控制在阈值内；不同意的话，这两批要拆得更细。决定：按推荐（主人 2026-11-18）。
 10. **登记完成屏障不在 M2 实现。** 推荐：没找到可用的宿主接点，硬加会让启动窗口里的主人输入被拒。M2 对没登记的来源返回 `unclaimed` 并拒绝（和现在一样），屏障留到 M3，H 批在 architecture 2.2 写明。决定：按推荐（主人 2026-11-18）。
+11. **来源适配表补只读分类（E1 执行中发现）。** E1a 发现历史投影要对已保存的轮次判断来源，而 `admit()` 是实时准入，旧的事实批次会被拒绝，导致漏投影。推荐：给来源适配器加只读的 `classify(message)`，历史投影经它取分支声明；E1 范围加上 B 批的契约文件、登记口测试和 `check-native-life.mjs`；`user`、QQ 补答的轮次保护留到 E2；Life 未加载时 Life 轮次不再做历史瘦身（原始事件保留）。另一个选项是 E1 不动历史投影、推到 F 批，F 批照样要补这份契约。不替换或延期其他目标，原完成标准不变，对应场景 3（生活与回顾）。决定：按推荐（主人 2026-11-18）。
 
 ## 验收
 
