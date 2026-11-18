@@ -26,9 +26,19 @@ export interface CapabilityRegistration extends CapabilityIdentity {
 }
 export type TurnKind = 'foreground' | 'background';
 export declare const COMPANION_TOOL_SOURCES: readonly ["owner", "life", "review", "guest", "tv"];
-export type CompanionToolSource = typeof COMPANION_TOOL_SOURCES[number];
+/** Modules augment this map and register their tool sources at runtime. */
+export interface CompanionToolSourceMap extends Record<typeof COMPANION_TOOL_SOURCES[number], true> {
+}
+export type CompanionToolSource = Extract<keyof CompanionToolSourceMap, string>;
 export declare const NATIVE_HISTORY_CONTEXT_SOURCES: readonly ["runtime-context", "chatpet-recall", "compact-checkpoint"];
-export type NativeSourceKind = 'user' | 'dsh-world-life' | 'dsh-world-reply-nudge' | 'chatpet-room-tv' | typeof NATIVE_HISTORY_CONTEXT_SOURCES[number];
+/** Modules augment this map for the native message kinds their adapters claim. */
+export interface NativeSourceKindMap extends Record<typeof NATIVE_HISTORY_CONTEXT_SOURCES[number], true> {
+    user: true;
+    'dsh-world-life': true;
+    'dsh-world-reply-nudge': true;
+    'chatpet-room-tv': true;
+}
+export type NativeSourceKind = Extract<keyof NativeSourceKindMap, string>;
 export type AdmissionDecision<Accepted> = {
     kind: 'unclaimed';
 } | {
