@@ -429,6 +429,24 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - Codex 沙箱不能写 worktree 的 `index.lock`，由 Claude 原样提交为 `8955bb4`（实现、测试和构建产物），执行结果另行提交。
 - 首轮返工补齐伙伴工具声明表，并让撤销等待所有作用域清理后汇总错误。构建通过，专项测试通过 16 项、失败 0 项，架构检查通过（R8 新增 0）。完整门禁由验收者在沙箱外执行。
 
+### C · 能力状态表
+
+**C1 改逻辑**
+
+- `src/core/{runtime,index,plugin}.ts` 接入 `CapabilityTable`；独立 Core 保留基础 9 行，DSH 插件追加情绪行，状态仍由 Core 计算。
+- `src/console/client.js` 将缺席拥有者显示为「不可用」，保留哔哩哔哩和 Memory 的显示规则；构建重新生成桌宠客户端。
+- `tests/core/capabilities.test.mjs` 在 `ceb3529` 上固定逐行输出，覆盖 360 个组合，集中维护模块缺席的期望，并单独断言两份客户端的设置页显示。
+- `mise exec -- pnpm run build` 通过；`mise exec -- node --test tests/core/capabilities.test.mjs dist/tests/core/core.test.js` 通过 10 项、失败 0 项；`mise exec -- pnpm run check:arch` 通过，新增违规 0。
+- 保留 Core 对应构建产物；已还原构建造成的三份 Channels 声明联合类型顺序差异。完整门禁及提交由验收者处理。
+
+**C2 搬家**
+
+- Life、Desktop、Room、Channels、Voice、Console、Emotion 依次接管能力行，随入口登记和撤销。Core 保留会话行、记忆行和 `petMemory` 缺席覆盖。
+- 对照测试覆盖 408 个组合，含 Console 实际卸载和重载。全部加载时的行、顺序、契约版本与 C1 一致。
+- 七步构建和专项测试均通过（每步 10 项、失败 0）。工作区架构检查逐步核对待删条目，同源临时副本收紧基线后逐步通过。
+- 批末在工作区运行 `check:arch -- --write-baseline`，按身份核对删除 7 条 R2（57、66、67、68、72、77、85），R8 条目身份无变化，最终架构检查通过。
+- 提交：Codex 沙箱写不了 index，Claude 按 Codex 的累积快照逐步重放提交（C1 `a7986aa`，C2 `7869678`、`724bf38`、`bbf1763`、`60aefa0`、`48a7522`、`73f30b4`、`6cc4798`）。和方案的差异：基线不在批末一次删除，而是每个模块的提交里用 `--write-baseline` 删去该步消失的条目，保证每个提交 `check:arch` 都通过；合计删除的仍是上面 7 条，最终文件和 Codex 的批末快照逐字节一致。
+
 ## 审查结论
 
 ### A 批第一轮（Claude 核实 Codex 审查，返工）
@@ -504,4 +522,20 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - 第 1 条：已修。`src/core/tables/tools.ts` 的 `CompanionToolTable` 复用 `RegistrationTable`，按 `name` 唯一，校验 `COMPANION_TOOL_SOURCES`，登记时冻结来源副本；取出的 `historyOverview` 带租约，撤销后失效，同名重新登记不受影响（`tests/core/tables-tools.test.ts`）。
 - 第 2 条：已修。`registry.ts` 的撤销改用 `allSettled` 加 `async` 包装，同步抛错也会变成 rejection，所有作用域都清理完后再抛 `AggregateError`；新测试在真实 Cordis 插件作用域里验证，前一个作用域清理抛错时后一个照样被撤销。
 - 复跑：`pnpm run build` 后 `dist` 与源码一致；`node --test dist/tests/core/tables*.test.js` 16 项通过；`pnpm run check:arch` 通过（R1–R8 新增 0）。返工由 Claude 原样提交。
+
+### C 批（Claude 核实 Codex 审查，通过）
+
+已核实：
+- 改动只在 C 批允许的文件内：Core 三个文件、7 个模块的 `plugin.ts`、`console/client.js`、生成的 `desktop/platform/client.js`、能力对照测试、`dist/src/**`，基线只删条目。
+- 能力对照测试的期望值我拿到 `ceb3529` 上跑过：逐行对照通过，只有设置页显示那条失败，正是 C1 有意改动的行为。所以「全部加载时逐行不变」有真实基准。
+- 7 个模块各自在入口登记、在卸载时撤销；状态计算逐字搬过去，没有改语义。
+- 基线合计删了 7 条 R2（`core/plugin.ts:57,66,67,68,72,77,85`），R8 没有新增或消失。
+- 沙箱外 `pnpm run verify` 通过（138 个测试文件，模型调用 0），行为清单 52 条全部通过。
+- 构建后 3 份 Channels `.d.ts` 的联合类型顺序是稳定的新输出，已单独提交为 `22c4475`，避免以后每次构建都让工作区变脏。
+
+没有必须修的问题。建议（不影响合并）：
+
+- 热卸载窗口：Cordis 卸载模块时先让服务不可见，等依赖它的插件清理完，才执行本模块的撤销（例如 `src/desktop/plugin.ts:19-22`）。这段时间里设置页可能同时看到 `desktop: null` 和仍在报告的能力行。旧代码在同一窗口里也会列出 Desktop 两行（显示为「已停用」），所以只是短暂显示不一致。可以考虑让登记跟着服务的可见性走。
+- 每次 `listCapabilities` 的工作区就绪检查从 1 次变成 7 次（`src/core/workspace.ts:417-432` 每次都同步读配置和存储清单），设置页等桌宠启动时每 700 毫秒查一次。要根治，需要让 `status()` 接收本次查询的上下文（B 批契约），建议在 M3 定登记表的查询上下文时一起处理。
+- 独立的 `createCore`（不装任何模块）现在只返回 Core 登记的 2 行，原来是 9 行。这符合方案「模块缺席即无行」，但 `./core` 的直接使用者会看到这个变化。
 

@@ -19,6 +19,7 @@ import { PersistentLifePlan, parsePlanDraft } from './plan.js';
 import { registerPlanTools } from './plan-tools.js';
 import {presentFacts} from '../core/interaction-presentation.js';
 import type { CompanionFact, CompanionFactSource } from '../contracts/interaction.js';
+import { CONTRACT_VERSION } from '../contracts/version.js';
 import {readFactReferences} from './facts.js';
 
 type Runtime = ReturnType<typeof createLifeRuntime>;
@@ -541,7 +542,20 @@ declare module '@deepseek-ai/cordis' {
   interface Events { 'pet/life.review'(sessionId: string): void; 'pet/life.changed'(): void }
 }
 export function apply(ctx: Context, config: Config = {}) {
-  const life = new CompanionLife(ctx, ctx.petCore, config.agentPreset ?? 'standard');
+  const host = ctx.petCore;
+  const life = new CompanionLife(ctx, host, config.agentPreset ?? 'standard');
   ctx.provide('petLife', life);
   ctx.effect(() => () => life.close());
+  ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+    id: 'life.pursuits', owner: 'life', contractVersion: CONTRACT_VERSION, order: 3,
+    status: () => {
+      const bound = host.workspace.status().state === 'ready';
+      const running = bound && life.running();
+      return {
+        state: bound ? running ? 'ready' : 'disabled' : 'unavailable',
+        reason: bound ? running ? null : 'Life is paused' : 'Bind a workspace to start Life',
+        supportedOperations: ['start', 'stop', 'inspect', 'interact'],
+      };
+    },
+  }).revoke);
 }

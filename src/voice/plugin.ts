@@ -2,6 +2,7 @@ import type {Context} from '@deepseek-ai/cordis';
 import {lstatSync, mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {createRequire} from 'node:module';
+import {CONTRACT_VERSION} from '../contracts/version.js';
 import {digest} from '../core/storage.js';
 import type {PetCoreHost} from '../core/index.js';
 
@@ -62,10 +63,21 @@ export const name = '70-Voice';
 export const inject = ['petCore','profileContext'];
 export function apply(ctx: Context, config: {deviceDirectory?:string} = {}) {
   const services = ctx as unknown as {profileContext:{dir:string}; get(key:string):unknown};
-  const voice = new CompanionVoice(ctx.petCore, config.deviceDirectory ?? join(services.profileContext.dir,'chatpet-voice'),
+  const host = ctx.petCore;
+  const voice = new CompanionVoice(host, config.deviceDirectory ?? join(services.profileContext.dir,'chatpet-voice'),
     () => services.get('speechToText'));
   ctx.provide('petVoice',voice);
   ctx.on('pet/core.changed',() => voice.refresh());
   ctx.effect(() => () => voice.release());
+  ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+    id: 'voice.speech', owner: 'voice', contractVersion: CONTRACT_VERSION, order: 8,
+    status: () => {
+      const bound = host.workspace.status().state === 'ready';
+      const hear = bound && voice.canTranscribe();
+      return {state: !bound ? 'unavailable' : hear ? 'ready' : 'degraded',
+        reason: !bound ? 'Bind a workspace to use speech' : hear ? null : 'Speech recognition provider is unavailable',
+        supportedOperations: !bound ? [] : hear ? ['speak', 'hear'] : ['speak']};
+    },
+  }).revoke);
 }
 declare module '@deepseek-ai/cordis' {interface Context {petVoice: CompanionVoice}}

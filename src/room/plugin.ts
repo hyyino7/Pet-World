@@ -7,6 +7,7 @@ import { lstatSync, readFileSync } from 'node:fs';
 import type {} from '../behavior/plugin.js';
 import { RoomWindow } from './window.js';
 import { digest } from '../core/storage.js';
+import { CONTRACT_VERSION } from '../contracts/version.js';
 import { RoomChat } from './chat.js';
 import { roomPhoto, type PhotoLook, type PhotoView } from './photo.js';
 import { roomAsset, roomPrefix } from './assets.js';
@@ -152,4 +153,14 @@ export function apply(ctx:Context) {
     scope.effect(() => server.register({kind:'prefix',path:roomPrefix,resource:roomAsset}));
   });
   ctx.effect(() => async () => {host.native.roomAdmission = undefined; await room.close();});
+  ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+    id: 'desktop.room', owner: 'desktop', contractVersion: CONTRACT_VERSION, order: 6,
+    status: () => {
+      const bound = host.workspace.status().state === 'ready';
+      return {
+        state: bound ? 'ready' : 'unavailable', reason: bound ? null : 'Bind a workspace to open the room',
+        supportedOperations: bound ? ['view', 'garden', 'history'] : [],
+      };
+    },
+  }).revoke);
 }

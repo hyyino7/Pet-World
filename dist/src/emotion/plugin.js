@@ -2,6 +2,7 @@ import { registerWorldPrompt, registerWorldContext } from '../core/native/prompt
 import { COMPANION_FEELINGS, decideExpression, expressionStream, readRoomMood } from './index.js';
 import { RecentLedger } from './recent.js';
 import { EmotionFile, readEmotionState } from './state.js';
+import { CONTRACT_VERSION } from '../contracts/version.js';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 export class CompanionEmotion {
     host;
@@ -360,5 +361,11 @@ export function apply(ctx) {
             instances.delete(host);
         await emotion.close();
     });
+    ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+        id: 'emotion.expression', owner: 'emotion', contractVersion: CONTRACT_VERSION, order: 10,
+        status: () => host.workspace.status().state === 'ready' && emotion.catalog.actions.length > 0
+            ? { state: 'ready', reason: null, supportedOperations: ['express', 'recordPlayback'] }
+            : { state: 'unavailable', reason: 'Requires a bound workspace and expression assets', supportedOperations: [] },
+    }).revoke);
 }
 //# sourceMappingURL=plugin.js.map

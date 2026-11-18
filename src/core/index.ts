@@ -24,15 +24,14 @@ export function createCore(config:CoreConfig) {
     workspace.registerInitializer('memory-bank',target=>initializeMemoryStorage(config.memory,target,useConfiguredDirectory()),
       target=>[relative(join(target.path,'.chatpet'),join(memoryDirectory(config.memory!,target.path,useConfiguredDirectory()),'data','memory.db')).split(sep).join('/')]);
   }
-  runtime.capabilities=()=>{
-    const rows=runtime.baseCapabilities(),memory=rows.find(row=>row.id==='memory.lifecycle')!;
-    if(native.memory) {
-      const ready=native.memory.connection.lifecycle==='ready';
-      Object.assign(memory,{state:!native.memoryEnabledForNewSessions?'disabled':ready?'ready':'degraded',
-        reason:!native.memoryEnabledForNewSessions?'Memory is disabled for subsequent turns; native chat remains available':ready?'Shared Bank available for native observation and recall':`Memory provider ${native.memory.connection.lifecycle}; chat continues without recall on failure`,
-        supportedOperations:ready?['observe','recall','correct','withdraw','validate']:[]});
-    }
-    return rows;
+  runtime.capabilityStatuses['memory.lifecycle']=()=>{
+    const memory=native.memory;
+    if(!memory)return;
+    const lifecycle=memory.connection.lifecycle;
+    const ready=lifecycle==='ready';
+    return {state:!native.memoryEnabledForNewSessions?'disabled':ready?'ready':'degraded',
+      reason:!native.memoryEnabledForNewSessions?'Memory is disabled for subsequent turns; native chat remains available':ready?'Shared Bank available for native observation and recall':`Memory provider ${lifecycle}; chat continues without recall on failure`,
+      supportedOperations:ready?['observe','recall','correct','withdraw','validate']:[]};
   };
   return {
     services:{core:Object.freeze(runtime.core),preferences:createPreferences(runtime),workspace:workspace.port},

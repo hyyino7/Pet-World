@@ -5,6 +5,7 @@ import { COMPANION_FEELINGS, decideExpression, expressionStream, readRoomMood, t
 import { RecentLedger, type RecentExperience } from './recent.js';
 import { EmotionFile, readEmotionState } from './state.js';
 import type { EmotionCatalog, EmotionSnapshot, EmotionState, EmotionUpdate } from '../contracts/emotion.js';
+import { CONTRACT_VERSION } from '../contracts/version.js';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 
 interface Turn {
@@ -306,4 +307,10 @@ export function apply(ctx: Context): void {
     if(instances.get(host)===emotion)instances.delete(host);
     await emotion.close();
   });
+  ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+    id: 'emotion.expression', owner: 'emotion', contractVersion: CONTRACT_VERSION, order: 10,
+    status: () => host.workspace.status().state === 'ready' && emotion.catalog.actions.length > 0
+      ? {state:'ready', reason:null, supportedOperations:['express', 'recordPlayback']}
+      : {state:'unavailable', reason:'Requires a bound workspace and expression assets', supportedOperations:[]},
+  }).revoke);
 }

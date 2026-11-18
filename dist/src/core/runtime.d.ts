@@ -1,8 +1,10 @@
 import type { CapabilityStatus, ServiceCall } from '../contracts/common.js';
 import type { AttentionPolicy, CompanionIdentity, CoreService } from '../contracts/core.js';
+import type { CapabilityRegistration } from '../contracts/tables.js';
 import { CoreAuthority } from './authority.js';
 import { type ConversationOptions } from './options.js';
 import { CoreStore } from './storage.js';
+import { CapabilityTable } from './tables/capabilities.js';
 export interface CoreConfig {
     dataDir: string;
     companionId: string;
@@ -26,6 +28,8 @@ export declare class CoreRuntime {
     fileEffect: boolean;
     private stopped;
     onChange: (operation: string, value: unknown) => void;
+    readonly capabilityTable: CapabilityTable;
+    readonly capabilityStatuses: Partial<Record<CapabilityStatus['id'], () => ReturnType<CapabilityRegistration['status']> | undefined>>;
     capabilities: () => CapabilityStatus[];
     constructor(config: CoreConfig);
     private validateIdentity;
@@ -34,6 +38,6 @@ export declare class CoreRuntime {
     get conversation(): Readonly<ConversationOptions>;
     /** Configuration API authority, compare-and-set and request deduplication. */
     call<I, O>(name: string, write: boolean, fn: (input: I) => O): ServiceCall<I, O>;
-    baseCapabilities(): CapabilityStatus[];
+    private registerBaseCapabilities;
     close(): void;
 }

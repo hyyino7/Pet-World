@@ -160,7 +160,7 @@ export declare function createMessaging(ctx: Context, host: PetCoreHost, options
             meaning: string;
             usage: string;
             count: number;
-            status: "confirmed" | "candidate" | "rejected";
+            status: "rejected" | "confirmed" | "candidate";
         }[];
         stickers: {
             id: string;

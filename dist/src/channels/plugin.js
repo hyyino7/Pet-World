@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from 'node:util';
 import { bridgeRoute, compactRoute } from '#dsh-world/ecosystem/bridge/route';
+import { CONTRACT_VERSION } from '../contracts/version.js';
 import { digest } from '../core/storage.js';
 import { bridgePrefix, LocalBridge, privateDeviceDirectory } from './bridge.js';
 import { createMessaging } from './messaging.js';
@@ -134,7 +135,8 @@ export const inject = ['petCore', 'webServer', 'sessionController', 'agents', 's
 export function apply(ctx, config = {}) {
     const services = ctx;
     const profile = ctx.get('profileContext');
-    const channels = new CompanionChannels(ctx, ctx.petCore, services, config.deviceDirectory ?? profile?.dir ?? '');
+    const host = ctx.petCore;
+    const channels = new CompanionChannels(ctx, host, services, config.deviceDirectory ?? profile?.dir ?? '');
     ctx.provide('petChannels', channels);
     ctx.effect(() => services.webServer.register(bridgeRoute(bridgePrefix, () => channels.local)));
     ctx.effect(() => services.webServer.register(compactRoute(bridgePrefix, () => channels.local, () => channels.compact())));
@@ -143,5 +145,14 @@ export function apply(ctx, config = {}) {
     ctx.on('pet/life.changed', refresh);
     refresh();
     ctx.effect(() => async () => { await channels.close(); });
+    ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+        id: 'channel.qq', owner: 'qq', contractVersion: CONTRACT_VERSION, order: 7,
+        status: () => {
+            const state = channels.qqConnection();
+            return { state: state === 'online' ? 'ready' : state === 'off' ? 'disabled' : 'unavailable',
+                reason: state === 'online' ? null : state === 'off' ? 'QQ is off' : 'QQ is disconnected',
+                supportedOperations: state === 'online' ? ['receive', 'reply'] : [] };
+        },
+    }).revoke);
 }
 //# sourceMappingURL=plugin.js.map
