@@ -213,8 +213,8 @@ B 的原文（`product.md:274`）：保留检查和棘轮、概念统一，在�
 - 临时副本执行 `mise exec -- pnpm run build` 通过；随后 `mise exec -- pnpm run test:behavior-list` 的索引测试 11 条、行为清单 52 条均通过，失败 0 条，含本机回环 Memory 测试。
 - 门禁：在合并结果（main `6edef28` + 本分支 `442aeab`）上 `pnpm run verify` 全绿（1417 个测试全过，含 Memory 回环测试、`check:release`、`check:package`），`pnpm run build && pnpm run test:behavior-list` 索引 11 条、行为清单 52 条全过。已安装环境的外部调用、真实副本升级与回退留待 C、D 批验收。
 - 第一轮审查返工补齐正式版与预发布版的升级指引、播放证据与能力行的登记限制，以及离线备份的安装回执要求和升级顺序。
-- C 批（进行中）：`0.2.0-rc.1` 已发布，冻结提交 `852030a`，与 `fd70ea2` 只差版本元数据；第一次尝试有 1 项测试失败，主人确认是 GitHub 侧问题，第三次尝试通过。三条原生检查在 `852030a` 上通过（付费调用 0）；日常 profile 里除 her-world 自身的副本外，没有代码用到被删字段。
-- C 批隔离环境升级后 `00-Core` 报 `Invalid companionId`：主人复现确认是 setup 版换成 npm 版就会发生（同版本 0.1.8 也一样），不是 RC 回归，登记为已知问题 8；隔离环境改为 npm 版 0.1.8 加 profile 层覆盖后重做升级。
+- C 批（通过，主人验收）：`0.2.0-rc.1` 已发布，冻结提交 `852030a`，与 `fd70ea2` 只差版本元数据；第一次尝试有 1 项测试失败，主人确认是 GitHub 侧问题，第三次尝试通过。三条原生检查在 `852030a` 上通过（付费调用 0）；日常 profile 里除 her-world 自身的副本外，没有代码用到被删字段。
+- C 批隔离环境升级后 `00-Core` 报 `Invalid companionId`：主人复现确认是 setup 版换成 npm 版就会发生（同版本 0.1.8 也一样），不是 RC 回归，登记为已知问题 8；隔离环境改为 npm 版 0.1.8 加 profile 层覆盖后，用更新按钮升到 RC 并激活，主人确认通过。
 
 ## 审查结论
 
