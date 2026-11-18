@@ -11,3 +11,8 @@ export * as lifePlugin from '../../src/life/plugin.js';
 export * as channelsPlugin from '../../src/channels/plugin.js';
 export * as voicePlugin from '../../src/voice/plugin.js';
 export * as memoryPlugin from '../../src/memory/plugin.js';
+export * as roomPlugin from '../../src/room/plugin.js';
+export * as desktopPlugin from '../../src/desktop/plugin.js';
+export * as emotionPlugin from '../../src/emotion/plugin.js';
+export * as guestPreset from '../../src/channels/guest.js';
+export { resolveCompanionHome } from '../../src/core/companion-foundation.js';
