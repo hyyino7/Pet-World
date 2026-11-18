@@ -220,7 +220,7 @@ export function apply(ctx:Context) {
   ctx.provide('petEconomy',service);
   const stopAccess=installEconomyAccessGuard(ctx,()=>service.protectedDirectory());
   const scope=(agent?:Agent)=>{
-    if(!agent || agent.session.header.agentPreset==='chatpet-channel-guest' || host.native.channelBoundary?.guest(agent.id) || !host.native.manages(agent.id))return;
+    if(!agent || agent.session.header.agentPreset==='chatpet-channel-guest' || host.native.isGuest(agent.id) || !host.native.manages(agent.id))return;
     const bound=ctx.petWorld.sessionStatus(agent.session),current=host.workspace.status();
     if(bound?.state!=='ready'||current.state!=='ready'||!current.target||bound.target?.id!==current.target.id)return;
     return current.target.id;

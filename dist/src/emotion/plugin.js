@@ -108,10 +108,11 @@ export class CompanionEmotion {
         if (current)
             return { ...(roomMood ?? {}), label: current.mood, updatedAt: current.at, ...(current.feelings ? { feelings: current.feelings } : {}) };
     }
-    async update(workspaceId, input) {
+    async update(workspaceId, input, assertCurrent) {
         const run = this.queue.then(async () => {
             if (this.closed)
                 throw Error('Emotion component is closed');
+            assertCurrent?.();
             const { expectedRevision: _revision, expectedHash: _hash, ...values } = input;
             const candidate = readEmotionState({ ...values, reason: input.reason ?? '', at: Date.now(), memories: input.memories ?? [] });
             const snapshot = this.file(workspaceId).update(input, candidate.at);
@@ -129,21 +130,23 @@ export class CompanionEmotion {
         // it does not erase the companion's independently retained emotional state.
         this.ledger(workspaceId)?.retire(memoryId);
     }
-    complete(sessionId, turn) {
+    complete(sessionId, turn, current = () => true) {
         // Footer updates have no editor revision of their own. Read and apply them
         // in the same queue as explicit edits so concurrent surfaces cannot all
         // read one stale revision and silently lose later emotional updates.
-        const run = this.queue.then(() => this.completeTurn(sessionId, turn));
+        const run = this.queue.then(() => this.completeTurn(sessionId, turn, current));
         this.queue = run.catch(() => { });
         return run;
     }
-    async completeTurn(sessionId, turn) {
-        if (this.closed || !turn.intent)
+    async completeTurn(sessionId, turn, current) {
+        if (this.closed || !turn.intent || !current())
             return;
         const ledger = this.ledger(turn.workspaceId);
         if (!ledger)
             return;
         const previousRead = await this.read(turn.workspaceId), previous = previousRead.state;
+        if (this.closed || !current())
+            return;
         const carriesReason = !turn.intent.reason && (!turn.intent.mood || turn.intent.mood === previous?.mood);
         let state = previous;
         if (turn.intent.mood || turn.intent.feelings || turn.intent.roomMood || turn.intent.reason) {
@@ -193,9 +196,11 @@ export function installEmotion(ctx, host) {
         return status?.state === 'ready' && status.target ? { ...status.target, guest: false } : undefined;
     }
     const warn = (error) => ctx.logger('chatpet-emotion').warn('Recent expression unavailable', error instanceof Error ? error.message : 'unknown');
-    host.native.playbackEvidence = (sessionId, playbackId) => {
+    // Keep the existing anonymous callback's vocabulary scope stable for R8.
+    const playback = host.native.registerPlaybackEvidence(((sessionId, playbackId) => {
         const turn = turns.get(sessionId);
-        if (!turn)
+        const scope = host.native.scopeFor(sessionId);
+        if (!turn || !scope || scope.workspaceId !== turn.workspaceId || scope.path !== turn.path)
             return;
         const ledger = emotion.ledger(turn.workspaceId);
         const action = ledger?.read().actions.find(item => item.id === playbackId);
@@ -211,7 +216,7 @@ export function installEmotion(ctx, host) {
                     warn(error);
                 }
             } };
-    };
+    }));
     const expressionGuide = () => [
         '你是同一个大肥鱼，无论是否显示在桌面或房间。保持自己持续的心情，区别于用户情绪、实际行为、工作状态和交互状态。愤怒与无聊可分别用 feelings 中的 anger、boredom 表达，也可以用准确的文字表达其他感受；不要按关键词推断，不把它们换算成开心，不引入自动衰减。',
         JSON.stringify({ available: emotion.catalog }),
@@ -228,11 +233,18 @@ export function installEmotion(ctx, host) {
         output: { schema: { type: 'string' }, render: (_, value) => [{ type: 'text', text: value }] },
         async execute(args, exec) {
             const agent = exec.agent, workspace = agent && bound(agent.session);
-            if (!agent || !workspace || workspace.guest || !host.native.manages(agent.id))
+            const turn = agent && turns.get(agent.id);
+            if (!agent || !workspace || workspace.guest || !turn)
                 throw Error('Emotion update requires a bound owner conversation');
-            host.native.validate(agent.id);
+            const assertCurrent = () => {
+                playback.lease.assertCurrent();
+                if (turns.get(agent.id) !== turn || !host.native.emotionAllowed(agent.id, turn.turn, 'tool'))
+                    throw Error('Emotion update requires a bound owner conversation');
+                host.native.validate(agent.id);
+            };
+            assertCurrent();
             const saved = await emotion.update(workspace.id, { expectedRevision: args.expected_revision, expectedHash: args.expected_hash, mood: args.mood, reason: args.reason,
-                ...(args.feelings ? { feelings: args.feelings } : {}) });
+                ...(args.feelings ? { feelings: args.feelings } : {}) }, assertCurrent);
             return JSON.stringify(saved);
         } });
     ctx.tools.register(updateTool, { when: ({ agent }) => Boolean(agent && bound(agent.session) && !bound(agent.session)?.guest) });
@@ -317,8 +329,11 @@ export function installEmotion(ctx, host) {
                     if (event.data.turn !== turn.turn || event.data.reason.kind !== 'completed')
                         return;
                     const w = bound(session);
-                    if (w?.id === turn.workspaceId && w.path === turn.path)
-                        await emotion.complete(session.id, turn);
+                    if (w?.id === turn.workspaceId && w.path === turn.path) {
+                        const footerAllowed = host.native.captureEmotionFooter(session.id, turn.turn);
+                        if (footerAllowed)
+                            await emotion.complete(session.id, turn, () => playback.lease.isCurrent() && footerAllowed());
+                    }
                 }
             }
             catch (error) {
@@ -343,7 +358,13 @@ export function installEmotion(ctx, host) {
             prompt.attach(scope);
         attach(scope, false);
     };
-    ctx.effect(() => () => { turns.clear(); promptState.clear(); emotion.attachGuest = undefined; host.native.playbackEvidence = undefined; });
+    ctx.effect(() => async () => {
+        const revoked = playback.revoke();
+        turns.clear();
+        promptState.clear();
+        emotion.attachGuest = undefined;
+        await revoked;
+    });
 }
 export const name = '20-Emotion';
 export const inject = ['petCore', 'petWorld', 'systemPrompt', 'agents', 'tools'];

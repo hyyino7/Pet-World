@@ -147,7 +147,7 @@ export function installCompanionFoundation(ctx: Context, host: PetCoreHost, worl
   const prepared = new WeakMap<Agent,{workspaceId:string; text:string}>();
   const getScope = () => companionWritingScope(ctx,host);
   const ownerScope = (agent: Agent) => {
-    if (agent.session.header.agentPreset === 'chatpet-channel-guest' || host.native.channelBoundary?.guest(agent.id)
+    if (agent.session.header.agentPreset === 'chatpet-channel-guest' || host.native.isGuest(agent.id)
       || world.sessionStatus(agent.session)?.state !== 'ready') return;
     const current = workspace(ctx,host), scope = getScope();
     if (!current || !scope || !scope.sessionIds.includes(agent.id) || current.registry.archivedSessionIds.includes(agent.id)) return;

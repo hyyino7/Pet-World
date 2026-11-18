@@ -26,7 +26,24 @@ export class SourceAdapterTable {
         return this.table.register(adapter.id, {
             ...adapter, sources: [...adapter.sources], branches: { ...adapter.branches }, admit: adapter.admit.bind(adapter),
             classify: adapter.classify?.bind(adapter),
+            isGuest: adapter.isGuest?.bind(adapter),
+            beforeFirstStep: adapter.beforeFirstStep?.bind(adapter),
         });
+    }
+    isGuest(sessionId) {
+        return this.table.entries().some(({ value, lease }) => lease.isCurrent() && value.isGuest?.(sessionId) === true && lease.isCurrent());
+    }
+    async beforeFirstStep(current) {
+        for (const { value, lease } of this.table.entries()) {
+            if (!lease.isCurrent() || !value.beforeFirstStep)
+                continue;
+            if (!current())
+                return false;
+            await value.beforeFirstStep();
+            if (!lease.isCurrent() || !current())
+                return false;
+        }
+        return current();
     }
     classify(message) {
         for (const { value: adapter, lease } of this.table.entries()) {

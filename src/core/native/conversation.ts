@@ -8,8 +8,9 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 import type { NativeMemory } from './memory.js';
 import { canonical, check, digest, now, reject } from '../storage.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
-import type { SourceAdmission } from '../../contracts/tables.js';
+import type { RegistrationLease, SessionPolicyRow, SourceAdmission, TurnKind } from '../../contracts/tables.js';
 import { SourceAdapterTable } from '../tables/sources.js';
+import { RegistrationTable } from '../tables/registry.js';
 
 export interface NativeScope { workspaceId: string; path: string; storageId: string; guest: boolean }
 export function matchesNativeScope(current: NativeScope | undefined, expected: NativeScope): boolean {
@@ -19,11 +20,56 @@ export function matchesNativeScope(current: NativeScope | undefined, expected: N
 
 export interface NativeSourceContext {
   readonly policyKey: string;
+  readonly guardDuringTakeover?: boolean;
   fileAccessKey?(): string;
   continueAfterInterrupt?(scope: NativeScope): () => void;
 }
 export type NativeSourceSelection = Extract<SourceAdmission<NativeSourceContext>, {kind: 'accepted'}>;
-interface NativeTurn { turn: number; scope: NativeScope; sourceIds: string[] }
+interface NativeTurn {
+  turn: number;
+  scope: NativeScope;
+  sourceIds: string[];
+  sources: Map<string, TurnSourcePolicy>;
+}
+interface TurnSourcePolicy {
+  turnKind: TurnKind;
+  lease: RegistrationLease;
+  guardDuringTakeover?: boolean;
+  emotionUpdate: NativeSourceSelection['branch']['emotionUpdate'];
+  reply?: {channel: string; sessionId: string};
+}
+type ResolvePlaybackEvidence = (sessionId: string, playbackId: string) =>
+  {text: string; occurredAt: number; associated(memoryId: string): void} | undefined;
+
+const ownerPolicy: SessionPolicyRow = {
+  row: 1, branch: 'owner', trustedActor: '主人，无渠道身份的原生输入',
+  selectionKey: '绑定工作区内的就绪会话', historyScope: '原生会话自己的历史', preset: '主人在 DSH 选择',
+  lifecycle: 'DSH 取消与归档，首步恢复图片和会话副本', bindingCheck: '工作区、路径、存储与 guest 绑定',
+  tools: {description: 'DSH 原生权限及已启用的伙伴工具', behaviorIds: ['M2A-09']},
+  memoryObservation: {description: '观察主人输入及完成的回复', behaviorIds: ['B10']},
+  emotionUpdate: {
+    footer: {description: '回复 footer 更新共享情绪', behaviorIds: ['M2A-10']},
+    tool: {description: '允许情绪工具', behaviorIds: ['M2A-10']},
+  },
+};
+
+const homePolicy: SessionPolicyRow = {
+  row: 2, branch: 'home', trustedActor: '随输入来源',
+  selectionKey: '每个 Core 的共享 home', historyScope: '共享 home', preset: 'Life、DSH 组合预设或 standard',
+  lifecycle: '打开前恢复会话副本，归档后由上游选择会话', bindingCheck: '打开时核对工作区与路径',
+  tools: {description: '随输入来源', behaviorIds: ['M2A-19', 'M2A-22']},
+  memoryObservation: {description: '随输入来源', behaviorIds: ['M2A-22']},
+  emotionUpdate: {
+    footer: {description: '随输入来源', behaviorIds: ['M2A-19']},
+    tool: {description: '随输入来源', behaviorIds: ['M2A-19']},
+  },
+};
+
+interface OwnerSourceContext extends NativeSourceContext { sessionId: string; isGuest(): boolean }
+
+function classifyOwner(message: UserMessage): 'owner' | undefined {
+  if (message.source.kind === 'user' && !('identity' in message.source)) return 'owner';
+}
 
 interface Work {
   sessionId:string;turn:number;scope:NativeScope;steps:number;toolCalls:number;
@@ -32,43 +78,70 @@ interface Work {
 /** Scoped services for the existing DSH Agent; only autonomous inputs have extra allowances. */
 export class CoreNative {
   memory?: NativeMemory;
-  memoryEnabledForNewSessions = true;
+  private memoryEnabled = true;
   readonly sourceTable = new SourceAdapterTable<NativeSourceContext>();
-  roomAdmission?: (sessionId: string, message: UserMessage) => boolean;
-  channelBoundary?: {guest(sessionId: string): boolean; admit(sessionId: string, message: UserMessage): boolean; identity?(sessionId: string): Record<string, unknown> | undefined};
+  private readonly playbackProviders = new RegistrationTable<ResolvePlaybackEvidence>();
   resolveScope?: (sessionId: string) => NativeScope | undefined;
   attachGuest?: (context: Context) => void;
   private readonly turns = new Map<string, NativeTurn>();
   private readonly preparedFactInputs=new Map<string,{scope:NativeScope;ids:string[]}>();
   scopeFor(sessionId: string): NativeScope | undefined { return this.resolveScope?.(sessionId); }
+  isGuest(sessionId: string): boolean { return this.sourceTable.isGuest(sessionId); }
+  registerPlaybackEvidence(resolve: ResolvePlaybackEvidence) {
+    return this.playbackProviders.register('playback', resolve);
+  }
+  emotionAllowed(sessionId: string, turn: number, permission: 'footer' | 'tool'): boolean {
+    const current = this.turns.get(sessionId);
+    if (current?.turn !== turn || !matchesNativeScope(this.scopeFor(sessionId), current.scope)) return false;
+    const sources = [...current.sources.values()];
+    if (permission === 'tool' && sources.some(source =>
+      source.guardDuringTakeover && (!source.lease.isCurrent() || !source.emotionUpdate.tool))) return false;
+    return sources.some(({emotionUpdate, lease}) => lease.isCurrent() && emotionUpdate[permission]);
+  }
+  captureEmotionFooter(sessionId: string, turn: number): (() => boolean) | undefined {
+    const current = this.turns.get(sessionId);
+    if (current?.turn !== turn || !matchesNativeScope(this.scopeFor(sessionId), current.scope)) return;
+    const scope = {...current.scope};
+    const leases = [...current.sources.values()]
+      .filter(({emotionUpdate, lease}) => emotionUpdate.footer && lease.isCurrent())
+      .map(({lease}) => lease);
+    if (!leases.length) return;
+    return () => matchesNativeScope(this.scopeFor(sessionId), scope) && leases.some(lease => lease.isCurrent());
+  }
   private current(sessionId: string, expected?: NativeScope): NativeScope {
     const scope = this.scopeFor(sessionId);
     check(scope && (!expected || matchesNativeScope(scope, expected)), 'Conversation left its bound workspace');
     return scope!;
   }
   acceptsInput(sessionId: string, message: UserMessage): boolean {
-    if (message.source.kind === 'user') return !('identity' in message.source) || this.channelBoundary?.admit(sessionId, message) === true;
-    if (message.source.kind === 'dsh-world-life') {
-      return this.sourceTable.admit({sessionId, message}).kind === 'accepted';
-    }
-    return this.roomAdmission?.(sessionId, message) === true || this.channelBoundary?.admit(sessionId,message) === true;
+    return this.sourceTable.admit({sessionId, message}).kind === 'accepted';
   }
+  setMemoryEnabledForNewSessions(enabled: boolean): void { this.memoryEnabled = enabled; }
+  memoryEnabledForNewSessions(): boolean { return this.memoryEnabled; }
   memoryFor(_sessionId: string): NativeMemory | undefined {
     // The current component switch applies at the next turn, including retained chats.
-    return this.memoryEnabledForNewSessions ? this.memory : undefined;
+    return this.memoryEnabled ? this.memory : undefined;
   }
-  /** Native DSH owns the turn. Core retains only its attributed input identifiers,
-   * not an execution/activity, allowance, serial slot or cancellation timer. */
+  /** Native DSH owns the turn. Core retains only input references and selected policy metadata. */
   observeInputs(sessionId: string, turn: number, messages: readonly UserMessage[], scope = this.current(sessionId)): string[] {
     this.current(sessionId, scope);
     let current = this.turns.get(sessionId);
     if (!current || current.turn !== turn) {
-      current = {turn, scope, sourceIds:[]}; this.turns.set(sessionId,current);
+      current = {turn, scope, sourceIds:[], sources:new Map()}; this.turns.set(sessionId,current);
       this.runtime.store.put('native-current-inputs',sessionId,[]);
     }
     this.current(sessionId,current.scope);
     for (const message of messages) {
-      if (!this.acceptsInput(sessionId,message)) continue;
+      const selection = this.sourceTable.admit({sessionId, message});
+      if (selection.kind !== 'accepted') continue;
+      const {branch, context, lease} = selection;
+      const {memoryObservation} = branch;
+      current.sources.set(message.id, {lease, turnKind: branch.turnKind, emotionUpdate: branch.emotionUpdate,
+        guardDuringTakeover: context.guardDuringTakeover, reply: memoryObservation?.reply?.()});
+      const observation = memoryObservation?.input?.();
+      if (!observation) continue;
+      const {origin, actorId, sourceKind, attribution} = observation;
+      lease.assertCurrent();
       const key=digest([sessionId,message.id]);
       const sourceId=this.runtime.store.get<string>('native-user-source',key) ?? `native-input:${key}`;
       const metadata=message.source as typeof message.source & {facts?:CompanionFact[]};
@@ -82,11 +155,8 @@ export class CoreNative {
           'QQ reply retry requires its actual original native source');
         roots.push(originalSource!);
       }
-      const identity = 'identity' in message.source ? message.source.identity : undefined;
-      const attributed = identity && typeof identity === 'object' ? {...identity} : undefined;
       if (!this.runtime.store.get('source',sourceId)) {
-        const source: EvidenceSource = {sourceId,origin:scope.guest?'external_content':message.source.kind==='user'?'owner_statement':'virtual_action',
-          actorId:message.source.kind==='dsh-world-reply-nudge'?'system:qq-reply':scope.guest ? String(attributed?.speakerId ?? 'external') : message.source.kind==='user'?this.runtime.config.ownerActorId:facts.length?'system:companion-world':this.runtime.config.companionId,
+        const source: EvidenceSource = {sourceId,origin,actorId,
           recordedAt:now(),locator:`dsh:${sessionId}:${message.id}`,rootSourceIds:roots,
           text:message.content.flatMap(part=>part.type==='text'?[part.text]:[]).join('\n')};
         this.runtime.store.put('source',sourceId,source);
@@ -99,7 +169,7 @@ export class CoreNative {
       // eligible; observing only the facts leaves an unknown ancestry gap.
       if (this.memoryFor(sessionId) && !this.runtime.store.get('memory-source-work',sourceId))
         this.runtime.store.put('memory-source-work',sourceId,{sourceId,workspaceId:scope.storageId,state:'queued',observationId:null,
-          sourceKind:message.source.kind==='user'?'user_statement':'system',attribution:attributed ?? {channel:'dsh',sessionId}});
+          sourceKind,attribution});
     }
     const prepared=this.preparedFactInputs.get(sessionId);
     if(prepared) {
@@ -148,8 +218,11 @@ export class CoreNative {
       const sourceId=`result:native:${digest([sessionId,turn])}`;
       if(!this.runtime.store.get('source',sourceId))this.runtime.store.put('source',sourceId,{sourceId,origin:'model_interpretation',actorId:this.runtime.config.companionId,
         recordedAt:now(),locator:`dsh:${sessionId}:turn:${turn}`,rootSourceIds:[...current.sourceIds],text:result.text} satisfies EvidenceSource);
-      if(this.memoryFor(sessionId) && !this.runtime.store.get('memory-source-work',sourceId))this.runtime.store.put('memory-source-work',sourceId,
-        {sourceId,workspaceId:current.scope.storageId,state:'queued',observationId:null,attribution:{channel:current.scope.guest?'external':'dsh',sessionId}});
+      const policies = [...current.sources.values()];
+      const policy = policies.find(source => source.turnKind === 'foreground') ?? policies[0];
+      if(policy?.reply && policy.lease.isCurrent() && this.memoryFor(sessionId) && !this.runtime.store.get('memory-source-work',sourceId))
+        this.runtime.store.put('memory-source-work',sourceId,
+          {sourceId,workspaceId:current.scope.storageId,state:'queued',observationId:null,attribution:policy.reply});
       const sources=this.runtime.store.get<string[]>('native-session-sources',sessionId) ?? [];
       this.runtime.store.put('native-session-sources',sessionId,[...new Set([...sources,sourceId])]);
     }
@@ -160,10 +233,32 @@ export class CoreNative {
       this.current(sessionId,current.scope);
     }
   }
-  playbackEvidence?: (sessionId: string, playbackId: string) => { text: string; occurredAt: number; associated(memoryId: string): void } | undefined;
   private readonly active = new Map<string, Work>();
   private closing = false;
-  constructor(readonly runtime:CoreRuntime) {}
+  constructor(readonly runtime:CoreRuntime) {
+    this.sourceTable.register({
+      id: 'core-owner', sources: ['user'], order: 0, classify: classifyOwner, policyRows: [homePolicy],
+      branches: {
+        owner: {
+          turnKind: 'foreground', toolSource: 'owner', toolPolicy: null,
+          memoryObservation: {
+            input: ({sessionId, isGuest}: OwnerSourceContext) => {
+              const guest = isGuest();
+              return {origin: guest ? 'external_content' : 'owner_statement',
+                actorId: guest ? 'external' : runtime.config.ownerActorId,
+                sourceKind: 'user_statement', attribution: {channel: 'dsh', sessionId}};
+            },
+            reply: ({sessionId, isGuest}: OwnerSourceContext) => ({channel: isGuest() ? 'external' : 'dsh', sessionId}),
+          },
+          emotionUpdate: {footer: true, tool: true},
+          historyProjection: {participates: false, protectsTurn: true}, policyRow: ownerPolicy,
+        },
+      },
+      admit: ({sessionId, message}) => classifyOwner(message)
+        ? {kind: 'accepted', branch: 'owner', context: {policyKey: 'owner', sessionId, isGuest: () => this.scopeFor(sessionId)?.guest === true} as OwnerSourceContext}
+        : {kind: 'unclaimed'},
+    });
+  }
   manages(sessionId: string): boolean { const scope=this.scopeFor(sessionId); return this.active.has(sessionId) || Boolean(scope && !scope.guest); }
   /** Autonomous planning submits durable intent; it must not bypass it with ad-hoc body goals. */
   isAutonomous(sessionId:string):boolean { return this.active.has(sessionId); }
@@ -200,8 +295,11 @@ export class CoreNative {
     let work=this.active.get(sessionId);
     check(!work || work.turn===turn,'Previous autonomous native turn has not settled');
     if(!work) {
-      const inputs=messages.filter(message=>message.source.kind!=='user' && this.acceptsInput(sessionId,message));
-      check(inputs.length,'Autonomous native work requires its registered Life/TV source');
+      const admitted=messages.some(message=>{
+        const selection=this.sourceTable.admit({sessionId,message});
+        return selection.kind==='accepted'&&selection.branch.turnKind==='background';
+      });
+      check(admitted,'Autonomous native work requires its registered Life/TV source');
       work={sessionId,turn,scope,steps:0,toolCalls:0,timer:setTimeout(lifecycle.cancel,this.runtime.conversation.maxDurationMs),...lifecycle};
       this.active.set(sessionId,work);
     }
@@ -226,25 +324,33 @@ export class CoreNative {
     const operate = async (operation: string, args: Record<string, unknown>, actualSession?: string, callId?: string) => {
       check(actualSession, 'Memory tools require an admitted native session');
       this.validate(actualSession!);
-      check(this.memoryFor(actualSession!), 'Memory is disabled for this conversation');
-      const scope=this.scopeFor(actualSession!);
-      const binding=await this.memory!.prepare(actualSession!,scope);
-      this.validate(actualSession!);
+      const memory=this.memoryFor(actualSession);
+      check(memory, 'Memory is disabled for this conversation');
+      const scope=this.current(actualSession);
+      const binding=await memory.prepare(actualSession,scope);
+      const assertCurrent = () => {
+        memory.assertBinding(binding);
+        this.current(actualSession,scope);
+        this.validate(actualSession);
+      };
+      assertCurrent();
       const inputIds=this.runtime.store.get<string[]>('native-current-inputs',actualSession!) ?? [];
-      await this.memory!.capture(inputIds,binding);
-      this.memory!.assertBinding(binding);
-      this.validate(actualSession!);
-      if(operation==='read'){const detail=await this.memory!.detail(String(args.memory_id),binding);this.memory!.assertBinding(binding);this.validate(actualSession!);return detail.text;}
+      await memory.capture(inputIds,binding);
+      assertCurrent();
+      if(operation==='read'){const detail=await memory.detail(String(args.memory_id),binding);assertCurrent();return detail.text;}
       if (operation === 'recall') {
-        await this.memory!.recall(actualSession!,String(args.query),false,binding);this.memory!.assertBinding(binding);this.validate(actualSession!);return this.memory!.context(actualSession!);
+        await memory.recall(actualSession,String(args.query),false,binding);assertCurrent();return memory.context(actualSession);
       }
       const { playback_id: playbackId, ...providerArgs } = args;
-      let playback: ReturnType<NonNullable<CoreNative['playbackEvidence']>>;
+      let associatePlayback: ((memoryId: string) => void) | undefined;
+      const provider = this.playbackProviders.get('playback');
       const evidenceIds=[...inputIds];
       if (operation === 'propose' && playbackId !== undefined) {
         check(typeof playbackId === 'string', 'Invalid playback reference');
-        playback = this.playbackEvidence?.(actualSession, playbackId);
-        check(playback, 'Playback was not observed in the current workspace or has expired');
+        const playback = provider?.value(actualSession, playbackId);
+        check(provider && playback, 'Playback was not observed in the current workspace or has expired');
+        provider.lease.assertCurrent();
+        associatePlayback = provider.lease.guard(memoryId => playback.associated(memoryId));
         check(Array.isArray(args.evidence_quotes) && args.evidence_quotes.length > 0, 'Action preference requires owner evidence');
         const owner = inputIds.map(id => this.runtime.store.require<EvidenceSource>('source', id)).filter(source => source.origin === 'owner_statement');
         check(args.evidence_quotes.some(quote => typeof quote === 'string' && quote.trim() && owner.some(source => source.text.includes(quote))),
@@ -254,21 +360,25 @@ export class CoreNative {
         const sourceId = `native-playback:${digest([workspaceId, playbackId, playback.occurredAt, playback.text])}`;
         if (!this.runtime.store.get('source', sourceId)) this.runtime.store.transaction(() => {
           this.runtime.store.put('source', sourceId, { sourceId, origin: 'external_content', actorId: this.runtime.config.companionId,
-            locator: `desktop:${workspaceId}:${playbackId}`, recordedAt: new Date(playback!.occurredAt).toISOString(),
-            rootSourceIds: [], text: playback!.text } satisfies EvidenceSource);
+            locator: `desktop:${workspaceId}:${playbackId}`, recordedAt: new Date(playback.occurredAt).toISOString(),
+            rootSourceIds: [], text: playback.text } satisfies EvidenceSource);
           this.runtime.store.put('memory-source-work', sourceId, { sourceId, workspaceId, state: 'queued', observationId: null });
         });
-        await this.memory!.capture([sourceId],binding);
+        await memory.capture([sourceId],binding);
+        assertCurrent();
+        provider.lease.assertCurrent();
         evidenceIds.push(sourceId);
         providerArgs.evidence_quotes = [...args.evidence_quotes, playback.text];
       }
       const sources = evidenceIds.map(id => ({ id, revision: '1' }));
-      const result = await this.memory!.connection.call<Record<string, unknown>>(operation, operation === 'propose'
+      const result = await memory.connection.call<Record<string, unknown>>(operation, operation === 'propose'
         ? { ...providerArgs, operation_id: `native:${actualSession}:${callId}`, sources }
         : operation === 'correct' ? { ...args, sources } : args,binding.storageId);
-      this.memory!.assertBinding(binding);
-      this.validate(actualSession!);
-      if (playback && typeof result.id === 'string') playback.associated(result.id);
+      assertCurrent();
+      if (associatePlayback && provider) {
+        provider.lease.assertCurrent();
+        if (typeof result.id === 'string') associatePlayback(result.id);
+      }
       return canonical(operation === 'withdraw' ? { withdrawalId: result.withdrawal_id, state: result.withdrawal_state }
         : { memoryId: result.id, revision: result.version, content: result.content });
     };

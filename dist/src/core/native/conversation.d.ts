@@ -16,44 +16,45 @@ export interface NativeScope {
 export declare function matchesNativeScope(current: NativeScope | undefined, expected: NativeScope): boolean;
 export interface NativeSourceContext {
     readonly policyKey: string;
+    readonly guardDuringTakeover?: boolean;
     fileAccessKey?(): string;
     continueAfterInterrupt?(scope: NativeScope): () => void;
 }
 export type NativeSourceSelection = Extract<SourceAdmission<NativeSourceContext>, {
     kind: 'accepted';
 }>;
+type ResolvePlaybackEvidence = (sessionId: string, playbackId: string) => {
+    text: string;
+    occurredAt: number;
+    associated(memoryId: string): void;
+} | undefined;
 /** Scoped services for the existing DSH Agent; only autonomous inputs have extra allowances. */
 export declare class CoreNative {
     readonly runtime: CoreRuntime;
     memory?: NativeMemory;
-    memoryEnabledForNewSessions: boolean;
+    private memoryEnabled;
     readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
-    roomAdmission?: (sessionId: string, message: UserMessage) => boolean;
-    channelBoundary?: {
-        guest(sessionId: string): boolean;
-        admit(sessionId: string, message: UserMessage): boolean;
-        identity?(sessionId: string): Record<string, unknown> | undefined;
-    };
+    private readonly playbackProviders;
     resolveScope?: (sessionId: string) => NativeScope | undefined;
     attachGuest?: (context: Context) => void;
     private readonly turns;
     private readonly preparedFactInputs;
     scopeFor(sessionId: string): NativeScope | undefined;
+    isGuest(sessionId: string): boolean;
+    registerPlaybackEvidence(resolve: ResolvePlaybackEvidence): import("../../contracts/tables.js").TableRegistration;
+    emotionAllowed(sessionId: string, turn: number, permission: 'footer' | 'tool'): boolean;
+    captureEmotionFooter(sessionId: string, turn: number): (() => boolean) | undefined;
     private current;
     acceptsInput(sessionId: string, message: UserMessage): boolean;
+    setMemoryEnabledForNewSessions(enabled: boolean): void;
+    memoryEnabledForNewSessions(): boolean;
     memoryFor(_sessionId: string): NativeMemory | undefined;
-    /** Native DSH owns the turn. Core retains only its attributed input identifiers,
-     * not an execution/activity, allowance, serial slot or cancellation timer. */
+    /** Native DSH owns the turn. Core retains only input references and selected policy metadata. */
     observeInputs(sessionId: string, turn: number, messages: readonly UserMessage[], scope?: NativeScope): string[];
     /** Called only by scoped native input/prompt adapters, never a model tool. */
     clearPreparedFacts(sessionId: string): void;
     observeFacts(sessionId: string, facts: readonly CompanionFact[], scope?: NativeScope): string[];
     finishTurn(sessionId: string, turn: number, result: NativeRunResult): Promise<void>;
-    playbackEvidence?: (sessionId: string, playbackId: string) => {
-        text: string;
-        occurredAt: number;
-        associated(memoryId: string): void;
-    } | undefined;
     private readonly active;
     private closing;
     constructor(runtime: CoreRuntime);
@@ -78,3 +79,4 @@ export declare class CoreNative {
     end(sessionId: string): Promise<void>;
     close(): Promise<void>;
 }
+export {};

@@ -183,6 +183,10 @@ async function pluginFixture(t) {
     },
     setPresentation(open, recognition) {desktopOpen = open; hear = recognition;},
     async list() {return value(await host.services.core.listCapabilities(request(), {}));},
+    async sourcePolicies() {
+      await root.get('petChannels').refresh();
+      return host.native.sourceTable.policyRows();
+    },
     async snapshot() {
       const method = 'chatpetSettings/snapshot', path = '/api/' + method;
       const response = await routes.get(path)(new Request('http://fixture.invalid' + path, {
@@ -193,6 +197,23 @@ async function pluginFixture(t) {
     },
   };
 }
+
+test('全部模块加载后登记九行会话策略，且每个授权面引用有效的行为清单条目', async t => {
+  const f = await pluginFixture(t);
+  await f.bind();
+  const policies = await f.sourcePolicies();
+  assert.deepEqual(policies.map(policy => policy.row), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  const index = JSON.parse(readFileSync(new URL('../behavior-list/index.json', import.meta.url), 'utf8'));
+  const behaviorIds = new Set(index.entries.map(entry => entry.id));
+  for (const policy of policies) {
+    const declarations = [policy.tools, policy.memoryObservation, policy.emotionUpdate?.footer, policy.emotionUpdate?.tool];
+    for (const declaration of declarations) {
+      assert.ok(declaration?.description.trim(), `第 ${policy.row} 行缺少授权说明`);
+      assert.ok(Array.isArray(declaration.behaviorIds), `第 ${policy.row} 行缺少行为清单引用`);
+      for (const id of declaration.behaviorIds) assert.ok(behaviorIds.has(id), `第 ${policy.row} 行引用了未知条目 ${id}`);
+    }
+  }
+});
 
 test('能力输出逐行匹配旧版，覆盖单模块卸载和恢复', async t => {
   const f = await pluginFixture(t);

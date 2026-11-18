@@ -19,11 +19,14 @@ export function apply(ctx) {
     ctx.on('agent/pre-step', async ({ agent, messages, step }, next) => {
         if (agent.session.header.agentPreset !== GUEST_PRESET)
             return next();
-        const boundary = ctx.get('petCore')?.native.channelBoundary;
-        if (!boundary?.guest(agent.id))
+        const native = ctx.get('petCore')?.native;
+        if (!native?.isGuest(agent.id))
             return { kind: 'reject' };
         const speakers = messages.filter(message => message.source.kind === 'user' || message.source.kind === 'dsh-world-reply-nudge');
-        if ((step === 1 && !speakers.length) || speakers.some(message => !boundary.admit(agent.id, message)))
+        if ((step === 1 && !speakers.length) || speakers.some(message => {
+            const decision = native.sourceTable.admit({ sessionId: agent.id, message });
+            return decision.kind !== 'accepted' || decision.branch.toolSource !== 'guest';
+        }))
             return { kind: 'reject' };
         return next();
     });

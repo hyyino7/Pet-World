@@ -35,9 +35,9 @@ export async function checkLifeReview({ctx, host, workspace, root, life, until, 
   });
   const archiveSession = await talk(shop);
   setProgram(async function*() { yield* say('Fixture response.'); });
-  host.native.memoryEnabledForNewSessions = false;
+  host.native.setMemoryEnabledForNewSessions(false);
   const privateSession = await talk(privateText);
-  host.native.memoryEnabledForNewSessions = true;
+  host.native.setMemoryEnabledForNewSessions(true);
   const settings=await life.snapshot(workspaceId);
   if(!settings.preferences.review)await life.settings(workspaceId,settings.preferences,{...settings.preferences,review:'23:00'});
   await life.control(workspaceId, true);

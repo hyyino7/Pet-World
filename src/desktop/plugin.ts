@@ -1,4 +1,5 @@
 import type { Context } from '@deepseek-ai/cordis';
+import type { SessionPolicyRow } from '../contracts/tables.js';
 import { CONTRACT_VERSION } from '../contracts/version.js';
 import { desktopFor, registerDesktop, type Desktop } from './index.js';
 
@@ -7,11 +8,43 @@ export const inject = ['petCore', 'agents', 'sessions'];
 declare module '@deepseek-ai/cordis' {
   interface Context { petDesktop: Desktop }
 }
+
+const desktopPolicies: readonly SessionPolicyRow[] = [
+  {
+    row: 7, branch: 'desktop-chat', trustedActor: '无渠道身份的主人输入',
+    selectionKey: '按存储绑定选择未归档的原生会话', historyScope: '所选原生会话的历史', preset: 'DSH 默认预设',
+    lifecycle: '按请求去重；停止走原生取消；受管轮次首步前恢复图片', bindingCheck: '工作区、路径、存储和窗口代次',
+    inherits: 1,
+    tools: {description: '沿用第 1 行的主人工具权限', behaviorIds: ['M2A-09']},
+    memoryObservation: {description: '沿用第 1 行观察输入和回复', behaviorIds: ['M2A-09']},
+    emotionUpdate: {
+      footer: {description: '沿用第 1 行处理回复 footer', behaviorIds: ['M2A-09']},
+      tool: {description: '沿用第 1 行的情绪工具权限', behaviorIds: ['M2A-10']},
+    },
+  },
+  {
+    row: 9, branch: 'desktop-monologue', trustedActor: '伙伴',
+    selectionKey: '当前绑定及唤醒条件', historyScope: '一次性请求', preset: '碎碎念或梦话的原生请求',
+    lifecycle: '只发布说话事件；条件改变即取消', bindingCheck: '调用前后校验目标绑定',
+    tools: {description: '无工具', behaviorIds: ['M2A-11']},
+    memoryObservation: {description: '无 Memory 读写', behaviorIds: ['M2A-11']},
+    emotionUpdate: {
+      footer: {description: '无 footer 情绪更新', behaviorIds: ['M2A-11']},
+      tool: {description: '无情绪工具', behaviorIds: ['M2A-11']},
+    },
+  },
+];
+
 export function apply(ctx: Context): void {
   const host = ctx.petCore;
   registerDesktop(ctx, host);
   const desktop = desktopFor(host);
   ctx.provide('petDesktop', desktop);
+  ctx.effect(() => host.native.sourceTable.register({
+    id: 'desktop', order: 30, sources: [], branches: {}, policyRows: desktopPolicies,
+    admit: () => ({kind: 'unclaimed'}),
+    async beforeFirstStep() { await desktop.features?.restoreImages(); },
+  }).revoke);
   for (const [order, id, supportedOperations] of [
     [4, 'desktop.presentation', ['send', 'stop', 'fold', 'reopen']],
     [5, 'desktop.body', ['open', 'close', 'drag', 'play']],

@@ -30,7 +30,7 @@ function fixture(t:TestContext) {
     companionSettings:()=>({memoryRecallCount:8,memoryRecallBlockChars:600})} as unknown as NonNullable<CoreRuntime['files']>;
   const memory=new NativeMemory(runtime,{dataDir:join(workspace,'.chatpet/data/memory'),python:resolve('.venv/bin/python')});
   const native=new CoreNative(runtime);native.memory=memory;native.resolveScope=()=>({...scope});
-  native.sourceTable.register(createLifeSourceAdapter({} as Context,{native} as PetCoreHost,()=>true));
+  native.sourceTable.register(createLifeSourceAdapter({} as Context,{native,workspace:runtime.files} as PetCoreHost,()=>true));
   const observations:Observation[]=[],validations:unknown[]=[],starts:unknown[]=[];
   memory.connection.start=async(...args)=>{starts.push(args);};
   memory.connection.call=async<T>(operation:string,args:Record<string,unknown>,bank?:string):Promise<T>=>{
@@ -118,6 +118,27 @@ test('actual Body facts and a Life reply keep a complete eligible Core-to-Memory
   assert.deepEqual(aggregate.roots,[{id:original.source_id,revision:'1'}]);
 });
 
+test('mixed native input records Life and owner evidence from each source policy',async t=>{
+  const f=fixture(t),session='life-home',turn=1;
+  const fact=f.water('mixed-water');
+  const ids=f.native.observeInputs(session,turn,[
+    lifeMessage('mixed-life',[fact]),ownerMessage('mixed-owner','I will take over this conversation'),
+  ]);
+  await f.native.finishTurn(session,turn,completed('I will continue with you.'));
+  const sourceFor=(id:string)=>f.runtime.store.require<EvidenceSource>('source',
+    f.runtime.store.require<string>('native-user-source',digest([session,id])));
+  const life=sourceFor('mixed-life'),owner=sourceFor('mixed-owner');
+  assert.equal(life.origin,'virtual_action');
+  assert.equal(life.actorId,'system:companion-world');
+  assert.equal(owner.origin,'owner_statement');
+  assert.equal(owner.actorId,'owner-one');
+  assert.equal(f.observations.find(row=>row.source_id===life.sourceId)?.source_kind,'system');
+  assert.equal(f.observations.find(row=>row.source_id===owner.sourceId)?.source_kind,'user_statement');
+  const reply=f.runtime.store.require<EvidenceSource>('source',replyId(session,turn));
+  assert.deepEqual(reply.rootSourceIds,ids);
+  assert.deepEqual(f.observations.find(row=>row.source_id===reply.sourceId)?.attribution,{channel:'dsh',sessionId:session});
+});
+
 test('an owner chat recalls the original interaction after another chat acknowledged delivery',async t=>{
   const f=fixture(t),fact=f.water('cross-chat');
   const [factId]=f.native.observeFacts('owner-A',[fact]);
@@ -170,12 +191,12 @@ test('a post-provider acknowledgement failure survives Core reopen and retries t
 });
 
 test('Memory off retains native originals without silently enrolling old life inputs on re-enable',async t=>{
-  const f=fixture(t);f.native.memoryEnabledForNewSessions=false;
+  const f=fixture(t);f.native.setMemoryEnabledForNewSessions(false);
   const old=f.native.observeInputs('retained',1,[lifeMessage('off-batch',[f.water('off')])]);
   await f.native.finishTurn('retained',1,completed('Original off-period reply'));
   for(const id of [...old,replyId('retained',1)])assert.equal(f.runtime.store.get('memory-source-work',id),undefined);
   assert.equal(f.observations.length,0);assert.equal(f.starts.length,0);
-  f.native.memoryEnabledForNewSessions=true;
+  f.native.setMemoryEnabledForNewSessions(true);
   f.native.observeInputs('retained',2,[ownerMessage('new-turn')]);await f.native.finishTurn('retained',2,completed('This is a newly observed turn.'));
   const observed=new Set(f.observations.map(row=>row.source_id));
   for(const id of [...old,replyId('retained',1)])assert.equal(observed.has(id),false);

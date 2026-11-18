@@ -4,6 +4,11 @@ import type {
 } from '../../contracts/tables.js';
 import { RegistrationTable } from './registry.js';
 
+type NativeSourceAdapter<Selected> = SourceAdapter<Selected> & {
+  isGuest?(sessionId: string): boolean;
+  beforeFirstStep?(): Promise<void>;
+};
+
 function guardBranch<Selected>(
   branch: SourceBranch<Selected>, context: Selected, lease: RegistrationLease,
 ): AdmittedSourceBranch {
@@ -26,16 +31,33 @@ function guardBranch<Selected>(
 }
 
 export class SourceAdapterTable<Selected = unknown> {
-  private readonly table = new RegistrationTable<SourceAdapter<Selected>>({
+  private readonly table = new RegistrationTable<NativeSourceAdapter<Selected>>({
     order: adapter => adapter.order,
     overlaps: (left, right) => left.sources.some(source => right.sources.includes(source)),
   });
 
-  register(adapter: SourceAdapter<Selected>): TableRegistration {
+  register(adapter: NativeSourceAdapter<Selected>): TableRegistration {
     return this.table.register(adapter.id, {
       ...adapter, sources: [...adapter.sources], branches: { ...adapter.branches }, admit: adapter.admit.bind(adapter),
       classify: adapter.classify?.bind(adapter),
+      isGuest: adapter.isGuest?.bind(adapter),
+      beforeFirstStep: adapter.beforeFirstStep?.bind(adapter),
     });
+  }
+
+  isGuest(sessionId: string): boolean {
+    return this.table.entries().some(({ value, lease }) =>
+      lease.isCurrent() && value.isGuest?.(sessionId) === true && lease.isCurrent());
+  }
+
+  async beforeFirstStep(current: () => boolean): Promise<boolean> {
+    for (const { value, lease } of this.table.entries()) {
+      if (!lease.isCurrent() || !value.beforeFirstStep) continue;
+      if (!current()) return false;
+      await value.beforeFirstStep();
+      if (!lease.isCurrent() || !current()) return false;
+    }
+    return current();
   }
 
   classify(message: SourceInput['message']): SourceClassificationResult {

@@ -81,6 +81,7 @@ try {
   const config = {dataDirectory:join(repo,'.chatpet/data/channels'), ownerHome:async()=>home, identityAllowed:i => ['first','second'].includes(i.accountId),
     ownerIdentity:i => i.channel === 'qq' && i.accountId === 'first' && i.speakerId === 'qq:owner', active:()=>true};
   homes = createChannelHomes(ctx,host,config);
+  assert.deepEqual(host.native.sourceTable.policyRows().filter(({row})=>row===5||row===6).map(({row})=>row),[5,6]);
   const send = async (source, text) => {
     const agent = await homes.open(source);
     const words = createUserMessage({source:{kind:'user',identity:source},content:[{type:'text',text}]});
@@ -116,6 +117,9 @@ try {
   assert.equal(calls.length,before);
   await assert.rejects(()=>homes.open(identity('friend','friend','private','unpaired')));
   homes.stop();
+  assert.equal(host.native.isGuest(a.id),false);
+  assert.equal(host.native.sourceTable.admit({sessionId:a.id,message:foreign}).kind,'unclaimed');
+  assert.ok(host.native.sourceTable.policyRows().every(({row})=>row!==5&&row!==6));
   a.followup(foreign); await a.whenIdle();
   assert.equal(calls.length,before);
   homes = createChannelHomes(ctx,host,config);

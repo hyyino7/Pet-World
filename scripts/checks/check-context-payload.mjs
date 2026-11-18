@@ -9,8 +9,9 @@ import {economyOverview} from '../../dist/src/economy/tool-context.js';
 import {planOverview} from '../../dist/src/life/tool-context.js';
 import {presentFacts} from '../../dist/src/core/interaction-presentation.js';
 import {lifeHistoryCandidates,historicalStateOverview} from '../../dist/src/core/native/history-maintenance.js';
-import {SourceAdapterTable} from '../../dist/src/core/tables/sources.js';
+import {CoreNative} from '../../dist/src/core/native/conversation.js';
 import {createLifeSourceAdapter} from '../../dist/src/life/tool-policy.js';
+import {createChannelSourceAdapter} from '../../dist/src/channels/sessions.js';
 
 const args=process.argv.slice(2);if(args[0]==='--')args.shift();
 const [file,...options]=args;
@@ -45,8 +46,10 @@ const visible={requests:0,allToolTextBefore:0,allToolTextAfter:0,candidateTextBe
 const maintenance={results:0,resultCharsBefore:0,resultCharsAfter:0,requestBodyBefore:0,requestBodyAfter:0,
   toolHistoryBefore:0,toolHistoryAfter:0,summaryCallsAdded:0};
 const maintained=new Map();
-const sources=new SourceAdapterTable();
+const sources=new CoreNative({}).sourceTable;
 sources.register(createLifeSourceAdapter({},{},()=>false));
+const offline=()=>{throw Error('History analysis does not admit live channel input');};
+sources.register(createChannelSourceAdapter({guest:offline,ownerActorId:offline,admit:offline}));
 const classify=message=>sources.classify(message);
 for(let index=0;index<events.length;index++){
   if(events[index].type==='turn/end'&&events[index].data.reason.kind==='completed') {

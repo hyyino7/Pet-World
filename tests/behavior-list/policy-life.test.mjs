@@ -33,6 +33,31 @@ test('Life 自主工具调用达到次数上限',async t=>{
   await f.end(active);
 });
 
+test('新增后台来源的工具限制在首步组装模型 schema 前生效',async t=>{
+  const f=await fixture(t,{policy:true,life:false,economy:false});
+  const baseline=await f.begin();
+  assert.ok(baseline.prompt.tools.some(tool=>tool.name==='bash'));
+  await f.end(baseline);
+
+  const kind='synthetic-background';
+  const registration=f.host.native.sourceTable.register({
+    id:kind,order:0,sources:[kind],
+    branches:{background:{turnKind:'background',toolSource:'life',
+      toolPolicy:{install:agent=>agent.ctx.tools.restrict({allow:['read']}),denial:'Synthetic background tools'},
+      emotionUpdate:{footer:false,tool:false},
+    }},
+    admit:()=>({kind:'accepted',branch:'background',context:{policyKey:kind}}),
+  });
+  t.after(()=>registration.revoke());
+  const message=input(kind);
+  baseline.agent.followup(message);
+  const active=await f.begin(baseline.agent.id,message);
+  const names=active.prompt.tools.map(tool=>tool.name);
+  assert.ok(!names.includes('bash'),'首步组装发送给模型的 schema 已屏蔽 bash');
+  assert.ok(names.includes('read'));
+  await f.end(active);
+});
+
 test('Life 自主时限到点取消原生轮次',async t=>{
   const {f,active}=await autonomous(t,{maxDurationMs:1000});
   assert.deepEqual(f.cancellations,[]);

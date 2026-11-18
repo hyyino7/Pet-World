@@ -18,7 +18,7 @@ function fixture(guest=false,group=false) {
   let active=true,permit=true,storageId='bank-a',guestHook:any;
   const native=new CoreNative({} as any);
   native.resolveScope=()=>({workspaceId:'owner',path:directory,storageId,guest});
-  const host={native,workspace:{sessionStatus:()=>({state:'ready'})}} as unknown as PetCoreHost;
+  const host={native,workspace:{runtime:native.runtime,sessionStatus:()=>({state:'ready'})}} as unknown as PetCoreHost;
   const registry={get:(id:string)=>workspaces.get(id),archivedSessionIds:[] as string[],async create(path:string){const previous=[...workspaces.values()].find(w=>w.path===path);if(previous)return previous;const w={id:'guest-ws',path,sessionIds:[] as string[]};workspaces.set(w.id,w);return w;}};
   const ctx:any={on(name:string,fn:Function){if(name==='agent/pre-step')guestHook=fn;else listeners.add(fn);return()=>listeners.delete(fn);},
     tools:{restrict(){}},systemPrompt:{section(){},getSectionOrder(){return 1;},suppressRuntimeContext(){}},inject(){},
@@ -46,6 +46,70 @@ function fixture(guest=false,group=false) {
     async original(){const agent=await homes.open(identity);const words=word();assert.equal(native.acceptsInput(agent.id,words),true);emit(agent,'user/message',words);emit(agent,'turn/end',{turn:1,reason:{kind:'completed'}});return {agent,words};},
     permit(value:boolean){permit=value;},rebind(){storageId='bank-b';},off(){active=false;},close(){homes.stop();rmSync(directory,{recursive:true,force:true});}};
 }
+
+test('Channels admits a receipt repeatedly by message ID and consumes it only once', async t => {
+  const f = fixture();
+  t.after(() => f.close());
+  const {native} = f.host;
+  const agent = await f.homes.open(f.identity);
+  const message = f.word();
+  const admit = (words: typeof message) => native.sourceTable.admit({sessionId: agent.id, message: words});
+  const history = native.sourceTable.classify(message);
+  assert.equal(history?.historyProjection?.protectsTurn, true);
+  const first = admit(message);
+  assert.equal(first.kind, 'accepted');
+  const another = f.word();
+  assert.equal(admit(another).kind, 'rejected');
+  assert.equal(admit(message).kind, 'accepted');
+  await f.homes.open(f.identity);
+  assert.equal(admit(message).kind, 'accepted');
+  assert.equal(admit(another).kind, 'accepted');
+  f.homes.stop();
+  if (first.kind === 'accepted') assert.equal(first.lease.isCurrent(), false);
+  assert.equal(admit(message).kind, 'unclaimed');
+});
+
+test('Channels rejection and failure stop same-source admission, while an unclaimed source can continue', async t => {
+  const f = fixture();
+  t.after(() => f.close());
+  const table = f.host.native.sourceTable;
+  let laterCalls = 0;
+  table.register({id: 'later-channel-fixture', order: 20, sources: ['user', 'dsh-world-reply-nudge'],
+    branches: {}, admit: () => { laterCalls++; return {kind: 'rejected', reason: 'later adapter'}; }});
+  const message = f.word(), input = {sessionId: f.owner.id, message};
+  assert.equal(table.admit(input).kind, 'rejected');
+  assert.equal(laterCalls, 0);
+
+  const agent = await f.homes.open(f.identity);
+  const failure = Error('Synthetic route failure');
+  t.mock.method(f.host.workspace, 'sessionStatus', () => { throw failure; });
+  assert.deepEqual(table.admit({sessionId: agent.id, message}), {kind: 'failed', error: failure});
+  assert.equal(laterCalls, 0);
+  const native = createUserMessage({source: {kind: 'user'}, content: [{type: 'text', text: 'Native owner'}]});
+  assert.equal(table.admit({sessionId: agent.id, message: native}).kind, 'accepted');
+
+  f.homes.stop();
+  assert.deepEqual(table.admit(input), {kind: 'rejected', reason: 'later adapter'});
+  assert.equal(laterCalls, 1);
+});
+
+test('Channels rechecks the same QQ nudge against its live original, binding and grant', async t => {
+  const f = fixture(true);
+  t.after(() => f.close());
+  const {agent, words} = await f.original(), message = f.nudge();
+  const admit = () => f.host.native.sourceTable.admit({sessionId: agent.id, message}).kind;
+  assert.equal(admit(), 'rejected');
+  assert.equal(f.host.native.sourceTable.classify(message)?.historyProjection?.protectsTurn, true);
+  const release = f.homes.replyNudge(agent.id, words, message);
+  assert.equal(admit(), 'accepted');
+  f.permit(false);
+  assert.equal(admit(), 'rejected');
+  f.permit(true);
+  assert.equal(admit(), 'accepted');
+  f.rebind();
+  assert.equal(admit(), 'rejected');
+  release();
+});
 
 for(const guest of [false,true])test(`R7-02: ${guest?'guest':'owner'} admits only the registered nudge for the actual original delivery`,async()=>{
   const f=fixture(guest);try {
@@ -94,11 +158,18 @@ test('R7-02: stopping QQ during capability setup prevents followup and revokes t
 for(const authorized of [true,false])test(`R7-02: actual Core pre-step ${authorized?'keeps admitted guest retry conversational':'rejects a forged retry'}`,async()=>{
   const handlers=new Map<string,Function[]>(),agent:any={id:'guest',session:{id:'guest',header:{agentPreset:GUEST_PRESET},snapshotEvents:()=>[]}};
   const native=new CoreNative({} as any),status={state:'ready',target:{id:'workspace',path:'/disposable'}};let begins=0;
-  native.channelBoundary={guest:()=>true,admit:()=>authorized};native.observeInputs=()=>[];
+  const [policyRow] = native.sourceTable.policyRows();
+  native.sourceTable.register({id:'guest-fixture',order:10,sources:['dsh-world-reply-nudge'],isGuest:()=>true,
+    branches:{guest:{turnKind:'foreground',toolSource:'guest',toolPolicy:null,memoryObservation:null,
+      emotionUpdate:{footer:true,tool:false},policyRow}},
+    admit:()=>authorized?{kind:'accepted',branch:'guest',context:{policyKey:'guest'}}
+      :{kind:'rejected',reason:'missing grant'}});
+  native.observeInputs=()=>[];
   native.begin=async()=>{begins++;throw Error('Guest retry must not start autonomous owner work');};
   const host={native,workspace:{status:()=>status,storageId:()=>'bank'}} as unknown as PetCoreHost;
   const ctx={on(name:string,fn:Function){handlers.set(name,[...(handlers.get(name)??[]),fn]);return()=>{};},effect(){},get(){return undefined;},
-    tools:{definitions:()=>[],register:()=>()=>{},guard:()=>()=>{}},agents:new Map([[agent.id,agent]])} as unknown as Context;
+    tools:{definitions:()=>[],register:()=>()=>{},guard:()=>()=>{}},agents:new Map([[agent.id,agent]]),
+    logger:()=>({debug(){},warn(){}})} as unknown as Context;
   const stop=applyCoreAgent(ctx,host,{sessionStatus:()=>status} as any);
   try {const message=createUserMessage({source:{kind:'dsh-world-reply-nudge'},content:[{type:'text',text:'retry'}]});
     const result=await handlers.get('agent/pre-step')!.at(-1)!({agent,turn:1,step:1,messages:[message],signal:new AbortController().signal},async()=>({kind:'enter',messages:[]}));

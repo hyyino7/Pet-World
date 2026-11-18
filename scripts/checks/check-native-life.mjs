@@ -70,7 +70,7 @@ try {
   await ctx.plugin({apply(scope){scope.provide('petDesktop',{status:()=>({running:true}),presentLife:text=>bubbles.push(text)});}});
   const mountLife = async () => {lifeComponent = await ctx.plugin(await import('../../dist/src/life/plugin.js'));return ctx.petLife;};
   let life = await mountLife();
-  assert.deepEqual(host.native.sourceTable.policyRows().map(row=>row.row),[3,4]);
+  assert.deepEqual(host.native.sourceTable.policyRows().map(row=>row.row),[1,2,3,4]);
   if (!process.argv.includes('--review-only')) {
   assert.equal((await life.snapshot(workspace.id)).enabled, false);
   assert.equal(calls, 0);
@@ -102,7 +102,7 @@ try {
   await delay(1400); assert.equal(calls, before);
   const paused = readFileSync(homeFile,'utf8');
   await lifeComponent.dispose();
-  assert.deepEqual(host.native.sourceTable.policyRows(),[]);
+  assert.deepEqual(host.native.sourceTable.policyRows().map(row=>row.row),[1,2]);
   life = await mountLife();
   assert.equal((await life.snapshot(workspace.id)).enabled, false);
   assert.equal(readFileSync(homeFile,'utf8'), paused, 'Paused state does not advance on reload');

@@ -44,7 +44,7 @@ const gardenOperation={
 /** Normal owner conversations use the same Life authority, never a per-chat plan. */
 export function registerPlanTools(ctx:Context,host:PetCoreHost,life:CompanionLife) {
   const scope=(agent?:Agent) => {
-    if(!agent || agent.session.header.agentPreset==='chatpet-channel-guest' || host.native.channelBoundary?.guest(agent.id))return;
+    if(!agent || agent.session.header.agentPreset==='chatpet-channel-guest' || host.native.isGuest(agent.id))return;
     const status=host.workspace.status();
     if(status.state!=='ready' || !status.target || ctx.petWorld.sessionStatus(agent.session)?.state!=='ready')return;
     const registry=(ctx as unknown as {get(name:string):any}).get('workspaceRegistry');

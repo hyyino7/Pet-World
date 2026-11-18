@@ -25,14 +25,16 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         if (status.state !== 'ready' || !status.target)
             return;
         const agent = ctx.agents.get(id) ?? agents.get(id);
-        const guest = host.native.channelBoundary?.guest(id) === true;
+        const guest = host.native.isGuest(id);
         if (!guest && (!agent || world.sessionStatus(agent.session)?.state !== 'ready'))
             return;
         return { workspaceId: status.target.id, path: status.target.path, storageId: host.workspace.storageId(), guest };
     };
     host.native.resolveScope = scopeFor;
     const sameScope = (id, expected) => matchesNativeScope(scopeFor(id), expected);
-    const currentTurn = (id, saved) => sameScope(id, saved.scope) && (!saved.background || !saved.lifePolicy || saved.lifePolicy.lease.isCurrent());
+    const currentTurn = (id, saved) => sameScope(id, saved.scope)
+        && (!saved.background || !saved.lifePolicy || saved.lifePolicy.lease.isCurrent())
+        && (!saved.persistentToolGuard || saved.persistentToolGuard.lease.isCurrent());
     const clearContinuation = (id) => {
         const clear = continuations.get(id);
         continuations.delete(id);
@@ -43,7 +45,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         lifePolicies.delete(agent);
         policy?.release();
     };
-    const selectLife = (agent, message) => {
+    const selectSource = (agent, message) => {
         const decision = host.native.sourceTable.admit({ sessionId: agent.id, message });
         switch (decision.kind) {
             case 'accepted': return decision;
@@ -70,22 +72,37 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         const release = selection.branch.toolPolicy?.install?.(agent);
         lifePolicies.set(agent, { selection, release: () => release?.() });
     };
-    // A capability-admitted QQ retry continues an actual conversation; its
-    // internal source remains a system observation, not autonomous owner work.
-    const interactiveInput = (message) => message.source.kind === 'user' || message.source.kind === 'dsh-world-reply-nudge';
+    // A denied interactive envelope rejects the step even without a registered branch.
+    const interactiveEnvelope = (message) => message.source.kind === 'user' || message.source.kind === 'dsh-world-reply-nudge';
+    const selectStepSources = (agent, messages) => {
+        const interactive = new Map();
+        for (const message of messages) {
+            if (!interactiveEnvelope(message))
+                continue;
+            const selection = selectSource(agent, message);
+            if (!selection)
+                return;
+            interactive.set(message, selection);
+        }
+        return messages.flatMap(message => {
+            const selection = interactive.get(message) ?? selectSource(agent, message);
+            return selection ? [{ message, selection }] : [];
+        });
+    };
     // DSH resolves schemas before pre-step. Install the native mask while its
     // trusted inbox input is queued, and recheck at step admission below.
-    const stopLifeInbox = ctx.on('agent/inbox/inserted', ({ agent, message }) => {
+    const stopSourceInbox = ctx.on('agent/inbox/inserted', ({ agent, message }) => {
         if (!scopeFor(agent.id))
             return;
-        if (interactiveInput(message) && host.native.acceptsInput(agent.id, message)) {
+        const selection = selectSource(agent, message);
+        if (!selection)
+            return;
+        if (selection.branch.turnKind === 'foreground') {
             clearContinuation(agent.id);
             releaseLifePolicy(agent);
         }
-        else if (message.source.kind === 'dsh-world-life' && turns.get(agent.id)?.background !== false) {
-            const selection = selectLife(agent, message);
-            if (selection)
-                constrainLife(agent, selection);
+        else if (selection.branch.toolPolicy?.install && turns.get(agent.id)?.background !== false) {
+            constrainLife(agent, selection);
         }
     });
     const stopReviewFiles = installSourceFileGuard(ctx, agent => {
@@ -200,8 +217,10 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         const saved = turns.get(exec.agent.id);
         if (!sameScope(exec.agent.id, saved.scope))
             return '会话已离开原绑定工作区';
-        if (saved.background && saved.lifePolicy) {
-            const { branch, lease } = saved.lifePolicy;
+        for (const policy of [saved.persistentToolGuard, saved.background && saved.lifePolicy]) {
+            if (!policy)
+                continue;
+            const { branch, lease } = policy;
             if (!lease.isCurrent())
                 return '自主轮次的来源登记已撤销';
             if (branch.toolPolicy?.allows?.(exec) === false)
@@ -226,54 +245,43 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         let saved = turns.get(payload.agent.id);
         const first = !saved || saved.turn !== payload.turn;
         if (first) {
-            if (payload.messages.some(message => interactiveInput(message) && !host.native.acceptsInput(payload.agent.id, message)))
+            const accepted = selectStepSources(payload.agent, payload.messages);
+            if (!accepted?.length)
                 return { kind: 'reject' };
-            const selections = [];
-            const accepted = payload.messages.filter(message => {
-                if (message.source.kind !== 'dsh-world-life')
-                    return host.native.acceptsInput(payload.agent.id, message);
-                const selection = selectLife(payload.agent, message);
-                if (!selection)
-                    return false;
-                selections.push(selection);
-                return true;
-            });
-            const user = accepted.some(interactiveInput);
-            if (!accepted.length)
-                return { kind: 'reject' };
-            saved = { turn: payload.turn, scope, background: !user };
+            const selections = accepted.map(({ selection }) => selection);
+            const foreground = selections.some(selection => selection.branch.turnKind === 'foreground');
+            saved = { turn: payload.turn, scope, background: !foreground,
+                persistentToolGuard: selections.find(selection => selection.context.guardDuringTakeover) };
             turns.set(payload.agent.id, saved);
-            if (user) {
+            if (foreground) {
                 clearContinuation(payload.agent.id);
                 releaseLifePolicy(payload.agent);
             }
             else {
                 for (const selection of selections)
-                    constrainLife(payload.agent, selection);
+                    if (!selection.context.guardDuringTakeover)
+                        constrainLife(payload.agent, selection);
                 saved.lifePolicy = lifePolicies.get(payload.agent)?.selection;
             }
-            const input = accepted[0];
-            if (input)
-                inputs.set(payload.agent.id, input.id);
+            inputs.set(payload.agent.id, accepted[0].message.id);
             if (!scope.guest) {
-                await ctx.get('petDesktop')?.features?.restoreImages();
-                if (!currentTurn(payload.agent.id, saved))
+                if (!await host.native.sourceTable.beforeFirstStep(() => currentTurn(payload.agent.id, saved)))
                     return { kind: 'reject' };
                 await ctx.get('petTranscripts')?.restore();
                 if (!currentTurn(payload.agent.id, saved))
                     return { kind: 'reject' };
             }
-            host.native.observeInputs(payload.agent.id, payload.turn, accepted, scope);
+            host.native.observeInputs(payload.agent.id, payload.turn, accepted.map(({ message }) => message), scope);
         }
         if (!sameScope(payload.agent.id, saved.scope))
             return { kind: 'reject' };
         if (!first) {
-            if (payload.messages.some(message => interactiveInput(message) && !host.native.acceptsInput(payload.agent.id, message)))
+            const admitted = selectStepSources(payload.agent, payload.messages);
+            if (!admitted)
                 return { kind: 'reject' };
-            const admitted = payload.messages.filter(message => host.native.acceptsInput(payload.agent.id, message));
             if (admitted.length)
-                host.native.observeInputs(payload.agent.id, payload.turn, admitted, saved.scope);
-            if (saved.background && admitted.some(interactiveInput)) {
+                host.native.observeInputs(payload.agent.id, payload.turn, admitted.map(({ message }) => message), saved.scope);
+            if (saved.background && admitted.some(({ selection }) => selection.branch.turnKind === 'foreground')) {
                 // A real owner input takes over this native turn; autonomous limits do
                 // not become a hidden cap on the owner's subsequent tool work.
                 host.native.finish(payload.agent.id);
@@ -397,7 +405,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         await archiveTail;
         disposePrompt();
         disposeFoundation();
-        stopLifeInbox();
+        stopSourceInbox();
         stopReviewFiles();
         for (const agent of [...lifePolicies.keys()])
             releaseLifePolicy(agent);

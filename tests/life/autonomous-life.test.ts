@@ -204,7 +204,7 @@ test('admitted system fact batches preserve the owner actor without acquiring ow
   const runtime={store,config:{ownerActorId:'owner-one',companionId:'fish'}} as unknown as CoreRuntime;
   const native=new CoreNative(runtime),scope={workspaceId:'workspace',path:f.root,storageId:'world',guest:false};
   native.resolveScope=()=>scope;
-  native.sourceTable.register(createLifeSourceAdapter({} as Context,{native} as PetCoreHost,()=>true));
+  native.sourceTable.register(createLifeSourceAdapter({} as Context,{native,workspace:{runtime}} as PetCoreHost,()=>true));
   native.observeInputs('home',1,[{id:'fact-message',source:{kind:'dsh-world-life',facts:f.room.pendingFacts()},content:[{type:'text',text:'Owner supplied water'}]} as any]);
   const sources=[...values.entries()].filter(([key])=>key.startsWith('source')).map(([,value])=>value as any);
   assert.ok(sources.some(source=>source.actorId==='owner-one'&&source.origin==='virtual_action'));

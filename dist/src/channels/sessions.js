@@ -6,6 +6,69 @@ import { privateDeviceDirectory } from './bridge.js';
 import { GUEST_PRESET } from './guest.js';
 const keyFor = (identity) => JSON.stringify([conversationKey(identity), identity.conversationType === 'private' ? identity.speakerId : null]);
 const shipment = (identity) => JSON.stringify([keyFor(identity), identity.speakerId, identity.platformMessageId ?? null]);
+function claims(message) {
+    return message.source.kind === 'dsh-world-reply-nudge'
+        || message.source.kind === 'user' && 'identity' in message.source;
+}
+// A saved log can use the same policy without opening routes or granting delivery.
+export function createChannelSourceAdapter(routes) {
+    const branch = (guest) => ({
+        turnKind: 'foreground',
+        toolSource: guest ? 'guest' : 'owner',
+        toolPolicy: null,
+        memoryObservation: {
+            input: ({ sessionId, message }) => {
+                const { source } = message;
+                const identity = 'identity' in source ? source.identity : undefined;
+                const attribution = identity && typeof identity === 'object' ? { ...identity } : undefined;
+                const nudge = source.kind === 'dsh-world-reply-nudge';
+                return {
+                    origin: guest ? 'external_content' : nudge ? 'virtual_action' : 'owner_statement',
+                    actorId: nudge ? 'system:qq-reply' : guest ? String(attribution?.speakerId ?? 'external')
+                        : routes.ownerActorId(),
+                    sourceKind: nudge ? 'system' : 'user_statement',
+                    attribution: attribution ?? { channel: 'dsh', sessionId },
+                };
+            },
+            reply: ({ sessionId }) => ({ channel: guest ? 'external' : 'dsh', sessionId }),
+        },
+        emotionUpdate: { footer: true, tool: !guest },
+        historyProjection: { participates: false, protectsTurn: true },
+        policyRow: {
+            row: guest ? 6 : 5,
+            branch: guest ? 'guest' : 'channel-owner',
+            trustedActor: guest ? '已登记的外部发言人' : '渠道私聊的主人；QQ 补答核验原消息',
+            selectionKey: guest ? '私聊按发言人，群聊按会话' : '当前绑定的共享 home',
+            historyScope: guest ? '独立渠道会话' : '共享 home',
+            preset: guest ? GUEST_PRESET : '共享 home 的原生预设',
+            lifecycle: '前台轮次；关闭渠道时取消在途请求与补答授权',
+            bindingCheck: guest ? '已登记身份、会话目录、组合预设和归档状态' : '当前工作区、会话和补答原消息',
+            tools: { description: guest ? '独立预设屏蔽所有继承工具' : '沿用主人工具权限',
+                behaviorIds: [guest ? 'M2A-20' : 'M2A-19'] },
+            memoryObservation: { description: guest ? '按外部身份观察，召回共享 Bank' : '观察带渠道身份的主人输入和补答',
+                behaviorIds: [guest ? 'M2A-20' : 'M2A-19'] },
+            emotionUpdate: {
+                footer: { description: '允许回复 footer 更新共享情绪', behaviorIds: [guest ? 'M2A-21' : 'M2A-19'] },
+                tool: { description: guest ? 'guest 无情绪工具' : '允许情绪工具', behaviorIds: [guest ? 'M2A-20' : 'M2A-19'] },
+            },
+        },
+    });
+    return {
+        id: 'channels', order: 10, sources: ['user', 'dsh-world-reply-nudge'], isGuest: routes.guest,
+        branches: { owner: branch(false), guest: branch(true) },
+        // Saved messages do not carry the live owner role. Both branches protect the same history.
+        classify: message => claims(message) ? 'owner' : undefined,
+        admit: ({ sessionId, message }) => {
+            if (!claims(message))
+                return { kind: 'unclaimed' };
+            const selected = routes.admit(sessionId, message);
+            if (!selected)
+                return { kind: 'rejected', reason: '渠道消息缺少有效收件或补答授权' };
+            const context = { policyKey: selected, sessionId, message };
+            return { kind: 'accepted', branch: selected, context };
+        },
+    };
+}
 /** World owns per-conversation session recovery. Native workspace membership
  * stores the routing association, including across process restarts. */
 export function createChannelHomes(ctx, host, options) {
@@ -49,31 +112,33 @@ export function createChannelHomes(ctx, host, options) {
         const row = guests.get(id);
         return guest(id) && row !== undefined && keyFor(row.identity) === keyFor(identity);
     }
-    function admit(id, message) {
+    function admittedIdentity(id, message) {
         if (message.source.kind === 'dsh-world-reply-nudge') {
             const grant = nudges.get(id), original = delivered.get(id);
-            return !!grant && !!original && grant.id === message.id && grant.message === JSON.stringify(message)
+            if (grant && original && grant.id === message.id && grant.message === JSON.stringify(message)
                 && original.message === grant.original && original.scope === grant.scope
                 && latestInput(id) === grant.original
-                && JSON.stringify(host.native.scopeFor(id) ?? null) === grant.scope && allowsReply(id, grant.identity);
+                && JSON.stringify(host.native.scopeFor(id) ?? null) === grant.scope && allowsReply(id, grant.identity))
+                return grant.identity;
+            return;
         }
         if (message.source.kind !== 'user' || !('identity' in message.source))
-            return false;
+            return;
         let identity;
         try {
             identity = speakerIdentity(message.source.identity);
         }
         catch {
-            return false;
+            return;
         }
         if (!allowsReply(id, identity))
-            return false;
+            return;
         const key = shipment(identity), checked = accepted.get(id);
         if (checked?.get(message.id) === key)
-            return true;
+            return identity;
         const outstanding = pending.get(id), count = outstanding?.get(key) ?? 0;
         if (!count || !outstanding)
-            return false;
+            return;
         if (count === 1)
             outstanding.delete(key);
         else
@@ -82,12 +147,17 @@ export function createChannelHomes(ctx, host, options) {
         messages.set(message.id, key);
         accepted.set(id, messages);
         delivered.set(id, { message: JSON.stringify(message), identity, scope: JSON.stringify(host.native.scopeFor(id) ?? null) });
-        return true;
+        return identity;
     }
-    if (host.native.channelBoundary)
-        throw Error('渠道会话已由另一个接入实例管理');
-    const boundary = { guest, admit };
-    host.native.channelBoundary = boundary;
+    const registration = host.native.sourceTable.register(createChannelSourceAdapter({
+        guest,
+        ownerActorId: () => host.workspace.runtime.config.ownerActorId,
+        admit: (sessionId, message) => {
+            const identity = admittedIdentity(sessionId, message);
+            if (identity)
+                return isOwner(identity) ? 'owner' : 'guest';
+        },
+    }));
     const cleared = ctx.on('session/event', (session, event) => {
         if (event.type === 'turn/end')
             accepted.delete(session.id);
@@ -194,8 +264,7 @@ export function createChannelHomes(ctx, host, options) {
             if (stopped)
                 return;
             stopped = true;
-            if (host.native.channelBoundary === boundary)
-                host.native.channelBoundary = undefined;
+            void registration.revoke();
             for (const router of routes.values())
                 router.stop();
             for (const { agent } of guests.values())
