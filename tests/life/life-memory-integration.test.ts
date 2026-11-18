@@ -7,6 +7,9 @@ import {tmpdir} from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {CoreRuntime} from '../../src/core/runtime.js';
 import {CoreNative, type NativeScope} from '../../src/core/native/conversation.js';
+import {createLifeSourceAdapter} from '../../src/core/life-tool-policy.js';
+import type {PetCoreHost} from '../../src/core/index.js';
+import type {Context} from '@deepseek-ai/cordis';
 import {NativeMemory} from '../../src/core/native/memory.js';
 import type {CompanionFact} from '../../src/contracts/interaction.js';
 import type {EvidenceSource} from '../../src/contracts/common.js';
@@ -26,7 +29,8 @@ function fixture(t:TestContext) {
   runtime.files={status:()=>({state:'ready',target:{id:scope.workspaceId,path:scope.path}}),storageId:()=>scope.storageId,
     companionSettings:()=>({memoryRecallCount:8,memoryRecallBlockChars:600})} as unknown as NonNullable<CoreRuntime['files']>;
   const memory=new NativeMemory(runtime,{dataDir:join(workspace,'.chatpet/data/memory'),python:resolve('.venv/bin/python')});
-  const native=new CoreNative(runtime);native.memory=memory;native.resolveScope=()=>({...scope});native.lifeAdmission=()=>true;
+  const native=new CoreNative(runtime);native.memory=memory;native.resolveScope=()=>({...scope});
+  native.sourceTable.register(createLifeSourceAdapter({} as Context,{native} as PetCoreHost,()=>true));
   const observations:Observation[]=[],validations:unknown[]=[],starts:unknown[]=[];
   memory.connection.start=async(...args)=>{starts.push(args);};
   memory.connection.call=async<T>(operation:string,args:Record<string,unknown>,bank?:string):Promise<T>=>{

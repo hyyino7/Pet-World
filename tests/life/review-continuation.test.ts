@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
+import {createLifeSourceAdapter} from '../../src/core/life-tool-policy.js';
 import {apply} from '../../src/core/native/agent.js';
+import {SourceAdapterTable} from '../../src/core/tables/sources.js';
 import {createUserMessage} from '@deepseek-ai/dsh-llm';
 
 function fixture() {
@@ -17,6 +19,9 @@ function fixture() {
   const ctx={on(name:string,fn:Function){handlers.set(name,[...(handlers.get(name)??[]),fn]);return()=>{};},effect(){},get(){return undefined;},
     tools:{definitions:()=>['read','write','bash','life_plan_read'].map(name=>({name})),register:()=>()=>{},guard(fn:Function){guards.push(fn);return()=>{};}},
     agents:new Map([[agent.id,agent]])} as unknown as Context;
+  native.scopeFor=(id:string)=>native.resolveScope(id);
+  native.sourceTable=new SourceAdapterTable();
+  native.sourceTable.register(createLifeSourceAdapter(ctx,host,native.acceptsInput));
   const stop=apply(ctx,host,{sessionStatus:()=>status} as any);
   let turn=0;
   async function start(source:any) {

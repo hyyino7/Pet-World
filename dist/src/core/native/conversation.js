@@ -1,12 +1,16 @@
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { canonical, check, digest, now, reject } from '../storage.js';
+import { SourceAdapterTable } from '../tables/sources.js';
+export function matchesNativeScope(current, expected) {
+    return !!current && current.workspaceId === expected.workspaceId && current.path === expected.path
+        && current.storageId === expected.storageId && current.guest === expected.guest;
+}
 /** Scoped services for the existing DSH Agent; only autonomous inputs have extra allowances. */
 export class CoreNative {
     runtime;
     memory;
     memoryEnabledForNewSessions = true;
-    /** Life owns admission; absence/unload leaves background native turns denied. */
-    lifeAdmission;
+    sourceTable = new SourceAdapterTable();
     roomAdmission;
     channelBoundary;
     resolveScope;
@@ -16,14 +20,16 @@ export class CoreNative {
     scopeFor(sessionId) { return this.resolveScope?.(sessionId); }
     current(sessionId, expected) {
         const scope = this.scopeFor(sessionId);
-        check(scope && (!expected || scope.workspaceId === expected.workspaceId && scope.path === expected.path && scope.storageId === expected.storageId && scope.guest === expected.guest), 'Conversation left its bound workspace');
+        check(scope && (!expected || matchesNativeScope(scope, expected)), 'Conversation left its bound workspace');
         return scope;
     }
     acceptsInput(sessionId, message) {
         if (message.source.kind === 'user')
             return !('identity' in message.source) || this.channelBoundary?.admit(sessionId, message) === true;
-        return this.lifeAdmission?.(sessionId, message) === true || this.roomAdmission?.(sessionId, message) === true
-            || this.channelBoundary?.admit(sessionId, message) === true;
+        if (message.source.kind === 'dsh-world-life') {
+            return this.sourceTable.admit({ sessionId, message }).kind === 'accepted';
+        }
+        return this.roomAdmission?.(sessionId, message) === true || this.channelBoundary?.admit(sessionId, message) === true;
     }
     memoryFor(_sessionId) {
         // The current component switch applies at the next turn, including retained chats.

@@ -2,9 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Session,SessionId} from '@deepseek-ai/dsh-session';
 import {createUserMessage} from '@deepseek-ai/dsh-llm';
+import type {Context} from '@deepseek-ai/cordis';
 import type {Agent} from '@deepseek-ai/dsh-agent';
 import {homeView,emptyHomeState} from '#feiyu-home';
+import type {PetCoreHost} from '../../src/core/index.js';
+import {createLifeSourceAdapter} from '../../src/core/life-tool-policy.js';
 import {prepareLifeHistory,applyLifeHistory,historicalStateOverview} from '../../src/core/native/history-maintenance.js';
+import {SourceAdapterTable} from '../../src/core/tables/sources.js';
+
+const table=new SourceAdapterTable();
+table.register(createLifeSourceAdapter({} as Context,{} as PetCoreHost,()=>false));
+const classify:Parameters<typeof prepareLifeHistory>[2]=message=>table.classify(message);
 
 function fixture() {
   const session=Session.create(SessionId('history-fixture'));
@@ -34,7 +42,7 @@ function fixture() {
 test('native maintenance projects only older successful default Life states, preserves originals and replays idempotently',async()=>{
   const f=fixture(),first=f.appendTurn();f.appendTurn();
   const originals=structuredClone(f.session.snapshotEvents());
-  const prepared=await prepareLifeHistory(f.agent,()=>true);
+  const prepared=await prepareLifeHistory(f.agent,()=>true,classify);
   assert.deepEqual(f.session.snapshotEvents(),originals,'Idle maintenance only prepares; it never writes outside a turn');
   f.openRequest();
   const result=applyLifeHistory(f.agent,prepared,f.meter);
@@ -58,7 +66,7 @@ test('owner input, takeover, review, failure, explicit full, receipts, other too
   const f=fixture();
   for(const options of [{owner:true},{takeover:true},{review:true},{failed:true},{full:true},{error:true},{receipt:true},{tool:'life_read_segment'},{}])f.appendTurn(options);
   const before=structuredClone(f.session.snapshotEvents());
-  assert.equal((await prepareLifeHistory(f.agent,()=>true)).length,0);
+  assert.equal((await prepareLifeHistory(f.agent,()=>true,classify)).length,0);
   assert.deepEqual(f.session.snapshotEvents(),before);
 });
 
@@ -67,13 +75,13 @@ test('queued interaction, active turn and changed workspace never enter maintena
     const f=fixture();f.appendTurn();f.appendTurn();
     if(condition==='queued')(f.agent.inbox.nextTurn as any[]).push({});
     if(condition==='running')Object.assign(f.agent,{status:'running'});
-    assert.equal((await prepareLifeHistory(f.agent,()=>condition!=='changed')).length,0);
+    assert.equal((await prepareLifeHistory(f.agent,()=>condition!=='changed',classify)).length,0);
     assert.equal(f.counts().maintenanceCalls,0);
   }
 });
 
 test('a native compaction that supersedes a prepared result makes the stale projection a no-op',async()=>{
-  const f=fixture();f.appendTurn();f.appendTurn();const prepared=await prepareLifeHistory(f.agent,()=>true);
+  const f=fixture();f.appendTurn();f.appendTurn();const prepared=await prepareLifeHistory(f.agent,()=>true,classify);
   const source=prepared[0].event;f.openRequest();
   f.session.append('tool/result',source.data,{surfaceOp:{op:'replace',startSeq:source.seq,endSeq:source.seq},sourceEventSeqs:[source.seq]});
   const before=structuredClone(f.session.snapshotEvents());

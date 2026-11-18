@@ -64,16 +64,22 @@ try{
   }
   async function send(handle,text){handle.agent.followup(createUserMessage({source:{kind:'user'},content:[{type:'text',text}]}));await handle.agent.whenIdle();await ctx.sessions.flush(handle.agent.session);const end=[...handle.agent.session.snapshotEvents()].reverse().find(event=>event.type==='turn/end');assert.equal(end?.data.reason.kind,'completed',JSON.stringify(end?.data.reason));}
   const cold=await open(),initialPrepare=host.native.memory.prepare.bind(host.native.memory);
-  host.native.lifeAdmission=(id,message)=>id===cold.agent.id && message.source.kind==='dsh-world-life';
+  const {createLifeSourceAdapter}=await import('../../dist/src/core/life-tool-policy.js');
+  const coldSource=host.native.sourceTable.register(createLifeSourceAdapter(ctx,host,id=>id===cold.agent.id));
   host.native.memory.prepare=async()=>{throw Error('Synthetic cold Memory outage');};
   program=async function*(){yield* say('Autonomous turn survives cold Memory outage.');};
-  cold.agent.followup(createUserMessage({source:{kind:'dsh-world-life'},content:[{type:'text',text:'Synthetic autonomous wakeup.'}]}));
+  const wakeup=createUserMessage({source:{kind:'dsh-world-life'},content:[{type:'text',text:'Synthetic autonomous wakeup.'}]});
+  const coldInput={sessionId:cold.agent.id,message:wakeup};
+  assert.equal(host.native.sourceTable.admit(coldInput).kind,'accepted');
+  cold.agent.followup(wakeup);
   await cold.agent.whenIdle();
   const coldEnd=[...cold.agent.session.snapshotEvents()].reverse().find(event=>event.type==='turn/end');
   assert.equal(coldEnd.data.reason.kind,'completed','A first autonomous turn does not require a prewarmed Memory provider');
   assert.equal(host.workspace.runtime.store.get('native-session-sources',cold.agent.id).length,2,'One background input plus one final reply have exactly two attributed source records');
   assert.equal(host.workspace.runtime.store.all('activity').length,0);assert.equal(host.workspace.runtime.store.all('execution').length,0);
-  host.native.memory.prepare=initialPrepare;host.native.lifeAdmission=undefined;await cold.dispose();
+  host.native.memory.prepare=initialPrepare;await coldSource.revoke();
+  assert.equal(host.native.sourceTable.admit(coldInput).kind,'unclaimed');
+  await cold.dispose();
   const a=await open(),b=await open();let beginCalls=0;const originalBegin=host.native.begin.bind(host.native);host.native.begin=(...args)=>{beginCalls++;return originalBegin(...args);};
   writeFileSync(join(repo,'ordinary-native-read.txt'),'A read-only native tool fixture.');
   let step=0;program=async function*(options){

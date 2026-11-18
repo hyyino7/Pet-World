@@ -1,6 +1,7 @@
 import type {Agent} from '@deepseek-ai/dsh-agent';
 import type {Message} from '@deepseek-ai/dsh-llm';
-import type {SessionEvent} from '@deepseek-ai/dsh-session';
+import type {SessionEvent,UserMessage} from '@deepseek-ai/dsh-session';
+import type {RegistrationLease,SourceClassification} from '../../contracts/tables.js';
 import {roomOverview,gardenOverview} from '../../room/tool-context.js';
 import {economyOverview} from '../../economy/tool-context.js';
 import {planOverview} from '../../life/tool-context.js';
@@ -25,23 +26,27 @@ export function historicalStateOverview(name:string,args:unknown,value:unknown):
 
 /** Only completed Life turns, excluding owner takeovers, reviews and the latest
  * turn. Raw tool calls identify reads; mutations, errors and other tools stay. */
-export function lifeHistoryCandidates(events:readonly SessionEvent[],nodes:readonly number[]):{
-  event:SessionEvent<'tool/result'>;call:SessionEvent<'tool/call'>['data'];
+type ClassifySource=(message:UserMessage)=>SourceClassification|undefined;
+
+export function lifeHistoryCandidates(events:readonly SessionEvent[],nodes:readonly number[],classify:ClassifySource):{
+  event:SessionEvent<'tool/result'>;call:SessionEvent<'tool/call'>['data'];lease:RegistrationLease;
 }[] {
   let turn:number|undefined;
-  const states=new Map<number,{life:boolean;protected:boolean;completed:boolean}>();
+  const states=new Map<number,{lease?:RegistrationLease;protected:boolean;completed:boolean}>();
   const calls=new Map<string,SessionEvent<'tool/call'>['data']>();
   for(const event of events) {
-    if(event.type==='turn/start'){turn=event.data.turn;states.set(turn,{life:false,protected:false,completed:false});}
+    if(event.type==='turn/start'){turn=event.data.turn;states.set(turn,{protected:false,completed:false});}
     if(event.type==='tool/call')calls.set(event.data.callId,event.data);
     const state=turn===undefined?undefined:states.get(turn);
     if(!state)continue;
     if(event.type==='user/message') {
       const source=event.data.source;
-      if(source.kind==='dsh-world-life') {
-        state.life=true;
-        if('purpose' in source&&source.purpose==='review')state.protected=true;
-      } else if(source.kind==='user'||source.kind==='dsh-world-reply-nudge')state.protected=true;
+      if(source.kind==='user'||source.kind==='dsh-world-reply-nudge')state.protected=true;
+      else {
+        const classification=classify(event.data);
+        if(classification?.historyProjection?.participates)state.lease=classification.lease;
+        if(classification?.historyProjection?.protectsTurn)state.protected=true;
+      }
     }
     if(event.type==='turn/end'){state.completed=event.data.reason.kind==='completed';turn=undefined;}
   }
@@ -49,22 +54,22 @@ export function lifeHistoryCandidates(events:readonly SessionEvent[],nodes:reado
   return nodes.flatMap(seq=>{
     const event=events[seq];if(event?.type!=='tool/result'||event.data.message.isError)return [];
     const call=calls.get(event.data.message.toolCallId),state=call&&states.get(call.turn);
-    if(!call||!state?.life||state.protected||!state.completed||call.turn===latest)return [];
-    return [{event,call}];
+    if(!call||!state?.lease?.isCurrent()||state.protected||!state.completed||call.turn===latest)return [];
+    return [{event,call,lease:state.lease}];
   });
 }
 
-export interface HistoryProjection {event:SessionEvent<'tool/result'>;text:string}
+export interface HistoryProjection {event:SessionEvent<'tool/result'>;text:string;lease:RegistrationLease}
 export interface HistoryMaintenanceResult {replaced:number;charsBefore:number;charsAfter:number}
 
 /** Idle maintenance is read-only. Native persistence requires replacement
  * tool results inside an open turn, so landing waits for the next real request.
  * This does not wake a session or consume/acknowledge any domain facts. */
-export async function prepareLifeHistory(agent:Agent,isCurrent:()=>boolean):Promise<HistoryProjection[]> {
+export async function prepareLifeHistory(agent:Agent,isCurrent:()=>boolean,classify:ClassifySource):Promise<HistoryProjection[]> {
   if(agent.status!=='idle'||agent.inbox.nextTurn.length||agent.inbox.nextStep.length||!isCurrent())return [];
   return agent.runMaintenance(async signal=>{
     const changes:HistoryProjection[]=[];
-    for(const {event,call} of lifeHistoryCandidates(agent.session.snapshotEvents(),agent.session.surface.nodes)) {
+    for(const {event,call,lease} of lifeHistoryCandidates(agent.session.snapshotEvents(),agent.session.surface.nodes,classify)) {
       signal.throwIfAborted();if(!isCurrent())return [];
       const original=agent.session.deriveEventMessage(event);
       if(!original||original.content.length!==1||original.content[0]?.type!=='text')continue;
@@ -72,7 +77,7 @@ export async function prepareLifeHistory(agent:Agent,isCurrent:()=>boolean):Prom
       try{args=JSON.parse(call.arguments);value=JSON.parse(original.content[0].text);}catch{continue;}
       const view=historicalStateOverview(call.name,args,value);if(view===undefined)continue;
       const text=JSON.stringify(view);
-      if(text.length<original.content[0].text.length)changes.push({event,text});
+      if(text.length<original.content[0].text.length)changes.push({event,text,lease});
     }
     return changes;
   });
@@ -84,8 +89,8 @@ export async function prepareLifeHistory(agent:Agent,isCurrent:()=>boolean):Prom
 export function applyLifeHistory(agent:Agent,changes:readonly HistoryProjection[],meter:{estimateMessage(message:Message):number}):HistoryMaintenanceResult {
   const result={replaced:0,charsBefore:0,charsAfter:0},session=agent.session;
   const visible=new Set<number>(session.surface.nodes);
-  for(const {event,text} of changes) {
-    if(!visible.has(event.seq))continue; // Native compaction may have superseded the prepared span.
+  for(const {event,text,lease} of changes) {
+    if(!lease.isCurrent()||!visible.has(event.seq))continue; // Native compaction may have superseded the prepared span.
     const original=session.deriveEventMessage(event);
     if(!original||original.content.length!==1||original.content[0]?.type!=='text')continue;
     const appendPrune=session.append.bind(session) as (type:'compaction/prune',data:{

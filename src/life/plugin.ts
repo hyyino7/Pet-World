@@ -21,6 +21,8 @@ import {presentFacts} from '../core/interaction-presentation.js';
 import type { CompanionFact, CompanionFactSource } from '../contracts/interaction.js';
 import { CONTRACT_VERSION } from '../contracts/version.js';
 import {readFactReferences} from './facts.js';
+import {createLifeSourceAdapter} from '../core/life-tool-policy.js';
+import type {TableRegistration} from '../contracts/tables.js';
 
 type Runtime = ReturnType<typeof createLifeRuntime>;
 interface Workspace { id: string; path: string; sessionIds: readonly string[]; attachSession(id: string): Promise<void> }
@@ -49,11 +51,10 @@ export class CompanionLife {
   private serial: Promise<unknown> = Promise.resolve();
   private timer?: NodeJS.Timeout;
   private subscriptions: (()=>void)[] = [];
+  private sourceRegistration?: TableRegistration;
   readonly timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   constructor(private ctx: Context, private host: PetCoreHost, private preset: string) {
     for(const dispose of registerPlanTools(ctx,host,this))ctx.effect(()=>dispose);
-    host.native.lifeAdmission = (id, message) => this.running() && this.runtime?.isHome(id) === true && message.source.kind === 'dsh-world-life'
-      && (!('facts' in message.source) || this.runtime.acceptsFactMessage(id,message));
     installLifeReview(ctx, host, () => {
       const workspace = this.current();
       if (!this.closed && workspace && this.binding?.id===workspace.id && this.binding.path===workspace.path) return {
@@ -70,6 +71,11 @@ export class CompanionLife {
     this.subscriptions.push(ctx.on('pet/core.changed',changed),ctx.on('pet/behavior.changed',event=>{if(event.reason!=='observation')changed();}),
       ctx.on('pet/economy.fact',changed),ctx.on('pet/life.changed',changed));
     this.scheduleTick();
+  }
+  registerSource() {
+    this.sourceRegistration = this.host.native.sourceTable.register(createLifeSourceAdapter(this.ctx,this.host,(id,message)=>
+      this.running() && this.runtime?.isHome(id) === true && message.source.kind === 'dsh-world-life'
+        && (!('facts' in message.source) || this.runtime.acceptsFactMessage(id,message))));
   }
   /** Domain changes and native alarms wake Life; an idle world needs no pump. */
   private scheduleTick() {
@@ -524,9 +530,10 @@ export class CompanionLife {
   }
   async close() {
     this.closed = true; clearTimeout(this.timer);this.timer=undefined;
+    const revoked=this.sourceRegistration?.revoke();
     for(const stop of this.subscriptions.splice(0))stop();
     this.publishRest();
-    this.host.native.lifeAdmission = undefined;
+    await revoked;
     await this.enqueue(async () => {
       try { await this.stopRuntime(); }
       finally { this.binding = undefined; }
@@ -546,6 +553,7 @@ export function apply(ctx: Context, config: Config = {}) {
   const life = new CompanionLife(ctx, host, config.agentPreset ?? 'standard');
   ctx.provide('petLife', life);
   ctx.effect(() => () => life.close());
+  life.registerSource();
   ctx.effect(() => host.workspace.runtime.capabilityTable.register({
     id: 'life.pursuits', owner: 'life', contractVersion: CONTRACT_VERSION, order: 3,
     status: () => {

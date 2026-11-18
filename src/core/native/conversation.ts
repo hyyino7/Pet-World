@@ -8,8 +8,21 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 import type { NativeMemory } from './memory.js';
 import { canonical, check, digest, now, reject } from '../storage.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
+import type { SourceAdmission } from '../../contracts/tables.js';
+import { SourceAdapterTable } from '../tables/sources.js';
 
 export interface NativeScope { workspaceId: string; path: string; storageId: string; guest: boolean }
+export function matchesNativeScope(current: NativeScope | undefined, expected: NativeScope): boolean {
+  return !!current && current.workspaceId === expected.workspaceId && current.path === expected.path
+    && current.storageId === expected.storageId && current.guest === expected.guest;
+}
+
+export interface NativeSourceContext {
+  readonly policyKey: string;
+  fileAccessKey?(): string;
+  continueAfterInterrupt?(scope: NativeScope): () => void;
+}
+export type NativeSourceSelection = Extract<SourceAdmission<NativeSourceContext>, {kind: 'accepted'}>;
 interface NativeTurn { turn: number; scope: NativeScope; sourceIds: string[] }
 
 interface Work {
@@ -20,8 +33,7 @@ interface Work {
 export class CoreNative {
   memory?: NativeMemory;
   memoryEnabledForNewSessions = true;
-  /** Life owns admission; absence/unload leaves background native turns denied. */
-  lifeAdmission?: (sessionId: string, message: UserMessage) => boolean;
+  readonly sourceTable = new SourceAdapterTable<NativeSourceContext>();
   roomAdmission?: (sessionId: string, message: UserMessage) => boolean;
   channelBoundary?: {guest(sessionId: string): boolean; admit(sessionId: string, message: UserMessage): boolean; identity?(sessionId: string): Record<string, unknown> | undefined};
   resolveScope?: (sessionId: string) => NativeScope | undefined;
@@ -31,13 +43,15 @@ export class CoreNative {
   scopeFor(sessionId: string): NativeScope | undefined { return this.resolveScope?.(sessionId); }
   private current(sessionId: string, expected?: NativeScope): NativeScope {
     const scope = this.scopeFor(sessionId);
-    check(scope && (!expected || scope.workspaceId === expected.workspaceId && scope.path === expected.path && scope.storageId === expected.storageId && scope.guest===expected.guest), 'Conversation left its bound workspace');
+    check(scope && (!expected || matchesNativeScope(scope, expected)), 'Conversation left its bound workspace');
     return scope!;
   }
   acceptsInput(sessionId: string, message: UserMessage): boolean {
     if (message.source.kind === 'user') return !('identity' in message.source) || this.channelBoundary?.admit(sessionId, message) === true;
-    return this.lifeAdmission?.(sessionId, message) === true || this.roomAdmission?.(sessionId, message) === true
-      || this.channelBoundary?.admit(sessionId,message) === true;
+    if (message.source.kind === 'dsh-world-life') {
+      return this.sourceTable.admit({sessionId, message}).kind === 'accepted';
+    }
+    return this.roomAdmission?.(sessionId, message) === true || this.channelBoundary?.admit(sessionId,message) === true;
   }
   memoryFor(_sessionId: string): NativeMemory | undefined {
     // The current component switch applies at the next turn, including retained chats.

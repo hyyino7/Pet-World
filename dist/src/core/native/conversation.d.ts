@@ -5,19 +5,29 @@ import type { UserMessage, SessionEvent } from '@deepseek-ai/dsh-session';
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
 import type { NativeMemory } from './memory.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
+import type { SourceAdmission } from '../../contracts/tables.js';
+import { SourceAdapterTable } from '../tables/sources.js';
 export interface NativeScope {
     workspaceId: string;
     path: string;
     storageId: string;
     guest: boolean;
 }
+export declare function matchesNativeScope(current: NativeScope | undefined, expected: NativeScope): boolean;
+export interface NativeSourceContext {
+    readonly policyKey: string;
+    fileAccessKey?(): string;
+    continueAfterInterrupt?(scope: NativeScope): () => void;
+}
+export type NativeSourceSelection = Extract<SourceAdmission<NativeSourceContext>, {
+    kind: 'accepted';
+}>;
 /** Scoped services for the existing DSH Agent; only autonomous inputs have extra allowances. */
 export declare class CoreNative {
     readonly runtime: CoreRuntime;
     memory?: NativeMemory;
     memoryEnabledForNewSessions: boolean;
-    /** Life owns admission; absence/unload leaves background native turns denied. */
-    lifeAdmission?: (sessionId: string, message: UserMessage) => boolean;
+    readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
     roomAdmission?: (sessionId: string, message: UserMessage) => boolean;
     channelBoundary?: {
         guest(sessionId: string): boolean;

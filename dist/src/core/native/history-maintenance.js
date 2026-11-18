@@ -20,16 +20,14 @@ export function historicalStateOverview(name, args, value) {
     if (name === 'life_plan_read' && typeof value.revision === 'number' && (value.plan === null || object(value.plan)))
         return planOverview(value);
 }
-/** Only completed Life turns, excluding owner takeovers, reviews and the latest
- * turn. Raw tool calls identify reads; mutations, errors and other tools stay. */
-export function lifeHistoryCandidates(events, nodes) {
+export function lifeHistoryCandidates(events, nodes, classify) {
     let turn;
     const states = new Map();
     const calls = new Map();
     for (const event of events) {
         if (event.type === 'turn/start') {
             turn = event.data.turn;
-            states.set(turn, { life: false, protected: false, completed: false });
+            states.set(turn, { protected: false, completed: false });
         }
         if (event.type === 'tool/call')
             calls.set(event.data.callId, event.data);
@@ -38,13 +36,15 @@ export function lifeHistoryCandidates(events, nodes) {
             continue;
         if (event.type === 'user/message') {
             const source = event.data.source;
-            if (source.kind === 'dsh-world-life') {
-                state.life = true;
-                if ('purpose' in source && source.purpose === 'review')
+            if (source.kind === 'user' || source.kind === 'dsh-world-reply-nudge')
+                state.protected = true;
+            else {
+                const classification = classify(event.data);
+                if (classification?.historyProjection?.participates)
+                    state.lease = classification.lease;
+                if (classification?.historyProjection?.protectsTurn)
                     state.protected = true;
             }
-            else if (source.kind === 'user' || source.kind === 'dsh-world-reply-nudge')
-                state.protected = true;
         }
         if (event.type === 'turn/end') {
             state.completed = event.data.reason.kind === 'completed';
@@ -57,20 +57,20 @@ export function lifeHistoryCandidates(events, nodes) {
         if (event?.type !== 'tool/result' || event.data.message.isError)
             return [];
         const call = calls.get(event.data.message.toolCallId), state = call && states.get(call.turn);
-        if (!call || !state?.life || state.protected || !state.completed || call.turn === latest)
+        if (!call || !state?.lease?.isCurrent() || state.protected || !state.completed || call.turn === latest)
             return [];
-        return [{ event, call }];
+        return [{ event, call, lease: state.lease }];
     });
 }
 /** Idle maintenance is read-only. Native persistence requires replacement
  * tool results inside an open turn, so landing waits for the next real request.
  * This does not wake a session or consume/acknowledge any domain facts. */
-export async function prepareLifeHistory(agent, isCurrent) {
+export async function prepareLifeHistory(agent, isCurrent, classify) {
     if (agent.status !== 'idle' || agent.inbox.nextTurn.length || agent.inbox.nextStep.length || !isCurrent())
         return [];
     return agent.runMaintenance(async (signal) => {
         const changes = [];
-        for (const { event, call } of lifeHistoryCandidates(agent.session.snapshotEvents(), agent.session.surface.nodes)) {
+        for (const { event, call, lease } of lifeHistoryCandidates(agent.session.snapshotEvents(), agent.session.surface.nodes, classify)) {
             signal.throwIfAborted();
             if (!isCurrent())
                 return [];
@@ -90,7 +90,7 @@ export async function prepareLifeHistory(agent, isCurrent) {
                 continue;
             const text = JSON.stringify(view);
             if (text.length < original.content[0].text.length)
-                changes.push({ event, text });
+                changes.push({ event, text, lease });
         }
         return changes;
     });
@@ -101,8 +101,8 @@ export async function prepareLifeHistory(agent, isCurrent) {
 export function applyLifeHistory(agent, changes, meter) {
     const result = { replaced: 0, charsBefore: 0, charsAfter: 0 }, session = agent.session;
     const visible = new Set(session.surface.nodes);
-    for (const { event, text } of changes) {
-        if (!visible.has(event.seq))
+    for (const { event, text, lease } of changes) {
+        if (!lease.isCurrent() || !visible.has(event.seq))
             continue; // Native compaction may have superseded the prepared span.
         const original = session.deriveEventMessage(event);
         if (!original || original.content.length !== 1 || original.content[0]?.type !== 'text')
