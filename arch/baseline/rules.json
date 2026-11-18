@@ -60,7 +60,7 @@
     {
       "rule": "R1",
       "file": "src/console/plugin.ts",
-      "line": 2,
+      "line": 3,
       "column": 1,
       "scope": "<module>",
       "target": "src/desktop/plugin.js",
@@ -72,7 +72,7 @@
     {
       "rule": "R1",
       "file": "src/console/plugin.ts",
-      "line": 3,
+      "line": 4,
       "column": 1,
       "scope": "<module>",
       "target": "src/room/plugin.js",
@@ -84,7 +84,7 @@
     {
       "rule": "R1",
       "file": "src/console/plugin.ts",
-      "line": 4,
+      "line": 5,
       "column": 1,
       "scope": "<module>",
       "target": "src/channels/plugin.js",
@@ -96,7 +96,7 @@
     {
       "rule": "R1",
       "file": "src/console/plugin.ts",
-      "line": 6,
+      "line": 7,
       "column": 1,
       "scope": "<module>",
       "target": "src/desktop/platform/plugin.js",
@@ -108,7 +108,7 @@
     {
       "rule": "R2",
       "file": "src/console/plugin.ts",
-      "line": 21,
+      "line": 22,
       "column": 76,
       "scope": "apply/settingsHandler:callback2",
       "target": "petDesktop",
@@ -120,7 +120,7 @@
     {
       "rule": "R2",
       "file": "src/console/plugin.ts",
-      "line": 23,
+      "line": 24,
       "column": 11,
       "scope": "apply/settingsHandler:callback6",
       "target": "petRoom",
@@ -132,7 +132,7 @@
     {
       "rule": "R2",
       "file": "src/console/plugin.ts",
-      "line": 24,
+      "line": 25,
       "column": 11,
       "scope": "apply/settingsHandler:callback7",
       "target": "petChannels",
@@ -144,7 +144,7 @@
     {
       "rule": "R2",
       "file": "src/console/plugin.ts",
-      "line": 25,
+      "line": 26,
       "column": 11,
       "scope": "apply/settingsHandler:callback8",
       "target": "petPlatform",

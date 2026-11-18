@@ -105,7 +105,6 @@ export class CoreRuntime {
     const rows:[number,CapabilityStatus['id'],CapabilityStatus['owner']][]=[
       [1,'core.conversation','core'],
       [2,'memory.lifecycle','memory'],
-      [9,'console.operations','console'],
     ];
     for(const [order,id,owner] of rows) {
       this.capabilityTable.register({

@@ -122,7 +122,6 @@ export class CoreRuntime {
         const rows = [
             [1, 'core.conversation', 'core'],
             [2, 'memory.lifecycle', 'memory'],
-            [9, 'console.operations', 'console'],
         ];
         for (const [order, id, owner] of rows) {
             this.capabilityTable.register({

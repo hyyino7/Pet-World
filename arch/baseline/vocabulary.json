@@ -10623,13 +10623,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/channels/plugin.ts\",\"scope\":\"CompanionChannels/request/this . serial:callback0\"}",
@@ -11625,13 +11625,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/React . useEffect:callback0\"}",
@@ -12653,13 +12653,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/apply/request\"}",
@@ -12936,13 +12936,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/apply/request\"}",
@@ -13016,7 +13016,7 @@
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -13105,13 +13105,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -13200,13 +13200,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -13301,13 +13301,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -13400,13 +13400,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -13495,13 +13495,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/request\"}",
@@ -13590,13 +13590,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/room/window-main.cjs\",\"scope\":\"<module>\"}",
@@ -13691,13 +13691,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/room/window-preload.cjs\",\"scope\":\"<module>\"}",
@@ -13792,13 +13792,13 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/console/plugin.ts",
-      "line": 28,
+      "line": 29,
       "column": 26,
       "scope": "apply",
       "target": "{\"file\":\"src/room/window.ts\",\"scope\":\"<module>\"}",
@@ -13893,7 +13893,7 @@
       "other": {
         "file": "src/console/plugin.ts",
         "scope": "apply",
-        "line": 28
+        "line": 29
       }
     },
     {

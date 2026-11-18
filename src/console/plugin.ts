@@ -1,4 +1,5 @@
 import type { Context } from '@deepseek-ai/cordis';
+import { CONTRACT_VERSION } from '../contracts/version.js';
 import type {} from '../desktop/plugin.js';
 import type {} from '../room/plugin.js';
 import type {} from '../channels/plugin.js';
@@ -41,4 +42,10 @@ export function apply(ctx: Context): void {
       },
     });
   }
+  ctx.inject(['petCore'], scope => {
+    scope.effect(() => scope.petCore.workspace.runtime.capabilityTable.register({
+      id: 'console.operations', owner: 'console', contractVersion: CONTRACT_VERSION, order: 9,
+      status: () => ({state: 'unavailable', reason: 'Native component is not available', supportedOperations: []}),
+    }).revoke);
+  });
 }

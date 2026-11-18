@@ -1,3 +1,4 @@
+import { CONTRACT_VERSION } from '../contracts/version.js';
 import { settingsHandler } from './settings.js';
 export const name = 'her-world';
 export const inject = ['connection'];
@@ -27,5 +28,11 @@ export function apply(ctx) {
             },
         });
     }
+    ctx.inject(['petCore'], scope => {
+        scope.effect(() => scope.petCore.workspace.runtime.capabilityTable.register({
+            id: 'console.operations', owner: 'console', contractVersion: CONTRACT_VERSION, order: 9,
+            status: () => ({ state: 'unavailable', reason: 'Native component is not available', supportedOperations: [] }),
+        }).revoke);
+    });
 }
 //# sourceMappingURL=plugin.js.map

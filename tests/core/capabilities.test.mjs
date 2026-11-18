@@ -70,6 +70,7 @@ function expected({bound, desktopOpen, qq, hear, missing}) {
     petRoom: {'desktop.room': null},
     petChannels: {'channel.qq': null},
     petVoice: {'voice.speech': null},
+    console: {'console.operations': null},
     petEmotion: {'emotion.expression': unavailableExpression},
   };
   return rows(rowOrder, {...all, ...absent[missing]});
@@ -92,10 +93,7 @@ test('独立 createCore 只返回当前由 Core 登记的能力', async t => {
   const host = createCore(temp.config);
   t.after(async () => {try {await host.close();} finally {temp.cleanup();}});
   const actual = value(await host.services.core.listCapabilities(host.operator.request('capabilities'), {}));
-  assert.deepEqual(actual, rows(rowOrder.slice(0, 9), {
-    'life.pursuits': null, 'desktop.presentation': null, 'desktop.body': null, 'desktop.room': null,
-    'channel.qq': null, 'voice.speech': null,
-  }));
+  assert.deepEqual(actual, rows(rowOrder.slice(0, 2), {}));
 });
 
 async function pluginFixture(t) {
@@ -139,17 +137,16 @@ async function pluginFixture(t) {
   await install(corePlugin, {...temp.config, memory: {
     python: resolve('.venv/bin/python'), dataDir: join(temp.repo, '.chatpet/data/memory'),
   }});
-  await install(consolePlugin);
   const host = root.get('petCore');
   const plugins = {
-    petMemory: memoryPlugin, petLife: lifePlugin, petDesktop: desktopPlugin, petRoom: roomPlugin,
+    console: consolePlugin, petMemory: memoryPlugin, petLife: lifePlugin, petDesktop: desktopPlugin, petRoom: roomPlugin,
     petChannels: channelsPlugin, petVoice: voicePlugin, petEmotion: emotionPlugin,
   };
   const loaded = new Map();
   async function load(service) {
     loaded.set(service, await install(plugins[service]));
-    const module = root.get(service);
-    assert.ok(module, service + ' 已加载');
+    const module = service === 'console' ? undefined : root.get(service);
+    if (service !== 'console') assert.ok(module, service + ' 已加载');
     if (service === 'petEmotion') module.registerCatalog('fixture', {
       actions: [{name: 'wave', description: 'Fixture action'}], stickers: [],
     });
@@ -164,7 +161,7 @@ async function pluginFixture(t) {
       await fiber.dispose();
       fibers.splice(fibers.indexOf(fiber), 1);
       loaded.delete(service);
-      assert.equal(root.get(service), undefined, service + ' 已卸载');
+      if (service !== 'console') assert.equal(root.get(service), undefined, service + ' 已卸载');
     },
     async bind() {
       const {revision, conversation} = value(await host.services.preferences.read(request(), {}));
