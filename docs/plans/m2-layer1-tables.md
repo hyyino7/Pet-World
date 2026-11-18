@@ -499,6 +499,19 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - 提交：Claude 按 Codex 的累积快照重放提交（`0463154`、`9c1b930`、`38ca255`、`c2adde9`、`182ddff`），每步先重新构建再跑 Core、Emotion、Memory 和回归快测（588 项）与 `check:arch`。
 - 返工结果：Memory 启动固定作用域快照，真实 provider 回归确认复用对象换库后无法读取旧库记录。构建通过，Node 快测 697 项、Python provider 22 项均通过，失败和跳过均为 0；`check:arch` 通过，基线零增删。
 
+### H · 复测（`<M2 末>` = `d865bff`）
+
+只度量、不合并，分支保留。计数是相对 `d865bff` 的已提交累计差异，主列只算手写 `src/`。
+
+| 题 | 提交 | 手写 `src/` | 层 | 测试 / `dist/src` | 基线 | 判定（拍板点 1） |
+| --- | --- | --- | --- | --- | --- | --- |
+| 4a 新工具，仅主人 | `codex/m2-retest-4-tool` `991c6fb` | 1：`src/behavior/plugin.ts` | 第二层 `behavior` | 1 / 2 | 1 | 达标（不增加） |
+| 4b 同上，Life 也可用 | 同一分支 `5d1ef47` | 1：同上 | 第二层 | 1 / 2 | 2 | 达标（减半、只动一层） |
+| 4c 同上，另加历史概览 | 同一分支 `9cfaeb7` | 1：同上 | 第二层 | 1 / 2 | 4 | 达标（减半、只动一层） |
+| 5a 后台系统提醒来源 | `codex/m2-retest-5-source` `2e7ab9e` | 3：`src/contracts/tables.ts`、`src/life/tool-policy.ts`、`src/life/plugin.ts` | 第一层 `contracts` + 第二层 `life` | 1 / 6 | 至少 3 | **未达标**（没减半，动了两层） |
+
+5a 碰到第一层的原因：`contracts/tables.ts` 里的 `source.kind` 声明类型（G 批）和 `COMPANION_TOOL_SOURCES` 都是封闭词表，新增一类来源两处都要加一项。Life 里的两个文件分别是适配器声明和入口登记。Core 没有改动，`check:arch` 新增 0。5b 按拍板点 1 不建分支，沿用读码下限（至少 5 个文件），本批未改变它的结构。
+
 ## 审查结论
 
 ### A 批第一轮（Claude 核实 Codex 审查，返工）
