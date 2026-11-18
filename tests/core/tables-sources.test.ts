@@ -116,3 +116,25 @@ test('declaration-only policy rows can be listed but never admit an input', asyn
   await registration.revoke();
   assert.deepEqual(table.policyRows(), []);
 });
+
+test('classifying a saved source skips unclaimed branches and leaves a one-time grant available for admission', async () => {
+  const table = new SourceAdapterTable<string>();
+  const saved = guestInput(), grant = new Set([saved.message.id]);
+  assert.equal(table.classify(saved.message), undefined);
+  table.register(adapter({ id: 'unclaimed', order: 1, classify: () => undefined, admit: () => ({kind:'unclaimed'}) }));
+  const standard = adapter(), owner = standard.branches.owner;
+  const registration = table.register(adapter({
+    branches: { owner: { ...owner, historyProjection: { participates: false, protectsTurn: true } } },
+    classify: message => 'identity' in message.source ? 'owner' : undefined,
+    admit: ({ message }) => grant.delete(message.id)
+      ? { kind: 'accepted', branch: 'owner', context: 'one-time' }
+      : { kind: 'rejected', reason: 'Missing grant' },
+  }));
+  assert.equal(table.classify(input().message), undefined);
+  assert.equal(table.classify(saved.message)?.historyProjection?.protectsTurn, true);
+  assert.equal(table.admit(saved).kind, 'accepted');
+  assert.equal(table.admit(saved).kind, 'rejected');
+  assert.equal(table.classify(saved.message)?.historyProjection?.protectsTurn, true);
+  await registration.revoke();
+  assert.equal(table.classify(saved.message), undefined);
+});

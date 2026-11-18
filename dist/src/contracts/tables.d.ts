@@ -103,11 +103,18 @@ export interface SourceAdapter<Selected> {
     readonly branches: Readonly<Record<string, SourceBranch<Selected>>>;
     /** Rows such as shared home and Desktop monologues have no input branch. */
     readonly policyRows?: readonly SessionPolicyRow[];
+    /** Select a branch using saved message fields only, without checking or consuming grants. */
+    classify?(message: UserMessage): string | undefined;
     /** The adapter owns idempotence and consumes any one-time grant on first acceptance. */
     admit(input: SourceInput): AdmissionDecision<{
         branch: string;
         context: Selected;
     }>;
+}
+export interface SourceClassification {
+    readonly branch: string;
+    readonly historyProjection: SourceBranch<unknown>['historyProjection'];
+    readonly lease: RegistrationLease;
 }
 /** Callbacks are bound to this admission's context and registration generation. */
 export interface AdmittedSourceBranch extends Omit<SourceBranch<unknown>, 'toolPolicy' | 'fileAccess' | 'memoryObservation'> {
