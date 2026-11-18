@@ -115,6 +115,38 @@ test('one registration attaches once to each native preset and revokes its actua
   }
 });
 
+test('a synchronous cleanup failure does not leave another native scope attached', async t => {
+  const directory = mkdtempSync(join(tmpdir(), 'her-world-table-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const resource = join(directory, 'guest-scope');
+  const root = new Context();
+  const table = new RegistrationTable<string>();
+  const registration = table.register('projection', 'fixture');
+  const failure = new Error('standard scope cleanup failed');
+  const standard = await root.plugin((scope: Context) =>
+    registration.attach(scope, () => () => { throw failure; }));
+  const guest = await root.plugin((scope: Context) => registration.attach(scope, () => {
+    writeFileSync(resource, 'attached');
+    return async () => {
+      await new Promise<void>(resolve => setImmediate(resolve));
+      rmSync(resource, { force: true });
+    };
+  }));
+  t.after(async () => {
+    await guest.dispose();
+    await standard.dispose();
+  });
+
+  assert.ok(existsSync(resource));
+  await assert.rejects(registration.revoke(), error => {
+    assert.equal(existsSync(resource), false);
+    assert.ok(error instanceof AggregateError);
+    assert.deepEqual(error.errors, [failure]);
+    return true;
+  });
+  assert.equal(registration.lease.isCurrent(), false);
+});
+
 test('capability rows validate both public identifiers before reserving a slot', () => {
   const table = new CapabilityTable();
   const row: CapabilityRegistration = { id: 'desktop.room', owner: 'desktop', order: 5,

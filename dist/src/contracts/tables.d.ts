@@ -25,7 +25,8 @@ export interface CapabilityRegistration extends CapabilityIdentity {
     status(): StatusDetails<CapabilityStatus>;
 }
 export type TurnKind = 'foreground' | 'background';
-export type CompanionToolSource = 'owner' | 'life' | 'review' | 'guest' | 'tv';
+export declare const COMPANION_TOOL_SOURCES: readonly ["owner", "life", "review", "guest", "tv"];
+export type CompanionToolSource = typeof COMPANION_TOOL_SOURCES[number];
 export type NativeSourceKind = UserMessage['source']['kind'];
 export type AdmissionDecision<Accepted> = {
     kind: 'unclaimed';
@@ -126,6 +127,7 @@ export type SourceAdmission<Selected> = AdmissionDecision<{
 export interface CompanionToolDeclaration {
     readonly name: string;
     readonly sources: readonly CompanionToolSource[];
+    /** Synchronously project a tool result for history. */
     historyOverview?(args: unknown, value: unknown): unknown;
 }
 export {};

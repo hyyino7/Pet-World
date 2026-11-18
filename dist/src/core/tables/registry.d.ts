@@ -13,6 +13,7 @@ export declare class RegistrationTable<Value> {
     private readonly registrations;
     constructor(ordering?: Ordering<Value> | undefined);
     register(key: string, value: Value): TableRegistration;
+    get(key: string): Entry<Value> | undefined;
     entries(): readonly Entry<Value>[];
 }
 export {};

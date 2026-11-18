@@ -30,7 +30,8 @@ export interface CapabilityRegistration extends CapabilityIdentity {
 }
 
 export type TurnKind = 'foreground' | 'background';
-export type CompanionToolSource = 'owner' | 'life' | 'review' | 'guest' | 'tv';
+export const COMPANION_TOOL_SOURCES = Object.freeze(['owner', 'life', 'review', 'guest', 'tv'] as const);
+export type CompanionToolSource = typeof COMPANION_TOOL_SOURCES[number];
 export type NativeSourceKind = UserMessage['source']['kind'];
 
 export type AdmissionDecision<Accepted> =
@@ -121,5 +122,6 @@ export type SourceAdmission<Selected> = AdmissionDecision<{
 export interface CompanionToolDeclaration {
   readonly name: string;
   readonly sources: readonly CompanionToolSource[];
+  /** Synchronously project a tool result for history. */
   historyOverview?(args: unknown, value: unknown): unknown;
 }

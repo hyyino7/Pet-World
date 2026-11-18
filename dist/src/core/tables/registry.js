@@ -58,9 +58,15 @@ export class RegistrationTable {
                 if (!isCurrent())
                     return;
                 this.registrations.delete(key);
-                await Promise.all([...scopes.values()].map(attachment => attachment.dispose?.()));
+                const results = await Promise.allSettled([...scopes.values()].map(async (attachment) => attachment.dispose?.()));
+                const errors = results.flatMap(result => result.status === 'rejected' ? [result.reason] : []);
+                if (errors.length)
+                    throw new AggregateError(errors, `Failed to revoke registration: ${key}`);
             },
         };
+    }
+    get(key) {
+        return this.registrations.get(key);
     }
     entries() {
         return [...this.registrations.values()].sort((left, right) => left.order - right.order);

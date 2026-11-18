@@ -66,9 +66,15 @@ export class RegistrationTable<Value> {
       revoke: async () => {
         if (!isCurrent()) return;
         this.registrations.delete(key);
-        await Promise.all([...scopes.values()].map(attachment => attachment.dispose?.()));
+        const results = await Promise.allSettled([...scopes.values()].map(async attachment => attachment.dispose?.()));
+        const errors = results.flatMap(result => result.status === 'rejected' ? [result.reason] : []);
+        if (errors.length) throw new AggregateError(errors, `Failed to revoke registration: ${key}`);
       },
     };
+  }
+
+  get(key: string): Entry<Value> | undefined {
+    return this.registrations.get(key);
   }
 
   entries(): readonly Entry<Value>[] {
