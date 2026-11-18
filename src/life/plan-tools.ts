@@ -7,7 +7,10 @@ import type { CompanionLife } from './plugin.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
 import { isHistoryObject } from '../core/native/history-maintenance.js';
 import type { CompanionToolDeclaration } from '../contracts/tables.js';
+import type { CompanionToolTable } from '../core/tables/tools.js';
 import { registerLifeToolPolicy } from './tool-policy.js';
+
+type PlanTool = ToolDefinition & Partial<Omit<CompanionToolDeclaration,'name'>>;
 
 const output={schema:{type:'string' as const},render:(_:unknown,value:string)=>[{type:'text' as const,text:value}]};
 export const lifePlanReadToolDeclaration = {
@@ -71,11 +74,11 @@ export function registerPlanTools(ctx:Context,host:PetCoreHost,life:CompanionLif
     signal.throwIfAborted();const id=checked(agent);
     return {id,validate:()=>{signal.throwIfAborted();if(checked(agent)!==id)throw Error('Life conversation or workspace admission changed');}};
   };
-  const catalog:ToolDefinition[]=[
-    defineTool({name:lifePlanReadToolDeclaration.name,description:'读取同一个伙伴跨会话保存的当前生活计划、版本、活动和进度。无计划也是有效状态。',parameters:{view:{type:'string',enum:['overview','full'],description:'Autonomous turns default to overview; full retains the original snapshot.'}},output,
+  const catalog:PlanTool[]=[
+    {...lifePlanReadToolDeclaration,...defineTool({name:lifePlanReadToolDeclaration.name,description:'读取同一个伙伴跨会话保存的当前生活计划、版本、活动和进度。无计划也是有效状态。',parameters:{view:{type:'string',enum:['overview','full'],description:'Autonomous turns default to overview; full retains the original snapshot.'}},output,
       execute:async({view},exec)=>{const guard=admission(exec.agent,exec.signal);const state=await life.readPlan(guard.id,guard.validate);
-        return JSON.stringify((view??(host.native.isAutonomous(exec.agent!.id)?'overview':'full'))==='overview'?planOverview(state):state);}}),
-    defineTool({name:'life_plan_update',description:'提交或明确替换持久生活计划。先读版本；可长期保持活动、休息或无安排。move 表示前往位置并在实际到达后结束；room 表示到指定位置持续活动，hold 表示原地持续活动，不会入睡。决定睡觉须提交 body、action=sleep，实际入睡后才算睡着；nextConsiderAt 只设置思考时间。无限持续活动只能放在最后；nextConsiderAt 只唤醒思考，不结束活动。body 必须给 action；room/move 必须使用 room_state 中的 room/spot；garden 必须给 garden:{type:...}，先用 room_garden 的 state 查询目标和资源，巡视使用 type=visit。身体和园艺操作以真实执行结果结束，后续持续休息可另加 hold。economy 用目录中的真实 itemId 购买、出售或消费；收菜、出售、补种与消费都由你明确决定，不因成熟自动执行。read 指定已持有书本的实际片段，必须取得内容并确认才算读过，动画不代表阅读完成。计划只表达意图，程序验证并执行，不能声称已经完成。不要为每个动画片段或普通聊天重建计划。',parameters:{
+        return JSON.stringify((view??(host.native.isAutonomous(exec.agent!.id)?'overview':'full'))==='overview'?planOverview(state):state);}})},
+    {sources:OWNER_LIFE_TOOL_SOURCES,...defineTool({name:'life_plan_update',description:'提交或明确替换持久生活计划。先读版本；可长期保持活动、休息或无安排。move 表示前往位置并在实际到达后结束；room 表示到指定位置持续活动，hold 表示原地持续活动，不会入睡。决定睡觉须提交 body、action=sleep，实际入睡后才算睡着；nextConsiderAt 只设置思考时间。无限持续活动只能放在最后；nextConsiderAt 只唤醒思考，不结束活动。body 必须给 action；room/move 必须使用 room_state 中的 room/spot；garden 必须给 garden:{type:...}，先用 room_garden 的 state 查询目标和资源，巡视使用 type=visit。身体和园艺操作以真实执行结果结束，后续持续休息可另加 hold。economy 用目录中的真实 itemId 购买、出售或消费；收菜、出售、补种与消费都由你明确决定，不因成熟自动执行。read 指定已持有书本的实际片段，必须取得内容并确认才算读过，动画不代表阅读完成。计划只表达意图，程序验证并执行，不能声称已经完成。不要为每个动画片段或普通聊天重建计划。',parameters:{
       expectedRevision:{type:'integer',required:true},
       plan:{type:'object',required:true,properties:{
         goal:{type:'string',required:true},reason:{type:'string',required:true},nextConsiderAt:{oneOf:[{type:'string'},{type:'null'}],required:true,description:'ISO time with timezone, or null to wait for an explicit event. Finishing the last finite activity is one such event. Empty steps with null explicitly choose quiet waiting. No fixed interval.'},
@@ -120,27 +123,30 @@ export function registerPlanTools(ctx:Context,host:PetCoreHost,life:CompanionLif
         ]}},
         reconsiderWhen:{type:'array',items:{type:'object',properties:{metric:{type:'string',enum:['hunger','thirst','energy','bladder','pain'],required:true},comparison:{type:'string',enum:['gte','lte'],required:true},value:{type:'number',required:true}},additionalProperties:false}},
       },additionalProperties:false},
-    },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.updatePlan(guard.id,args.expectedRevision,args.plan,guard.validate));}}),
-    defineTool({name:'life_read_segment',description:'读取当前生活计划正在执行的真实读物片段。先读计划及版本，使用当前执行的原operationId；返回实际文字和持久receiptToken。取得内容不会自动推进书签，也不代表读懂。读到返回文字后才可明确调用life_read_confirm。沿用当前原生会话，不创建第二个阅读代理。',parameters:{
+    },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.updatePlan(guard.id,args.expectedRevision,args.plan,guard.validate));}})},
+    {sources:OWNER_LIFE_TOOL_SOURCES,...defineTool({name:'life_read_segment',description:'读取当前生活计划正在执行的真实读物片段。先读计划及版本，使用当前执行的原operationId；返回实际文字和持久receiptToken。取得内容不会自动推进书签，也不代表读懂。读到返回文字后才可明确调用life_read_confirm。沿用当前原生会话，不创建第二个阅读代理。',parameters:{
       expectedRevision:{type:'integer',required:true},operationId:{type:'string',required:true},
-    },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.readPlannedSegment(guard.id,args.expectedRevision,args.operationId,guard.validate));}}),
-    defineTool({name:'life_read_confirm',description:'仅在你已经取得并实际阅读life_read_segment返回的文字后，确认当前原operationId及该真实片段的receiptToken。程序核对持有权、内容版本、计划版本与取消状态后推进书签；不记录你已读懂，不以动画或口头意图推进进度。',parameters:{
+    },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.readPlannedSegment(guard.id,args.expectedRevision,args.operationId,guard.validate));}})},
+    {sources:OWNER_LIFE_TOOL_SOURCES,...defineTool({name:'life_read_confirm',description:'仅在你已经取得并实际阅读life_read_segment返回的文字后，确认当前原operationId及该真实片段的receiptToken。程序核对持有权、内容版本、计划版本与取消状态后推进书签；不记录你已读懂，不以动画或口头意图推进进度。',parameters:{
       expectedRevision:{type:'integer',required:true},operationId:{type:'string',required:true},receiptToken:{type:'string',required:true},
-    },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.confirmPlannedReading(guard.id,args.expectedRevision,args.operationId,args.receiptToken,guard.validate));}}),
-    defineTool({name:'life_plan_keep',description:'考虑后明确保留当前生活计划、活动和进度，不重建或重复派工。先读版本并说明继续或等待的原因；nextConsiderAt可保留原时间、选择新时间或明确为null等待事件。无计划时请用life_plan_update保存安排或空步骤等待，失败的活动要修订计划，已暂停的活动须明确恢复。普通查看不必调用。',parameters:{
+    },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.confirmPlannedReading(guard.id,args.expectedRevision,args.operationId,args.receiptToken,guard.validate));}})},
+    {sources:OWNER_LIFE_TOOL_SOURCES,...defineTool({name:'life_plan_keep',description:'考虑后明确保留当前生活计划、活动和进度，不重建或重复派工。先读版本并说明继续或等待的原因；nextConsiderAt可保留原时间、选择新时间或明确为null等待事件。无计划时请用life_plan_update保存安排或空步骤等待，失败的活动要修订计划，已暂停的活动须明确恢复。普通查看不必调用。',parameters:{
       expectedRevision:{type:'integer',required:true},reason:{type:'string',required:true},
       nextConsiderAt:{oneOf:[{type:'string'},{type:'null'}],required:true},
-    },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.keepPlan(guard.id,args.expectedRevision,args.reason,args.nextConsiderAt,guard.validate));}}),
-    defineTool({name:'life_activity_control',description:'明确暂停、恢复或取消当前生活计划。普通聊天不必暂停；暂停保留进度，恢复不重新消费已完成步骤。自主生活关闭时只能暂停或取消，不能偷偷开启。',parameters:{
+    },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.keepPlan(guard.id,args.expectedRevision,args.reason,args.nextConsiderAt,guard.validate));}})},
+    {sources:OWNER_LIFE_TOOL_SOURCES,...defineTool({name:'life_activity_control',description:'明确暂停、恢复或取消当前生活计划。普通聊天不必暂停；暂停保留进度，恢复不重新消费已完成步骤。自主生活关闭时只能暂停或取消，不能偷偷开启。',parameters:{
       expectedRevision:{type:'integer',required:true},action:{type:'string',enum:['pause','resume','cancel'],required:true},reason:{type:'string',required:true},
-    },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.controlPlan(guard.id,args.expectedRevision,args.action,args.reason,guard.validate));}}),
+    },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.controlPlan(guard.id,args.expectedRevision,args.action,args.reason,guard.validate));}})},
   ];
-  const registration=ctx.tools as unknown as {register(tool:ToolDefinition,options:{when(context:{agent?:Agent}):boolean}):()=>void};
   registerLifeToolPolicy(ctx,host.native.toolTable);
-  return catalog.map(tool=>{
-    const dispose=registration.register(tool,{when:({agent})=>!!scope(agent)});
-    const declaration=tool.name===lifePlanReadToolDeclaration.name ? lifePlanReadToolDeclaration : {name:tool.name,sources:OWNER_LIFE_TOOL_SOURCES};
-    ctx.effect(() => host.native.toolTable.register(declaration).revoke);
-    return dispose;
-  });
+  return catalog.map(tool=>registerPlanTool(ctx,host.native.toolTable,tool,({agent})=>!!scope(agent)));
+}
+
+export function registerPlanTool(
+  ctx:Context,table:CompanionToolTable,tool:PlanTool,when:(context:{agent?:Agent})=>boolean,
+):()=>void {
+  const dispose=ctx.tools.register(tool,{when});
+  const {name,sources=['owner'],historyOverview}=tool;
+  ctx.effect(() => table.register({name,sources,historyOverview}).revoke);
+  return dispose;
 }

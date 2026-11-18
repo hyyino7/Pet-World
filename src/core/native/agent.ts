@@ -10,7 +10,7 @@ import type { PetCoreHost } from '../index.js';
 import { registerWorldPrompt, retireLegacyPrompt, retireDynamicContext } from './prompt.js';
 import { WorldRecall } from './recall.js';
 import type { PetWorld } from '../../world/service.js';
-import {matchesNativeScope,OWNER_LIFE_TOOL_SOURCES,type NativeScope,type NativeSourceSelection} from './conversation.js';
+import {matchesNativeScope,type NativeScope,type NativeSourceSelection} from './conversation.js';
 import {installCompanionFoundation} from '../companion-foundation.js';
 import {installSourceFileGuard} from '../life-review-files.js';
 import {prepareLifeHistory,applyLifeHistory,type HistoryProjection} from './history-maintenance.js';
@@ -183,9 +183,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
         return Boolean(scope && !scope.guest && (!tool.name.startsWith('pet_memory_') || host.native.memoryFor(context.agent!.id)));
       },
     });
-    const lifeReadOrRemember = tool.name === 'pet_memory_read' || tool.name === 'pet_memory_recall' || tool.name === 'pet_memory_remember';
-    const sources = lifeReadOrRemember ? OWNER_LIFE_TOOL_SOURCES : ['owner'] as const;
-    ctx.effect(() => host.native.toolTable.register({name:tool.name,sources}).revoke);
+    ctx.effect(() => host.native.toolTable.register({name:tool.name,sources:tool.sources}).revoke);
   }
   // Background allowances stay on autonomous input only. DSH enforces native
   // permissions/cancellation for ordinary user work, without a second counter.

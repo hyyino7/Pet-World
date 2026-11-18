@@ -5,7 +5,7 @@ import type { UserMessage, SessionEvent } from '@deepseek-ai/dsh-session';
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
 import type { NativeMemory } from './memory.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
-import { type SourceAdmission } from '../../contracts/tables.js';
+import { type CompanionToolDeclaration, type SourceAdmission } from '../../contracts/tables.js';
 import { SourceAdapterTable } from '../tables/sources.js';
 import { CompanionToolTable } from '../tables/tools.js';
 export declare const OWNER_LIFE_TOOL_SOURCES: readonly ("owner" | "life" | "review")[];
@@ -73,7 +73,7 @@ export declare class CoreNative {
     }): Promise<void>;
     validate(sessionId: string): void;
     guardTool(sessionId: string): void;
-    tools(sessionId?: string): ToolDefinition[];
+    tools(sessionId?: string): (ToolDefinition & Pick<CompanionToolDeclaration, 'sources'>)[];
     context(): {
         identity: string;
         user: string;
