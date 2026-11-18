@@ -53,7 +53,7 @@ test('a review file already resolving is denied if Life unloads before native di
 });
 
 test('a saved Life fact batch that fails live admission still projects without changing the current grant',async t=>{
-  const f=await fixture(t,{economy:false});
+  const f=await fixture(t,{economy:false,room:true});
   await f.enable();
   const home=await f.home(),table=f.host.native.sourceTable;
   const fact={version:1,id:'synthetic-water',requestId:'synthetic-water',domain:'body',type:'water',
@@ -81,7 +81,7 @@ test('a saved Life fact batch that fails live admission still projects without c
   const agent={session,status:'idle',inbox:{nextTurn:[],nextStep:[]},runMaintenance:job=>job(signal())};
   const classify=message=>table.classify(message);
   assert.equal(classify(granted)?.historyProjection?.participates,true);
-  const prepared=await prepareLifeHistory(agent,()=>true,classify);
+  const prepared=await prepareLifeHistory(agent,()=>true,classify,f.host.native.toolTable);
   assert.deepEqual(prepared.map(change=>change.event.seq),[original.seq]);
   assert.equal(readFileSync(path,'utf8'),before);
   assert.equal(table.admit({sessionId:home.id,message:granted}).kind,'accepted');
@@ -91,5 +91,5 @@ test('a saved Life fact batch that fails live admission still projects without c
   assert.equal(session.eventAt(original.seq).data.message.content[0].text,text);
   await f.life.close();
   assert.equal(classify(old),undefined);
-  assert.deepEqual(await prepareLifeHistory(agent,()=>true,classify),[]);
+  assert.deepEqual(await prepareLifeHistory(agent,()=>true,classify,f.host.native.toolTable),[]);
 });

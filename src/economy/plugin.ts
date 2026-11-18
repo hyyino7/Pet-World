@@ -8,6 +8,9 @@ import { randomUUID } from 'node:crypto';
 import type { PetCoreHost, WorkspaceTarget } from '../core/index.js';
 import { bytesDigest, canonical, check, digest, integer } from '../core/storage.js';
 import { registerWorldContext } from '../core/native/prompt.js';
+import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
+import { isHistoryObject } from '../core/native/history-maintenance.js';
+import type { CompanionToolDeclaration } from '../contracts/tables.js';
 import type { RoomEconomyPort, RoomFoodReservation } from '../behavior/room.js';
 import { EconomyStore } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
@@ -16,6 +19,13 @@ import type { CompanionFact, CompanionFactActor } from '../contracts/interaction
 
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];
 const access = {mode:'bounded',detail:'余额与物品由程序结算。原生文件工具防误改；同一系统账户的命令和其他插件仍可访问文件。'} as const;
+export const economyStateToolDeclaration = {
+  name:'pet_economy_state',sources:OWNER_LIFE_TOOL_SOURCES,
+  historyOverview(_args,value) {
+    if(isHistoryObject(value)&&isHistoryObject(value.configuration)&&Array.isArray(value.inventory)
+      &&Array.isArray(value.ledger)&&Array.isArray(value.catalog))return economyOverview(value as unknown as Parameters<typeof economyOverview>[0]);
+  },
+} satisfies CompanionToolDeclaration;
 function localFile(path:string) {
   const stat=lstatSync(path,{throwIfNoEntry:false});
   check(!stat || stat.isFile()&&!stat.isSymbolicLink()&&stat.nlink===1,'Invalid retained garden file');
@@ -226,7 +236,7 @@ export function apply(ctx:Context) {
     return current.target.id;
   };
   const output={schema:{type:'string' as const},render:(_:unknown,value:string)=>[{type:'text' as const,text:value}]};
-  ctx.tools.register(defineTool({name:'pet_economy_state',description:'读取同一伙伴的真实钱包、库存、商店目录、读物与书签、待确认消费及近期流水。基础餐食和饮水免费。种植、收获、出售和消费由你明确选择并写入持久生活计划，不会自动派工、发工资或凭文字增加物品。',parameters:{view:{type:'string',enum:['overview','full'],description:'Autonomous turns default to overview. full retains the original snapshot.'},
+  const stateTool=defineTool({name:economyStateToolDeclaration.name,description:'读取同一伙伴的真实钱包、库存、商店目录、读物与书签、待确认消费及近期流水。基础餐食和饮水免费。种植、收获、出售和消费由你明确选择并写入持久生活计划，不会自动派工、发工资或凭文字增加物品。',parameters:{view:{type:'string',enum:['overview','full'],description:'Autonomous turns default to overview. full retains the original snapshot.'},
       factIds:{type:'array',items:{type:'string'},description:'Read 1–16 original committed economic interaction receipts by exact fact IDs.'},
       section:{type:'string',enum:['catalog','ledger'],description:'Optional paged catalog or recent ledger (up to 80 original recent entries).'},offset:{type:'integer'},limit:{type:'integer'}},output,
     execute:async(args,exec)=>{const id=scope(exec.agent);check(id,'Economy requires an admitted owner conversation');
@@ -235,7 +245,9 @@ export function apply(ctx:Context) {
         const facts=await service.readFacts(id,args.factIds);validate();return JSON.stringify({facts});}
       const state=await service.snapshot(id,validate);
       return JSON.stringify(args.section?economyPage(state,args.section,args.offset,args.limit):
-        (args.view??(host.native.isAutonomous(exec.agent!.id)?'overview':'full'))==='overview'?economyOverview(state):state);}}),{when:({agent})=>!!scope(agent)});
+        (args.view??(host.native.isAutonomous(exec.agent!.id)?'overview':'full'))==='overview'?economyOverview(state):state);}});
+  ctx.tools.register(stateTool,{when:({agent})=>!!scope(agent)});
+  ctx.effect(() => host.native.toolTable.register(economyStateToolDeclaration).revoke);
   registerWorldContext(ctx,'chatpet.economy',35,agent=>{
     const id=scope(agent);if(!id)return '';
     try {const snapshot=service.gardenPort(id).loadGarden(Date.now());

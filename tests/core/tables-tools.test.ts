@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { CompanionToolSource } from '../../src/contracts/index.js';
 import { historicalStateOverview } from '../../src/core/native/history-maintenance.js';
 import { CompanionToolTable } from '../../src/core/tables/tools.js';
+import { lifePlanReadToolDeclaration } from '../../src/life/plan-tools.js';
 
 test('tool declarations are unique by name and validate their sources before registration', () => {
   const table = new CompanionToolTable();
@@ -24,11 +25,13 @@ test('tool declarations are unique by name and validate their sources before reg
 
 test('named and source-filtered history projections expire with their registration', async () => {
   const table = new CompanionToolTable();
+  const projections = new CompanionToolTable();
+  projections.register(lifePlanReadToolDeclaration);
   const declaration = {
     name: 'life_plan_read',
     sources: ['life'] as const,
     historyOverview(args: unknown, value: unknown) {
-      return historicalStateOverview(this.name, args, value);
+      return historicalStateOverview(projections, this.name, args, value);
     },
   };
   const registration = table.register(declaration);

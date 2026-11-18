@@ -1,27 +1,21 @@
 import type {Agent} from '@deepseek-ai/dsh-agent';
 import type {Message} from '@deepseek-ai/dsh-llm';
 import type {SessionEvent,UserMessage} from '@deepseek-ai/dsh-session';
-import type {RegistrationLease,SourceClassificationResult} from '../../contracts/tables.js';
-import {roomOverview,gardenOverview} from '../../room/tool-context.js';
-import {economyOverview} from '../../economy/tool-context.js';
-import {planOverview} from '../../life/tool-context.js';
+import type {CompanionToolDeclaration,RegistrationLease,SourceClassificationResult} from '../../contracts/tables.js';
+import type {CompanionToolTable} from '../tables/tools.js';
 
-type ObjectValue=Record<string,any>;
-const object=(value:unknown):value is ObjectValue=>!!value&&typeof value==='object'&&!Array.isArray(value);
+export const isHistoryObject=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
 
 /** Reuse module-owned structured projections, never middle-slice JSON or prose.
  * Explicit full/detail/receipt reads and already-small results are immutable. */
-export function historicalStateOverview(name:string,args:unknown,value:unknown):unknown|undefined {
-  if(!object(args)||!object(value)||args.view==='full'||value.view!==undefined||value.ok===false
+function projectHistory(declaration:CompanionToolDeclaration|undefined,args:unknown,value:unknown):unknown|undefined {
+  if(!isHistoryObject(args)||!isHistoryObject(value)||args.view==='full'||value.view!==undefined||value.ok===false
     ||'factIds' in args||'section' in args)return;
-  if(name==='room_state'&&object(value.layout)&&Array.isArray(value.layout.rooms)
-    &&object(value.layout.spots)&&object(value.her)&&object(value.body))return roomOverview(value);
-  if(name==='room_garden'&&args.type==='state'&&object(value.garden)&&Array.isArray(value.garden.plots)
-    &&object(value.garden.care))return gardenOverview(value);
-  if(name==='pet_economy_state'&&object(value.configuration)&&Array.isArray(value.inventory)
-    &&Array.isArray(value.ledger)&&Array.isArray(value.catalog))return economyOverview(value as Parameters<typeof economyOverview>[0]);
-  if(name==='life_plan_read'&&typeof value.revision==='number'&&(value.plan===null||object(value.plan)))
-    return planOverview(value as {plan:object|null});
+  return declaration?.historyOverview?.(args,value);
+}
+
+export function historicalStateOverview(tools:CompanionToolTable,name:string,args:unknown,value:unknown):unknown|undefined {
+  return projectHistory(tools.get(name),args,value);
 }
 
 /** Only completed Life turns, excluding owner takeovers, reviews and the latest
@@ -64,13 +58,17 @@ export function lifeHistoryCandidates(
   });
 }
 
-export interface HistoryProjection {event:SessionEvent<'tool/result'>;text:string;lease:RegistrationLease}
+export interface HistoryProjection {
+  event:SessionEvent<'tool/result'>;text:string;lease:RegistrationLease;isToolCurrent():boolean;
+}
 export interface HistoryMaintenanceResult {replaced:number;charsBefore:number;charsAfter:number}
 
 /** Idle maintenance is read-only. Native persistence requires replacement
  * tool results inside an open turn, so landing waits for the next real request.
  * This does not wake a session or consume/acknowledge any domain facts. */
-export async function prepareLifeHistory(agent:Agent,isCurrent:()=>boolean,classify:ClassifySource):Promise<HistoryProjection[]> {
+export async function prepareLifeHistory(
+  agent:Agent,isCurrent:()=>boolean,classify:ClassifySource,tools:CompanionToolTable,
+):Promise<HistoryProjection[]> {
   if(agent.status!=='idle'||agent.inbox.nextTurn.length||agent.inbox.nextStep.length||!isCurrent())return [];
   return agent.runMaintenance(async signal=>{
     const changes:HistoryProjection[]=[];
@@ -78,13 +76,18 @@ export async function prepareLifeHistory(agent:Agent,isCurrent:()=>boolean,class
       message=>agent.ctx.logger('chatpet-context').warn(message));
     for(const {event,call,lease} of candidates) {
       signal.throwIfAborted();if(!isCurrent())return [];
+      const declaration=tools.get(call.name);
+      if(!declaration?.historyOverview)continue;
       const original=agent.session.deriveEventMessage(event);
       if(!original||original.content.length!==1||original.content[0]?.type!=='text')continue;
       let args:unknown,value:unknown;
       try{args=JSON.parse(call.arguments);value=JSON.parse(original.content[0].text);}catch{continue;}
-      const view=historicalStateOverview(call.name,args,value);if(view===undefined)continue;
+      const view=projectHistory(declaration,args,value);if(view===undefined)continue;
       const text=JSON.stringify(view);
-      if(text.length<original.content[0].text.length)changes.push({event,text,lease});
+      // The table freezes a separate sources array for each registration.
+      if(text.length<original.content[0].text.length)changes.push({
+        event,text,lease,isToolCurrent:()=>tools.get(call.name)?.sources===declaration.sources,
+      });
     }
     return changes;
   });
@@ -96,8 +99,8 @@ export async function prepareLifeHistory(agent:Agent,isCurrent:()=>boolean,class
 export function applyLifeHistory(agent:Agent,changes:readonly HistoryProjection[],meter:{estimateMessage(message:Message):number}):HistoryMaintenanceResult {
   const result={replaced:0,charsBefore:0,charsAfter:0},session=agent.session;
   const visible=new Set<number>(session.surface.nodes);
-  for(const {event,text,lease} of changes) {
-    if(!lease.isCurrent()||!visible.has(event.seq))continue; // Native compaction may have superseded the prepared span.
+  for(const {event,text,lease,isToolCurrent} of changes) {
+    if(!lease.isCurrent()||!isToolCurrent()||!visible.has(event.seq))continue; // Native compaction may have superseded the prepared span.
     const original=session.deriveEventMessage(event);
     if(!original||original.content.length!==1||original.content[0]?.type!=='text')continue;
     const appendPrune=session.append.bind(session) as (type:'compaction/prune',data:{

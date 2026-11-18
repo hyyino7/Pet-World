@@ -123,7 +123,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         historyReady.delete(agent);
         if (!sameScope(agent.id, scope) || scope.guest)
             return;
-        void watch(prepareLifeHistory(agent, () => !historyClosing && sameScope(agent.id, scope), message => host.native.sourceTable.classify(message)).then(changes => {
+        void watch(prepareLifeHistory(agent, () => !historyClosing && sameScope(agent.id, scope), message => host.native.sourceTable.classify(message), host.native.toolTable).then(changes => {
             if (changes.length && !historyClosing && sameScope(agent.id, scope))
                 historyPrepared.set(agent, { scope, changes });
         }).catch(error => {
@@ -202,13 +202,15 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
     };
     ctx.on('agent/request', onRequest);
     const tools = ctx.tools;
-    for (const tool of host.native.tools())
+    for (const tool of host.native.tools()) {
         tools.register(tool, {
             when: context => {
                 const scope = context.agent && scopeFor(context.agent.id);
                 return Boolean(scope && !scope.guest && (!tool.name.startsWith('pet_memory_') || host.native.memoryFor(context.agent.id)));
             },
         });
+        ctx.effect(() => host.native.toolTable.register({ name: tool.name, sources: tool.sources }).revoke);
+    }
     // Background allowances stay on autonomous input only. DSH enforces native
     // permissions/cancellation for ordinary user work, without a second counter.
     ctx.tools.guard(exec => {
