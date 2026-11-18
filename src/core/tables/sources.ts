@@ -1,0 +1,65 @@
+import type {
+  AdmittedSourceBranch, RegistrationLease, SessionPolicyRow, SourceAdapter, SourceAdmission,
+  SourceBranch, SourceInput, TableRegistration,
+} from '../../contracts/tables.js';
+import { RegistrationTable } from './registry.js';
+
+function guardBranch<Selected>(
+  branch: SourceBranch<Selected>, context: Selected, lease: RegistrationLease,
+): AdmittedSourceBranch {
+  const { toolPolicy, fileAccess, memoryObservation } = branch;
+  const { install, allows } = toolPolicy ?? {};
+  const { input, reply } = memoryObservation ?? {};
+  return {
+    ...branch,
+    toolPolicy: toolPolicy && {
+      denial: toolPolicy.denial,
+      install: install && lease.guard(agent => install.call(toolPolicy, agent, context, lease)),
+      allows: allows && lease.guard(execution => allows.call(toolPolicy, execution, context, lease)),
+    },
+    fileAccess: fileAccess && lease.guard((tool, path) => fileAccess.call(branch, tool, path, context, lease)),
+    memoryObservation: memoryObservation && {
+      input: input && lease.guard(() => input.call(memoryObservation, context)),
+      reply: reply && lease.guard(() => reply.call(memoryObservation, context)),
+    },
+  };
+}
+
+export class SourceAdapterTable<Selected = unknown> {
+  private readonly table = new RegistrationTable<SourceAdapter<Selected>>({
+    order: adapter => adapter.order,
+    overlaps: (left, right) => left.sources.some(source => right.sources.includes(source)),
+  });
+
+  register(adapter: SourceAdapter<Selected>): TableRegistration {
+    return this.table.register(adapter.id, {
+      ...adapter, sources: [...adapter.sources], branches: { ...adapter.branches }, admit: adapter.admit.bind(adapter),
+    });
+  }
+
+  policyRows(): SessionPolicyRow[] {
+    return this.table.entries().flatMap(({ value }) => [
+      ...Object.values(value.branches).map(branch => branch.policyRow), ...(value.policyRows ?? []),
+    ]).sort((left, right) => left.row - right.row);
+  }
+
+  admit(input: SourceInput): SourceAdmission<Selected> {
+    for (const { value: adapter, lease } of this.table.entries()) {
+      if (!lease.isCurrent() || !adapter.sources.includes(input.message.source.kind)) continue;
+      try {
+        const decision = adapter.admit(input);
+        lease.assertCurrent();
+        if (decision.kind === 'unclaimed') continue;
+        if (decision.kind !== 'accepted') return decision;
+        if (!Object.hasOwn(adapter.branches, decision.branch)) {
+          throw new Error(`Unknown branch from source adapter ${adapter.id}: ${decision.branch}`);
+        }
+        const branch = guardBranch(adapter.branches[decision.branch], decision.context, lease);
+        return { ...decision, branch, lease };
+      } catch (error) {
+        return { kind: 'failed', error };
+      }
+    }
+    return { kind: 'unclaimed' };
+  }
+}

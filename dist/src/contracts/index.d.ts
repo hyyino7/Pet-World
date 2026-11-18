@@ -6,3 +6,4 @@ export type * from './emotion.js';
 export { COMPANION_FEELINGS } from './emotion.js';
 export type * from './behavior.js';
 export type * from './interaction.js';
+export type * from './tables.js';
