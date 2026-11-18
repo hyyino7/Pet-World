@@ -2,7 +2,7 @@
 
 Her World（npm 包 `her-world`）是跑在 DSH 里的伙伴插件：同一个伙伴的身份、记忆和生活，贯穿 DSH 原生聊天、桌宠、Room、QQ／微信和语音。使用者只有主人；维护者是 Claude 和 Codex。
 
-开工前先读 [docs/product.md](docs/product.md) 的当前阶段。Her World 正在按三层结构整体重构：结构见 [docs/architecture.md](docs/architecture.md)，已拍板的取舍见 [docs/decisions.md](docs/decisions.md)。
+开工前先读 [docs/product.md](docs/product.md) 的当前阶段。Her World 正在按三层结构整体重构，阶段 1 已按 B 缩小（第一层停在登记口，只重写第二层的合并，第三层原地治理）：结构见 [docs/architecture.md](docs/architecture.md)，已拍板的取舍见 [docs/decisions.md](docs/decisions.md)。
 
 用中文沟通；仓库文档用中文写，代码、命令、路径和分支名用英文。改到还是英文的文档时，顺手把它翻译成中文。
 
@@ -38,7 +38,8 @@ Her World（npm 包 `her-world`）是跑在 DSH 里的伙伴插件：同一个�
 | 工具 | 在工具定义旁声明 `sources`（和需要时的 `historyOverview`），登记到 `host.native.toolTable`；见 [architecture.md 5.10](docs/architecture.md#510-扩展一处声明其余派生) |
 | 输入来源 | 在模块里写来源适配器，入口登记到 `host.native.sourceTable`；新 `source.kind` 在 DSH 的 `MessageSourceMap` 声明，新工具来源用 `toolTable.registerSource` 登记；见 architecture.md 2.2、5.8、5.10 |
 | 能力状态行 | 在模块入口登记到 `host.workspace.runtime.capabilityTable`，卸载时撤销；见 architecture.md 2.2 |
-| 上下文段、设置项、照料动作、事实领域 | 目标做法见 [architecture.md 5.10](docs/architecture.md#510-扩展一处声明其余派生)；现在要改哪些文件，见 product.md「典型修改前后对比」 |
+| 上下文段 | 在模块入口用 `registerWorldPrompt` 登记；不做段声明（architecture.md 5.9） |
+| 设置项、照料动作、事实领域 | 目标做法和所在阶段见 [architecture.md 5.10](docs/architecture.md#510-扩展一处声明其余派生)；现在要改哪些文件，见 product.md「典型修改前后对比」 |
 | kind、action 的词表 | 先跑 `pnpm run check:arch -- --report`，看 R8 报告里有没有现成的定义可以复用 |
 | 必须保住的行为 | 测试写进 `tests/behavior-list/`，并在 `index.json` 加一条 |
 | 不在当前阶段完成标准里的想法 | `~/Developer/project-design/ideas/inbox.md` |

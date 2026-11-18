@@ -4,7 +4,7 @@
 
 - 现状说法的基线是 Her World 0.1.8（提交 `0a45ada`）。
 - 代码路径默认相对 `src/`；`scripts/`、`tests/`、`vendor/` 下的文件写全路径。
-- 目录名暂定：伙伴本体 `kernel/`、生活世界 `living/`、呈现与连接 `surface/`。
+- 目录：阶段 1 缩小后（[decisions.md](decisions.md)「阶段 1 缩小」），第一层、第三层保留现有目录（`src/core/`、`src/room/` 等），只有第二层合并时新建目录，名字在 2a 方案里定。下面总览里的 `kernel / living / surface` 只是层的代号，不是目录。
 
 ---
 
@@ -28,7 +28,7 @@
 ┌──────────────────────▼─────────────────────────────┐
 │ 第一层  伙伴本体  kernel/                          │
 │   身份与绑定 · DSH 聊天接缝 · 记忆 · 情绪 · 记录库       │
-│   五张表：初始化 · 提示词与历史投影 · 来源适配 · 能力状态 · 运维操作 │
+│   登记口：来源适配 · 能力状态 · 工具声明 · 初始化 · 运维操作      │
 └────────────────────────────────────────────────────┘
                     DSH（聊天、调度、会话日志）
 ```
@@ -51,7 +51,7 @@
 
 | 现在的目录 | 行数（不含上游生成文件） | 去哪里 | 说明 |
 | --- | ---: | --- | --- |
-| `core/` | 3370 | 第一层 | 去掉 19 处运行时向上读取，和对 desktop、life、room、economy 的 import |
+| `core/` | 3370 | 第一层 | 目录不改；剩余的向上读取和 import 按 [product.md](product.md)「第一层剩余违规的去向」在 2a、阶段 3 清，另有 4 条长期例外 |
 | `memory/` | 966 | 第一层 | 记忆的创建和关闭归第一层 |
 | `emotion/` | 698 | 第一层 | 含近期互动账本 |
 | `contracts/` | 268 | 拆成三份，各层一份 | 接口跟着拥有者走 |
@@ -70,12 +70,12 @@
 3. **记忆**：Mnemosyne 引擎整体复用，创建、关闭、绑定校验都归本层。
 4. **情绪**：状态文件和近期互动账本。
 5. **记录库**：自述、历史、日记、相册。
-6. **五张表**（本层提供，上层登记）：
+6. **登记口**（本层提供，上层登记）：
 
 | 表 | 作用 | 现状（M2 后） |
 | --- | --- | --- |
-| **初始化表** | 各模块登记自己的目录、文件、数据库如何建、如何校验、清单里写什么 | 未做，移到 M3（[decisions.md](decisions.md) 2026-11-18）：`core/initialization.ts` 里仍写死 13 个目录、桌宠配置、Life 控制文件、情绪文件 |
-| **提示词与历史投影表** | 各模块登记提示词片段，以及「当前状态」在历史里怎么投影、怎么替换旧快照 | 提示词片段仍用 `registerWorldPrompt`，段登记和状态快照退休留到 M3；历史投影已改由工具声明的 `historyOverview` 派生（`core/tables/tools.ts`），Core 不再 import 各模块的投影函数 |
+| **初始化登记** | 各模块登记自己的初始化动作和清单里的文件 | 已有 `registerInitializer`（`core/workspace.ts:183-187`），Economy、Memory Bank、近期账本在用。Core 写死的 13 个目录、桌宠配置、Life 控制文件、情绪文件（`core/initialization.ts:8-10,67-79`）**不再改成登记**：显式初始化时一次建好、启动时一起校验，避免部分加载语义（阶段 1 缩小）；`initialization.ts` 的两条 R1 是长期例外 |
+| **提示词与历史投影** | 各模块登记提示词片段；工具结果在历史里怎么瘦身 | 历史瘦身已由工具声明的 `historyOverview` 派生（`core/tables/tools.ts`），Core 不再 import 各模块的投影函数。提示词片段继续用 `registerWorldPrompt`（`core/native/prompt.ts:91`）在模块入口登记，动态段退休照旧（`prompt.ts:25-55`）；段声明表和状态快照退休表**不做**（阶段 1 缩小） |
 | **来源适配表** | 一种「原生输入来源」登记一整套适配：准入、工具限制、守卫、历史投影、图片恢复 | 已落地：`core/tables/sources.ts`，挂在 `host.native.sourceTable`。Core 登记主人原生输入，Life、Room、Channels 各自登记适配器，Desktop 登记首步前的图片恢复和第 7、9 行声明（5.8）。判定分 `unclaimed / rejected / accepted / failed`，另有只读分类供历史投影。登记完成屏障未实现，见下面的契约 |
 | **能力状态表** | 各模块登记自己的状态行（只有状态和操作名，不能被调用） | 已落地：`core/tables/capabilities.ts`。Core 只登记会话和记忆两行，其余由提供它的模块在入口登记、卸载时撤销；模块缺席即无行，设置页对这类拥有者显示「不可用」 |
 | **运维操作表** | 设置页要执行的操作（开房间、授权访问、改平台设置、操作 Channels）由各模块登记，控制台只调用这张表 | 未做（阶段 3）：控制台直接认识 Desktop、Room、Life、Emotion、Economy、Channels |
@@ -87,7 +87,7 @@
 - 重复登记：同一键重复登记是错误，不是覆盖。
 - 优先级和顺序：需要顺序的表（提示词、来源适配）显式写排序键，不靠加载先后。
 - 「没有适配器认领」和「适配器拒绝」是两种结果，不能都当成 `false`。
-- 登记完成屏障：第一层在所有登记完成之前，对来源适配表返回「未就绪」，不是「放行」。**M2 未实现**：没有找到可用的宿主接点，硬加会让启动窗口里的主人输入被拒；现在没登记的来源返回 `unclaimed` 并拒绝，和 M2 前一致，屏障留到 M3。
+- 登记完成屏障：第一层在所有登记完成之前，对来源适配表返回「未就绪」，不是「放行」。**未实现，推迟不排期**：没有找到可用的宿主接点，硬加会让启动窗口里的主人输入被拒；现在没登记的来源返回 `unclaimed` 并拒绝，和 0.1.8 一致。2a、阶段 3 的验收继续覆盖「未登记即拒绝」和不同装载顺序；等 DSH 提供接点，或观察到启动窗口里有输入被误拒时再议。
 - 撤销：模块卸载时撤销登记；撤销之后，在途调用必须失效或被取消，不能继续用旧回调。
 - 异常：适配器抛错只影响它负责的来源，不拖垮其他来源，也不放行。
 - 授权边界：owner、guest、Life、电视画面这几种输入的授权互相独立；渠道准入还要核验原消息和一次性授权，所以准入不是一个布尔回调，而是带上下文的结构化判定。
@@ -129,8 +129,8 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | **R2** | 运行时服务读取 | `ctx.get('petX')`、`ctx.petX`、`scope.petX`、`inject: [...]`；还要识别别名、解构、计算名（例如把服务名存进变量再读）；遇到无法静态判定的写法直接判失败，要求改成显式写法 | 扫描 + 每个模块声明允许读取的服务；声明是子集且方向合规 | M1 |
 | **R3** | 事件 | `ctx.on / ctx.emit('pet/…')`，也包括 DSH 原生事件的订阅；事件只能向上流（订阅者所在层不低于发布者）；事件名在发布层的 contracts 里声明 | 扫描 | M1 |
 | **R4** | 直接给别人的对象赋值 | `host.native.xxx =`，也包括通过别名、解构后的赋值 | 扫描，并配一个「已知违规」样例集验证脚本真的抓得到 | M1 |
-| **R5** | 谁在写哪份数据 | 见下 | 见下 | M1 先对旧代码报告；M2 到 M3 随第一层的存储句柄生效 |
-| **R6** | 关闭后不留尾巴 | 定时器、订阅、在途请求，以及在途 I/O 和子进程 | 见第 8 节 | 从 M3 的第一层起，每个新写的模块各带一条 |
+| **R5** | 谁在写哪份数据 | 见下 | 见下 | M1 起只报告；存储句柄随阶段 3 的数据搬迁方案再定 |
+| **R6** | 关闭后不留尾巴 | 定时器、订阅、在途请求，以及在途 I/O 和子进程 | 见第 8 节 | 从阶段 2a 起，每个新写的模块各带一条 |
 | **R7** | 外围可关闭 | 见下 | 组合测试 | 阶段 2 覆盖生活世界的卸载与暂停；阶段 3 覆盖全部外围模块 |
 | **R8** | 词汇重复与裸字符串 | 同一组字符串取值（例如六种照料动作）出现在多个文件；公开接口（各层 contracts 和对外服务）里的 `kind / action / status / type` 字段是裸 `string`，而不是声明出来的类型 | 扫描；旧重复留在基线里放行并只报告，随各阶段统一词表逐步清理；新增重复当场阻断 | M1 |
 
@@ -139,7 +139,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 **R5 的做法：**
 
 - 状态拥有者表（第 4 节）登记每份持久数据的路径或表名、拥有者、**唯一写入协议**。
-- 第一层提供**按拥有者划分的存储句柄**：句柄只暴露拥有者自己的表和行，别的模块拿不到。拼 `.chatpet/data/…` 路径的代码只允许在 `kernel/storage/`。
+- （目标，未实现，随阶段 3 的数据搬迁方案再定）第一层提供**按拥有者划分的存储句柄**：句柄只暴露拥有者自己的表和行，别的模块拿不到。拼 `.chatpet/data/…` 路径的代码只允许在第一层的存储模块里。
 - Core 的 SQLite 里**不许出现别的模块的表，也不许出现别的模块的记录 kind**。Core 的 `records` 表按 `kind` 区分记录，Channels 的 5 类记录和 Desktop 的会话映射就是这样混进来的。拥有者边界覆盖**记录 kind 和写入端口**，不只是建表。
 - **局限**：脚本只能查到「哪个模块创建了哪个文件、哪张表、写了哪个记录 kind」，查不到「对已有文件的某一行的越权更新」。后者靠「句柄只暴露自己的数据」从设计上堵，再用一个运行时写入追踪测试在一次性数据目录里核对实际产生的文件和表。
 
@@ -206,7 +206,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 - 记忆服务：观察、召回、修订、撤回、校验，沿用 Pet 接口。
 - 情绪服务：沿用 `EmotionService`。
 - 记录库：对上层提供受限句柄。
-- 五张表：见 2.2。
+- 登记口：见 2.2。
 
 ### 5.2 第二层对外
 
@@ -223,7 +223,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 | 共用物 | 现在 | 新 |
 | --- | --- | --- |
-| 图片准入（`DesktopImages`，Room 在用） | `desktop/images.ts` | 抽成 `surface/shared/`，Desktop 和 Room 都依赖它，彼此不依赖 |
+| 图片准入（`DesktopImages`，Room 在用） | `desktop/images.ts` | 抽成第三层的共用小包（目录在阶段 3 方案里定），Desktop 和 Room 都依赖它，彼此不依赖 |
 | **语音**（Desktop、Room、Channels 都用） | 多处直接读 `petVoice` | **第一层的 contracts 声明一个「语音接口」**（说、听、取消、可用性），Voice 登记为实现，使用者通过第一层取得这个接口；接口撤销时，在途调用按 2.2 的契约失效。不用能力状态行，因为它不能被调用，也没有取消和失效约定 |
 | 房间模型 `CompanionRoom` | `life/room.ts` 再导出 `behavior/room.ts` | 并入第二层·身体区，Room 只读快照 |
 
@@ -329,7 +329,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | 1 | 普通 owner 会话 | DSH 原生输入，`user` 无 `identity`，直接准入（`core/native/conversation.ts:38`）；证据记为 `owner_statement`，actor 是 `ownerActorId`（`:74-75`） | 当前绑定工作区里任一就绪会话（`core/native/agent.ts:45-47`）；历史是这个会话自己的；预设由主人在 DSH 里选 | 取消、权限由 DSH 原生负责（`core/native/agent.ts:160-161`）；工作区归档后把会话交给 Memory 归档（`:108-128`）；首步前恢复 Desktop 图片和会话副本（`:189-193`） | `sameScope` 比较 `workspaceId/path/storageId/guest`（`core/native/agent.ts:51`）；没有实例代次 |
 | 2 | 共享 home | 容器，不是来源：主人输入、Life 输入、渠道主人输入都落在这里，授权面随输入来源走（第 1、3、4、5 行） | 每个 Core 一个，缓存后复用（`core/companion-foundation.ts:74-133`）；home 的会话 ID 记在 `life.json`（`:60-62`）；预设取 Life 的 `agentPreset`，否则 DSH 组合预设，否则 `standard`（`:94`）；标题随伙伴名刷新（`:183-196`） | 归档的 home 由上游 `createHome` 识别（`:125`）；打开前先恢复会话副本（`:76`）；前台打开不要求 Life 启用（`:64`） | 打开时比较绑定的 `id/path`（`:90-93`）；R7 外的换绑由第 1 行规则负责 |
 | 3 | Life 自主轮次 | `dsh-world-life`，由 Life 来源适配器准入：Life 运行中、会话是 home、事实批次被接受（`life/plugin.ts` 的 `registerSource`）；actor 是伙伴，有事实时是 `system:companion-world`（`core/native/conversation.ts:75`） | 只在 home（同上）；后台轮次（`core/native/agent.ts:184`） | 时长上限到点取消（`core/native/conversation.ts:191`）；卸载 Life 撤销准入，后台轮次一律拒绝（`life/plugin.ts:528`、`core/native/conversation.ts:23`）；主人输入入队即解除 Life 限制（`core/native/agent.ts:76-82`），轮中接管结束自主计数（`:201-208`） | 同第 1 行；Life 自己另比 `storageId` 和 `companionId`（`life/plugin.ts:166-170`） |
-| 4 | 回顾轮次 | `dsh-world-life` 加 `purpose: 'review'` 和 `reviewDay`（`core/native/agent.ts:63-65`），准入同第 3 行 | 只在 home；中断的回顾把权限带到下一次 Life 输入（`:36,60-62,248-249`） | 同第 3 行；主人输入结束回顾权限（`:78-79`）；回顾完成且开启压缩时发 `pet/life.review`（`life/plugin.ts:194-196`），Memory 订阅它（`memory/batch.ts:14`，M3 改为向下调用） | 同第 3 行；回顾文件守卫按访问键复核（`core/life-review-files.ts:83-89`） |
+| 4 | 回顾轮次 | `dsh-world-life` 加 `purpose: 'review'` 和 `reviewDay`（`core/native/agent.ts:63-65`），准入同第 3 行 | 只在 home；中断的回顾把权限带到下一次 Life 输入（`:36,60-62,248-249`） | 同第 3 行；主人输入结束回顾权限（`:78-79`）；回顾完成且开启压缩时发 `pet/life.review`（`life/plugin.ts:194-196`），Memory 订阅它（`memory/batch.ts:14`，阶段 2a 改为向下调用） | 同第 3 行；回顾文件守卫按访问键复核（`core/life-review-files.ts:83-89`） |
 | 5 | 渠道里的主人私聊 | QQ/微信私聊且 `speakerId` 等于设置的主人（`channels/messaging-settings.ts:50-53`、`channels/sessions.ts:46`）；`user` 带 `identity`，由渠道来源适配器准入，每条收件只能用一次（`channels/sessions.ts:76-89`）；QQ 补答 `dsh-world-reply-nudge` 只准一次且核验原消息（`:68-75,168-178`、`core/native/conversation.ts:64-70`），actor 是 `system:qq-reply`（`:75`） | 路由到共享 home（`channels/plugin.ts:52-56`、`channels/sessions.ts:152`）；前台轮次（`core/native/agent.ts:73,182`） | 关闭渠道时取消已准入的主人轮次（`channels/sessions.ts:185`）；补答授权随关闭撤销（`:177,186`） | 准入时存下 `scopeFor` 的 JSON，补答时逐字比较（`channels/sessions.ts:74,88,172`） |
 | 6 | guest 私聊或群聊 | 渠道里不是主人的已登记身份（`channels/sessions.ts:55-59`）；准入同第 5 行的一次性收件；证据记为 `external_content`，actor 是发言人 `speakerId`（`core/native/conversation.ts:74-75`） | 私聊按发言人、群聊按会话分开（`channels/sessions.ts:29`）；每个对话一个独立工作区目录（`:100-104,119`），会话前缀 `chatpet-guest-<digest>-`（`:103`）；预设固定 `chatpet-channel-guest`，不符就拒绝（`:127,135-136`、`channels/guest.ts:5`） | 关闭渠道时取消在途 guest 轮次（`channels/sessions.ts:184`）；取最新未归档会话（`:112`）；Memory 的归档同步只遍历主人工作区（`core/native/agent.ts:112-115`），guest 会话不经过它 | 同第 5 行；另要求会话 `cwd` 和组合预设不变（`channels/sessions.ts:57-58`） |
 | 7 | Desktop 聊天 | `user` 带 `rpcId`，无 `identity`，按主人输入准入（`desktop/conversation.ts:181`）；同一 `rpcId` 不重复投递（`:173`） | 每个存储绑定记一个会话 ID，存在 Core 的 `desktop-session`（`desktop/index.ts:44-45`、`desktop/conversation.ts:138-141`）；可打开工作区里任一未归档会话（`:142-145`）；新建会话 `chatpet-<uuid>`，用 DSH 默认预设（`:159`） | 停止走原生取消（`:184-189`）；「新建」先保存再归档旧会话（`:147-157`）；关闭小窗只撤销排队命令，不停原生会话（`:81-85`） | `sameBinding` 比较 `id/path/storageId`，另有小窗代次 `revision`（`desktop/conversation.ts:37-39,128`） |
@@ -386,16 +386,14 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 ### 5.9 上下文组装契约
 
-提示词与历史投影表（2.2）的每一段都声明：类别（Prompt 还是 Context）、对 owner 和 guest 是否可见、**准备依赖**（显式键，取代现在 `environment` 与 `interactions` 靠共享 WeakMap 偷偷耦合）、有效期、预算单位和数值、准备超时、退休策略。组装的事务顺序固定为：
+提示词段继续用 `registerWorldPrompt` 登记（2.2）。阶段 1 缩小后，**不做逐段声明**（类别、可见性、准备依赖、有效期、预算、超时、退休），也不加 `order` 全局唯一检查；这些和召回策略一起砍出重构，记在 `~/Developer/project-design/ideas/inbox.md`，留给重构后的大模型使用细则。保留的是组装的事务顺序和下面的隐含契约，它们在阶段 2a 第一批变成契约测试，因为 2a 要搬的事实准备正靠它们保护。组装的事务顺序固定为：
 
 > 准备 → 复核 scope → 输入准入 → 请求中替换 → 原生日志落盘 → 事实确认
 
 规则：
 
-- 段的 `order` 在全局唯一，登记时检查，不再靠约定。
-- **预算只声明和度量，不强制截断。** 每段声明预算并报告实际大小；强制截断会改变现有行为，以后单独讨论。
 - 区分五件不同的事：状态退休、召回替换、旧工具结果投影、原生压缩、完整日志保留。
-- 现有的隐含契约变成契约测试：工具限制必须在 schema 解析前安装；`environment` 先于 `interactions` 准备；`chatpet.interactions` 这个段名及其原样 JSON 是「确认事实」协议的一部分，改名不能只改登记处；事实确认晚于原生日志落盘；替换历史只能发生在打开的原生请求里；会话预设名、会话前缀和渠道目录同时承担路由与恢复协议；「共享 home 的身份」与「Life 正在运行」是两个不同的判定。
+- 现有的隐含契约在阶段 2a 变成契约测试（复用 `test:native-context` 和历史维护测试，只补没覆盖的项）：工具限制必须在 schema 解析前安装；`environment` 先于 `interactions` 准备；`chatpet.interactions` 这个段名及其原样 JSON 是「确认事实」协议的一部分，改名不能只改登记处；事实确认晚于原生日志落盘；替换历史只能发生在打开的原生请求里；会话预设名、会话前缀和渠道目录同时承担路由与恢复协议；「共享 home 的身份」与「Life 正在运行」是两个不同的判定。
 
 ### 5.10 扩展：一处声明，其余派生
 
@@ -405,11 +403,11 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | --- | --- | --- |
 | 新增工具 | 工具定义旁声明 `sources`（没写的只给主人），需要历史瘦身时再声明 `historyOverview`，登记到工具声明表 `host.native.toolTable`（M2 已落地） | Life 和回顾名单、历史瘦身识别、来源适配的工具限制 |
 | 新增输入来源 | 在模块里写一个来源适配器（准入、分支、`turnKind`、工具策略、记忆观察、情绪更新、历史投影、会话策略行），在入口登记到 `host.native.sourceTable`；新的 `source.kind` 在 DSH 的 `MessageSourceMap` 声明，新的工具来源用 `toolTable.registerSource` 登记（M2 已落地） | 入队和首步准入、工具限制、记忆观察、情绪 footer、历史投影、会话策略一行 |
-| 新增上下文段 | 一条段声明（5.9） | `order` 唯一性检查、预算度量、退休 |
-| 新增设置项 | 一份字段声明 | 页面控件、保存键集合、校验、实际消费的接线 |
-| 新增设置页操作 | 运维操作表的一条登记 | 路由清单、处理分支、客户端调用 |
-| 新增照料动作 | 第二层的 `BodyAction` 基础表 | 主人入口、角色工具枚举、计划类型与校验、计划 schema、设置页白名单、按钮 |
-| 新增事实领域 | 一份事实领域声明 | 类型、提示词投影、Life 读取、Python 侧识别清单 |
+| 新增上下文段 | 在模块入口用 `registerWorldPrompt` 登记（缩小后不做段声明，5.9） | 无；顺序、可见性由登记处自己写 |
+| 新增设置项 | 一份字段声明（阶段 3，按收益再评估） | 页面控件、保存键集合、校验、实际消费的接线 |
+| 新增设置页操作 | 运维操作表的一条登记（阶段 3） | 路由清单、处理分支、客户端调用 |
+| 新增照料动作 | 第二层的 `BodyAction` 基础表（阶段 2b） | 主人入口、角色工具枚举、计划类型与校验、计划 schema、设置页白名单、按钮 |
+| 新增事实领域 | 一份事实领域声明（阶段 2b） | 类型、提示词投影、Life 读取、Python 侧识别清单 |
 
 重构前的基线和 M2 后的复测见 [product.md](product.md) 的「典型修改前后对比」。
 
@@ -471,7 +469,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 版本号和日志放在 `.chatpet/data/storage-manifest.json` 和 `.chatpet/data/migrations.jsonl`，迁移锁是同目录的 `migration.lock`（`scripts/migrate/context.mjs:19-20`）。它们不放进 `.chatpet/manifest.json`：那个文件算进绑定指纹（`src/core/workspace.ts:155,171`），还会被 Core 改写（`:279-281`）。三个文件都在 `.chatpet/` 里，现有备份自然覆盖。
 
-一次迁移完成后，日志一直留着，再跑全新的 `run` 会被拒绝。M3 增加第二个迁移步骤之前，要先定好完成的日志是归档，还是另起日志和备份。
+一次迁移完成后，日志一直留着，再跑全新的 `run` 会被拒绝（`scripts/migrate/runner.mjs:26-31`）。阶段 2a 增加第二个迁移步骤之前（2a 第一批），要一起定好：完成日志归档还是另起日志和备份；旧存储清单怎么过渡（清单按完全相等比较，更新 `dataVersions` 后旧清单会在加锁前报 `manifest-mismatch`，`scripts/migrate/context.mjs:22-30`）；每轮新备份的边界；恢复会把旧的 `migration.lock` 一起带回来（`tests/migrate/normal.test.mjs:46-54`）。
 
 ### 7.5 演练覆盖
 
@@ -495,18 +493,18 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 ## 9. 重写顺序
 
-第一层不能作为一个整体独立完成：Memory 还订阅 `pet/life.review`（`memory/batch.ts:14`），历史维护还 import 上层投影函数（`core/native/history-maintenance.ts:4`），记录库还读 Life 的活动记录，Core 还写 `life.json`。所以把它拆成几个**每步自己能完成、不破坏旧功能**的小单位。各步对应的里程碑和完成标准见 [product.md](product.md) 的「阶段」。
+第一层不能作为一个整体独立完成：Memory 还订阅 `pet/life.review`（`memory/batch.ts:14`），历史维护还 import 上层投影函数（`core/native/history-maintenance.ts:4`），记录库还读 Life 的活动记录，Core 还写 `life.json`。所以把它拆成几个**每步自己能完成、不破坏旧功能**的小单位。各步对应的里程碑和完成标准见 [product.md](product.md) 的「阶段」。阶段 1 缩小后（[decisions.md](decisions.md)「阶段 1 缩小」），第一层停在 P2b，P2c 取消，其中属于第二层的部分并入 P3。
 
 | 步 | 做什么 |
 | --- | --- |
 | P0 | 行为基线：拆行为清单；定 `layers.json`；R1–R4、R8 先对旧代码跑，用已知违规样例集验证脚本抓得到，现状违规清单固定 |
 | P1 | 迁移骨架：存储清单版本号、迁移日志、备份与回退串联、真实数据副本演练（7.4 的边界） |
-| P2a | 两张最小的表：能力状态表、初始化表（含校验和清单登记）；Core 不再读上层服务拼状态、不再写死目录 |
-| P2b | 来源适配表：把 Life 一类原生输入的整套适配（准入、工具限制、回顾守卫、历史投影）迁出第一层；`host.native.xxxAdmission` 赋值消失 |
-| P2c | 提示词与历史投影表；事件改调用（Memory 不再订阅 `pet/life.review`）；记录库的活动日期改由第二层只读接口提供；共享 home 身份记录归属确定（迁移放在 P3） |
-| P3 | 合并第二层（先合并、行为不变，概念统一随后逐步）：共享 home 身份记录迁移、常驻实例、旧入口语义表落实、事实准备和确认搬入、旧服务名门面、`economy.initialized` 搬出 |
-| P4 | 第三层：逐个模块改成只读快照加登记；`desktop-session`、Channels 账本搬出（各随其拥有者模块）；图片准入抽共用；语音接口落地；运维操作表 |
-| P5 | 收尾：删旧代码和旧适配（以已安装配置核实为前提）、更新本文 |
+| P2a | 能力状态表：Core 不再读上层服务拼状态（已完成）。原定的初始化表缩小后不做 |
+| P2b | 来源适配表和工具声明表：把 Life 一类原生输入的整套适配（准入、工具限制、回顾守卫、历史投影）迁出第一层；`host.native.xxxAdmission` 赋值消失（已完成） |
+| P2c | 取消。事件改调用（Memory 不再订阅 `pet/life.review`）、记录库改读第二层只读接口并入 P3；提示词段表砍掉；共享 home 身份记录的归属已定（第 4 节） |
+| P3 | 合并第二层（先合并、行为不变，概念统一随后逐步）：5.9 隐含契约的契约测试先行；第一层里属于第二层的 18 条违规搬走；共享 home 身份记录迁移、常驻实例、旧入口语义表落实、事实准备和确认搬入、旧服务名门面、`economy.initialized` 搬出 |
+| P4 | 第三层原地治理，不重写模块：图片准入抽共用；语音接口落地；运维操作表；浏览器里的经济待确认请求迁入持久存储；Channels 账本暂留 Core 数据库，`desktop-session` 搬出为可选 |
+| P5 | 收尾：删已不用的旧适配（以已安装配置核实为前提）、更新本文、按 G8 复核长期例外 |
 
 每步结束都要：行为清单全绿、门禁通过、能发一个版本、更新「典型修改前后对比」。
 
@@ -514,7 +512,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 ## 10. 特殊情况
 
-- **首次安装 / 空状态**：没有绑定资料目录时，第一层只开聊天，不创建上层数据；上层模块按初始化表在「主人明确初始化」时才建。沿用现状。
+- **首次安装 / 空状态**：没有绑定资料目录时，第一层只开聊天，不创建上层数据。主人明确初始化时，Core 一次建好全部技术容器，可选服务既不打开也不启用（`core/initialization.ts:16`）；Economy、Memory Bank、近期账本经 `registerInitializer` 登记自己的初始化。沿用现状。
 - **失败**：迁移任一步失败，保留原文件，标记「待核对」，不静默继续。
 - **取消**：迁移可以在两步之间取消；已完成的步骤依赖目标状态判断，不依赖标记。
 - **旧数据兼容**：新代码读 0.1.8 数据；有格式改动的项靠迁移，不靠读时兼容（读时兼容算兜底，要先说明理由并经主人同意）。
@@ -526,13 +524,13 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 | 不确定 | 怎么验证 |
 | --- | --- |
-| 五张表的契约能否覆盖第一层现在承担的全部上层策略（`core/native/agent.ts` 的 Life 工具限制和回顾守卫、Desktop 图片恢复，`core/companion-foundation.ts` 的事实准备） | P2b 前，列出 `agent.ts`、`companion-foundation.ts`、`prompt.ts` 里每一处向上的策略，逐条对应到某张表；`prompt.ts` 本身没有直接向上读取，但它的异步准备、准入、附着、卸载、历史替换契约要完整保留 |
+| 登记口的契约能否覆盖第一层现在承担的全部上层策略（`core/native/agent.ts` 的 Life 工具限制和回顾守卫、Desktop 图片恢复，`core/companion-foundation.ts` 的事实准备） | P2b 前，列出 `agent.ts`、`companion-foundation.ts`、`prompt.ts` 里每一处向上的策略，逐条对应到某张表；`prompt.ts` 本身没有直接向上读取，但它的异步准备、准入、附着、卸载、历史替换契约要完整保留 |
 | 合并后 Room、Desktop 只靠快照能否替代现在的直接读取 | P4 前，逐处列出它们读 `petBehavior / petLife / petEconomy` 的位置，核对快照字段够用 |
 | 三个旧入口独立卸载的语义 | 阶段 2 开始前填 6.2 的表，P3 用测试覆盖 |
 | 主人的真实数据是否都在第 4 节的位置里（含旧位置 `data/life/` 下的自述、日记、相册） | P1 在真实数据副本上盘点实际文件和表，对比登记表 |
 | 旧安装能否无缝升级 | P1 在隔离的已安装环境里演练 |
 | 检查脚本能否覆盖 R1–R4 | P0 对旧代码跑，要求准确列出 [product.md](product.md) G5 所列的 Core 向上读取、`lifeAdmission / roomAdmission / channelBoundary`；存储写入另看 R5 报告 |
-| 记录库的唯一写入协议（原生 `write/edit` 工具） | P2 前决定：经记录库守卫，还是保留现状并在清单里明示 |
+| 记录库的唯一写入协议（原生 `write/edit` 工具） | 阶段 2a 前决定（和记录库改读第二层只读接口一起）：经记录库守卫，还是保留现状并在清单里明示 |
 | 上游的完整集合：`HOME_ACTIONS`、身体 kind、`source.kind`、Life 自动登记的提示词段 | 本地只有声明或 `any`；需要上游契约，或隔离环境里的只读目录快照，才能确认完整取值 |
 | 素材名称是否准确表现了动作、情绪和对象 | 分配表的文字匹配不能证明效果；需要在隔离的呈现端里观看素材验收 |
 | 两套分类器对同一情绪的不同呈现，是 bug 还是有意为之 | M1 登记为已知问题，由主人判断；统一规则前先确认哪个是期望行为 |
