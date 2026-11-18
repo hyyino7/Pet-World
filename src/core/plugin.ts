@@ -1,6 +1,5 @@
 import { installNativeTranscripts } from './native/transcripts.js';
 import { createWorldService, type PetWorld } from '../world/service.js';
-import { CONTRACT_VERSION } from '../contracts/version.js';
 import type { Context } from '@deepseek-ai/cordis';
 import { createCore, type CoreConfig, type PetCoreHost } from './index.js';
 import { apply as installNativeAdapter } from './native/agent.js';
@@ -59,11 +58,6 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
       if (!status || ctx.get('petMemory')) return status;
       return {...status, state:'disabled', reason:'Memory is off for the next turn in every conversation; retained Bank and native logs remain'};
     };
-    runtime.capabilityTable.register({id:'emotion.expression', owner:'emotion', contractVersion:CONTRACT_VERSION, order:10,
-      status: () => isBound() && (ctx.get('petEmotion')?.catalog.actions.length ?? 0) > 0
-        ? {state:'ready', reason:null, supportedOperations:['express', 'recordPlayback']}
-        : {state:'unavailable', reason:'Requires a bound workspace and expression assets', supportedOperations:[]},
-    });
     return async () => {
       try {
         await stopBatch(); await stopAdapter(); await host.native.close();

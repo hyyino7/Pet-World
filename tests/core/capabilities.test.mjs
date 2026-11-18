@@ -71,7 +71,7 @@ function expected({bound, desktopOpen, qq, hear, missing}) {
     petChannels: {'channel.qq': null},
     petVoice: {'voice.speech': null},
     console: {'console.operations': null},
-    petEmotion: {'emotion.expression': unavailableExpression},
+    petEmotion: {'emotion.expression': null},
   };
   return rows(rowOrder, {...all, ...absent[missing]});
 }

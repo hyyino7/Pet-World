@@ -442,7 +442,7 @@
     {
       "rule": "R1",
       "file": "src/core/plugin.ts",
-      "line": 7,
+      "line": 6,
       "column": 1,
       "scope": "<module>",
       "target": "src/life/album-tools.js",
@@ -454,7 +454,7 @@
     {
       "rule": "R2",
       "file": "src/core/plugin.ts",
-      "line": 43,
+      "line": 42,
       "column": 73,
       "scope": "apply/ctx . effect:callback0/registerAlbumTools:callback2",
       "target": "petRoom",
@@ -466,7 +466,7 @@
     {
       "rule": "R2",
       "file": "src/core/plugin.ts",
-      "line": 44,
+      "line": 43,
       "column": 66,
       "scope": "apply/ctx . effect:callback0/registerAlbumTools:callback2",
       "target": "petLife",
@@ -606,7 +606,7 @@
     {
       "rule": "R4",
       "file": "src/emotion/plugin.ts",
-      "line": 173,
+      "line": 174,
       "column": 3,
       "scope": "installEmotion",
       "target": "host.native.playbackEvidence",
@@ -618,7 +618,7 @@
     {
       "rule": "R4",
       "file": "src/emotion/plugin.ts",
-      "line": 288,
+      "line": 289,
       "column": 97,
       "scope": "installEmotion/ctx . effect:callback0/<callback>",
       "target": "host.native.playbackEvidence",
