@@ -237,7 +237,7 @@ test('QQ 补答重查原消息，同名换绑后旧授权失效',async t=>{
   await f.bind(replacement);
   assert.equal(f.host.workspace.status().target.id,old.id);
   assert.equal(f.host.workspace.status().target.title,old.title);
-  assert.equal(f.host.native.scopeFor(home.id),undefined,'同名绑定也不能继续使用旧 home');
+  assert.equal(f.host.native.nativeScopeFor(home.id),undefined,'同名绑定也不能继续使用旧 home');
   assert.equal(accept(nudge),false);
 });
 

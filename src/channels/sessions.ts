@@ -149,7 +149,7 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
       if (grant && original && grant.id===message.id && grant.message===JSON.stringify(message)
         && original.message===grant.original && original.scope===grant.scope
         && latestInput(id)===grant.original
-        && JSON.stringify(host.native.scopeFor(id)??null)===grant.scope && allowsReply(id,grant.identity)) return grant.identity;
+        && JSON.stringify(host.native.nativeScopeFor(id)??null)===grant.scope && allowsReply(id,grant.identity)) return grant.identity;
       return;
     }
     if (message.source.kind !== 'user' || !('identity' in message.source)) return;
@@ -164,7 +164,7 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
     const messages = checked ?? new Map<string, string>();
     messages.set(message.id, key);
     accepted.set(id, messages);
-    delivered.set(id,{message:JSON.stringify(message),identity,scope:JSON.stringify(host.native.scopeFor(id)??null)});
+    delivered.set(id,{message:JSON.stringify(message),identity,scope:JSON.stringify(host.native.nativeScopeFor(id)??null)});
     return identity;
   }
   const registration = host.native.sourceTable.register(createChannelSourceAdapter({
@@ -253,7 +253,7 @@ export function createChannelHomes(ctx: Context, host: PetCoreHost, options: Opt
       const previous=delivered.get(id);
       if (!previous || previous.identity.channel!=='qq' || previous.message!==JSON.stringify(original)
         || latestInput(id)!==previous.message
-        || !allowsReply(id,previous.identity) || JSON.stringify(host.native.scopeFor(id)??null)!==previous.scope
+        || !allowsReply(id,previous.identity) || JSON.stringify(host.native.nativeScopeFor(id)??null)!==previous.scope
         || message.source.kind!=='dsh-world-reply-nudge' || !('forMessageId' in message.source) || message.source.forMessageId!==original.id
         || nudges.has(id)) throw Error('QQ 补答的原消息或会话已失效');
       const grant={id:message.id,message:JSON.stringify(message),original:previous.message,identity:previous.identity,scope:previous.scope};

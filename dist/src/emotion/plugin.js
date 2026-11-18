@@ -190,7 +190,7 @@ export function installEmotion(ctx, host) {
     const emotion = emotionFor(host);
     const turns = new Map();
     function bound(session) {
-        const shared = host.native.scopeFor(session.id);
+        const shared = host.native.nativeScopeFor(session.id);
         if (shared)
             return { id: shared.workspaceId, path: shared.path, guest: shared.guest };
         const status = ctx.petWorld.sessionStatus(session);
@@ -200,7 +200,7 @@ export function installEmotion(ctx, host) {
     // Keep the existing anonymous callback's vocabulary scope stable for R8.
     const playback = host.native.registerPlaybackEvidence(((sessionId, playbackId) => {
         const turn = turns.get(sessionId);
-        const scope = host.native.scopeFor(sessionId);
+        const scope = host.native.nativeScopeFor(sessionId);
         if (!turn || !scope || scope.workspaceId !== turn.workspaceId || scope.path !== turn.path)
             return;
         const ledger = emotion.ledger(turn.workspaceId);
@@ -344,7 +344,7 @@ export function installEmotion(ctx, host) {
         }, { global: true });
         scopeCtx.on('llm/stream', async function* (options, next) {
             const turn = options.sessionId && turns.get(options.sessionId);
-            if (!turn || options.purpose || !host.native.scopeFor(String(options.sessionId))) {
+            if (!turn || options.purpose || !host.native.nativeScopeFor(String(options.sessionId))) {
                 yield* next();
                 return;
             }

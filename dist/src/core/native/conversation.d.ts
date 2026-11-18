@@ -42,7 +42,7 @@ export declare class CoreNative {
     attachGuest?: (context: Context) => void;
     private readonly turns;
     private readonly preparedFactInputs;
-    scopeFor(sessionId: string): NativeScope | undefined;
+    nativeScopeFor(sessionId: string): NativeScope | undefined;
     isGuest(sessionId: string): boolean;
     registerPlaybackEvidence(resolve: ResolvePlaybackEvidence): import("../../contracts/tables.js").TableRegistration;
     emotionAllowed(sessionId: string, turn: number, permission: 'footer' | 'tool'): boolean;

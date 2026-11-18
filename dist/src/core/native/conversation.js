@@ -47,14 +47,14 @@ export class CoreNative {
     attachGuest;
     turns = new Map();
     preparedFactInputs = new Map();
-    scopeFor(sessionId) { return this.resolveScope?.(sessionId); }
+    nativeScopeFor(sessionId) { return this.resolveScope?.(sessionId); }
     isGuest(sessionId) { return this.sourceTable.isGuest(sessionId); }
     registerPlaybackEvidence(resolve) {
         return this.playbackProviders.register('playback', resolve);
     }
     emotionAllowed(sessionId, turn, permission) {
         const current = this.turns.get(sessionId);
-        if (current?.turn !== turn || !matchesNativeScope(this.scopeFor(sessionId), current.scope))
+        if (current?.turn !== turn || !matchesNativeScope(this.nativeScopeFor(sessionId), current.scope))
             return false;
         const sources = [...current.sources.values()];
         if (permission === 'tool' && sources.some(source => source.guardDuringTakeover && (!source.lease.isCurrent() || !source.emotionUpdate.tool)))
@@ -63,7 +63,7 @@ export class CoreNative {
     }
     captureEmotionFooter(sessionId, turn) {
         const current = this.turns.get(sessionId);
-        if (current?.turn !== turn || !matchesNativeScope(this.scopeFor(sessionId), current.scope))
+        if (current?.turn !== turn || !matchesNativeScope(this.nativeScopeFor(sessionId), current.scope))
             return;
         const scope = { ...current.scope };
         const leases = [...current.sources.values()]
@@ -71,10 +71,10 @@ export class CoreNative {
             .map(({ lease }) => lease);
         if (!leases.length)
             return;
-        return () => matchesNativeScope(this.scopeFor(sessionId), scope) && leases.some(lease => lease.isCurrent());
+        return () => matchesNativeScope(this.nativeScopeFor(sessionId), scope) && leases.some(lease => lease.isCurrent());
     }
     current(sessionId, expected) {
-        const scope = this.scopeFor(sessionId);
+        const scope = this.nativeScopeFor(sessionId);
         check(scope && (!expected || matchesNativeScope(scope, expected)), 'Conversation left its bound workspace');
         return scope;
     }
@@ -234,11 +234,11 @@ export class CoreNative {
                 },
             },
             admit: ({ sessionId, message }) => classifyOwner(message)
-                ? { kind: 'accepted', branch: 'owner', context: { policyKey: 'owner', sessionId, isGuest: () => this.scopeFor(sessionId)?.guest === true } }
+                ? { kind: 'accepted', branch: 'owner', context: { policyKey: 'owner', sessionId, isGuest: () => this.nativeScopeFor(sessionId)?.guest === true } }
                 : { kind: 'unclaimed' },
         });
     }
-    manages(sessionId) { const scope = this.scopeFor(sessionId); return this.active.has(sessionId) || Boolean(scope && !scope.guest); }
+    manages(sessionId) { const scope = this.nativeScopeFor(sessionId); return this.active.has(sessionId) || Boolean(scope && !scope.guest); }
     /** Autonomous planning submits durable intent; it must not bypass it with ad-hoc body goals. */
     isAutonomous(sessionId) { return this.active.has(sessionId); }
     /** Read selected sources through the owning Memory service. This does not
