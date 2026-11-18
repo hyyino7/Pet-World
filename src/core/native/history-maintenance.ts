@@ -27,6 +27,8 @@ export function historicalStateOverview(name:string,args:unknown,value:unknown):
 /** Only completed Life turns, excluding owner takeovers, reviews and the latest
  * turn. Raw tool calls identify reads; mutations, errors and other tools stay. */
 type ClassifySource=(message:UserMessage)=>SourceClassificationResult;
+// Native logs store these model-facing projections as user/message events too.
+const historyContextSources = new Set(['runtime-context', 'chatpet-recall', 'compact-checkpoint']);
 
 export function lifeHistoryCandidates(
   events:readonly SessionEvent[],nodes:readonly number[],classify:ClassifySource,warn:(message:string)=>void=console.warn,
@@ -41,14 +43,14 @@ export function lifeHistoryCandidates(
     if(event.type==='tool/call')calls.set(event.data.callId,event.data);
     const state=turn===undefined?undefined:states.get(turn);
     if(!state)continue;
-    if(event.type==='user/message') {
+    if(event.type==='user/message'&&!historyContextSources.has(event.data.source.kind)) {
       const classification=classify(event.data);
-      if(classification&&'kind' in classification) {
+      if(!classification||'kind' in classification) {
         state.protected=true;
-        warn(`History classification failed for ${event.data.source.kind} (adapter ${classification.adapterId}); retaining turn ${turn}`);
+        if(classification)warn(`History classification failed for ${event.data.source.kind} (adapter ${classification.adapterId}); retaining turn ${turn}`);
       } else {
-        if(classification?.historyProjection?.participates)state.lease=classification.lease;
-        if(classification?.historyProjection?.protectsTurn)state.protected=true;
+        if(classification.historyProjection?.participates)state.lease=classification.lease;
+        if(classification.historyProjection?.protectsTurn)state.protected=true;
       }
     }
     if(event.type==='turn/end'){state.completed=event.data.reason.kind==='completed';turn=undefined;}

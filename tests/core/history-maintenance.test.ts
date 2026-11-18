@@ -55,7 +55,8 @@ function fixture() {
 }
 
 test('native maintenance projects only older successful default Life states, preserves originals and replays idempotently',async()=>{
-  const f=fixture(),first=f.appendTurn();f.appendTurn();
+  const f=fixture(),first=f.appendTurn({additionalSource:{kind:'runtime-context',form:'snapshot',sections:[{name:'fixture',text:'Runtime context'}]}});
+  f.appendTurn();
   const originals=structuredClone(f.session.snapshotEvents());
   const prepared=await prepareLifeHistory(f.agent,()=>true,classify);
   assert.deepEqual(f.session.snapshotEvents(),originals,'Idle maintenance only prepares; it never writes outside a turn');
@@ -144,6 +145,23 @@ test('read-only policies protect native owner and channel takeovers and QQ nudge
   f.openRequest();
   assert.equal(applyLifeHistory(f.agent,prepared,f.meter).replaced,1);
   for(const result of protectedResults)assert.ok(f.session.surface.nodes.includes(result.seq));
+});
+
+test('saved QQ inputs protect their Life turns after the channel adapter is revoked',async()=>{
+  const sources=new CoreNative({} as CoreRuntime).sourceTable;
+  sources.register(createLifeSourceAdapter({} as Context,{} as PetCoreHost,()=>false));
+  const registration=sources.register(createChannelSourceAdapter({guest:offline,ownerActorId:offline,admit:offline}));
+  const classifySaved:typeof classify=message=>sources.classify(message);
+  const f=fixture();
+  const identity={channel:'qq',accountId:'fixture',conversationId:'private',conversationType:'private',speakerId:'qq:owner'};
+  const channelSource={kind:'user' as const,identity};
+  f.appendTurn({additionalSource:channelSource});
+  f.appendTurn({additionalSource:{kind:'dsh-world-reply-nudge'}});
+  f.appendTurn();
+
+  assert.equal((await prepareLifeHistory(f.agent,()=>true,classifySaved)).length,0);
+  await registration.revoke();
+  assert.equal((await prepareLifeHistory(f.agent,()=>true,classifySaved)).length,0);
 });
 
 test('queued interaction, active turn and changed workspace never enter maintenance',async()=>{

@@ -330,8 +330,9 @@ export function installEmotion(ctx, host) {
                         return;
                     const w = bound(session);
                     if (w?.id === turn.workspaceId && w.path === turn.path) {
-                        await emotion.complete(session.id, turn, () => playback.lease.isCurrent()
-                            && host.native.emotionAllowed(session.id, turn.turn, 'footer'));
+                        const footerAllowed = host.native.captureEmotionFooter(session.id, turn.turn);
+                        if (footerAllowed)
+                            await emotion.complete(session.id, turn, () => playback.lease.isCurrent() && footerAllowed());
                     }
                 }
             }

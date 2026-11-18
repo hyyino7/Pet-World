@@ -43,6 +43,7 @@ export declare class CoreNative {
     isGuest(sessionId: string): boolean;
     registerPlaybackEvidence(resolve: ResolvePlaybackEvidence): import("../../contracts/tables.js").TableRegistration;
     emotionAllowed(sessionId: string, turn: number, permission: 'footer' | 'tool'): boolean;
+    captureEmotionFooter(sessionId: string, turn: number): (() => boolean) | undefined;
     private current;
     acceptsInput(sessionId: string, message: UserMessage): boolean;
     setMemoryEnabledForNewSessions(enabled: boolean): void;

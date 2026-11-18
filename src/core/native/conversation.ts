@@ -98,6 +98,16 @@ export class CoreNative {
       source.guardDuringTakeover && (!source.lease.isCurrent() || !source.emotionUpdate.tool))) return false;
     return sources.some(({emotionUpdate, lease}) => lease.isCurrent() && emotionUpdate[permission]);
   }
+  captureEmotionFooter(sessionId: string, turn: number): (() => boolean) | undefined {
+    const current = this.turns.get(sessionId);
+    if (current?.turn !== turn || !matchesNativeScope(this.scopeFor(sessionId), current.scope)) return;
+    const scope = {...current.scope};
+    const leases = [...current.sources.values()]
+      .filter(({emotionUpdate, lease}) => emotionUpdate.footer && lease.isCurrent())
+      .map(({lease}) => lease);
+    if (!leases.length) return;
+    return () => matchesNativeScope(this.scopeFor(sessionId), scope) && leases.some(lease => lease.isCurrent());
+  }
   private current(sessionId: string, expected?: NativeScope): NativeScope {
     const scope = this.scopeFor(sessionId);
     check(scope && (!expected || matchesNativeScope(scope, expected)), 'Conversation left its bound workspace');

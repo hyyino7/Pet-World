@@ -51,6 +51,36 @@ test('普通主人会话可执行情绪工具并拒绝过期版本',async t=>{
   await f.end(active);
 });
 
+test('同一会话的下一轮开始后，上一轮完成的 footer 仍写入情绪',async t=>{
+  const f=await fixture(t,{policy:true,emotion:true,life:false,economy:false});
+  const first=await f.begin();
+  const emotion=f.service('petEmotion'),read=emotion.read.bind(emotion);
+  const reading=Promise.withResolvers(),resume=Promise.withResolvers();
+  let pauseFirstRead=true;
+  t.mock.method(emotion,'read',async id=>{
+    const snapshot=await read(id);
+    if(pauseFirstRead){
+      pauseFirstRead=false;
+      reading.resolve();
+      await resume.promise;
+    }
+    return snapshot;
+  });
+
+  const completed=f.end(first,'completed',footer('Previous turn'));
+  let next;
+  try {
+    await Promise.race([reading.promise,completed]);
+    next=await f.begin(first.agent.id);
+  } finally {
+    resume.resolve();
+    await completed;
+  }
+  await assertEmotion(f,'Previous turn');
+  await f.end(next,'completed',footer('Next turn'));
+  await assertEmotion(f,'Next turn');
+});
+
 test('碎碎念和梦话只用伙伴身份，梦话带上游指令且不触发 Memory 或情绪',async t=>{
   const calls=[];
   const f=await fixture(t,{policy:true,desktop:true,emotion:true,memory:true,life:false,economy:false,configure(services){

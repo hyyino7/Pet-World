@@ -20,6 +20,8 @@ export function historicalStateOverview(name, args, value) {
     if (name === 'life_plan_read' && typeof value.revision === 'number' && (value.plan === null || object(value.plan)))
         return planOverview(value);
 }
+// Native logs store these model-facing projections as user/message events too.
+const historyContextSources = new Set(['runtime-context', 'chatpet-recall', 'compact-checkpoint']);
 export function lifeHistoryCandidates(events, nodes, classify, warn = console.warn) {
     let turn;
     const states = new Map();
@@ -34,16 +36,17 @@ export function lifeHistoryCandidates(events, nodes, classify, warn = console.wa
         const state = turn === undefined ? undefined : states.get(turn);
         if (!state)
             continue;
-        if (event.type === 'user/message') {
+        if (event.type === 'user/message' && !historyContextSources.has(event.data.source.kind)) {
             const classification = classify(event.data);
-            if (classification && 'kind' in classification) {
+            if (!classification || 'kind' in classification) {
                 state.protected = true;
-                warn(`History classification failed for ${event.data.source.kind} (adapter ${classification.adapterId}); retaining turn ${turn}`);
+                if (classification)
+                    warn(`History classification failed for ${event.data.source.kind} (adapter ${classification.adapterId}); retaining turn ${turn}`);
             }
             else {
-                if (classification?.historyProjection?.participates)
+                if (classification.historyProjection?.participates)
                     state.lease = classification.lease;
-                if (classification?.historyProjection?.protectsTurn)
+                if (classification.historyProjection?.protectsTurn)
                     state.protected = true;
             }
         }

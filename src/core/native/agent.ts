@@ -95,9 +95,8 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   };
   // DSH resolves schemas before pre-step. Install the native mask while its
   // trusted inbox input is queued, and recheck at step admission below.
-  const stopLifeInbox=ctx.on('agent/inbox/inserted',({agent,message})=>{
+  const stopSourceInbox=ctx.on('agent/inbox/inserted',({agent,message})=>{
     if(!scopeFor(agent.id))return;
-    if(!interactiveEnvelope(message) && message.source.kind!=='dsh-world-life')return;
     const selection=selectSource(agent,message);
     if(!selection)return;
     if(selection.branch.turnKind==='foreground') {
@@ -312,7 +311,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     historyClosing=true;historyReady.clear();historyPrepared.clear();stopHistoryStatus();
     await Promise.allSettled([...pending]);await archiveTail;
     disposePrompt();disposeFoundation();
-    stopLifeInbox();stopReviewFiles();for(const agent of [...lifePolicies.keys()])releaseLifePolicy(agent);
+    stopSourceInbox();stopReviewFiles();for(const agent of [...lifePolicies.keys()])releaseLifePolicy(agent);
     if(host.native.resolveScope===scopeFor){host.native.resolveScope=undefined;host.native.attachGuest=undefined;}
     agents.clear();turns.clear();inputs.clear();for(const id of continuations.keys())clearContinuation(id);
   })();
