@@ -32,7 +32,9 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
     };
     host.native.resolveScope = scopeFor;
     const sameScope = (id, expected) => matchesNativeScope(scopeFor(id), expected);
-    const currentTurn = (id, saved) => sameScope(id, saved.scope) && (!saved.background || !saved.lifePolicy || saved.lifePolicy.lease.isCurrent());
+    const currentTurn = (id, saved) => sameScope(id, saved.scope)
+        && (!saved.background || !saved.lifePolicy || saved.lifePolicy.lease.isCurrent())
+        && (!saved.persistentToolGuard || saved.persistentToolGuard.lease.isCurrent());
     const clearContinuation = (id) => {
         const clear = continuations.get(id);
         continuations.delete(id);
@@ -43,7 +45,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         lifePolicies.delete(agent);
         policy?.release();
     };
-    const selectLife = (agent, message) => {
+    const selectSource = (agent, message) => {
         const decision = host.native.sourceTable.admit({ sessionId: agent.id, message });
         switch (decision.kind) {
             case 'accepted': return decision;
@@ -83,7 +85,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
             releaseLifePolicy(agent);
         }
         else if (message.source.kind === 'dsh-world-life' && turns.get(agent.id)?.background !== false) {
-            const selection = selectLife(agent, message);
+            const selection = selectSource(agent, message);
             if (selection)
                 constrainLife(agent, selection);
         }
@@ -200,8 +202,10 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         const saved = turns.get(exec.agent.id);
         if (!sameScope(exec.agent.id, saved.scope))
             return '会话已离开原绑定工作区';
-        if (saved.background && saved.lifePolicy) {
-            const { branch, lease } = saved.lifePolicy;
+        for (const policy of [saved.persistentToolGuard, saved.background && saved.lifePolicy]) {
+            if (!policy)
+                continue;
+            const { branch, lease } = policy;
             if (!lease.isCurrent())
                 return '自主轮次的来源登记已撤销';
             if (branch.toolPolicy?.allows?.(exec) === false)
@@ -230,9 +234,9 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
                 return { kind: 'reject' };
             const selections = [];
             const accepted = payload.messages.filter(message => {
-                if (message.source.kind !== 'dsh-world-life')
+                if (message.source.kind !== 'dsh-world-life' && message.source.kind !== 'chatpet-room-tv')
                     return host.native.acceptsInput(payload.agent.id, message);
-                const selection = selectLife(payload.agent, message);
+                const selection = selectSource(payload.agent, message);
                 if (!selection)
                     return false;
                 selections.push(selection);
@@ -241,7 +245,8 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
             const user = accepted.some(interactiveInput);
             if (!accepted.length)
                 return { kind: 'reject' };
-            saved = { turn: payload.turn, scope, background: !user };
+            saved = { turn: payload.turn, scope, background: !user,
+                persistentToolGuard: selections.find(selection => selection.context.guardDuringTakeover) };
             turns.set(payload.agent.id, saved);
             if (user) {
                 clearContinuation(payload.agent.id);
@@ -249,7 +254,8 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
             }
             else {
                 for (const selection of selections)
-                    constrainLife(payload.agent, selection);
+                    if (!selection.context.guardDuringTakeover)
+                        constrainLife(payload.agent, selection);
                 saved.lifePolicy = lifePolicies.get(payload.agent)?.selection;
             }
             const input = accepted[0];

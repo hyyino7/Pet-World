@@ -2,6 +2,8 @@ import type { Context } from '@deepseek-ai/cordis';
 import { type UserMessage } from '@deepseek-ai/dsh-llm';
 import type { SessionEvent } from '@deepseek-ai/dsh-session';
 import { DesktopImages } from '../desktop/images.js';
+import type { SourceAdapter } from '../contracts/tables.js';
+import type { NativeSourceContext } from '../core/native/conversation.js';
 declare module '@deepseek-ai/dsh-llm' {
     interface MessageSourceMap {
         'chatpet-room-tv': {
@@ -9,6 +11,9 @@ declare module '@deepseek-ai/dsh-llm' {
             rpcId: string;
         };
     }
+}
+interface TelevisionSourceContext extends NativeSourceContext {
+    sessionId: string;
 }
 export declare function televisionImage(input: unknown): {
     mediaType: string;
@@ -34,6 +39,7 @@ export declare class RoomChat {
     isRoom(id: string): boolean;
     allows(id: string, message: UserMessage): boolean;
     watching(id: string): boolean;
+    sourceAdapter(): SourceAdapter<TelevisionSourceContext>;
     private agent;
     history(workspaceId: string): Promise<{
         ok: boolean;
@@ -48,3 +54,4 @@ export declare class RoomChat {
     }>;
     close(): Promise<void>;
 }
+export {};

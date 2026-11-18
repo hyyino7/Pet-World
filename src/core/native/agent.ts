@@ -18,7 +18,10 @@ import {prepareLifeHistory,applyLifeHistory,type HistoryProjection} from './hist
 export const name = 'chatpet-agent';
 export const inject = ['petCore', 'petWorld', 'agents', 'systemPrompt', 'tools'];
 interface WorkspaceView { id: string; path: string; sessionIds: readonly string[] }
-interface ManagedTurn {turn:number;scope:NativeScope;background:boolean;lifePolicy?:NativeSourceSelection}
+interface ManagedTurn {
+  turn:number;scope:NativeScope;background:boolean;lifePolicy?:NativeSourceSelection;
+  persistentToolGuard?:NativeSourceSelection;
+}
 interface NativeServices {
   get(name: 'workspaceRegistry'): { get(id: string): WorkspaceView | undefined; archivedSessionIds: readonly string[] } | undefined;
   sessionPersistence: { open(id: SessionId, access: 'read'): Promise<{read(): Promise<{events: readonly SessionEvent[]}>; close(): Promise<void>}> };
@@ -47,14 +50,16 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   };
   host.native.resolveScope=scopeFor;
   const sameScope=(id:string,expected:NativeScope)=>matchesNativeScope(scopeFor(id),expected);
-  const currentTurn=(id:string,saved:ManagedTurn)=>sameScope(id,saved.scope)&&(!saved.background||!saved.lifePolicy||saved.lifePolicy.lease.isCurrent());
+  const currentTurn=(id:string,saved:ManagedTurn)=>sameScope(id,saved.scope)
+    && (!saved.background||!saved.lifePolicy||saved.lifePolicy.lease.isCurrent())
+    && (!saved.persistentToolGuard||saved.persistentToolGuard.lease.isCurrent());
   const clearContinuation=(id:string)=>{
     const clear=continuations.get(id);continuations.delete(id);clear?.();
   };
   const releaseLifePolicy=(agent:Agent)=>{
     const policy=lifePolicies.get(agent);lifePolicies.delete(agent);policy?.release();
   };
-  const selectLife=(agent:Agent,message:UserMessage)=>{
+  const selectSource=(agent:Agent,message:UserMessage)=>{
     const decision=host.native.sourceTable.admit({sessionId:agent.id,message});
     switch(decision.kind) {
       case 'accepted': return decision;
@@ -83,7 +88,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     if(interactiveInput(message) && host.native.acceptsInput(agent.id,message)) {
       clearContinuation(agent.id);releaseLifePolicy(agent);
     } else if(message.source.kind==='dsh-world-life'&&turns.get(agent.id)?.background!==false) {
-      const selection=selectLife(agent,message);
+      const selection=selectSource(agent,message);
       if(selection)constrainLife(agent,selection);
     }
   });
@@ -169,8 +174,9 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     if(!exec.agent || !turns.has(exec.agent.id))return;
     const saved=turns.get(exec.agent.id)!;
     if(!sameScope(exec.agent.id,saved.scope))return '会话已离开原绑定工作区';
-    if(saved.background&&saved.lifePolicy) {
-      const {branch,lease}=saved.lifePolicy;
+    for(const policy of [saved.persistentToolGuard,saved.background && saved.lifePolicy]) {
+      if(!policy)continue;
+      const {branch,lease}=policy;
       if(!lease.isCurrent())return '自主轮次的来源登记已撤销';
       if(branch.toolPolicy?.allows?.(exec)===false)return branch.toolPolicy.denial;
     }
@@ -189,16 +195,18 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
       if(payload.messages.some(message=>interactiveInput(message) && !host.native.acceptsInput(payload.agent.id,message)))return {kind:'reject'};
       const selections:NativeSourceSelection[]=[];
       const accepted=payload.messages.filter(message=>{
-        if(message.source.kind!=='dsh-world-life')return host.native.acceptsInput(payload.agent.id,message);
-        const selection=selectLife(payload.agent,message);
+        if(message.source.kind!=='dsh-world-life'&&message.source.kind!=='chatpet-room-tv')return host.native.acceptsInput(payload.agent.id,message);
+        const selection=selectSource(payload.agent,message);
         if(!selection)return false;
         selections.push(selection);return true;
       });
       const user=accepted.some(interactiveInput);
       if(!accepted.length)return {kind:'reject'};
-      saved={turn:payload.turn,scope,background:!user};turns.set(payload.agent.id,saved);
+      saved={turn:payload.turn,scope,background:!user,
+        persistentToolGuard:selections.find(selection=>selection.context.guardDuringTakeover)};
+      turns.set(payload.agent.id,saved);
       if(user){clearContinuation(payload.agent.id);releaseLifePolicy(payload.agent);}else {
-        for(const selection of selections)constrainLife(payload.agent,selection);
+        for(const selection of selections)if(!selection.context.guardDuringTakeover)constrainLife(payload.agent,selection);
         saved.lifePolicy=lifePolicies.get(payload.agent)?.selection;
       }
       const input=accepted[0];if(input)inputs.set(payload.agent.id,input.id);

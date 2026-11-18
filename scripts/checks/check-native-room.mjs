@@ -105,6 +105,10 @@ try {
   assert.ok(events.some(e=>e.type==='tool/result' && e.data.message.isError),'Actual TV tool invocation must be denied');
   assert.equal((await endpoint('roomState')).room.counts.feed,fed);
   assert.ok(events.some(e=>e.type==='user/message' && e.data.source.kind==='chatpet-room-tv' && e.data.content.some(x=>x.type==='image')));
+  const frameSource=host.native.sourceTable.classify(tvInput.data);
+  assert.equal(frameSource?.branch,'television');
+  assert.equal(frameSource.lease.isCurrent(),true);
+  assert.equal(host.native.sourceTable.admit({sessionId:roomId,message:tvInput.data}).kind,'rejected');
   await assert.rejects(()=>ctx.petRoom.request('another-workspace','roomState',{},'read',new AbortController().signal));
   if (process.argv.includes('--photo')) {
     step=0;
@@ -134,7 +138,9 @@ try {
   await albumTurn('c','pet_forget_photo',{id:photo.id},[{type:'text',text:'移除这张图片'}]);
   assert.equal((await ctx.petLife.library(ws.id,'album',0)).total,0);
   await owner.dispose();
-  assert.equal(host.native.roomAdmission,undefined);
+  assert.equal(frameSource.lease.isCurrent(),false);
+  assert.equal(host.native.sourceTable.classify(tvInput.data),undefined);
+  assert.equal(host.native.sourceTable.admit({sessionId:roomId,message:tvInput.data}).kind,'unclaimed');
   assert.equal(ctx.get('petRoom'),undefined);
   console.log(JSON.stringify({ok:true,roomId,fixtureCalls:seen.length,photo:process.argv.includes('--photo'),crossSessionAlbum:true,paidCalls:0}));
 } catch (error) {

@@ -37,7 +37,6 @@ export class CoreNative {
     memory;
     memoryEnabledForNewSessions = true;
     sourceTable = new SourceAdapterTable();
-    roomAdmission;
     channelBoundary;
     resolveScope;
     attachGuest;
@@ -54,10 +53,10 @@ export class CoreNative {
             return 'identity' in message.source
                 ? this.channelBoundary?.admit(sessionId, message) === true
                 : this.sourceTable.admit({ sessionId, message }).kind === 'accepted';
-        if (message.source.kind === 'dsh-world-life') {
+        if (message.source.kind === 'dsh-world-life' || message.source.kind === 'chatpet-room-tv') {
             return this.sourceTable.admit({ sessionId, message }).kind === 'accepted';
         }
-        return this.roomAdmission?.(sessionId, message) === true || this.channelBoundary?.admit(sessionId, message) === true;
+        return this.channelBoundary?.admit(sessionId, message) === true;
     }
     memoryFor(_sessionId) {
         // The current component switch applies at the next turn, including retained chats.

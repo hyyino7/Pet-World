@@ -11585,13 +11585,13 @@
       "other": {
         "file": "src/room/chat.ts",
         "scope": "roomHistory",
-        "line": 33
+        "line": 37
       }
     },
     {
       "rule": "R8",
       "file": "src/room/chat.ts",
-      "line": 33,
+      "line": 37,
       "column": 26,
       "scope": "roomHistory",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/ArchiveSearch/detail . dialogue . map:callback0\"}",
@@ -17853,13 +17853,13 @@
       "other": {
         "file": "src/room/chat.ts",
         "scope": "roomHistory",
-        "line": 33
+        "line": 37
       }
     },
     {
       "rule": "R8",
       "file": "src/room/chat.ts",
-      "line": 33,
+      "line": 37,
       "column": 26,
       "scope": "roomHistory",
       "target": "{\"file\":\"src/desktop/conversation.ts\",\"scope\":\"<module>\"}",
@@ -22538,13 +22538,13 @@
       "other": {
         "file": "src/room/chat.ts",
         "scope": "roomHistory",
-        "line": 33
+        "line": 37
       }
     },
     {
       "rule": "R8",
       "file": "src/room/chat.ts",
-      "line": 33,
+      "line": 37,
       "column": 26,
       "scope": "roomHistory",
       "target": "{\"file\":\"src/life/review-dialogue.ts\",\"scope\":\"<module>\"}",

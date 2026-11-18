@@ -142,17 +142,16 @@ export function apply(ctx:Context) {
   const room = new Room(ctx);
   ctx.provide('petRoom',room);
   const host = ctx.petCore;
-  host.native.roomAdmission = (id,message) => room.chat.allows(id,message);
   const tools = ctx.tools as unknown as {register(tool:ToolDefinition,options:{when(ctx:{agent?:Agent}):boolean}):()=>void};
   for (const tool of room.tools()) tools.register(tool,{when:({agent})=>!!room.toolScope(agent)});
-  // A television frame is external media. Even captions resembling instructions
-  // cannot execute tools during this observational turn.
-  ctx.tools.guard(exec => exec.agent && room.chat.watching(exec.agent.id) ? '电视画面只能用于观后感，不提供工具操作授权。' : undefined);
   ctx.inject(['webServer' as never], scope => {
     const server = (scope as unknown as {webServer:{register(route:{kind:'prefix';path:string;resource:typeof roomAsset}):()=>void}}).webServer;
     scope.effect(() => server.register({kind:'prefix',path:roomPrefix,resource:roomAsset}));
   });
-  ctx.effect(() => async () => {host.native.roomAdmission = undefined; await room.close();});
+  ctx.effect(() => {
+    const source = host.native.sourceTable.register(room.chat.sourceAdapter());
+    return async () => {await source.revoke(); await room.close();};
+  });
   ctx.effect(() => host.workspace.runtime.capabilityTable.register({
     id: 'desktop.room', owner: 'desktop', contractVersion: CONTRACT_VERSION, order: 6,
     status: () => {

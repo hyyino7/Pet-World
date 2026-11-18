@@ -16,6 +16,7 @@ export interface NativeScope {
 export declare function matchesNativeScope(current: NativeScope | undefined, expected: NativeScope): boolean;
 export interface NativeSourceContext {
     readonly policyKey: string;
+    readonly guardDuringTakeover?: boolean;
     fileAccessKey?(): string;
     continueAfterInterrupt?(scope: NativeScope): () => void;
 }
@@ -28,7 +29,6 @@ export declare class CoreNative {
     memory?: NativeMemory;
     memoryEnabledForNewSessions: boolean;
     readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
-    roomAdmission?: (sessionId: string, message: UserMessage) => boolean;
     channelBoundary?: {
         guest(sessionId: string): boolean;
         admit(sessionId: string, message: UserMessage): boolean;

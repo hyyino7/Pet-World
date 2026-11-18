@@ -382,7 +382,7 @@
     {
       "rule": "R2",
       "file": "src/core/native/agent.ts",
-      "line": 206,
+      "line": 214,
       "column": 15,
       "scope": "apply/onStep",
       "target": "petDesktop",
@@ -782,30 +782,6 @@
       "from": "room",
       "to": "voice",
       "reason": "服务读取未获准或方向违规"
-    },
-    {
-      "rule": "R4",
-      "file": "src/room/plugin.ts",
-      "line": 145,
-      "column": 3,
-      "scope": "apply",
-      "target": "ctx.petCore.native.roomAdmission",
-      "expression": "host . native . roomAdmission = ( id , message ) => room . chat . allows ( id , message )",
-      "from": "room",
-      "to": "core",
-      "reason": "直接改写 Core 的原生接缝"
-    },
-    {
-      "rule": "R4",
-      "file": "src/room/plugin.ts",
-      "line": 155,
-      "column": 33,
-      "scope": "apply/ctx . effect:callback0/<callback>",
-      "target": "ctx.petCore.native.roomAdmission",
-      "expression": "host . native . roomAdmission = undefined",
-      "from": "room",
-      "to": "core",
-      "reason": "直接改写 Core 的原生接缝"
     },
     {
       "rule": "R1",

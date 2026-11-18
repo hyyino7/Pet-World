@@ -19,6 +19,7 @@ export function matchesNativeScope(current: NativeScope | undefined, expected: N
 
 export interface NativeSourceContext {
   readonly policyKey: string;
+  readonly guardDuringTakeover?: boolean;
   fileAccessKey?(): string;
   continueAfterInterrupt?(scope: NativeScope): () => void;
 }
@@ -64,7 +65,6 @@ export class CoreNative {
   memory?: NativeMemory;
   memoryEnabledForNewSessions = true;
   readonly sourceTable = new SourceAdapterTable<NativeSourceContext>();
-  roomAdmission?: (sessionId: string, message: UserMessage) => boolean;
   channelBoundary?: {guest(sessionId: string): boolean; admit(sessionId: string, message: UserMessage): boolean; identity?(sessionId: string): Record<string, unknown> | undefined};
   resolveScope?: (sessionId: string) => NativeScope | undefined;
   attachGuest?: (context: Context) => void;
@@ -80,10 +80,10 @@ export class CoreNative {
     if (message.source.kind === 'user') return 'identity' in message.source
       ? this.channelBoundary?.admit(sessionId, message) === true
       : this.sourceTable.admit({sessionId, message}).kind === 'accepted';
-    if (message.source.kind === 'dsh-world-life') {
+    if (message.source.kind === 'dsh-world-life' || message.source.kind === 'chatpet-room-tv') {
       return this.sourceTable.admit({sessionId, message}).kind === 'accepted';
     }
-    return this.roomAdmission?.(sessionId, message) === true || this.channelBoundary?.admit(sessionId,message) === true;
+    return this.channelBoundary?.admit(sessionId,message) === true;
   }
   memoryFor(_sessionId: string): NativeMemory | undefined {
     // The current component switch applies at the next turn, including retained chats.
