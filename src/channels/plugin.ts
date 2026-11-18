@@ -3,6 +3,7 @@ import type {Agent} from '@deepseek-ai/dsh-agent';
 import {isDeepStrictEqual} from 'node:util';
 import {bridgeRoute, compactRoute} from '#dsh-world/ecosystem/bridge/route';
 import type {Push} from '#dsh-world/ecosystem/shared/outlets';
+import {CONTRACT_VERSION} from '../contracts/version.js';
 import {digest} from '../core/storage.js';
 import type {PetCoreHost} from '../core/index.js';
 import {bridgePrefix, LocalBridge, privateDeviceDirectory} from './bridge.js';
@@ -118,7 +119,8 @@ export const inject = ['petCore','webServer','sessionController','agents','sessi
 export function apply(ctx: Context, config: {deviceDirectory?:string} = {}) {
   const services = ctx as unknown as Services;
   const profile = (ctx as unknown as {get(key: string): Services['profileContext']}).get('profileContext');
-  const channels = new CompanionChannels(ctx, ctx.petCore, services, config.deviceDirectory ?? profile?.dir ?? '');
+  const host = ctx.petCore;
+  const channels = new CompanionChannels(ctx, host, services, config.deviceDirectory ?? profile?.dir ?? '');
   ctx.provide('petChannels', channels);
   ctx.effect(() => services.webServer.register(bridgeRoute(bridgePrefix, () => channels.local)));
   ctx.effect(() => services.webServer.register(compactRoute(bridgePrefix, () => channels.local, () => channels.compact())));
@@ -127,5 +129,14 @@ export function apply(ctx: Context, config: {deviceDirectory?:string} = {}) {
   ctx.on('pet/life.changed', refresh);
   refresh();
   ctx.effect(() => async () => { await channels.close(); });
+  ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+    id: 'channel.qq', owner: 'qq', contractVersion: CONTRACT_VERSION, order: 7,
+    status: () => {
+      const state = channels.qqConnection();
+      return {state: state === 'online' ? 'ready' : state === 'off' ? 'disabled' : 'unavailable',
+        reason: state === 'online' ? null : state === 'off' ? 'QQ is off' : 'QQ is disconnected',
+        supportedOperations: state === 'online' ? ['receive', 'reply'] : []};
+    },
+  }).revoke);
 }
 declare module '@deepseek-ai/cordis' {interface Context {petChannels: CompanionChannels}}

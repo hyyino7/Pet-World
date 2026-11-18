@@ -122,7 +122,6 @@ export class CoreRuntime {
         const rows = [
             [1, 'core.conversation', 'core'],
             [2, 'memory.lifecycle', 'memory'],
-            [7, 'channel.qq', 'qq'],
             [8, 'voice.speech', 'voice'],
             [9, 'console.operations', 'console'],
         ];

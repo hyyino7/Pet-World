@@ -59,14 +59,6 @@ export async function apply(ctx: Context, config: Config): Promise<void> {
       if (!status || ctx.get('petMemory')) return status;
       return {...status, state:'disabled', reason:'Memory is off for the next turn in every conversation; retained Bank and native logs remain'};
     };
-    statuses['channel.qq'] = () => {
-      const channels = ctx.get('petChannels');
-      if (!channels) return;
-      const state = channels.qqConnection();
-      return {state: state === 'online' ? 'ready' : state === 'off' ? 'disabled' : 'unavailable',
-        reason: state === 'online' ? null : state === 'off' ? 'QQ is off' : 'QQ is disconnected',
-        supportedOperations: state === 'online' ? ['receive', 'reply'] : []};
-    };
     statuses['voice.speech'] = () => {
       const voice = ctx.get('petVoice');
       if (!voice) return;
