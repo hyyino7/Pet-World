@@ -200,7 +200,18 @@ B 的原文（`product.md:274`）：保留检查和棘轮、概念统一，在�
 
 ## 执行结果
 
-<Codex 完成后填写，15 行以内>
+- A 批：`docs/release/notes.md` 改为 0.2.0 中文更新说明，本节记录 `v0.1.8..89b3f37` 的兼容面及验证结果。
+- `exports` 不变（`package.json:6`），`files` 不变（`package.json:41`），`imports` 不变（`package.json:35`）。
+- `cordis.patch.yml` 不变（`cordis.patch.yml:1`）。
+- Cordis 服务名不变（`docs/architecture.md:424`、`src/core/plugin.ts:34`、`src/core/native/transcripts.ts:292`）。
+- 配置字段不变（`src/core/runtime.ts:10`、`src/core/options.ts:3`、`src/memory/client.ts:5`、`src/core/companion-settings.ts:4`、`src/life/plugin.ts:546`、`src/channels/plugin.ts:119`、`src/voice/plugin.ts:64`）。
+- Bundle ID `her-world` 不变（`package.json:2`、`package.json:158`、`scripts/install-dsh.mjs:259`）。
+- `PetCoreHost` 顶层字段不变（`src/core/index.ts:36`）。`native` 删 `lifeAdmission`、`roomAdmission`、`channelBoundary`、`playbackEvidence`，改用 `sourceTable.register`、`isGuest` 和 `registerPlaybackEvidence`，并新增 `toolTable`（`src/core/native/conversation.ts:84`、`src/channels/sessions.ts:170`）。
+- `scopeFor` / `resolveScope` 改为 `nativeScopeFor` / `resolveNativeScope`（`src/core/native/conversation.ts:90`）。Memory 开关改用 `memoryEnabledForNewSessions()` 和 `setMemoryEnabledForNewSessions(enabled)`（`src/core/native/conversation.ts:125`）。
+- `native` 新增 `emotionAllowed`、`captureEmotionFooter`，`tools()` 的项目带 `sources`（`src/core/native/conversation.ts:99`、`src/core/native/conversation.ts:323`）。
+- `workspace.runtime` 删 `baseCapabilities()`，由 `capabilityTable` 与 `capabilityStatuses` 提供能力状态（`src/core/runtime.ts:31`）。`native.memory.connection.start()` 的范围字段改为 `bankId`（`src/memory/client.ts:11`、`src/core/native/memory.ts:53`）。`./contracts` 新增登记类型（`src/contracts/index.ts:9`）。
+- 临时副本执行 `mise exec -- pnpm run build` 通过；随后 `mise exec -- pnpm run test:behavior-list` 的索引测试 11 条、行为清单 52 条均通过，失败 0 条，含本机回环 Memory 测试。
+- 按 A 批此次指示未跑 `verify`。已安装环境的外部调用、真实副本升级与回退留待对应批次验收。
 
 ## 审查结论
 
