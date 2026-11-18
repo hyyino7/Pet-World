@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
+import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import type { Result } from '../../src/contracts/common.js';
 import { createCore } from '../../src/core/index.js';
 import { companionWritingScope, isCompanionHome, renderCompanionFoundation, resolveCompanionHome } from '../../src/core/companion-foundation.js';
@@ -102,7 +103,8 @@ test('foreground owner home reuses one native session without Life or autonomous
     assert.equal(created,1);assert.equal(first.id,second.id);assert.equal(renamed,1);
     assert.equal(isCompanionHome(f.ctx,f.host,first.id),true);assert.equal(isCompanionHome(f.ctx,f.host,'other'),false);
     assert.equal((await resolveCompanionHome(f.ctx,f.host,'standard')).id,first.id);
-    assert.equal(f.host.native.lifeAdmission,undefined,'Opening a foreground home grants no autonomous admission');
+    const message=createUserMessage({source:{kind:'dsh-world-life'},content:[]});
+    assert.equal(f.host.native.sourceTable.admit({sessionId:first.id,message}).kind,'unclaimed','Opening a foreground home grants no autonomous admission');
     assert.equal(created,1);assert.equal(JSON.parse(readFileSync(join(f.repo,'.chatpet/data/life/life.json'),'utf8')).homeSessionId,first.id);
   } finally {await f.close();}
 });

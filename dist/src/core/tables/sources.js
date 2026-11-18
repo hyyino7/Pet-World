@@ -25,7 +25,26 @@ export class SourceAdapterTable {
     register(adapter) {
         return this.table.register(adapter.id, {
             ...adapter, sources: [...adapter.sources], branches: { ...adapter.branches }, admit: adapter.admit.bind(adapter),
+            classify: adapter.classify?.bind(adapter),
         });
+    }
+    classify(message) {
+        for (const { value: adapter, lease } of this.table.entries()) {
+            if (!lease.isCurrent() || !adapter.sources.includes(message.source.kind))
+                continue;
+            try {
+                const branch = adapter.classify?.(message);
+                if (branch === undefined || !lease.isCurrent())
+                    continue;
+                if (!Object.hasOwn(adapter.branches, branch))
+                    return { kind: 'failed', adapterId: adapter.id };
+                const { historyProjection } = adapter.branches[branch];
+                return { branch, historyProjection: historyProjection && { ...historyProjection }, lease };
+            }
+            catch {
+                return { kind: 'failed', adapterId: adapter.id };
+            }
+        }
     }
     policyRows() {
         return this.table.entries().flatMap(({ value }) => [

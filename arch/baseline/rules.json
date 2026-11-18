@@ -382,7 +382,7 @@
     {
       "rule": "R2",
       "file": "src/core/native/agent.ts",
-      "line": 190,
+      "line": 206,
       "column": 15,
       "scope": "apply/onStep",
       "target": "petDesktop",
@@ -394,7 +394,7 @@
     {
       "rule": "R1",
       "file": "src/core/native/history-maintenance.ts",
-      "line": 4,
+      "line": 5,
       "column": 1,
       "scope": "<module>",
       "target": "src/room/tool-context.js",
@@ -406,7 +406,7 @@
     {
       "rule": "R1",
       "file": "src/core/native/history-maintenance.ts",
-      "line": 5,
+      "line": 6,
       "column": 1,
       "scope": "<module>",
       "target": "src/economy/tool-context.js",
@@ -418,7 +418,7 @@
     {
       "rule": "R1",
       "file": "src/core/native/history-maintenance.ts",
-      "line": 6,
+      "line": 7,
       "column": 1,
       "scope": "<module>",
       "target": "src/life/tool-context.js",
@@ -628,21 +628,9 @@
       "reason": "直接改写 Core 的原生接缝"
     },
     {
-      "rule": "R4",
-      "file": "src/life/plugin.ts",
-      "line": 55,
-      "column": 5,
-      "scope": "CompanionLife/constructor",
-      "target": "host.native.lifeAdmission",
-      "expression": "host . native . lifeAdmission = ( id , message ) => this . running (  ) && this . runtime ?. isHome ( id ) === true && message . source . kind === \"dsh-world-life\" && ( ! ( \"facts\" in message . source ) || this . runtime . acceptsFactMessage ( id , message ) )",
-      "from": "life",
-      "to": "core",
-      "reason": "直接改写 Core 的原生接缝"
-    },
-    {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 125,
+      "line": 131,
       "column": 27,
       "scope": "CompanionLife/publishRest",
       "target": "petDesktop",
@@ -654,7 +642,7 @@
     {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 174,
+      "line": 180,
       "column": 5,
       "scope": "CompanionLife/startRuntime",
       "target": "petDesktop",
@@ -666,7 +654,7 @@
     {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 282,
+      "line": 288,
       "column": 25,
       "scope": "CompanionLife/startRuntime/send",
       "target": "petDesktop",
@@ -678,7 +666,7 @@
     {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 288,
+      "line": 294,
       "column": 31,
       "scope": "CompanionLife/startRuntime/send",
       "target": "petChannels",
@@ -686,18 +674,6 @@
       "from": "life",
       "to": "channels",
       "reason": "服务读取未获准或方向违规"
-    },
-    {
-      "rule": "R4",
-      "file": "src/life/plugin.ts",
-      "line": 529,
-      "column": 5,
-      "scope": "CompanionLife/close",
-      "target": "this.host.native.lifeAdmission",
-      "expression": "this . host . native . lifeAdmission = undefined",
-      "from": "life",
-      "to": "core",
-      "reason": "直接改写 Core 的原生接缝"
     },
     {
       "rule": "R3",

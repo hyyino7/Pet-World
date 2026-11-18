@@ -1,6 +1,6 @@
 import type {
   AdmittedSourceBranch, RegistrationLease, SessionPolicyRow, SourceAdapter, SourceAdmission,
-  SourceBranch, SourceInput, TableRegistration,
+  SourceBranch, SourceClassificationResult, SourceInput, TableRegistration,
 } from '../../contracts/tables.js';
 import { RegistrationTable } from './registry.js';
 
@@ -34,7 +34,23 @@ export class SourceAdapterTable<Selected = unknown> {
   register(adapter: SourceAdapter<Selected>): TableRegistration {
     return this.table.register(adapter.id, {
       ...adapter, sources: [...adapter.sources], branches: { ...adapter.branches }, admit: adapter.admit.bind(adapter),
+      classify: adapter.classify?.bind(adapter),
     });
+  }
+
+  classify(message: SourceInput['message']): SourceClassificationResult {
+    for (const { value: adapter, lease } of this.table.entries()) {
+      if (!lease.isCurrent() || !adapter.sources.includes(message.source.kind)) continue;
+      try {
+        const branch = adapter.classify?.(message);
+        if (branch === undefined || !lease.isCurrent()) continue;
+        if (!Object.hasOwn(adapter.branches, branch)) return { kind: 'failed', adapterId: adapter.id };
+        const { historyProjection } = adapter.branches[branch];
+        return { branch, historyProjection: historyProjection && { ...historyProjection }, lease };
+      } catch {
+        return { kind: 'failed', adapterId: adapter.id };
+      }
+    }
   }
 
   policyRows(): SessionPolicyRow[] {

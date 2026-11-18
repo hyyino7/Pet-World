@@ -5,7 +5,7 @@ import {pathToFileURL} from 'node:url';
 import {Context} from '@deepseek-ai/cordis';
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt';
 import Tools from '@deepseek-ai/dsh-tools';
-import {lifeToolAllowed,lifeInheritedToolNames,restrictLifeTools} from '../../src/core/life-tool-policy.js';
+import {lifeToolAllowed,lifeInheritedToolNames,restrictLifeTools} from '../../src/life/tool-policy.js';
 
 test('native step schemas exclude programming capabilities and exact disposal restores owner tools',async t=>{
   const toolRequire=createRequire(createRequire(import.meta.url).resolve('@deepseek-ai/dsh-tools'));

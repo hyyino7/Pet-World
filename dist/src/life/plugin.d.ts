@@ -19,8 +19,10 @@ export declare class CompanionLife {
     private serial;
     private timer?;
     private subscriptions;
+    private sourceRegistration?;
     readonly timeZone: string;
     constructor(ctx: Context, host: PetCoreHost, preset: string);
+    registerSource(): void;
     /** Domain changes and native alarms wake Life; an idle world needs no pump. */
     private scheduleTick;
     private native;
