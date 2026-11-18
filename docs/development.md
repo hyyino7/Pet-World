@@ -115,7 +115,7 @@ node scripts/companion-backup.mjs restore --installation /tmp/her-world-syntheti
 <a id="baseline-counting"></a>
 ## 典型修改的计数
 
-固定起点为 `bfe069f`。先把修改提交到对应的实验分支，再将 `<分支>` 替换为该分支名执行：
+固定起点为 `bfe069f`（M1 基线）；M2 复测的起点是 `d865bff`，5a 重测的起点是 `754a0a5`，分支见 [product.md](product.md#典型修改前后对比)。先把修改提交到对应的实验分支，再将 `<分支>` 替换为该分支名执行（M2 复测把 `bfe069f` 换成对应起点）：
 
 ```sh
 git diff --stat bfe069f..<分支>
