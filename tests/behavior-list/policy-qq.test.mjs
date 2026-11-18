@@ -105,6 +105,34 @@ test('guest footer 写共享情绪（现状，待主人决定）',async t=>{
   await assertEmotion(f,'Guest');
 });
 
+test('QQ guest 已准入的消息在会话 cwd 或组合预设变化后被拒',async t=>{
+  const {f,send,receive}=await setup(t);
+  send('300','guest-binding','Synthetic guest input');
+  const {agent,message}=await receive('guest-binding',()=>f.agents());
+  assert.match(agent.id,/^chatpet-guest-/);
+  const active=await f.begin(agent.id,message);
+  const admits=()=>f.host.native.acceptsInput(agent.id,message);
+  const {cwd,agentPreset}=agent.session.header;
+  const presets=f.service('agentPresets');
+  try {
+    assert.equal(admits(),true);
+    agent.session.header.cwd=f.root;
+    assert.equal(admits(),false,'会话 cwd 变化后拒绝同一条收件');
+    agent.session.header.cwd=cwd;
+    assert.equal(admits(),true,'恢复 cwd 后，同一条收件仍可重查');
+
+    const composedPreset=t.mock.method(presets,'composedPreset',()=> 'standard');
+    try {
+      assert.equal(agent.session.header.agentPreset,agentPreset);
+      assert.equal(admits(),false,'会话头保持原预设，组合预设变化即拒绝收件');
+    } finally {composedPreset.mock.restore();}
+    assert.equal(admits(),true);
+  } finally {
+    agent.session.header.cwd=cwd;
+    await f.end(active);
+  }
+});
+
 test('QQ 真实收件在 Life 后续步接管，回顾日记和 Memory 来源跨重启保留',async t=>{
   let createSession;
   const {f,send,transport}=await setup(t,{

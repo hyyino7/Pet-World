@@ -400,7 +400,6 @@
       "policyCells": [
         "5.8.2#9/来源",
         "5.8.2#9/选择",
-        "5.8.2#9/绑定",
         "5.8.3#9/工具",
         "5.8.3#9/记忆",
         "5.8.3#9/情绪",
@@ -526,7 +525,6 @@
       "policyCells": [
         "5.8.2#6/来源",
         "5.8.2#6/选择",
-        "5.8.2#6/绑定",
         "5.8.3#6/工具",
         "5.8.3#6/记忆",
         "5.8.4#guest/历史",
@@ -690,6 +688,30 @@
       "families": [],
       "policyCells": [
         "5.8.2#9/生命周期"
+      ]
+    },
+    {
+      "id": "M2A-33",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/policy-qq.test.mjs",
+      "name": "QQ guest 已准入的消息在会话 cwd 或组合预设变化后被拒",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#6/绑定"
+      ]
+    },
+    {
+      "id": "M2A-34",
+      "categories": [],
+      "level": "L2",
+      "file": "dist/tests/regressions/audit-desktop.test.js",
+      "name": "F6: workspace changes abort an in-flight direct LLM request and suppress old output",
+      "l1Stage": "阶段 1",
+      "families": [],
+      "policyCells": [
+        "5.8.2#9/绑定"
       ]
     }
   ]

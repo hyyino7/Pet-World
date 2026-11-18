@@ -78,8 +78,14 @@ test('Room 电视和私聊共用原生日志，电视只准当前画面且所有
   assert.ok(visible.includes('pet_emotion_update'));
   assert.ok(!visible.some(name=>name.startsWith('room_')));
   for(const name of visible)await assert.rejects(f.tool(tv.active,name,{}),/电视画面只能用于观后感/);
-  await f.end(tv.active);
-  await tv.pending;
+  f.workspace.path=f.root;
+  try {
+    assert.equal(native.acceptsInput(tv.agent.id,tv.message),false,'绑定变化使在途画面的准入失效');
+  } finally {
+    f.workspace.path=f.repo;
+    await f.end(tv.active);
+    await tv.pending;
+  }
   assert.equal(native.acceptsInput(tv.agent.id,tv.message),false);
   assert.ok(!(await request(f,'roomHistory',{})).messages.some(row=>row.text.includes('【电视画面】')));
 });
