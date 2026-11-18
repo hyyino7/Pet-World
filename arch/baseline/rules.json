@@ -568,30 +568,6 @@
       "reason": "本地依赖未声明模块归属"
     },
     {
-      "rule": "R4",
-      "file": "src/emotion/plugin.ts",
-      "line": 174,
-      "column": 3,
-      "scope": "installEmotion",
-      "target": "host.native.playbackEvidence",
-      "expression": "host . native . playbackEvidence = ( sessionId , playbackId ) => { const turn = turns . get ( sessionId ) ; if ( ! turn ) return ; const ledger = emotion . ledger ( turn . workspaceId ) ; const action = ledger ?. read (  ) . actions . find ( item => item . id === playbackId ) ; if ( ! action || ! ledger ) return ; const label = emotion . catalog . actions . find ( item => item . name === action . name ) ?. label ?? action . name ; const result = { playing : \"已开始\" , ended : \"已播完\" , cancelled : \"已中断\" , failed : \"播放中出错\" } [ action . status ] ; return { occurredAt : action . at , text : TemplateHead:\"桌宠播放记录 \" action . id TemplateMiddle:\"，动作 \" label TemplateMiddle:\"（\" action . name TemplateMiddle:\"），\" result LastTemplateToken:\"\" , associated ( memoryId ) { try { ledger . associate ( action . name , memoryId ) ; } catch ( error ) { warn ( error ) ; } } } ; }",
-      "from": "emotion",
-      "to": "core",
-      "reason": "直接改写 Core 的原生接缝"
-    },
-    {
-      "rule": "R4",
-      "file": "src/emotion/plugin.ts",
-      "line": 289,
-      "column": 97,
-      "scope": "installEmotion/ctx . effect:callback0/<callback>",
-      "target": "host.native.playbackEvidence",
-      "expression": "host . native . playbackEvidence = undefined",
-      "from": "emotion",
-      "to": "core",
-      "reason": "直接改写 Core 的原生接缝"
-    },
-    {
       "rule": "R2",
       "file": "src/life/plugin.ts",
       "line": 131,

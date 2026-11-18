@@ -50,10 +50,10 @@ export declare class CompanionEmotion {
         mood?: number | undefined;
         dims?: Partial<Record<"happy" | "calm" | "sweet" | "heartache" | "worry" | "sad" | "jealous", number>> | undefined;
     } | undefined;
-    update(workspaceId: string, input: EmotionUpdate): Promise<EmotionSnapshot>;
+    update(workspaceId: string, input: EmotionUpdate, assertCurrent?: () => void): Promise<EmotionSnapshot>;
     experience(workspaceId: string): Promise<RecentExperience>;
     retire(workspaceId: string, memoryId: string): void;
-    complete(sessionId: string, turn: Turn): Promise<void>;
+    complete(sessionId: string, turn: Turn, current?: () => boolean): Promise<void>;
     private completeTurn;
     close(): Promise<void>;
 }

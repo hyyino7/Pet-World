@@ -55,6 +55,7 @@ async function fixture(t) {
     }
     if(operation==='archive')return {archived:true};
     if(operation==='summary')return {id:'summary-'+bank+'-'+body.summary_seq};
+    if(operation==='propose')return {id:'preference-'+bank,version:1,content:body.content};
     throw Error('Unexpected fixture operation '+operation);
   });
   const memory=new NativeMemory(runtime,{dataDir:join(paths.A,'.chatpet/data/memory'),python:resolve('/inert/python')});
@@ -197,6 +198,38 @@ test('R6-02: actual Memory tool refuses an ABA continuation between preparation 
   await assert.rejects(tool.execute({memory_id:'memory-bank-A'},{callId:'read-stale'}),/changed/);
   assert.equal(f.requests.some(row=>row.operation==='read'),false);assert.equal(f.runtime.store.get('source','source-bank-B'),undefined);
 });
+
+for(const change of ['none','provider','binding'])test(`Playback preference associates a Bank result only while its ${change} registration and binding are current`,async t=>{
+  const f=await fixture(t);
+  f.native.observeInputs('owner',1,[{role:'user',id:'owner-input',source:{kind:'user'},
+    content:[{type:'text',text:'Please repeat the observed action'}]}]);
+  const resolvePlayback=()=>({
+    text:'Observed synthetic playback',occurredAt:0,
+    associated(memoryId){f.runtime.store.put('fixture-playback-association','playback',memoryId);},
+  });
+  const provider=f.native.registerPlaybackEvidence(resolvePlayback);
+  const gate=f.gate('propose');
+  const tool=f.native.tools('owner').find(row=>row.name==='pet_memory_remember');
+  const pending=tool.execute({content:'Repeat the observed action',evidence_quotes:['repeat the observed action'],playback_id:'playback'},{callId:'remember'});
+  await Promise.race([gate.entered.promise,pending]);
+  if(change==='provider'){
+    await provider.revoke();
+    f.native.registerPlaybackEvidence(resolvePlayback);
+  }
+  if(change==='binding'){f.move('B');f.move('A');}
+  gate.release.resolve();
+  if(change==='none'){
+    assert.equal(JSON.parse(await pending).memoryId,'preference-bank-A');
+    assert.equal(f.runtime.store.get('fixture-playback-association','playback'),'preference-bank-A');
+  }else{
+    await assert.rejects(pending,/no longer current|changed/);
+    assert.equal(f.runtime.store.get('fixture-playback-association','playback'),undefined);
+  }
+  const submission=f.requests.find(row=>row.operation==='propose');
+  assert.equal(submission.bank,'bank-A');
+  assert.equal(submission.args.sources.length,2);
+});
+
 test('R6-02: registered guest chat retains the selected shared Bank without creating another Memory scope',async t=>{
   const f=await fixture(t);
   const source=f.native.sourceTable.register({id:'guest-scope-fixture',order:10,sources:[],isGuest:()=>true,branches:{},admit:()=>({kind:'unclaimed'})});

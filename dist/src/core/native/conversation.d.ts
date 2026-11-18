@@ -23,18 +23,26 @@ export interface NativeSourceContext {
 export type NativeSourceSelection = Extract<SourceAdmission<NativeSourceContext>, {
     kind: 'accepted';
 }>;
+type ResolvePlaybackEvidence = (sessionId: string, playbackId: string) => {
+    text: string;
+    occurredAt: number;
+    associated(memoryId: string): void;
+} | undefined;
 /** Scoped services for the existing DSH Agent; only autonomous inputs have extra allowances. */
 export declare class CoreNative {
     readonly runtime: CoreRuntime;
     memory?: NativeMemory;
     memoryEnabledForNewSessions: boolean;
     readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
+    private readonly playbackProviders;
     resolveScope?: (sessionId: string) => NativeScope | undefined;
     attachGuest?: (context: Context) => void;
     private readonly turns;
     private readonly preparedFactInputs;
     scopeFor(sessionId: string): NativeScope | undefined;
     isGuest(sessionId: string): boolean;
+    registerPlaybackEvidence(resolve: ResolvePlaybackEvidence): import("../../contracts/tables.js").TableRegistration;
+    emotionAllowed(sessionId: string, turn: number, permission: 'footer' | 'tool'): boolean;
     private current;
     acceptsInput(sessionId: string, message: UserMessage): boolean;
     memoryFor(_sessionId: string): NativeMemory | undefined;
@@ -45,11 +53,6 @@ export declare class CoreNative {
     clearPreparedFacts(sessionId: string): void;
     observeFacts(sessionId: string, facts: readonly CompanionFact[], scope?: NativeScope): string[];
     finishTurn(sessionId: string, turn: number, result: NativeRunResult): Promise<void>;
-    playbackEvidence?: (sessionId: string, playbackId: string) => {
-        text: string;
-        occurredAt: number;
-        associated(memoryId: string): void;
-    } | undefined;
     private readonly active;
     private closing;
     constructor(runtime: CoreRuntime);
@@ -74,3 +77,4 @@ export declare class CoreNative {
     end(sessionId: string): Promise<void>;
     close(): Promise<void>;
 }
+export {};
