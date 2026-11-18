@@ -29,16 +29,12 @@ export declare class CoreNative {
     memory?: NativeMemory;
     memoryEnabledForNewSessions: boolean;
     readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
-    channelBoundary?: {
-        guest(sessionId: string): boolean;
-        admit(sessionId: string, message: UserMessage): boolean;
-        identity?(sessionId: string): Record<string, unknown> | undefined;
-    };
     resolveScope?: (sessionId: string) => NativeScope | undefined;
     attachGuest?: (context: Context) => void;
     private readonly turns;
     private readonly preparedFactInputs;
     scopeFor(sessionId: string): NativeScope | undefined;
+    isGuest(sessionId: string): boolean;
     private current;
     acceptsInput(sessionId: string, message: UserMessage): boolean;
     memoryFor(_sessionId: string): NativeMemory | undefined;

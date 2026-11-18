@@ -198,7 +198,9 @@ test('R6-02: actual Memory tool refuses an ABA continuation between preparation 
   assert.equal(f.requests.some(row=>row.operation==='read'),false);assert.equal(f.runtime.store.get('source','source-bank-B'),undefined);
 });
 test('R6-02: registered guest chat retains the selected shared Bank without creating another Memory scope',async t=>{
-  const f=await fixture(t);f.native.channelBoundary={guest:()=>true,admit:()=>true};const a=agentFixture(f);t.after(()=>a.stop());
+  const f=await fixture(t);
+  const source=f.native.sourceTable.register({id:'guest-scope-fixture',order:10,sources:[],isGuest:()=>true,branches:{},admit:()=>({kind:'unclaimed'})});
+  const a=agentFixture(f);t.after(()=>a.stop());t.after(()=>source.revoke());
   const decision=await a.step(a.payload,async()=>({kind:'enter',messages:[]}));
   assert.equal(decision.kind,'enter');assert.equal(decision.messages[0].source.bank,'bank-A');
   assert.ok(f.requests.some(row=>row.operation==='context'));assert.ok(f.requests.every(row=>row.bank==='bank-A'));

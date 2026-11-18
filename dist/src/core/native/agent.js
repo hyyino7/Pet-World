@@ -25,7 +25,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         if (status.state !== 'ready' || !status.target)
             return;
         const agent = ctx.agents.get(id) ?? agents.get(id);
-        const guest = host.native.channelBoundary?.guest(id) === true;
+        const guest = host.native.isGuest(id);
         if (!guest && (!agent || world.sessionStatus(agent.session)?.state !== 'ready'))
             return;
         return { workspaceId: status.target.id, path: status.target.path, storageId: host.workspace.storageId(), guest };

@@ -282,7 +282,7 @@ export function apply(ctx) {
     ctx.provide('petEconomy', service);
     const stopAccess = installEconomyAccessGuard(ctx, () => service.protectedDirectory());
     const scope = (agent) => {
-        if (!agent || agent.session.header.agentPreset === 'chatpet-channel-guest' || host.native.channelBoundary?.guest(agent.id) || !host.native.manages(agent.id))
+        if (!agent || agent.session.header.agentPreset === 'chatpet-channel-guest' || host.native.isGuest(agent.id) || !host.native.manages(agent.id))
             return;
         const bound = ctx.petWorld.sessionStatus(agent.session), current = host.workspace.status();
         if (bound?.state !== 'ready' || current.state !== 'ready' || !current.target || bound.target?.id !== current.target.id)

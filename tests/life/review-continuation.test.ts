@@ -21,6 +21,7 @@ function fixture() {
     agents:new Map([[agent.id,agent]])} as unknown as Context;
   native.scopeFor=(id:string)=>native.resolveScope(id);
   native.sourceTable=new SourceAdapterTable();
+  native.isGuest=(id:string)=>native.sourceTable.isGuest(id);
   native.sourceTable.register(createLifeSourceAdapter(ctx,host,native.acceptsInput));
   const stop=apply(ctx,host,{sessionStatus:()=>status} as any);
   let turn=0;

@@ -4,6 +4,10 @@ import type {
 } from '../../contracts/tables.js';
 import { RegistrationTable } from './registry.js';
 
+type NativeSourceAdapter<Selected> = SourceAdapter<Selected> & {
+  isGuest?(sessionId: string): boolean;
+};
+
 function guardBranch<Selected>(
   branch: SourceBranch<Selected>, context: Selected, lease: RegistrationLease,
 ): AdmittedSourceBranch {
@@ -26,16 +30,22 @@ function guardBranch<Selected>(
 }
 
 export class SourceAdapterTable<Selected = unknown> {
-  private readonly table = new RegistrationTable<SourceAdapter<Selected>>({
+  private readonly table = new RegistrationTable<NativeSourceAdapter<Selected>>({
     order: adapter => adapter.order,
     overlaps: (left, right) => left.sources.some(source => right.sources.includes(source)),
   });
 
-  register(adapter: SourceAdapter<Selected>): TableRegistration {
+  register(adapter: NativeSourceAdapter<Selected>): TableRegistration {
     return this.table.register(adapter.id, {
       ...adapter, sources: [...adapter.sources], branches: { ...adapter.branches }, admit: adapter.admit.bind(adapter),
       classify: adapter.classify?.bind(adapter),
+      isGuest: adapter.isGuest?.bind(adapter),
     });
+  }
+
+  isGuest(sessionId: string): boolean {
+    return this.table.entries().some(({ value, lease }) =>
+      lease.isCurrent() && value.isGuest?.(sessionId) === true && lease.isCurrent());
   }
 
   classify(message: SourceInput['message']): SourceClassificationResult {

@@ -187,7 +187,7 @@ export class CompanionLife {
                 && host.workspace.storageId() === bound.plan.storageId && host.workspace.runtime.identity().companionId === bound.plan.companionId;
         };
         const member = (id) => active() && this.current()?.sessionIds.includes(id) === true
-            && !native.get('workspaceRegistry')?.archivedSessionIds.includes(id) && !host.native.channelBoundary?.guest(id);
+            && !native.get('workspaceRegistry')?.archivedSessionIds.includes(id) && !host.native.isGuest(id);
         this.ctx.get('petDesktop')?.features?.pause();
         await this.ctx.get('petTranscripts')?.restore();
         const selected = this.current();
@@ -217,7 +217,7 @@ export class CompanionLife {
                     this.ctx.emit('pet/life.review', id);
             },
             inWorkspace: id => this.current()?.id === bound.id && this.current()?.path === bound.path
-                && this.current()?.sessionIds.includes(id) === true && !host.native.channelBoundary?.guest(id),
+                && this.current()?.sessionIds.includes(id) === true && !host.native.isGuest(id),
             alarmContext: () => [this.ctx.get('petBehavior')?.promptLine(bound.id), bound.plan.summary()].filter(Boolean).join('\n'),
             hasCurrentPlan: () => !!bound.plan.read().plan,
             requirePlanningDecision: true,

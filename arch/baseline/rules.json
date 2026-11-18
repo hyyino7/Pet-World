@@ -34,30 +34,6 @@
       "reason": "服务读取未获准或方向违规"
     },
     {
-      "rule": "R4",
-      "file": "src/channels/sessions.ts",
-      "line": 93,
-      "column": 3,
-      "scope": "createChannelHomes",
-      "target": "host.native.channelBoundary",
-      "expression": "host . native . channelBoundary = boundary",
-      "from": "channels",
-      "to": "core",
-      "reason": "直接改写 Core 的原生接缝"
-    },
-    {
-      "rule": "R4",
-      "file": "src/channels/sessions.ts",
-      "line": 182,
-      "column": 53,
-      "scope": "createChannelHomes/stop",
-      "target": "host.native.channelBoundary",
-      "expression": "host . native . channelBoundary = undefined",
-      "from": "channels",
-      "to": "core",
-      "reason": "直接改写 Core 的原生接缝"
-    },
-    {
       "rule": "R1",
       "file": "src/console/plugin.ts",
       "line": 3,

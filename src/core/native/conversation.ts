@@ -65,25 +65,19 @@ export class CoreNative {
   memory?: NativeMemory;
   memoryEnabledForNewSessions = true;
   readonly sourceTable = new SourceAdapterTable<NativeSourceContext>();
-  channelBoundary?: {guest(sessionId: string): boolean; admit(sessionId: string, message: UserMessage): boolean; identity?(sessionId: string): Record<string, unknown> | undefined};
   resolveScope?: (sessionId: string) => NativeScope | undefined;
   attachGuest?: (context: Context) => void;
   private readonly turns = new Map<string, NativeTurn>();
   private readonly preparedFactInputs=new Map<string,{scope:NativeScope;ids:string[]}>();
   scopeFor(sessionId: string): NativeScope | undefined { return this.resolveScope?.(sessionId); }
+  isGuest(sessionId: string): boolean { return this.sourceTable.isGuest(sessionId); }
   private current(sessionId: string, expected?: NativeScope): NativeScope {
     const scope = this.scopeFor(sessionId);
     check(scope && (!expected || matchesNativeScope(scope, expected)), 'Conversation left its bound workspace');
     return scope!;
   }
   acceptsInput(sessionId: string, message: UserMessage): boolean {
-    if (message.source.kind === 'user') return 'identity' in message.source
-      ? this.channelBoundary?.admit(sessionId, message) === true
-      : this.sourceTable.admit({sessionId, message}).kind === 'accepted';
-    if (message.source.kind === 'dsh-world-life' || message.source.kind === 'chatpet-room-tv') {
-      return this.sourceTable.admit({sessionId, message}).kind === 'accepted';
-    }
-    return this.channelBoundary?.admit(sessionId,message) === true;
+    return this.sourceTable.admit({sessionId, message}).kind === 'accepted';
   }
   memoryFor(_sessionId: string): NativeMemory | undefined {
     // The current component switch applies at the next turn, including retained chats.

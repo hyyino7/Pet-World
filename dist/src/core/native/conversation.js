@@ -37,26 +37,19 @@ export class CoreNative {
     memory;
     memoryEnabledForNewSessions = true;
     sourceTable = new SourceAdapterTable();
-    channelBoundary;
     resolveScope;
     attachGuest;
     turns = new Map();
     preparedFactInputs = new Map();
     scopeFor(sessionId) { return this.resolveScope?.(sessionId); }
+    isGuest(sessionId) { return this.sourceTable.isGuest(sessionId); }
     current(sessionId, expected) {
         const scope = this.scopeFor(sessionId);
         check(scope && (!expected || matchesNativeScope(scope, expected)), 'Conversation left its bound workspace');
         return scope;
     }
     acceptsInput(sessionId, message) {
-        if (message.source.kind === 'user')
-            return 'identity' in message.source
-                ? this.channelBoundary?.admit(sessionId, message) === true
-                : this.sourceTable.admit({ sessionId, message }).kind === 'accepted';
-        if (message.source.kind === 'dsh-world-life' || message.source.kind === 'chatpet-room-tv') {
-            return this.sourceTable.admit({ sessionId, message }).kind === 'accepted';
-        }
-        return this.channelBoundary?.admit(sessionId, message) === true;
+        return this.sourceTable.admit({ sessionId, message }).kind === 'accepted';
     }
     memoryFor(_sessionId) {
         // The current component switch applies at the next turn, including retained chats.
