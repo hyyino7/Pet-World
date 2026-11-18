@@ -43,11 +43,11 @@ export class CoreNative {
     sourceTable = new SourceAdapterTable();
     toolTable = new CompanionToolTable();
     playbackProviders = new RegistrationTable();
-    resolveScope;
+    resolveNativeScope;
     attachGuest;
     turns = new Map();
     preparedFactInputs = new Map();
-    nativeScopeFor(sessionId) { return this.resolveScope?.(sessionId); }
+    nativeScopeFor(sessionId) { return this.resolveNativeScope?.(sessionId); }
     isGuest(sessionId) { return this.sourceTable.isGuest(sessionId); }
     registerPlaybackEvidence(resolve) {
         return this.playbackProviders.register('playback', resolve);

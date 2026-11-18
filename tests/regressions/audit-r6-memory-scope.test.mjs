@@ -59,7 +59,7 @@ async function fixture(t) {
     throw Error('Unexpected fixture operation '+operation);
   });
   const memory=new NativeMemory(runtime,{dataDir:join(paths.A,'.chatpet/data/memory'),python:resolve('/inert/python')});
-  const native=new CoreNative(runtime);native.memory=memory;native.resolveScope=scope;
+  const native=new CoreNative(runtime);native.memory=memory;native.resolveNativeScope=scope;
   const token=()=>({...scope(),preferencesRevision:runtime.store.get('preferences','current').revision});
   const prepare=async(session='owner')=>{
     const before=token();await memory.prepare(session,scope());return before;

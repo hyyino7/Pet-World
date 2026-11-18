@@ -38,7 +38,7 @@ export declare class CoreNative {
     readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
     readonly toolTable: CompanionToolTable;
     private readonly playbackProviders;
-    resolveScope?: (sessionId: string) => NativeScope | undefined;
+    resolveNativeScope?: (sessionId: string) => NativeScope | undefined;
     attachGuest?: (context: Context) => void;
     private readonly turns;
     private readonly preparedFactInputs;

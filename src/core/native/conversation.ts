@@ -87,11 +87,11 @@ export class CoreNative {
   readonly sourceTable = new SourceAdapterTable<NativeSourceContext>();
   readonly toolTable = new CompanionToolTable();
   private readonly playbackProviders = new RegistrationTable<ResolvePlaybackEvidence>();
-  resolveScope?: (sessionId: string) => NativeScope | undefined;
+  resolveNativeScope?: (sessionId: string) => NativeScope | undefined;
   attachGuest?: (context: Context) => void;
   private readonly turns = new Map<string, NativeTurn>();
   private readonly preparedFactInputs=new Map<string,{scope:NativeScope;ids:string[]}>();
-  nativeScopeFor(sessionId: string): NativeScope | undefined { return this.resolveScope?.(sessionId); }
+  nativeScopeFor(sessionId: string): NativeScope | undefined { return this.resolveNativeScope?.(sessionId); }
   isGuest(sessionId: string): boolean { return this.sourceTable.isGuest(sessionId); }
   registerPlaybackEvidence(resolve: ResolvePlaybackEvidence) {
     return this.playbackProviders.register('playback', resolve);
