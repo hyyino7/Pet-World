@@ -18225,13 +18225,13 @@
       "other": {
         "file": "src/voice/plugin.ts",
         "scope": "CompanionVoice/handle",
-        "line": 39
+        "line": 40
       }
     },
     {
       "rule": "R8",
       "file": "src/voice/plugin.ts",
-      "line": 39,
+      "line": 40,
       "column": 10,
       "scope": "CompanionVoice/handle",
       "target": "{\"file\":\"src/desktop/features.ts\",\"scope\":\"DesktopFeatures/request\"}",

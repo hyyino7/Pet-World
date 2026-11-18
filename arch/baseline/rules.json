@@ -476,18 +476,6 @@
       "reason": "服务读取未获准或方向违规"
     },
     {
-      "rule": "R2",
-      "file": "src/core/plugin.ts",
-      "line": 63,
-      "column": 21,
-      "scope": "apply/ctx . effect:callback0/<callback>",
-      "target": "petVoice",
-      "expression": "ctx . get ( \"petVoice\" )",
-      "from": "core",
-      "to": "voice",
-      "reason": "服务读取未获准或方向违规"
-    },
-    {
       "rule": "R1",
       "file": "src/desktop/features.ts",
       "line": 14,
@@ -856,7 +844,7 @@
     {
       "rule": "R1",
       "file": "src/voice/plugin.ts",
-      "line": 8,
+      "line": 9,
       "column": 50,
       "scope": "upstream",
       "target": "?",
@@ -866,7 +854,7 @@
     {
       "rule": "R1",
       "file": "src/voice/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 22,
       "scope": "CompanionVoice/canTranscribe",
       "target": "src/desktop/upstream/host/voice/speech-registry.js",

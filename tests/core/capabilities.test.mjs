@@ -69,7 +69,7 @@ function expected({bound, desktopOpen, qq, hear, missing}) {
     petDesktop: {'desktop.presentation': null, 'desktop.body': null},
     petRoom: {'desktop.room': null},
     petChannels: {'channel.qq': null},
-    petVoice: {'voice.speech': nativeUnavailable},
+    petVoice: {'voice.speech': null},
     petEmotion: {'emotion.expression': unavailableExpression},
   };
   return rows(rowOrder, {...all, ...absent[missing]});
@@ -94,7 +94,7 @@ test('独立 createCore 只返回当前由 Core 登记的能力', async t => {
   const actual = value(await host.services.core.listCapabilities(host.operator.request('capabilities'), {}));
   assert.deepEqual(actual, rows(rowOrder.slice(0, 9), {
     'life.pursuits': null, 'desktop.presentation': null, 'desktop.body': null, 'desktop.room': null,
-    'channel.qq': null,
+    'channel.qq': null, 'voice.speech': null,
   }));
 });
 

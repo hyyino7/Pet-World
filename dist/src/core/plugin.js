@@ -52,15 +52,6 @@ export async function apply(ctx, config) {
                     return status;
                 return { ...status, state: 'disabled', reason: 'Memory is off for the next turn in every conversation; retained Bank and native logs remain' };
             };
-        statuses['voice.speech'] = () => {
-            const voice = ctx.get('petVoice');
-            if (!voice)
-                return;
-            const bound = isBound(), hear = bound && voice.canTranscribe();
-            return { state: !bound ? 'unavailable' : hear ? 'ready' : 'degraded',
-                reason: !bound ? 'Bind a workspace to use speech' : hear ? null : 'Speech recognition provider is unavailable',
-                supportedOperations: !bound ? [] : hear ? ['speak', 'hear'] : ['speak'] };
-        };
         runtime.capabilityTable.register({ id: 'emotion.expression', owner: 'emotion', contractVersion: CONTRACT_VERSION, order: 10,
             status: () => isBound() && (ctx.get('petEmotion')?.catalog.actions.length ?? 0) > 0
                 ? { state: 'ready', reason: null, supportedOperations: ['express', 'recordPlayback'] }

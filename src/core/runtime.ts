@@ -105,7 +105,6 @@ export class CoreRuntime {
     const rows:[number,CapabilityStatus['id'],CapabilityStatus['owner']][]=[
       [1,'core.conversation','core'],
       [2,'memory.lifecycle','memory'],
-      [8,'voice.speech','voice'],
       [9,'console.operations','console'],
     ];
     for(const [order,id,owner] of rows) {
