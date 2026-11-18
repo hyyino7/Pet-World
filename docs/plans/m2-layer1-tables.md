@@ -427,6 +427,7 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - `mise exec -- pnpm run verify` 的 Node 测试 1,378 项通过、1 项失败。Memory 服务启动后，`tests/memory/memory-process.test.mjs:81` 调用 `/bin/ps` 被沙箱拒绝（`EPERM`），独立调用复现。门禁未通过，后续 Python 测试和打包检查未执行。
 - 现有入口继续走原路径。B 批只增加登记口及契约，登记完成屏障按拍板点 10 留到 M3。
 - Codex 沙箱不能写 worktree 的 `index.lock`，由 Claude 原样提交为 `8955bb4`（实现、测试和构建产物），执行结果另行提交。
+- 首轮返工补齐伙伴工具声明表，并让撤销等待所有作用域清理后汇总错误。构建通过，专项测试通过 16 项、失败 0 项，架构检查通过（R8 新增 0）。完整门禁由验收者在沙箱外执行。
 
 ## 审查结论
 
@@ -478,4 +479,29 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - 第 4、6、7、8 条和建议：M2A-33～36 和 M2A-22 新加的断言都落在真实入口和真实服务状态上；M2A-22 不再登记 `5.8.2#5/生命周期`，改由 M2A-35 覆盖。
 - 复跑：`pnpm run build` 通过；`pnpm run test:behavior-list` 的索引检查（含 82 格覆盖）通过，行为清单 52 条全部执行并通过。`git diff --stat 15057f8..HEAD -- src dist` 为空。
 - 本节和「执行结果」里提交说明的修正由 Claude 写，随合并提交进入 `main`。
+
+### B 批第一轮（Claude 核实 Codex 审查，返工）
+
+已核实：改动只在 B 批允许的文件内（`src/contracts/{tables,index}.ts`、`src/core/tables/**`、`tests/core/tables*.test.ts`、对应 `dist/src/**` 和本方案），没有接线，`arch/layers.json` 未改。`pnpm run build` 后重新生成的 `dist` 与提交一致。沙箱外 `pnpm run verify` 通过（136 个测试文件，模型调用 0）。Codex 执行时门禁失败是沙箱禁止 `/bin/ps`，属环境问题。测试用真实 Cordis 作用域和 DSH 工具，没有只断言 mock 的。
+
+下面 2 条要修：
+
+1. **少了第三个登记口：伙伴工具声明。** 方案 B 节和「概念与扩展检查」写的是「新增三个登记口」（能力状态、来源适配、伙伴工具声明），F 批要从声明派生 Life 名单和历史概览，上游本地挂载的工具也要「由所属模块用同样的声明结构补登」。现在 `src/contracts/tables.ts:121-125` 只有 `CompanionToolDeclaration` 类型，`src/core/tables/` 没有对应的登记表。改法：按 `CapabilityTable` 的写法加一个声明表，复用 `RegistrationTable`：按 `name` 唯一，校验 `sources` 只取五种工具来源；能按来源列出声明，取到的 `historyOverview` 回调要带租约，撤销后失效。工具执行仍走原生 `tools.register`，本批不接线。补对应测试。
+
+   已修：`CompanionToolTable` 复用 `RegistrationTable` 按工具名唯一登记，使用契约里的五种来源校验，提供按名称查找和按来源列出。取出的历史概览回调在撤销后失效。测试用现有 Life 历史投影验证回调行为。
+
+2. **一个作用域清理同步抛错，会让其余作用域都不清理。** `src/core/tables/registry.ts:66-69` 在 `map` 里依次调用 `attachment.dispose()`。Cordis 的 `effect` 返回的 `dispose` 是同步执行的（`node_modules/@deepseek-ai/cordis/src/fiber.ts:114-117` 的 `runDisposable` 不捕获异常），所以 `release()` 同步抛错会打断 `map`，后面的作用域不再清理；而登记键已经删掉了，再调 `revoke()` 也补不回来，旧的工具限制会一直留在那些预设上。这违反 2.2「撤销之后，在途调用必须失效」。改法：每个作用域的清理单独执行并收集错误，全部结束后再抛出（例如 `AggregateError`）。补一条测试：两个作用域里前一个清理抛错，后一个照样被撤销。
+
+   已修：撤销先使登记租约失效，再独立执行各 Cordis 作用域的清理，等待全部结束后用 `AggregateError` 报告失败。回归测试确认第一个作用域同步抛错后，第二个作用域仍异步删除其资源，撤销随后才报错。
+
+建议（不影响合并）：
+
+- `install()` 里如果同步重入调用 `revoke()`，`revoke` 会在 `attachment.dispose` 赋值前就返回；之后 `registry.ts:60` 会补做清理，但 `revoke()` 的调用方会早于清理完成就继续往下走。可以让 `revoke` 等这次挂载装完再清理。
+- `src/core/tables/sources.ts:59-61` 里，一个适配器抛错会让同一 `source.kind` 后面的适配器都不再判定（`tables-sources.test.ts:58` 按这个语义断言）。`user` 由 Core 主人输入、Desktop、Room、渠道共用，所以 E2 接线时要把 Core 主人输入的 `order` 排在渠道前面，否则渠道适配器出错会挡住主人原生输入。现在的 `acceptsInput`（`src/core/native/conversation.ts:37-41`）对不带 `identity` 的 `user` 直接放行，不经过渠道。
+
+### B 批复查（第二轮）
+
+- 第 1 条：已修。`src/core/tables/tools.ts` 的 `CompanionToolTable` 复用 `RegistrationTable`，按 `name` 唯一，校验 `COMPANION_TOOL_SOURCES`，登记时冻结来源副本；取出的 `historyOverview` 带租约，撤销后失效，同名重新登记不受影响（`tests/core/tables-tools.test.ts`）。
+- 第 2 条：已修。`registry.ts` 的撤销改用 `allSettled` 加 `async` 包装，同步抛错也会变成 rejection，所有作用域都清理完后再抛 `AggregateError`；新测试在真实 Cordis 插件作用域里验证，前一个作用域清理抛错时后一个照样被撤销。
+- 复跑：`pnpm run build` 后 `dist` 与源码一致；`node --test dist/tests/core/tables*.test.js` 16 项通过；`pnpm run check:arch` 通过（R1–R8 新增 0）。返工由 Claude 原样提交。
 
