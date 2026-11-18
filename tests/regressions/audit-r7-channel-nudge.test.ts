@@ -17,7 +17,7 @@ function fixture(guest=false,group=false) {
   const directory=mkdtempSync(join(tmpdir(),'r7-nudge-')),listeners=new Set<Function>(),agents=new Map<string,any>(),workspaces=new Map<string,any>();
   let active=true,permit=true,storageId='bank-a',guestHook:any;
   const native=new CoreNative({} as any);
-  native.resolveScope=()=>({workspaceId:'owner',path:directory,storageId,guest});
+  native.resolveNativeScope=()=>({workspaceId:'owner',path:directory,storageId,guest});
   const host={native,workspace:{runtime:native.runtime,sessionStatus:()=>({state:'ready'})}} as unknown as PetCoreHost;
   const registry={get:(id:string)=>workspaces.get(id),archivedSessionIds:[] as string[],async create(path:string){const previous=[...workspaces.values()].find(w=>w.path===path);if(previous)return previous;const w={id:'guest-ws',path,sessionIds:[] as string[]};workspaces.set(w.id,w);return w;}};
   const ctx:any={on(name:string,fn:Function){if(name==='agent/pre-step')guestHook=fn;else listeners.add(fn);return()=>listeners.delete(fn);},

@@ -40,7 +40,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   const historyPrepared=new Map<Agent,{scope:NativeScope;changes:HistoryProjection[]}>();
   let historyClosing=false;
   const recall = new WorldRecall();
-  const scopeFor = (id:string):NativeScope|undefined => {
+  const nativeScopeFor = (id:string):NativeScope|undefined => {
     const status=host.workspace.status();
     if(status.state!=='ready' || !status.target)return;
     const agent=ctx.agents.get(id as SessionId) ?? agents.get(id);
@@ -48,9 +48,9 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     if(!guest && (!agent || world.sessionStatus(agent.session)?.state!=='ready'))return;
     return {workspaceId:status.target.id,path:status.target.path,storageId:host.workspace.storageId(),guest};
   };
-  host.native.resolveScope=scopeFor;
-  const sameScope=(id:string,expected:NativeScope)=>matchesNativeScope(scopeFor(id),expected);
-  const currentTurn=(id:string,saved:ManagedTurn)=>sameScope(id,saved.scope)
+  host.native.resolveNativeScope=nativeScopeFor;
+  const sameNativeScope=(id:string,expected:NativeScope)=>matchesNativeScope(nativeScopeFor(id),expected);
+  const currentTurn=(id:string,saved:ManagedTurn)=>sameNativeScope(id,saved.scope)
     && (!saved.background||!saved.lifePolicy||saved.lifePolicy.lease.isCurrent())
     && (!saved.persistentToolGuard||saved.persistentToolGuard.lease.isCurrent());
   const clearContinuation=(id:string)=>{
@@ -96,7 +96,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   // DSH resolves schemas before pre-step. Install the native mask while its
   // trusted inbox input is queued, and recheck at step admission below.
   const stopSourceInbox=ctx.on('agent/inbox/inserted',({agent,message})=>{
-    if(!scopeFor(agent.id))return;
+    if(!nativeScopeFor(agent.id))return;
     const selection=selectSource(agent,message);
     if(!selection)return;
     if(selection.branch.turnKind==='foreground') {
@@ -118,10 +118,10 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     const scope=historyReady.get(agent);
     if(historyClosing||!scope||agent.status!=='idle')return;
     historyReady.delete(agent);
-    if(!sameScope(agent.id,scope)||scope.guest)return;
-    void watch(prepareLifeHistory(agent,()=>!historyClosing&&sameScope(agent.id,scope),
+    if(!sameNativeScope(agent.id,scope)||scope.guest)return;
+    void watch(prepareLifeHistory(agent,()=>!historyClosing&&sameNativeScope(agent.id,scope),
       message=>host.native.sourceTable.classify(message),host.native.toolTable).then(changes=>{
-      if(changes.length&&!historyClosing&&sameScope(agent.id,scope))historyPrepared.set(agent,{scope,changes});
+      if(changes.length&&!historyClosing&&sameNativeScope(agent.id,scope))historyPrepared.set(agent,{scope,changes});
     }).catch(error=>{
       ctx.logger('chatpet-context').warn('History maintenance pending; original events retained',error);
     }));
@@ -153,7 +153,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   });
   const profiles=new WeakMap<Agent,{turn:number;text:string}>();
   const disposePrompt=registerWorldPrompt(ctx,'chatpet.profile',10,agent=>{
-    const scope=scopeFor(agent.id);if(!scope)return '';
+    const scope=nativeScopeFor(agent.id);if(!scope)return '';
     const events=agent.session.snapshotEvents();
     const turn=[...events].reverse().find(event=>event.type==='turn/start')?.data.turn ?? -1;
     const saved=profiles.get(agent);if(saved?.turn===turn)return saved.text;
@@ -163,10 +163,10 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   const disposeFoundation=installCompanionFoundation(ctx,host,world);
   const scanned=new WeakMap<Agent,boolean>();
   const onRequest = ({agent,turn,step}: {agent:Agent;turn:number;step:number},next:()=>Promise<LlmCallConfig>)=>{
-    const bound=!!scopeFor(agent.id);
+    const bound=!!nativeScopeFor(agent.id);
     if(scanned.get(agent)!==bound){retireLegacyPrompt(agent.session,turn,step,bound);scanned.set(agent,bound);}
     const prepared=historyPrepared.get(agent);historyPrepared.delete(agent);
-    if(prepared&&sameScope(agent.id,prepared.scope)) {
+    if(prepared&&sameNativeScope(agent.id,prepared.scope)) {
       const meter=(ctx as unknown as {get(name:string):unknown}).get('tokenMeter') as {estimateMessage(message:import('@deepseek-ai/dsh-llm').Message):number}|undefined;
       if(meter)applyLifeHistory(agent,prepared.changes,meter);
     }
@@ -179,7 +179,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   for(const tool of host.native.tools()){
     tools.register(tool,{
       when:context=>{
-        const scope=context.agent && scopeFor(context.agent.id);
+        const scope=context.agent && nativeScopeFor(context.agent.id);
         return Boolean(scope && !scope.guest && (!tool.name.startsWith('pet_memory_') || host.native.memoryFor(context.agent!.id)));
       },
     });
@@ -190,7 +190,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
   ctx.tools.guard(exec=>{
     if(!exec.agent || !turns.has(exec.agent.id))return;
     const saved=turns.get(exec.agent.id)!;
-    if(!sameScope(exec.agent.id,saved.scope))return '会话已离开原绑定工作区';
+    if(!sameNativeScope(exec.agent.id,saved.scope))return '会话已离开原绑定工作区';
     for(const policy of [saved.persistentToolGuard,saved.background && saved.lifePolicy]) {
       if(!policy)continue;
       const {branch,lease}=policy;
@@ -200,7 +200,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     if(saved.background)try{host.native.guardTool(exec.agent.id);}catch{return '自主轮次已结束或超过限额';}
   });
   const onStep=async(payload:{agent:Agent;turn:number;step:number;messages:UserMessage[];signal:AbortSignal},next:()=>Promise<PreStepDecision>):Promise<PreStepDecision>=>{
-    const scope=scopeFor(payload.agent.id);
+    const scope=nativeScopeFor(payload.agent.id);
     if(!scope) {
       if(turns.has(payload.agent.id))return {kind:'reject'};
       return next();
@@ -228,7 +228,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
       }
       host.native.observeInputs(payload.agent.id,payload.turn,accepted.map(({message})=>message),scope);
     }
-    if(!sameScope(payload.agent.id,saved!.scope))return {kind:'reject'};
+    if(!sameNativeScope(payload.agent.id,saved!.scope))return {kind:'reject'};
     if(!first) {
       const admitted=selectStepSources(payload.agent,payload.messages);
       if(!admitted)return {kind:'reject'};
@@ -316,7 +316,7 @@ export function apply(ctx: Context, host: PetCoreHost = ctx.petCore, world: PetW
     await Promise.allSettled([...pending]);await archiveTail;
     disposePrompt();disposeFoundation();
     stopSourceInbox();stopReviewFiles();for(const agent of [...lifePolicies.keys()])releaseLifePolicy(agent);
-    if(host.native.resolveScope===scopeFor){host.native.resolveScope=undefined;host.native.attachGuest=undefined;}
+    if(host.native.resolveNativeScope===nativeScopeFor){host.native.resolveNativeScope=undefined;host.native.attachGuest=undefined;}
     agents.clear();turns.clear();inputs.clear();for(const id of continuations.keys())clearContinuation(id);
   })();
   ctx.effect(()=>stop);return stop;

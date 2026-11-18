@@ -9,6 +9,7 @@ import {MemoryClient} from '../../vendor/mnemosyne/src/memory-client.js';
 import {createCore} from '../../dist/src/core/index.js';
 
 const scope={companionId:'fixture-fish',scopeId:'fixture-owner',workspaceId:'fixture-bank'};
+const memoryScope={companionId:scope.companionId,scopeId:scope.scopeId,bankId:scope.workspaceId};
 function deferred(){let resolve;const promise=new Promise(done=>{resolve=done;});return {promise,resolve};}
 function memoryFixture(t) {
   const root=realpathSync(mkdtempSync(join(tmpdir(),'r2-memory-code-')));
@@ -30,7 +31,7 @@ function memoryFixture(t) {
     const result={baseUrl:this.baseUrl,method,path,body};state.requests.push(result);return result;
   });
   const connection=new MemoryConnection({dataDir:join(root,'.chatpet/data/memory'),python:join(root,'never-spawned-python')});
-  const start=(bank=scope)=>connection.start(bank,root,true);
+  const start=(bank=memoryScope)=>connection.start(bank,root,true);
   function die(){const host=state.hosts.at(-1);host.ready=false;host.child.exitCode=1;host.child=null;state.live.delete(host);}
   t.after(async()=>{state.startGate?.resolve();state.stopState='stopped';await connection.close();rmSync(root,{recursive:true,force:true});});
   return {root,connection,state,start,die};

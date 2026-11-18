@@ -95,14 +95,14 @@ export function createLifeSourceAdapter(ctx:Context,host:PetCoreHost,accepts:(se
       if(!saved)return {kind:'unclaimed'};
       if(!accepts(sessionId,message))return {kind:'rejected',reason:'Life requires its running home and a valid fact batch'};
       const pending=interrupted.get(sessionId);
-      const scope=pending||saved==='review'?host.native.scopeFor(sessionId):undefined;
+      const scope=pending||saved==='review'?host.native.nativeScopeFor(sessionId):undefined;
       const resumed=pending&&matchesNativeScope(scope,pending.scope)?pending:undefined;
       if(pending&&!resumed)interrupted.delete(sessionId);
       const review=saved==='review'||!!resumed;
       const source=message.source;
       const reviewDay=saved==='review'&&'reviewDay' in source&&typeof source.reviewDay==='string'?source.reviewDay:resumed?.day;
       const fileAccess=review?():LifeReviewFileAccess=>{
-        if(!scope||!matchesNativeScope(host.native.scopeFor(sessionId),scope))throw Error('自主回顾的文件范围暂时无法核对');
+        if(!scope||!matchesNativeScope(host.native.nativeScopeFor(sessionId),scope))throw Error('自主回顾的文件范围暂时无法核对');
         return {workspaceId:scope.workspaceId,root:scope.path,storageId:scope.storageId,sessionId,guest:scope.guest,
           reviewDay,writing:companionWritingScope(ctx,host)};
       }:undefined;

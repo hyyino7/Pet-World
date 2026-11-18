@@ -20,7 +20,7 @@ export function installMemoryBatch(ctx: Context, host: PetCoreHost): () => Promi
     if (!host.native.memoryFor(session.id) || event.type !== 'turn/end' || event.data.reason.kind !== 'completed') return;
     const native = ctx as unknown as { get(key: string): Parameters<PetCoreHost['workspace']['sessionStatus']>[1] };
     const bound = host.workspace.sessionStatus(session, native.get('workspaceRegistry'));
-    const scope=host.native.scopeFor(session.id);
+    const scope=host.native.nativeScopeFor(session.id);
     if(!scope || (!scope.guest && (bound?.state!=='ready' || !bound.target)))return;
     const old = store.get<Pending>('memory-batch', session.id);
     store.put('memory-batch', session.id, { sessionId: session.id, workspaceId: scope.workspaceId, path: scope.path,

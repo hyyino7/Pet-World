@@ -22,7 +22,7 @@ test('送达确认后另一个会话经真实 Memory 召回原事实',{timeout:3
   const f=await fixture(t,{memory:true,life:false});
   const memory=f.service('petMemory');assert.ok(memory);
   // 显式准备以便把回环端口等进程错误作为真实失败报告，不用聊天的降级掩盖。
-  await memory.prepare('home',f.host.native.scopeFor('home'));
+  await memory.prepare('home',f.host.native.nativeScopeFor('home'));
   await f.body.act('world','water','cross-chat','desktop');const [fact]=await f.body.pendingFacts('world');
   await f.end(await f.begin());await until(async()=>!(await f.body.pendingFacts('world')).length);
   assert.equal(memory.connection.lifecycle,'ready');

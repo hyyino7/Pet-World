@@ -32,7 +32,14 @@ export interface CapabilityRegistration extends CapabilityIdentity {
 export type TurnKind = 'foreground' | 'background';
 export const COMPANION_TOOL_SOURCES = Object.freeze(['owner', 'life', 'review', 'guest', 'tv'] as const);
 export type CompanionToolSource = typeof COMPANION_TOOL_SOURCES[number];
-export type NativeSourceKind = UserMessage['source']['kind'];
+// Native logs also store these model-facing projections as user/message events.
+export const NATIVE_HISTORY_CONTEXT_SOURCES = Object.freeze(['runtime-context', 'chatpet-recall', 'compact-checkpoint'] as const);
+export type NativeSourceKind =
+  | 'user'
+  | 'dsh-world-life'
+  | 'dsh-world-reply-nudge'
+  | 'chatpet-room-tv'
+  | typeof NATIVE_HISTORY_CONTEXT_SOURCES[number];
 
 export type AdmissionDecision<Accepted> =
   | { kind: 'unclaimed' }

@@ -8,7 +8,7 @@ export async function assertEmotion(f,reason) {
 }
 export async function prepareMemory(f,id='home') {
   // 预热会直接报告进程和回环失败，避免原生聊天的降级路径掩盖失败。
-  await f.service('petMemory').prepare(id,f.host.native.scopeFor(id));
+  await f.service('petMemory').prepare(id,f.host.native.nativeScopeFor(id));
 }
 export function assertObservation(f,sessionId,messageId,origin,actorId,attribution={channel:'dsh',sessionId}) {
   const store=f.host.workspace.runtime.store;

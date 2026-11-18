@@ -29,7 +29,7 @@ function fixture(t:TestContext) {
   runtime.files={status:()=>({state:'ready',target:{id:scope.workspaceId,path:scope.path}}),storageId:()=>scope.storageId,
     companionSettings:()=>({memoryRecallCount:8,memoryRecallBlockChars:600})} as unknown as NonNullable<CoreRuntime['files']>;
   const memory=new NativeMemory(runtime,{dataDir:join(workspace,'.chatpet/data/memory'),python:resolve('.venv/bin/python')});
-  const native=new CoreNative(runtime);native.memory=memory;native.resolveScope=()=>({...scope});
+  const native=new CoreNative(runtime);native.memory=memory;native.resolveNativeScope=()=>({...scope});
   native.sourceTable.register(createLifeSourceAdapter({} as Context,{native,workspace:runtime.files} as PetCoreHost,()=>true));
   const observations:Observation[]=[],validations:unknown[]=[],starts:unknown[]=[];
   memory.connection.start=async(...args)=>{starts.push(args);};

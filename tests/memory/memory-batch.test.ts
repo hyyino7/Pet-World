@@ -27,7 +27,7 @@ test('idle batching retains a committed native summary for retry without a secon
     if(name==='workspaceRegistry') return {get:()=>({path:repo,sessionIds:['session']})};
     if(name==='agentPresets') return {serviceFor:()=>engine};
   }, agents:{get:()=>agent}, on(_name:string,fn:typeof event) {event=fn;},effect(fn:()=>typeof dispose) {dispose=fn();},logger:()=>({warn(){}})};
-  host.native.resolveScope=()=>({workspaceId:'repo',path:repo,storageId:host.workspace.storageId(),guest:false});
+  host.native.resolveNativeScope=()=>({workspaceId:'repo',path:repo,storageId:host.workspace.storageId(),guest:false});
   const memory=new NativeMemory(host.workspace.runtime,{dataDir:join(repo,'.chatpet/data/memory'),python:'/unused/python'});
   memory.connection.start=async()=>{};
   memory.connection.validate=async()=>'eligible';

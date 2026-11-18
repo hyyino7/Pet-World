@@ -8,7 +8,7 @@ export declare function memoryDirectory(config: MemoryConfig, workspacePath: str
 export interface MemoryScope {
     companionId: string;
     scopeId: string;
-    workspaceId: string;
+    bankId: string;
 }
 export interface SourceDependency {
     id: string;
@@ -51,8 +51,8 @@ export declare class MemoryConnection {
     get lifecycle(): 'ready' | 'stopped' | 'unresolved';
     start(scope: MemoryScope, workspacePath: string, useConfiguredDirectory: boolean): Promise<void>;
     private open;
-    call<T>(operation: string, args: Record<string, unknown>, expectedWorkspaceId?: string): Promise<T>;
-    validate(dependencies: Dependencies, expectedWorkspaceId?: string): Promise<Decision>;
+    call<T>(operation: string, args: Record<string, unknown>, expectedBankId?: string): Promise<T>;
+    validate(dependencies: Dependencies, expectedBankId?: string): Promise<Decision>;
     close(): Promise<void>;
     private stop;
 }

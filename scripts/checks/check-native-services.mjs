@@ -114,7 +114,7 @@ try{
   await send(b,'What did the guest grow?');
   // Restart the real provider before another cross-session recall.
   await host.native.memory.connection.close();
-  await host.native.memory.prepare(b.agent.id,host.native.scopeFor(b.agent.id));
+  await host.native.memory.prepare(b.agent.id,host.native.nativeScopeFor(b.agent.id));
   program=async function*(options){assert.ok(all(options).includes('GUEST_GARDEN_STORY'),'Cross-session recall survives provider restart');yield* say('The guest grew a sunflower.');};
   await send(b,'What did the guest grow after the service restarted?');
   // Exercise the actual scoped native Memory tools with current-turn evidence.
@@ -154,7 +154,7 @@ try{
   const recall=host.native.memory.recall.bind(host.native.memory);host.native.memory.recall=async()=>{throw Error('Synthetic Memory outage');};
   program=async function*(options){assert.equal(activeRecall(),false);yield* say('Chat despite Memory outage.');};
   await send(b,'Continue despite the service outage.');host.native.memory.recall=recall;
-  await host.native.memory.prepare(b.agent.id,host.native.scopeFor(b.agent.id));
+  await host.native.memory.prepare(b.agent.id,host.native.nativeScopeFor(b.agent.id));
   const bank=await host.native.memory.connection.call('recall',{query:'PRIVATE_OFF_ORIGINAL',include_recent:true});
   assert.ok(!JSON.stringify(bank.records).includes('PRIVATE_OFF_ORIGINAL'),'Re-enabling Memory does not backfill the off-period original');
   const retained=b.agent.session.snapshotEvents();assert.deepEqual(retained.slice(0,beforeOff.length),beforeOff,'Toggle keeps every original native event');

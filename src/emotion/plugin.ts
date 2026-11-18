@@ -164,20 +164,21 @@ export function emotionFor(host: PetCoreHost): CompanionEmotion {
   return value;
 }
 type SessionView = Parameters<PetCoreHost['workspace']['sessionStatus']>[0];
+type EmotionBinding = { id: string; path: string; guest: boolean };
 export function installEmotion(ctx: Context, host: PetCoreHost): void {
   const emotion = emotionFor(host);
   const turns = new Map<string, Turn>();
-  function bound(session: SessionView) {
-    const shared = host.native.scopeFor(session.id);
+  function bound(session: SessionView): EmotionBinding | undefined {
+    const shared = host.native.nativeScopeFor(session.id);
     if (shared) return {id: shared.workspaceId, path: shared.path, guest: shared.guest};
     const status = ctx.petWorld.sessionStatus(session);
-    return status?.state === 'ready' && status.target ? {...status.target, guest: false} : undefined;
+    return status?.state === 'ready' && status.target ? {id: status.target.id, path: status.target.path, guest: false} : undefined;
   }
   const warn = (error: unknown) => ctx.logger('chatpet-emotion').warn('Recent expression unavailable', error instanceof Error ? error.message : 'unknown');
   // Keep the existing anonymous callback's vocabulary scope stable for R8.
   const playback = host.native.registerPlaybackEvidence(((sessionId, playbackId) => {
     const turn = turns.get(sessionId);
-    const scope = host.native.scopeFor(sessionId);
+    const scope = host.native.nativeScopeFor(sessionId);
     if (!turn || !scope || scope.workspaceId !== turn.workspaceId || scope.path !== turn.path) return;
     const ledger = emotion.ledger(turn.workspaceId);
     const action = ledger?.read().actions.find(item => item.id === playbackId);
@@ -289,7 +290,7 @@ export function installEmotion(ctx: Context, host: PetCoreHost): void {
     }, {global: true});
     scopeCtx.on('llm/stream', async function* (options, next) {
       const turn = options.sessionId && turns.get(options.sessionId);
-      if (!turn || options.purpose || !host.native.scopeFor(String(options.sessionId))) {
+      if (!turn || options.purpose || !host.native.nativeScopeFor(String(options.sessionId))) {
         yield* next(); return;
       }
       yield* expressionStream(next(), intent => { if (!options.signal?.aborted) turn.intent = intent; });

@@ -2,6 +2,7 @@ import type {Agent} from '@deepseek-ai/dsh-agent';
 import type {Message} from '@deepseek-ai/dsh-llm';
 import type {SessionEvent,UserMessage} from '@deepseek-ai/dsh-session';
 import type {CompanionToolDeclaration,RegistrationLease,SourceClassificationResult} from '../../contracts/tables.js';
+import {NATIVE_HISTORY_CONTEXT_SOURCES} from '../../contracts/tables.js';
 import type {CompanionToolTable} from '../tables/tools.js';
 
 export const isHistoryObject=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -21,8 +22,7 @@ export function historicalStateOverview(tools:CompanionToolTable,name:string,arg
 /** Only completed Life turns, excluding owner takeovers, reviews and the latest
  * turn. Raw tool calls identify reads; mutations, errors and other tools stay. */
 type ClassifySource=(message:UserMessage)=>SourceClassificationResult;
-// Native logs store these model-facing projections as user/message events too.
-const historyContextSources = new Set(['runtime-context', 'chatpet-recall', 'compact-checkpoint']);
+const historyContextSources = new Set<string>(NATIVE_HISTORY_CONTEXT_SOURCES);
 
 export function lifeHistoryCandidates(
   events:readonly SessionEvent[],nodes:readonly number[],classify:ClassifySource,warn:(message:string)=>void=console.warn,

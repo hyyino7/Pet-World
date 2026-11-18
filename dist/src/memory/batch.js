@@ -16,7 +16,7 @@ export function installMemoryBatch(ctx, host) {
             return;
         const native = ctx;
         const bound = host.workspace.sessionStatus(session, native.get('workspaceRegistry'));
-        const scope = host.native.scopeFor(session.id);
+        const scope = host.native.nativeScopeFor(session.id);
         if (!scope || (!scope.guest && (bound?.state !== 'ready' || !bound.target)))
             return;
         const old = store.get('memory-batch', session.id);

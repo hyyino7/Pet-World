@@ -27,7 +27,8 @@ export interface CapabilityRegistration extends CapabilityIdentity {
 export type TurnKind = 'foreground' | 'background';
 export declare const COMPANION_TOOL_SOURCES: readonly ["owner", "life", "review", "guest", "tv"];
 export type CompanionToolSource = typeof COMPANION_TOOL_SOURCES[number];
-export type NativeSourceKind = UserMessage['source']['kind'];
+export declare const NATIVE_HISTORY_CONTEXT_SOURCES: readonly ["runtime-context", "chatpet-recall", "compact-checkpoint"];
+export type NativeSourceKind = 'user' | 'dsh-world-life' | 'dsh-world-reply-nudge' | 'chatpet-room-tv' | typeof NATIVE_HISTORY_CONTEXT_SOURCES[number];
 export type AdmissionDecision<Accepted> = {
     kind: 'unclaimed';
 } | {

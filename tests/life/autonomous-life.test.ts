@@ -203,7 +203,7 @@ test('admitted system fact batches preserve the owner actor without acquiring ow
   const values=new Map<string,unknown>(),store={get:(table:string,key:string)=>values.get(table+key),put:(table:string,key:string,value:unknown)=>values.set(table+key,value)};
   const runtime={store,config:{ownerActorId:'owner-one',companionId:'fish'}} as unknown as CoreRuntime;
   const native=new CoreNative(runtime),scope={workspaceId:'workspace',path:f.root,storageId:'world',guest:false};
-  native.resolveScope=()=>scope;
+  native.resolveNativeScope=()=>scope;
   native.sourceTable.register(createLifeSourceAdapter({} as Context,{native,workspace:{runtime}} as PetCoreHost,()=>true));
   native.observeInputs('home',1,[{id:'fact-message',source:{kind:'dsh-world-life',facts:f.room.pendingFacts()},content:[{type:'text',text:'Owner supplied water'}]} as any]);
   const sources=[...values.entries()].filter(([key])=>key.startsWith('source')).map(([,value])=>value as any);
@@ -217,7 +217,7 @@ test('facts prepared before a new native turn remain sources of its reply and re
   const values=new Map<string,unknown>(),store={get:(table:string,key:string)=>values.get(table+key),put:(table:string,key:string,value:unknown)=>values.set(table+key,value)};
   const runtime={store,config:{ownerActorId:'owner-one',companionId:'fish'}} as unknown as CoreRuntime;
   const native=new CoreNative(runtime),scope={workspaceId:'workspace',path:f.root,storageId:'world',guest:false};
-  native.resolveScope=()=>scope;native.memory={prepare:async()=>{}} as any;
+  native.resolveNativeScope=()=>scope;native.memory={prepare:async()=>{}} as any;
   native.observeInputs('owner-chat',1,[]);
   const ids=native.observeFacts('owner-chat',f.room.pendingFacts());
   const work=store.get('memory-source-work',ids[0]) as any;
@@ -232,7 +232,7 @@ test('prepared private facts cannot be associated with a later guest scope',t=>{
   const f=fixture(t);f.room.act({action:'water'},'主人',f.now,{requestId:'owner-only',actor:owner});
   const values=new Map<string,unknown>(),store={get:(table:string,key:string)=>values.get(table+key),put:(table:string,key:string,value:unknown)=>values.set(table+key,value)};
   const native=new CoreNative({store,config:{ownerActorId:'owner',companionId:'fish'}} as unknown as CoreRuntime);
-  let guest=false;native.resolveScope=()=>({workspaceId:'workspace',path:f.root,storageId:'world',guest});
+  let guest=false;native.resolveNativeScope=()=>({workspaceId:'workspace',path:f.root,storageId:'world',guest});
   const ids=native.observeFacts('scope-switch',f.room.pendingFacts());guest=true;
   assert.throws(()=>native.observeInputs('scope-switch',2,[]),/bound workspace/);
   assert.ok(!(store.get('native-current-inputs','scope-switch') as string[]).includes(ids[0]));

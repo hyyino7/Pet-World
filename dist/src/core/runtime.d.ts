@@ -8,6 +8,7 @@ import { CapabilityTable } from './tables/capabilities.js';
 export interface CoreConfig {
     dataDir: string;
     companionId: string;
+    /** Scope of the companion identity. */
     scopeId: string;
     ownerActorId: string;
     displayName: string;

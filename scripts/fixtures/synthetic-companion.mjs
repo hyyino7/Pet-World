@@ -93,7 +93,7 @@ export async function generateSynthetic(out, variant = 'current') {
     const recent = new RecentLedger(target, () => ({recentActionCount:4,recentActionMinutes:10,recentMoodCount:4,recentMoodHours:1}));
     recent.playback({id:'fixture-play',name:'fixture play',kind:'pet',status:'playing'});
     assert.equal(recent.read().actions.length, 1);
-    host.native.resolveScope = () => ({workspaceId:target.id,path:repo,storageId:host.workspace.storageId(),guest:false});
+    host.native.resolveNativeScope = () => ({workspaceId:target.id,path:repo,storageId:host.workspace.storageId(),guest:false});
     const sources = host.native.observeInputs('fixture-session', 1, [{id:'fixture-message',source:{kind:'user'},content:[{type:'text',text:content.memory}]}]);
     await host.native.memory.prepare('fixture-session');
     const port = host.native.memory.connection;

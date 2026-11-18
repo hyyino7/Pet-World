@@ -50,7 +50,7 @@ export class NativeMemory {
     if (!owner) this.runtime.store.setMeta('memory-configured-directory-owner', { id: binding.storageId, path: workspace.path });
     // The explicit directory can be a legacy Bank below the original workspace.
     // Binding an ancestor of that workspace must never select the descendant's Bank.
-    return this.connection.start({ companionId: this.runtime.config.companionId, scopeId: this.runtime.config.scopeId, workspaceId: binding.storageId },
+    return this.connection.start({ companionId: this.runtime.config.companionId, scopeId: this.runtime.config.scopeId, bankId: binding.storageId },
       workspace.path, !owner || owner.id === binding.storageId);
   }
   private async ownerBank(workspaceId: string) {
@@ -133,11 +133,11 @@ export class NativeMemory {
     return context;
   }
   async capture(sourceIds: readonly string[], binding: NativeMemoryBinding): Promise<void> {
-    this.assertBinding(binding);const workspaceId=binding.storageId;
+    this.assertBinding(binding);const bankId=binding.storageId;
     for (const sourceId of sourceIds) {
       const provider = this.runtime.store.get<{ revision: string }>('memory-provider-source', sourceId);
       if (provider) {
-        await this.connection.validate({ sources: [{ id: sourceId, revision: provider.revision }], memories: [] },workspaceId);
+        await this.connection.validate({ sources: [{ id: sourceId, revision: provider.revision }], memories: [] },bankId);
         this.assertBinding(binding);
         continue;
       }
@@ -145,12 +145,12 @@ export class NativeMemory {
         // A durable acknowledgement already joins this exact immutable source.
         // Revalidate it through the provider; replaying observe here would
         // re-run consolidation and mutate a just-recalled episode's version.
-        await this.connection.validate({ sources: [{ id: sourceId, revision: '1' }], memories: [] },workspaceId);
+        await this.connection.validate({ sources: [{ id: sourceId, revision: '1' }], memories: [] },bankId);
         this.assertBinding(binding);
         continue;
       }
       const work = this.runtime.store.get<{ workspaceId: string; sourceKind?:string; attribution?:Record<string,unknown> }>('memory-source-work', sourceId);
-      if (!work || work.workspaceId !== workspaceId) {
+      if (!work || work.workspaceId !== bankId) {
         // Enabling Memory must not silently backfill pre-install personal logs.
         // Original native records remain in DSH; records without observed-source work are not silently backfilled.
         continue;
@@ -165,7 +165,7 @@ export class NativeMemory {
         ...(source.eventTime?.from ? {occurred_at:source.eventTime.from} : {}),
         conversation_context: work.sourceKind==='user_statement' || source.origin === 'model_interpretation' || source.origin === 'owner_statement',
         roots: source.rootSourceIds.map(id => ({ id, revision: '1' })),
-      },workspaceId);
+      },bankId);
       this.assertBinding(binding);
       this.runtime.store.put('memory-ack', sourceId, { sourceId, observationId: ack.observationId });
       const pending = this.runtime.store.get<Record<string, unknown>>('memory-source-work', sourceId);

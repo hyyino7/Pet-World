@@ -57,7 +57,7 @@ async function fixture(t:TestContext) {
     const events:any[]=[],session={id,header:{cwd:repo,agentPreset:preset},surface:{nodes:[] as number[]},eventAt:(seq:number)=>events[seq]};
     const result={id,session,ctx,events} as unknown as Agent & {events:any[]};agents.set(id,result);return result;
   }
-  host.native.resolveScope=(id:string)=>workspace.sessionIds.includes(id)?{workspaceId:'world',path:repo,storageId:host.workspace.storageId(),guest:id==='guest'}:undefined;
+  host.native.resolveNativeScope=(id:string)=>workspace.sessionIds.includes(id)?{workspaceId:'world',path:repo,storageId:host.workspace.storageId(),guest:id==='guest'}:undefined;
   const prompt=async(agent:Agent):Promise<string>=>(ctx as any).systemPrompt.assemble({agent});
   async function complete(agent:ReturnType<typeof fixtureAgent>,turn:number,outcome='completed',effective=true,beforeEnd?:()=>void) {
     const text=await prompt(agent);

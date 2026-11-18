@@ -20,7 +20,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
     const historyPrepared = new Map();
     let historyClosing = false;
     const recall = new WorldRecall();
-    const scopeFor = (id) => {
+    const nativeScopeFor = (id) => {
         const status = host.workspace.status();
         if (status.state !== 'ready' || !status.target)
             return;
@@ -30,9 +30,9 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
             return;
         return { workspaceId: status.target.id, path: status.target.path, storageId: host.workspace.storageId(), guest };
     };
-    host.native.resolveScope = scopeFor;
-    const sameScope = (id, expected) => matchesNativeScope(scopeFor(id), expected);
-    const currentTurn = (id, saved) => sameScope(id, saved.scope)
+    host.native.resolveNativeScope = nativeScopeFor;
+    const sameNativeScope = (id, expected) => matchesNativeScope(nativeScopeFor(id), expected);
+    const currentTurn = (id, saved) => sameNativeScope(id, saved.scope)
         && (!saved.background || !saved.lifePolicy || saved.lifePolicy.lease.isCurrent())
         && (!saved.persistentToolGuard || saved.persistentToolGuard.lease.isCurrent());
     const clearContinuation = (id) => {
@@ -92,7 +92,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
     // DSH resolves schemas before pre-step. Install the native mask while its
     // trusted inbox input is queued, and recheck at step admission below.
     const stopSourceInbox = ctx.on('agent/inbox/inserted', ({ agent, message }) => {
-        if (!scopeFor(agent.id))
+        if (!nativeScopeFor(agent.id))
             return;
         const selection = selectSource(agent, message);
         if (!selection)
@@ -121,10 +121,10 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         if (historyClosing || !scope || agent.status !== 'idle')
             return;
         historyReady.delete(agent);
-        if (!sameScope(agent.id, scope) || scope.guest)
+        if (!sameNativeScope(agent.id, scope) || scope.guest)
             return;
-        void watch(prepareLifeHistory(agent, () => !historyClosing && sameScope(agent.id, scope), message => host.native.sourceTable.classify(message), host.native.toolTable).then(changes => {
-            if (changes.length && !historyClosing && sameScope(agent.id, scope))
+        void watch(prepareLifeHistory(agent, () => !historyClosing && sameNativeScope(agent.id, scope), message => host.native.sourceTable.classify(message), host.native.toolTable).then(changes => {
+            if (changes.length && !historyClosing && sameNativeScope(agent.id, scope))
                 historyPrepared.set(agent, { scope, changes });
         }).catch(error => {
             ctx.logger('chatpet-context').warn('History maintenance pending; original events retained', error);
@@ -168,7 +168,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
     });
     const profiles = new WeakMap();
     const disposePrompt = registerWorldPrompt(ctx, 'chatpet.profile', 10, agent => {
-        const scope = scopeFor(agent.id);
+        const scope = nativeScopeFor(agent.id);
         if (!scope)
             return '';
         const events = agent.session.snapshotEvents();
@@ -184,14 +184,14 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
     const disposeFoundation = installCompanionFoundation(ctx, host, world);
     const scanned = new WeakMap();
     const onRequest = ({ agent, turn, step }, next) => {
-        const bound = !!scopeFor(agent.id);
+        const bound = !!nativeScopeFor(agent.id);
         if (scanned.get(agent) !== bound) {
             retireLegacyPrompt(agent.session, turn, step, bound);
             scanned.set(agent, bound);
         }
         const prepared = historyPrepared.get(agent);
         historyPrepared.delete(agent);
-        if (prepared && sameScope(agent.id, prepared.scope)) {
+        if (prepared && sameNativeScope(agent.id, prepared.scope)) {
             const meter = ctx.get('tokenMeter');
             if (meter)
                 applyLifeHistory(agent, prepared.changes, meter);
@@ -205,7 +205,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
     for (const tool of host.native.tools()) {
         tools.register(tool, {
             when: context => {
-                const scope = context.agent && scopeFor(context.agent.id);
+                const scope = context.agent && nativeScopeFor(context.agent.id);
                 return Boolean(scope && !scope.guest && (!tool.name.startsWith('pet_memory_') || host.native.memoryFor(context.agent.id)));
             },
         });
@@ -217,7 +217,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         if (!exec.agent || !turns.has(exec.agent.id))
             return;
         const saved = turns.get(exec.agent.id);
-        if (!sameScope(exec.agent.id, saved.scope))
+        if (!sameNativeScope(exec.agent.id, saved.scope))
             return '会话已离开原绑定工作区';
         for (const policy of [saved.persistentToolGuard, saved.background && saved.lifePolicy]) {
             if (!policy)
@@ -237,7 +237,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
             }
     });
     const onStep = async (payload, next) => {
-        const scope = scopeFor(payload.agent.id);
+        const scope = nativeScopeFor(payload.agent.id);
         if (!scope) {
             if (turns.has(payload.agent.id))
                 return { kind: 'reject' };
@@ -275,7 +275,7 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
             }
             host.native.observeInputs(payload.agent.id, payload.turn, accepted.map(({ message }) => message), scope);
         }
-        if (!sameScope(payload.agent.id, saved.scope))
+        if (!sameNativeScope(payload.agent.id, saved.scope))
             return { kind: 'reject' };
         if (!first) {
             const admitted = selectStepSources(payload.agent, payload.messages);
@@ -411,8 +411,8 @@ export function apply(ctx, host = ctx.petCore, world = ctx.petWorld) {
         stopReviewFiles();
         for (const agent of [...lifePolicies.keys()])
             releaseLifePolicy(agent);
-        if (host.native.resolveScope === scopeFor) {
-            host.native.resolveScope = undefined;
+        if (host.native.resolveNativeScope === nativeScopeFor) {
+            host.native.resolveNativeScope = undefined;
             host.native.attachGuest = undefined;
         }
         agents.clear();

@@ -1,3 +1,4 @@
+import { NATIVE_HISTORY_CONTEXT_SOURCES } from '../../contracts/tables.js';
 export const isHistoryObject = (value) => !!value && typeof value === 'object' && !Array.isArray(value);
 /** Reuse module-owned structured projections, never middle-slice JSON or prose.
  * Explicit full/detail/receipt reads and already-small results are immutable. */
@@ -10,8 +11,7 @@ function projectHistory(declaration, args, value) {
 export function historicalStateOverview(tools, name, args, value) {
     return projectHistory(tools.get(name), args, value);
 }
-// Native logs store these model-facing projections as user/message events too.
-const historyContextSources = new Set(['runtime-context', 'chatpet-recall', 'compact-checkpoint']);
+const historyContextSources = new Set(NATIVE_HISTORY_CONTEXT_SOURCES);
 export function lifeHistoryCandidates(events, nodes, classify, warn = console.warn) {
     let turn;
     const states = new Map();
