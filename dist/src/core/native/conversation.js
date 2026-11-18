@@ -5,6 +5,32 @@ export function matchesNativeScope(current, expected) {
     return !!current && current.workspaceId === expected.workspaceId && current.path === expected.path
         && current.storageId === expected.storageId && current.guest === expected.guest;
 }
+const ownerPolicy = {
+    row: 1, branch: 'owner', trustedActor: '主人，无渠道身份的原生输入',
+    selectionKey: '绑定工作区内的就绪会话', historyScope: '原生会话自己的历史', preset: '主人在 DSH 选择',
+    lifecycle: 'DSH 取消与归档，首步恢复图片和会话副本', bindingCheck: '工作区、路径、存储与 guest 绑定',
+    tools: { description: 'DSH 原生权限及已启用的伙伴工具', behaviorIds: ['M2A-09'] },
+    memoryObservation: { description: '观察主人输入及完成的回复', behaviorIds: ['B10'] },
+    emotionUpdate: {
+        footer: { description: '回复 footer 更新共享情绪', behaviorIds: ['M2A-10'] },
+        tool: { description: '允许情绪工具', behaviorIds: ['M2A-10'] },
+    },
+};
+const homePolicy = {
+    row: 2, branch: 'home', trustedActor: '随输入来源',
+    selectionKey: '每个 Core 的共享 home', historyScope: '共享 home', preset: 'Life、DSH 组合预设或 standard',
+    lifecycle: '打开前恢复会话副本，归档后由上游选择会话', bindingCheck: '打开时核对工作区与路径',
+    tools: { description: '随输入来源', behaviorIds: ['M2A-19', 'M2A-22'] },
+    memoryObservation: { description: '随输入来源', behaviorIds: ['M2A-22'] },
+    emotionUpdate: {
+        footer: { description: '随输入来源', behaviorIds: ['M2A-19'] },
+        tool: { description: '随输入来源', behaviorIds: ['M2A-19'] },
+    },
+};
+function classifyOwner(message) {
+    if (message.source.kind === 'user' && !('identity' in message.source))
+        return 'owner';
+}
 /** Scoped services for the existing DSH Agent; only autonomous inputs have extra allowances. */
 export class CoreNative {
     runtime;
@@ -25,7 +51,9 @@ export class CoreNative {
     }
     acceptsInput(sessionId, message) {
         if (message.source.kind === 'user')
-            return !('identity' in message.source) || this.channelBoundary?.admit(sessionId, message) === true;
+            return 'identity' in message.source
+                ? this.channelBoundary?.admit(sessionId, message) === true
+                : this.sourceTable.admit({ sessionId, message }).kind === 'accepted';
         if (message.source.kind === 'dsh-world-life') {
             return this.sourceTable.admit({ sessionId, message }).kind === 'accepted';
         }
@@ -156,6 +184,28 @@ export class CoreNative {
     closing = false;
     constructor(runtime) {
         this.runtime = runtime;
+        this.sourceTable.register({
+            id: 'core-owner', sources: ['user'], order: 0, classify: classifyOwner, policyRows: [homePolicy],
+            branches: {
+                owner: {
+                    turnKind: 'foreground', toolSource: 'owner', toolPolicy: null,
+                    memoryObservation: {
+                        input: ({ sessionId, isGuest }) => {
+                            const guest = isGuest();
+                            return { origin: guest ? 'external_content' : 'owner_statement',
+                                actorId: guest ? 'external' : runtime.config.ownerActorId,
+                                sourceKind: 'user_statement', attribution: { channel: 'dsh', sessionId } };
+                        },
+                        reply: ({ sessionId, isGuest }) => ({ channel: isGuest() ? 'external' : 'dsh', sessionId }),
+                    },
+                    emotionUpdate: { footer: true, tool: true },
+                    historyProjection: { participates: false, protectsTurn: true }, policyRow: ownerPolicy,
+                },
+            },
+            admit: ({ sessionId, message }) => classifyOwner(message)
+                ? { kind: 'accepted', branch: 'owner', context: { policyKey: 'owner', sessionId, isGuest: () => this.scopeFor(sessionId)?.guest === true } }
+                : { kind: 'unclaimed' },
+        });
     }
     manages(sessionId) { const scope = this.scopeFor(sessionId); return this.active.has(sessionId) || Boolean(scope && !scope.guest); }
     /** Autonomous planning submits durable intent; it must not bypass it with ad-hoc body goals. */

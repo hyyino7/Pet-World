@@ -8,7 +8,7 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 import type { NativeMemory } from './memory.js';
 import { canonical, check, digest, now, reject } from '../storage.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
-import type { SourceAdmission } from '../../contracts/tables.js';
+import type { SessionPolicyRow, SourceAdmission } from '../../contracts/tables.js';
 import { SourceAdapterTable } from '../tables/sources.js';
 
 export interface NativeScope { workspaceId: string; path: string; storageId: string; guest: boolean }
@@ -24,6 +24,36 @@ export interface NativeSourceContext {
 }
 export type NativeSourceSelection = Extract<SourceAdmission<NativeSourceContext>, {kind: 'accepted'}>;
 interface NativeTurn { turn: number; scope: NativeScope; sourceIds: string[] }
+
+const ownerPolicy: SessionPolicyRow = {
+  row: 1, branch: 'owner', trustedActor: '主人，无渠道身份的原生输入',
+  selectionKey: '绑定工作区内的就绪会话', historyScope: '原生会话自己的历史', preset: '主人在 DSH 选择',
+  lifecycle: 'DSH 取消与归档，首步恢复图片和会话副本', bindingCheck: '工作区、路径、存储与 guest 绑定',
+  tools: {description: 'DSH 原生权限及已启用的伙伴工具', behaviorIds: ['M2A-09']},
+  memoryObservation: {description: '观察主人输入及完成的回复', behaviorIds: ['B10']},
+  emotionUpdate: {
+    footer: {description: '回复 footer 更新共享情绪', behaviorIds: ['M2A-10']},
+    tool: {description: '允许情绪工具', behaviorIds: ['M2A-10']},
+  },
+};
+
+const homePolicy: SessionPolicyRow = {
+  row: 2, branch: 'home', trustedActor: '随输入来源',
+  selectionKey: '每个 Core 的共享 home', historyScope: '共享 home', preset: 'Life、DSH 组合预设或 standard',
+  lifecycle: '打开前恢复会话副本，归档后由上游选择会话', bindingCheck: '打开时核对工作区与路径',
+  tools: {description: '随输入来源', behaviorIds: ['M2A-19', 'M2A-22']},
+  memoryObservation: {description: '随输入来源', behaviorIds: ['M2A-22']},
+  emotionUpdate: {
+    footer: {description: '随输入来源', behaviorIds: ['M2A-19']},
+    tool: {description: '随输入来源', behaviorIds: ['M2A-19']},
+  },
+};
+
+interface OwnerSourceContext extends NativeSourceContext { sessionId: string; isGuest(): boolean }
+
+function classifyOwner(message: UserMessage): 'owner' | undefined {
+  if (message.source.kind === 'user' && !('identity' in message.source)) return 'owner';
+}
 
 interface Work {
   sessionId:string;turn:number;scope:NativeScope;steps:number;toolCalls:number;
@@ -47,7 +77,9 @@ export class CoreNative {
     return scope!;
   }
   acceptsInput(sessionId: string, message: UserMessage): boolean {
-    if (message.source.kind === 'user') return !('identity' in message.source) || this.channelBoundary?.admit(sessionId, message) === true;
+    if (message.source.kind === 'user') return 'identity' in message.source
+      ? this.channelBoundary?.admit(sessionId, message) === true
+      : this.sourceTable.admit({sessionId, message}).kind === 'accepted';
     if (message.source.kind === 'dsh-world-life') {
       return this.sourceTable.admit({sessionId, message}).kind === 'accepted';
     }
@@ -163,7 +195,30 @@ export class CoreNative {
   playbackEvidence?: (sessionId: string, playbackId: string) => { text: string; occurredAt: number; associated(memoryId: string): void } | undefined;
   private readonly active = new Map<string, Work>();
   private closing = false;
-  constructor(readonly runtime:CoreRuntime) {}
+  constructor(readonly runtime:CoreRuntime) {
+    this.sourceTable.register({
+      id: 'core-owner', sources: ['user'], order: 0, classify: classifyOwner, policyRows: [homePolicy],
+      branches: {
+        owner: {
+          turnKind: 'foreground', toolSource: 'owner', toolPolicy: null,
+          memoryObservation: {
+            input: ({sessionId, isGuest}: OwnerSourceContext) => {
+              const guest = isGuest();
+              return {origin: guest ? 'external_content' : 'owner_statement',
+                actorId: guest ? 'external' : runtime.config.ownerActorId,
+                sourceKind: 'user_statement', attribution: {channel: 'dsh', sessionId}};
+            },
+            reply: ({sessionId, isGuest}: OwnerSourceContext) => ({channel: isGuest() ? 'external' : 'dsh', sessionId}),
+          },
+          emotionUpdate: {footer: true, tool: true},
+          historyProjection: {participates: false, protectsTurn: true}, policyRow: ownerPolicy,
+        },
+      },
+      admit: ({sessionId, message}) => classifyOwner(message)
+        ? {kind: 'accepted', branch: 'owner', context: {policyKey: 'owner', sessionId, isGuest: () => this.scopeFor(sessionId)?.guest === true} as OwnerSourceContext}
+        : {kind: 'unclaimed'},
+    });
+  }
   manages(sessionId: string): boolean { const scope=this.scopeFor(sessionId); return this.active.has(sessionId) || Boolean(scope && !scope.guest); }
   /** Autonomous planning submits durable intent; it must not bypass it with ad-hoc body goals. */
   isAutonomous(sessionId:string):boolean { return this.active.has(sessionId); }
