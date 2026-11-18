@@ -513,6 +513,14 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 
 5a 碰到第一层的原因：`contracts/tables.ts` 里的 `source.kind` 声明类型（G 批）和 `COMPANION_TOOL_SOURCES` 都是封闭词表，新增一类来源两处都要加一项。Life 里的两个文件分别是适配器声明和入口登记。Core 没有改动，`check:arch` 新增 0。5b 按拍板点 1 不建分支，沿用读码下限（至少 5 个文件），本批未改变它的结构。
 
+### 拍板点 12 · 可扩展词表
+
+- `src/contracts/tables.ts` 用 `NativeSourceKindMap` 和 `CompanionToolSourceMap` 支持模块声明合并。来源适配表沿用原登记口，`OWNER_LIFE_TOOL_SOURCES` 继续从内置值派生。
+- `src/core/tables/tools.ts` 用 `registerSource` 单独登记工具来源。Life 现有入口先登记工具，再登记来源适配器，独立登记可沿用此顺序和各自的撤销入口。扩展授权绑定登记代次，撤销立即生效。
+- `tests/core/tables-extensible-vocabulary.test.ts` 验证内置来源、扩展认领、拼错和未登记拒绝、撤销及重载；`dist/src/` 已随构建更新。
+- 构建通过，指定快测 227 项通过，行为清单 52 条及索引自测 11 项通过，失败均为 0。架构规则及 R8 新增均为 0。完整门禁由验收者运行。
+- 5a 预计在第二层 `src/life/tool-policy.ts` 一处完成两份类型扩展、工具来源登记和共享 home 的提醒分支，另加行为测试。实际文件数以独立复测为准。
+
 ## 审查结论
 
 ### A 批第一轮（Claude 核实 Codex 审查，返工）
