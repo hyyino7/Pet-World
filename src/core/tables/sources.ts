@@ -1,6 +1,6 @@
 import type {
   AdmittedSourceBranch, RegistrationLease, SessionPolicyRow, SourceAdapter, SourceAdmission,
-  SourceBranch, SourceClassification, SourceInput, TableRegistration,
+  SourceBranch, SourceClassificationResult, SourceInput, TableRegistration,
 } from '../../contracts/tables.js';
 import { RegistrationTable } from './registry.js';
 
@@ -38,16 +38,18 @@ export class SourceAdapterTable<Selected = unknown> {
     });
   }
 
-  classify(message: SourceInput['message']): SourceClassification | undefined {
+  classify(message: SourceInput['message']): SourceClassificationResult {
     for (const { value: adapter, lease } of this.table.entries()) {
       if (!lease.isCurrent() || !adapter.sources.includes(message.source.kind)) continue;
-      const branch = adapter.classify?.(message);
-      if (branch === undefined || !lease.isCurrent()) continue;
-      if (!Object.hasOwn(adapter.branches, branch)) {
-        throw new Error(`Unknown branch from source adapter ${adapter.id}: ${branch}`);
+      try {
+        const branch = adapter.classify?.(message);
+        if (branch === undefined || !lease.isCurrent()) continue;
+        if (!Object.hasOwn(adapter.branches, branch)) return { kind: 'failed', adapterId: adapter.id };
+        const { historyProjection } = adapter.branches[branch];
+        return { branch, historyProjection: historyProjection && { ...historyProjection }, lease };
+      } catch {
+        return { kind: 'failed', adapterId: adapter.id };
       }
-      const { historyProjection } = adapter.branches[branch];
-      return { branch, historyProjection: historyProjection && { ...historyProjection }, lease };
     }
   }
 

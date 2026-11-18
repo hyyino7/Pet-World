@@ -32,14 +32,18 @@ export class SourceAdapterTable {
         for (const { value: adapter, lease } of this.table.entries()) {
             if (!lease.isCurrent() || !adapter.sources.includes(message.source.kind))
                 continue;
-            const branch = adapter.classify?.(message);
-            if (branch === undefined || !lease.isCurrent())
-                continue;
-            if (!Object.hasOwn(adapter.branches, branch)) {
-                throw new Error(`Unknown branch from source adapter ${adapter.id}: ${branch}`);
+            try {
+                const branch = adapter.classify?.(message);
+                if (branch === undefined || !lease.isCurrent())
+                    continue;
+                if (!Object.hasOwn(adapter.branches, branch))
+                    return { kind: 'failed', adapterId: adapter.id };
+                const { historyProjection } = adapter.branches[branch];
+                return { branch, historyProjection: historyProjection && { ...historyProjection }, lease };
             }
-            const { historyProjection } = adapter.branches[branch];
-            return { branch, historyProjection: historyProjection && { ...historyProjection }, lease };
+            catch {
+                return { kind: 'failed', adapterId: adapter.id };
+            }
         }
     }
     policyRows() {

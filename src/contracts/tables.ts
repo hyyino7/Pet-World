@@ -110,6 +110,12 @@ export interface SourceClassification {
   readonly lease: RegistrationLease;
 }
 
+export type SourceClassificationResult = SourceClassification | {
+  readonly kind: 'failed';
+  readonly adapterId: string;
+  readonly historyProjection?: never;
+} | undefined;
+
 /** Callbacks are bound to this admission's context and registration generation. */
 export interface AdmittedSourceBranch extends Omit<SourceBranch<unknown>, 'toolPolicy' | 'fileAccess' | 'memoryObservation'> {
   readonly toolPolicy: {

@@ -20,7 +20,7 @@ export function historicalStateOverview(name, args, value) {
     if (name === 'life_plan_read' && typeof value.revision === 'number' && (value.plan === null || object(value.plan)))
         return planOverview(value);
 }
-export function lifeHistoryCandidates(events, nodes, classify) {
+export function lifeHistoryCandidates(events, nodes, classify, warn = console.warn) {
     let turn;
     const states = new Map();
     const calls = new Map();
@@ -40,10 +40,16 @@ export function lifeHistoryCandidates(events, nodes, classify) {
                 state.protected = true;
             else {
                 const classification = classify(event.data);
-                if (classification?.historyProjection?.participates)
-                    state.lease = classification.lease;
-                if (classification?.historyProjection?.protectsTurn)
+                if (classification && 'kind' in classification) {
                     state.protected = true;
+                    warn(`History classification failed for ${source.kind} (adapter ${classification.adapterId}); retaining turn ${turn}`);
+                }
+                else {
+                    if (classification?.historyProjection?.participates)
+                        state.lease = classification.lease;
+                    if (classification?.historyProjection?.protectsTurn)
+                        state.protected = true;
+                }
             }
         }
         if (event.type === 'turn/end') {
@@ -70,7 +76,8 @@ export async function prepareLifeHistory(agent, isCurrent, classify) {
         return [];
     return agent.runMaintenance(async (signal) => {
         const changes = [];
-        for (const { event, call, lease } of lifeHistoryCandidates(agent.session.snapshotEvents(), agent.session.surface.nodes, classify)) {
+        const candidates = lifeHistoryCandidates(agent.session.snapshotEvents(), agent.session.surface.nodes, classify, message => agent.ctx.logger('chatpet-context').warn(message));
+        for (const { event, call, lease } of candidates) {
             signal.throwIfAborted();
             if (!isCurrent())
                 return [];

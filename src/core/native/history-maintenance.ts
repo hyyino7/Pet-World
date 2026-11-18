@@ -1,7 +1,7 @@
 import type {Agent} from '@deepseek-ai/dsh-agent';
 import type {Message} from '@deepseek-ai/dsh-llm';
 import type {SessionEvent,UserMessage} from '@deepseek-ai/dsh-session';
-import type {RegistrationLease,SourceClassification} from '../../contracts/tables.js';
+import type {RegistrationLease,SourceClassificationResult} from '../../contracts/tables.js';
 import {roomOverview,gardenOverview} from '../../room/tool-context.js';
 import {economyOverview} from '../../economy/tool-context.js';
 import {planOverview} from '../../life/tool-context.js';
@@ -26,9 +26,11 @@ export function historicalStateOverview(name:string,args:unknown,value:unknown):
 
 /** Only completed Life turns, excluding owner takeovers, reviews and the latest
  * turn. Raw tool calls identify reads; mutations, errors and other tools stay. */
-type ClassifySource=(message:UserMessage)=>SourceClassification|undefined;
+type ClassifySource=(message:UserMessage)=>SourceClassificationResult;
 
-export function lifeHistoryCandidates(events:readonly SessionEvent[],nodes:readonly number[],classify:ClassifySource):{
+export function lifeHistoryCandidates(
+  events:readonly SessionEvent[],nodes:readonly number[],classify:ClassifySource,warn:(message:string)=>void=console.warn,
+):{
   event:SessionEvent<'tool/result'>;call:SessionEvent<'tool/call'>['data'];lease:RegistrationLease;
 }[] {
   let turn:number|undefined;
@@ -44,8 +46,13 @@ export function lifeHistoryCandidates(events:readonly SessionEvent[],nodes:reado
       if(source.kind==='user'||source.kind==='dsh-world-reply-nudge')state.protected=true;
       else {
         const classification=classify(event.data);
-        if(classification?.historyProjection?.participates)state.lease=classification.lease;
-        if(classification?.historyProjection?.protectsTurn)state.protected=true;
+        if(classification&&'kind' in classification) {
+          state.protected=true;
+          warn(`History classification failed for ${source.kind} (adapter ${classification.adapterId}); retaining turn ${turn}`);
+        } else {
+          if(classification?.historyProjection?.participates)state.lease=classification.lease;
+          if(classification?.historyProjection?.protectsTurn)state.protected=true;
+        }
       }
     }
     if(event.type==='turn/end'){state.completed=event.data.reason.kind==='completed';turn=undefined;}
@@ -69,7 +76,9 @@ export async function prepareLifeHistory(agent:Agent,isCurrent:()=>boolean,class
   if(agent.status!=='idle'||agent.inbox.nextTurn.length||agent.inbox.nextStep.length||!isCurrent())return [];
   return agent.runMaintenance(async signal=>{
     const changes:HistoryProjection[]=[];
-    for(const {event,call,lease} of lifeHistoryCandidates(agent.session.snapshotEvents(),agent.session.surface.nodes,classify)) {
+    const candidates=lifeHistoryCandidates(agent.session.snapshotEvents(),agent.session.surface.nodes,classify,
+      message=>agent.ctx.logger('chatpet-context').warn(message));
+    for(const {event,call,lease} of candidates) {
       signal.throwIfAborted();if(!isCurrent())return [];
       const original=agent.session.deriveEventMessage(event);
       if(!original||original.content.length!==1||original.content[0]?.type!=='text')continue;

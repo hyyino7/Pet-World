@@ -9,6 +9,8 @@ import {economyOverview} from '../../dist/src/economy/tool-context.js';
 import {planOverview} from '../../dist/src/life/tool-context.js';
 import {presentFacts} from '../../dist/src/core/interaction-presentation.js';
 import {lifeHistoryCandidates,historicalStateOverview} from '../../dist/src/core/native/history-maintenance.js';
+import {SourceAdapterTable} from '../../dist/src/core/tables/sources.js';
+import {createLifeSourceAdapter} from '../../dist/src/life/tool-policy.js';
 
 const args=process.argv.slice(2);if(args[0]==='--')args.shift();
 const [file,...options]=args;
@@ -43,10 +45,13 @@ const visible={requests:0,allToolTextBefore:0,allToolTextAfter:0,candidateTextBe
 const maintenance={results:0,resultCharsBefore:0,resultCharsAfter:0,requestBodyBefore:0,requestBodyAfter:0,
   toolHistoryBefore:0,toolHistoryAfter:0,summaryCallsAdded:0};
 const maintained=new Map();
+const sources=new SourceAdapterTable();
+sources.register(createLifeSourceAdapter({},{},()=>false));
+const classify=message=>sources.classify(message);
 for(let index=0;index<events.length;index++){
   if(events[index].type==='turn/end'&&events[index].data.reason.kind==='completed') {
     const prefix=events.slice(0,index+1),surface=foldSurface(prefix);
-    for(const {event,call} of lifeHistoryCandidates(prefix,surface.nodes)) {
+    for(const {event,call} of lifeHistoryCandidates(prefix,surface.nodes,classify)) {
       if(maintained.has(event.seq)||event.data.message.content.length!==1||event.data.message.content[0].type!=='text')continue;
       let args,value;try{args=JSON.parse(call.arguments);value=JSON.parse(text(event.data.message));}catch{continue;}
       const view=historicalStateOverview(call.name,args,value);if(view===undefined)continue;

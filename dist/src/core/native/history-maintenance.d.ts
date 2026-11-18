@@ -1,14 +1,14 @@
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import type { Message } from '@deepseek-ai/dsh-llm';
 import type { SessionEvent, UserMessage } from '@deepseek-ai/dsh-session';
-import type { RegistrationLease, SourceClassification } from '../../contracts/tables.js';
+import type { RegistrationLease, SourceClassificationResult } from '../../contracts/tables.js';
 /** Reuse module-owned structured projections, never middle-slice JSON or prose.
  * Explicit full/detail/receipt reads and already-small results are immutable. */
 export declare function historicalStateOverview(name: string, args: unknown, value: unknown): unknown | undefined;
 /** Only completed Life turns, excluding owner takeovers, reviews and the latest
  * turn. Raw tool calls identify reads; mutations, errors and other tools stay. */
-type ClassifySource = (message: UserMessage) => SourceClassification | undefined;
-export declare function lifeHistoryCandidates(events: readonly SessionEvent[], nodes: readonly number[], classify: ClassifySource): {
+type ClassifySource = (message: UserMessage) => SourceClassificationResult;
+export declare function lifeHistoryCandidates(events: readonly SessionEvent[], nodes: readonly number[], classify: ClassifySource, warn?: (message: string) => void): {
     event: SessionEvent<'tool/result'>;
     call: SessionEvent<'tool/call'>['data'];
     lease: RegistrationLease;
