@@ -489,6 +489,16 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - 提交：Claude 按 Codex 的累积快照重放提交（`0d6bf29` 派生 Life 名单、`09be5bd` 历史概览改读声明），每步先重新构建再跑快测和 `check:arch`；基线在第 2 步删去 3 条 R1。
 - 返工结果：两条必修已完成并补回归测试。构建、快测 235 项、索引自测 11 项和行为清单 52 条均通过，失败和跳过均为 0；`check:arch` 新增 0 条，普通 Life 21 项和回顾 23 项名单分别与旧集合双向相等。
 
+### G · 命名分开
+
+- 来源适配表认领七种已声明的原生来源。原生作用域的读取和解析分两步改名。Emotion 两个分支统一使用 `EmotionBinding`，`scopeId` 补伙伴身份作用域注释。
+- TypeScript 用 `bankId` 指代记忆库，由 `memory/client.ts` 一次转换供 Python 进程和请求共用。线协议、Core 历史字段、事件名和服务名均保持原样。
+- 五个提交单位均通过 `check:types`、`build`、`check:arch`，定向快测依次通过 66、179、166、144、196 项。架构基线零增删。
+- Memory 回归 24 项、Python provider 22 项通过。两个合成工作区重启前后各自召回。合成 `current` 和 `legacy` 均退出 0，行为索引 11 项和清单 52 条通过。
+- 额外 P2 进程测试通过 2 项，1 项因沙箱拒绝 `/bin/ps` 受阻。完整 `verify` 由验收者在沙箱外执行。
+- 累计快照在 `/private/tmp/her-world-m2-g/`。改动留在工作区，待验收者按快照重放提交。
+- 提交：Claude 按 Codex 的累积快照重放提交（`0463154`、`9c1b930`、`38ca255`、`c2adde9`、`182ddff`），每步先重新构建再跑 Core、Emotion、Memory 和回归快测（588 项）与 `check:arch`。
+
 ## 审查结论
 
 ### A 批第一轮（Claude 核实 Codex 审查，返工）
