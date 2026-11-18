@@ -80,13 +80,17 @@ async function review(t,options={}){
 test('回顾 footer 生效且符合条件的回顾提前压缩恰好一次',async t=>{
   const {f,calls,home}=await review(t,{memory:true,compactAfterReview:true});
   await assertEmotion(f,'Review');
+  const batch=()=>f.host.workspace.runtime.store.get('memory-batch',home.id);
+  assert.equal(batch().lastAttempt,0);
   home.status='running';
   t.mock.timers.tick(1000);
   assert.deepEqual(calls,[]);
+  assert.equal(batch().lastAttempt,0,'会话忙碌时没有启动压缩');
   home.status='idle';
   t.mock.timers.tick(1000);
+  const firstAttempt=batch().lastAttempt;
+  assert.equal(firstAttempt,Date.now(),'空闲后立即启动压缩');
   await until(()=>calls.length===1,'完成实际压缩调用');
-  const batch=()=>f.host.workspace.runtime.store.get('memory-batch',home.id);
   await until(()=>batch().turns===0,'压缩处理完待处理轮次');
   assert.deepEqual(calls,[home.id]);
   t.mock.timers.tick(1000);
@@ -97,8 +101,19 @@ test('回顾 footer 生效且符合条件的回顾提前压缩恰好一次',asyn
   t.mock.timers.tick(1000);
   assert.deepEqual(calls,[home.id]);
   assert.equal(batch().turns,1);
+  assert.equal(batch().lastAttempt,firstAttempt,'最小间隔内没有启动压缩');
   t.mock.timers.tick(5*60_000);
+  const secondAttempt=batch().lastAttempt;
+  assert.equal(secondAttempt,Date.now(),'最小间隔到期后启动压缩');
   await until(()=>calls.length===2,'最小间隔到期后处理待办');
+  assert.deepEqual(calls,[home.id,home.id]);
+  await until(()=>batch().turns===0,'第二次压缩处理完待处理轮次');
+
+  // 一条普通轮次在间隔届满后仍低于轮数和闲置阈值，旧通知不能再消费。
+  await f.end(await f.begin(home.id));
+  t.mock.timers.tick(5*60_000);
+  assert.equal(batch().lastAttempt,secondAttempt,'旧回顾通知没有再次启动压缩');
+  assert.equal(batch().turns,1);
   assert.deepEqual(calls,[home.id,home.id]);
 });
 
