@@ -403,6 +403,68 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 
 （Codex 完成各批后填写，每批 15 行以内）
 
+### A · 补现状测试
+
+- `entries.ts` 接入 Room、Desktop、Emotion 和 guest，`fixture.mjs` 增加原生步进、流和便携日志恢复，`policy-host.mjs` 接入真实 DSH 工具和提示词作用域。
+- `channels.test.mjs` 与 `qq-transport.mjs` 复用 QQ 假传输，`families.test.mjs` 复用同一计划写入夹具，`policy-evidence.mjs` 提供回顾、情绪与 Memory 证据断言。
+- `policy-room.test.mjs`、`policy-desktop.test.mjs`、`policy-life.test.mjs`、`policy-qq.test.mjs` 分别覆盖 Room、桌面、Life 与回顾、QQ 与 guest。两条共享情绪 footer 测试均标「现状，待主人决定」。
+- `index.json` 登记 `policyCells`，`index.test.mjs` 检查 5.8.2–5.8.4 的 82 格均由非 L3 条目覆盖。
+- 临时副本中 `pnpm run build` 通过，`node --test tests/behavior-list/policy-{room,desktop,life,qq}.test.mjs` 通过 27 项，失败 0 项。Memory 本机回环可用。
+- `pnpm run test:behavior-list` 的索引检查通过 11 项，行为清单通过 48 项，失败 0 项。合并前门禁由 Claude 执行。
+- 与方案的差异是 Room 电视仍可见 `pet_emotion_update` 等工具 schema，Room 执行守卫拒绝可见工具的调用。测试按此现状断言。
+- L1 用合成宿主复现空闲通知与 QQ 投递之间开始 Life 首步的顺序。接管走真实 Life 入队监听器，重启后核验同一 home、日记和 Memory 来源。
+- `git diff --stat 15057f8 -- src dist` 为空。原 A 批已提交 5 次（`521815d`、`d0d49fa`、`306a06b`、`f96c0ca`、`dad46aa`）。首轮返工另提交 5 次（`61d4bd8`、`b9b878d`、`6cef1c8`、`f549784`、`18d25b9`）。
+- 首轮返工补强 `policy-qq.test.mjs`、`policy-life.test.mjs`、`policy-room.test.mjs` 的现状断言，更新 `index.json` 的绑定和生命周期覆盖。每项结果见下方审查条目。
+- 首轮返工在临时副本运行 `pnpm run build`、`node --test tests/behavior-list/policy-{life,qq,room,desktop}.test.mjs dist/tests/regressions/audit-desktop.test.js`，构建通过，专项测试 44 项通过、0 项失败。`pnpm run test:behavior-list` 的索引检查 11 项通过（82 格覆盖），行为清单 52 项通过，均为 0 项失败。
+
 ## 审查结论
 
-（Claude 验收时填写必须修的问题）
+### A 批第一轮（Claude 核实 Codex 审查，返工）
+
+已核实：改动只在 `tests/**` 和本方案内；没有删除、skip 或放宽已有测试；`families`、`channels` 两个文件只是把 `ownerPlan` 和 QQ 假传输抽成共享代码。`pnpm run build` 通过，`pnpm run test:behavior-list` 48 条全部执行并通过。夹具的 `policy` 模式用真实 DSH 工具作用域、守卫和提示词组装，断言落在真实服务状态上，没有只断言 mock 的测试。两条「现状，待主人决定」（M2A-07、M2A-21）按现状断言共享情绪被写入。L1（M2A-22）从合成 QQ 传输进入真实渠道入口，由真实 Life 入队监听器把收件转成后续步，并在第二步解除限制。
+
+问题在于：82 格里有几格登记了，但对应的测试并不检验这一格的行为；还有两处断言太宽，删掉被测守卫也能通过。下面 8 条都要修，修完 `index.test.mjs` 的格覆盖检查和行为清单要照样全绿。
+
+1. **L1 证明不了重启后复用了同一个 home。** `tests/behavior-list/fixture.mjs:115-119` 的 `sessionController.create()` 没收到 `sessionId` 时总是返回 `home`；而 home 的创建（`src/core/companion-foundation.ts:116`）正好不传 ID。所以即使重启后丢了 `life.json` 里的 home 记录、重新建了一个，`policy-qq.test.mjs:153` 的 ID 相等断言也会通过。改法：不带 ID 的创建要分配新 ID，或者记下创建调用，断言重启后没有再建。这是方案第 10 条「重启后仍是同一个 home」的核心证据。
+
+   已修：监测各次启动的原生会话创建调用。首次打开 home 时创建一次，最终重启后打开同一 ID 时创建零次。
+2. **「忙碌」和「最小间隔」两个条件实际没被检验。** `policy-life.test.mjs:83-85`、`:96-99` 在 `tick()` 之后马上看 `calls`；但 `src/memory/batch.ts:102` 先同步写 `lastAttempt`，然后要等 `:38` 的 `memory.prepare()` 返回才调用压缩替身。所以即使删掉空闲判断或最小间隔判断，这两处断言也会通过。改法：在这两个时间点断言 `memory-batch` 的 `lastAttempt` 没变，等条件满足后再断言它更新了。方案第 9 条明确列了空闲和最小间隔。
+
+   已修：直接断言忙碌和最小间隔内持久化的 `lastAttempt` 不变，确认空闲且间隔到期后才更新并压缩。
+3. **「恰好一次」证明不了回顾通知只用一次。** `policy-life.test.mjs:89-102` 首次压缩之后，每次都重新发一条 `pet/life.review`，所以即使删掉 `src/memory/batch.ts:104` 的 `reviews.delete()`，用例也会通过。改法：先加一条普通轮次，不发新通知，时间推过最小间隔，但不到轮数和闲置阈值，断言没有再压缩。
+
+   已修：压缩处理完待办后新增一条普通轮次，保持在轮数和闲置阈值以下。超过最小间隔且没有新通知时，压缩尝试时间、待办轮数和调用次数均符合预期。
+4. **`5.8.2#6/绑定` 没有真实断言。** 这一格只登记给了 M2A-20，而 M2A-20 从头到尾绑定都没变。5.8.2 第 6 行的绑定列还要求会话 `cwd` 和组合预设不变（`src/channels/sessions.ts:57-58`）。改法：用真实 QQ 收件建立 guest 会话，再分别改 `cwd` 和组合预设，断言旧会话不再准入；或者找一条门禁内确实断言这一点的已有测试来登记。
+
+   已修：M2A-33 经真实 QQ 收件建立 guest 轮次，分别改变会话 `cwd` 和组合预设并验证同一消息被拒，恢复后准入。绑定格由 M2A-33 覆盖。
+5. **`5.8.2#8-tv/绑定` 没有真实断言。** M2A-02 只改了消息 ID 和会话 ID，没改绑定；M2A-08 的私聊换绑不经过电视准入（`src/room/chat.ts:78-81` 的 `allows` → `isRoom`）。这一格属于原本「无测试」的第 8 行，必须补上。改法：电视请求还在途时切换绑定，断言同一会话、同一画面的准入失效。
+
+   已修：M2A-02 在电视请求仍在途时改变工作区路径，核验同一会话与同一画面被拒，恢复路径后完成原轮次。
+6. **`5.8.2#9/绑定` 登记错了测试。** M2A-11 一直用同一个绑定。门禁内已经有 `tests/regressions/audit-desktop.test.ts:162`（`F6: workspace changes abort an in-flight direct LLM request and suppress old output`），把它登记成新条目，覆盖这一格即可（`file` 用 `dist/tests/regressions/audit-desktop.test.js`）。
+
+   已修：将绑定格改登记给 M2A-34，运行原有 Desktop F6 回归，验证换绑中止请求且晚到输出不会呈现。
+7. **`5.8.3#3/记忆` 登记错了测试。** M2A-22 只核验了 QQ 主人消息、回顾输入和回顾回复，没核验普通 Life 自主输入进 Memory。改法二选一：登记 `tests/life/life-memory-integration.test.ts:94`（`actual Body facts and a Life reply keep a complete eligible Core-to-Memory source graph`，还覆盖事实登记）；或者在 M2A-22 里给 `autonomous` 加一条 `virtual_action` 的观察断言。
+
+   已修：M2A-22 核验普通 Life 自主输入以伙伴的 `virtual_action` 进入 Memory，带有原生会话归属和已确认的观察记录。
+8. **渠道关闭时取消已准入主人轮次，没有测试。** 方案第 3 条要求「取消」单独一条；5.8.2 第 5 行生命周期列写的是 `src/channels/sessions.ts:185`。M2A-24 关闭的是补答轮次，而补答不进 `accepted`，所以不会触发取消，用例也没断言 `cancellations`。`audit-r7-channel-nudge.test.ts:86` 只覆盖撤销授权。改法：真实 QQ 主人收件在 home 里开始轮次，关闭渠道，断言 `f.cancellations` 里有 `{id: home.id, reason: {kind: 'user'}}`，然后登记到 `5.8.2#5/生命周期`。
+
+   已修：M2A-35 让真实 QQ 主人收件在 home 开始原生轮次，关闭渠道组件后收到恰好一次 `{kind: "user"}` 取消，并拒绝原收件再次准入。登记到 `5.8.2#5/生命周期`。
+
+不用返工，但要记下来：
+
+- 方案第 7 条写「guest 和电视看不到 `pet_emotion_update`」，现状是电视看得到、调用时被 Room 守卫拒绝。测试按现状断言是对的。H 批要把 architecture 5.8.3 第 8 行情绪列的「没有工具」改成「工具可见，执行被拒」。
+- 建议：5.8.2#6/生命周期（关闭渠道时取消在途 guest 轮次，`src/channels/sessions.ts:184`）也只登记给了恢复用例，可以和第 8 条一起补一条断言。
+
+  已修：M2A-36 经真实 QQ 收件启动 guest 轮次，关闭渠道组件后收到恰好一次原生取消，并拒绝原收件再次准入。登记到 `5.8.2#6/生命周期`。
+
+### A 批复查（第二轮，通过）
+
+逐条核对 8 条和那条建议，都已修好，而且新断言能区分对错：删掉被测的守卫或判断，对应用例会失败。
+
+- 第 1 条：`sessionController.create` 的计数在每次启动时重新挂上（夹具每次启动都会调用 `configure`）。首次启动计 1 次，重启后计 0 次。
+- 第 2、3 条：现在断言的是持久化的 `lastAttempt`，不再只看压缩替身被调用。旧通知那一步，最后一次 `tick` 正好推满 5 分钟间隔，且低于 200 轮和 60 分钟两个阈值，所以只要 `reviews.delete()` 没了就会再压缩一次，用例会失败。
+- 第 5 条：换绑后 `src/room/chat.ts:78-81` 的 `allows` → `isRoom` → `existing` → `binding()` 抛错，被捕获后返回 `false`，走的确实是电视准入守卫。
+- 第 4、6、7、8 条和建议：M2A-33～36 和 M2A-22 新加的断言都落在真实入口和真实服务状态上；M2A-22 不再登记 `5.8.2#5/生命周期`，改由 M2A-35 覆盖。
+- 复跑：`pnpm run build` 通过；`pnpm run test:behavior-list` 的索引检查（含 82 格覆盖）通过，行为清单 52 条全部执行并通过。`git diff --stat 15057f8..HEAD -- src dist` 为空。
+- 本节和「执行结果」里提交说明的修正由 Claude 写，随合并提交进入 `main`。
+

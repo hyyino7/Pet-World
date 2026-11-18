@@ -25,6 +25,27 @@ test('索引覆盖十五类和四个 L1 故障家族并保留合法固定身份'
   for (const family of families) assert.ok(index.entries.some(row => row.families.includes(family) && row.level === 'L1'), family);
 });
 
+test('5.8 会话策略每格都有有效的非 L3 行为测试', () => {
+  const rows = ['1','2','3','4','5','6','7','8-chat','8-tv','9'];
+  const expected = new Set([
+    ...rows.flatMap(row => ['来源','选择','生命周期','绑定'].map(cell => `5.8.2#${row}/${cell}`)),
+    ...rows.flatMap(row => ['工具','记忆','情绪'].map(cell => `5.8.3#${row}/${cell}`)),
+    ...['home','owner','desktop','room','guest','whisper'].flatMap(row =>
+      ['历史','组装'].map(cell => `5.8.4#${row}/${cell}`)),
+  ]);
+  const covered = new Set();
+  for (const row of index.entries) {
+    if (!Object.hasOwn(row,'policyCells')) continue;
+    assert.ok(Array.isArray(row.policyCells) && row.policyCells.length > 0,row.id);
+    assert.equal(new Set(row.policyCells).size,row.policyCells.length,row.id);
+    for (const cell of row.policyCells) {
+      assert.ok(expected.has(cell),`${row.id} / ${cell}`);
+      if (row.level !== 'L3') covered.add(cell);
+    }
+  }
+  assert.deepEqual([...expected].filter(cell => !covered.has(cell)),[]);
+});
+
 function probe(t, source, names = ['literal [x].*']) {
   const directory = mkdtempSync(join(tmpdir(), 'behavior-runner-'));
   t.after(() => rmSync(directory, {recursive:true,force:true}));

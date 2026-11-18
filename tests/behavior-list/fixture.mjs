@@ -5,32 +5,47 @@ import {tmpdir} from 'node:os';
 import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
 import {setTimeout as pause} from 'node:timers/promises';
-import {corePlugin,behaviorPlugin,economyPlugin,lifePlugin,voicePlugin,channelsPlugin,memoryPlugin} from '../../dist/tests/behavior-list/entries.js';
+import {corePlugin,behaviorPlugin,economyPlugin,lifePlugin,voicePlugin,channelsPlugin,memoryPlugin,roomPlugin,desktopPlugin,emotionPlugin,guestPreset,resolveCompanionHome} from '../../dist/tests/behavior-list/entries.js';
+import {policyHost} from './policy-host.mjs';
+import {say} from '../../scripts/checks/lib/native-conversation-scenarios.mjs';
 export const value = result => {assert.equal(result.ok,true,JSON.stringify(result));return result.value;};
 export const signal = () => new AbortController().signal;
-export async function until(check, label='边界操作完成') {
-  for(let i=0;i<300;i++){if(await check())return;await pause(2);}
+export async function until(check, label='边界操作完成', attempts=300) {
+  for(let i=0;i<attempts;i++){if(await check())return;await pause(2);}
   assert.fail(label);
 }
 
 // 假的仅为 DSH 服务、文件工具、模型响应；所有插件从 apply 入口安装。
 // 原生日志写入临时目录；重新启动插件时只恢复这些磁盘日志。
-export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=true,recognizer,memory=false,channels=false,search}={}) {
-  t.mock.timers.enable({apis:['Date'],now:Date.parse(now)});
+export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=true,recognizer,memory=false,channels=false,search,policy=false,room=false,desktop=false,emotion=false,intervals=false,limits,configure}={}) {
+  t.mock.timers.enable({apis:intervals?['Date','setInterval']:['Date'],now:Date.parse(now)});
   const root=realpathSync(mkdtempSync(join(tmpdir(),'behavior-list-'))),repo=join(root,'workspace');mkdirSync(repo);
   const config={dataDir:join(root,'core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fixture',character:'Synthetic companion'};
   if(memory)config.memory={python:resolve('.venv/bin/python'),dataDir:join(repo,'.chatpet/data/memory')};
-  let services,handlers,effects,agents,ctx,sections,contexts,tools,guards,flushAllowed=true,sequence=0;
-  const warnings=[],sent=[],flushes=[];
+  let services,handlers,effects,agents,ctx,sections,contexts,tools,guards,dsh,guest,flushAllowed=true,sequence=0;
+  const warnings=[],sent=[],flushes=[],cancellations=[],archives=[];
   const logFile=id=>join(root,`native-${id}.json`);
   const workspace={id:'world',path:repo,sessionIds:['home','owner-b','guest'],async attachSession(id){if(!this.sessionIds.includes(id))this.sessionIds.push(id);}};
-  const registry={get:id=>id==='world'?workspace:undefined,archivedSessionIds:[]};
+  const external=new Map();
+  const registry={
+    get:id=>id==='world'?workspace:external.get(id),archivedSessionIds:[],
+    async archiveSession(id){archives.push({id,flushed:flushes.at(-1)});this.archivedSessionIds.push(id);},
+    async create(path){const id='channel-'+external.size;
+      const previous=[...external.values()].find(row=>row.path===path);
+      if(previous)return previous;
+      const created={id,path,sessionIds:[],attachSession:workspace.attachSession};
+      external.set(id,created);return created;
+    },
+  };
   async function emit(name,...args){for(const fn of [...(handlers.get(name)??[])])await fn(...args);}
   async function middleware(name,args,end=async()=>undefined){
-    const rows=[...(handlers.get(name)??[])];let i=0;
+    const agent=(name==='system-prompt/assemble'?args[1]:args[0])?.agent;
+    const isGuest=agent?.session.header.agentPreset===guestPreset.GUEST_PRESET;
+    const selected=dsh&&isGuest&&guest.handlers.has(name)?guest.handlers:handlers;
+    const rows=[...(selected.get(name)??[])];let i=0;
     const next=()=>{const fn=rows[i++];return fn?fn(...args,next):end();};return next();
   }
-  function makeAgent(id){
+  function makeAgent(id,cwd=repo,preset=id==='guest'?'chatpet-channel-guest':'standard'){
     const events=existsSync(logFile(id))?JSON.parse(readFileSync(logFile(id),'utf8')):[];
     const localTools=new Map(),restrictions=new Set();
     const toolService={
@@ -39,24 +54,38 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
       restrict(mask){restrictions.add(mask);return()=>restrictions.delete(mask);},
       guard(fn){guards.add(fn);return()=>guards.delete(fn);},
     };
-    const session={id,header:{id,cwd:repo,agentPreset:id==='guest'?'chatpet-channel-guest':'standard'},surface:{nodes:[]},
+    const session={id,header:{id,cwd,agentPreset:preset},surface:{nodes:[]},
       get seq(){return events.length;},eventAt:seq=>events[seq],snapshotEvents:()=>events,
       append(type,data){const event={type,data,seq:events.length,time:Date.now()};events.push(event);session.surface.nodes.push(event.seq);return event;}};
     session.surface.nodes=events.map(event=>event.seq);
-    const agent={id,session,status:'idle',inbox:{nextStep:[],nextTurn:[]},ctx:{...ctx,tools:toolService},
-      whenIdle:async()=>{},cancel(){agent.status='idle';},
+    const agent={id,session,status:'idle',inbox:{nextStep:[],nextTurn:[],remove(id){
+        for(const key of ['nextStep','nextTurn'])this[key]=this[key].filter(row=>row.id!==id);
+      }},ctx:{...ctx,tools:toolService},
+      whenIdle:async()=>{
+        if(!policy||(!agent.inbox.nextTurn.length&&agent.status==='idle'))return;
+        await until(()=>!agent.inbox.nextTurn.length&&agent.status==='idle','原生轮次结束',2000);
+      },
+      cancel(reason){cancellations.push({id,reason});if(!policy)agent.status='idle';},inject(){},
+
       steer(message){sent.push(message);agent.inbox.nextStep.push(message);void emit('agent/inbox/inserted',{agent,message});},
       followup(message){sent.push(message);agent.inbox.nextTurn.push(message);void emit('agent/inbox/inserted',{agent,message});}};
-    agents.set(id,agent);return {agent,localTools,restrictions};
+    if(dsh)agent.ctx=dsh.makeScope(agent,preset===guestPreset.GUEST_PRESET?guest.key:undefined);
+    agents.set(id,agent);
+    return {agent,localTools,restrictions,restore(log){
+      events.splice(0,events.length,...log);
+      session.surface.nodes=events.map(event=>event.seq);
+    }};
   }
   let agentInfo;
   async function start(){
     services=new Map();handlers=new Map();effects=[];agents=new Map();sections=new Set();contexts=new Set();tools=new Map();guards=new Set();
+    dsh=policy?await policyHost(repo,effects):undefined;
     const logger=Object.assign(()=>logger,{warn:(...args)=>warnings.push(args),error:(...args)=>warnings.push(args),info(){}});
     ctx={get:name=>services.get(name),provide(name,service){services.set(name,service);ctx[name]=service;},
       on(name,fn,options){const rows=handlers.get(name)??[];options?.prepend?rows.unshift(fn):rows.push(fn);handlers.set(name,rows);return()=>{const i=rows.indexOf(fn);if(i>=0)rows.splice(i,1);};},
       emit(name,...args){void emit(name,...args).catch(error=>warnings.push(error));},logger,
       effect(factory){const stop=factory();if(typeof stop==='function')effects.push(stop);return()=>{};},
+      inject(names,apply){if(names.every(name=>services.has(name)))apply(ctx);},
       agents:{get:id=>agents.get(id),list:()=>[...agents.values()]},
       sessions:{get:id=>agents.get(id)?.session,async flush(session){
         if(!flushAllowed)return false;
@@ -66,20 +95,62 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
       systemPrompt:{section(row){sections.add(row);return()=>sections.delete(row);},context(row){contexts.add(row);return()=>contexts.delete(row);}},
     };
     ctx.systemPrompt.assemble=context=>middleware('system-prompt/assemble',[{},context],async()=>[...sections,...contexts].map(row=>row.text(context)).filter(Boolean).join('\n'));
-    services.set('agents',ctx.agents);
+    if(dsh){
+      ctx.tools=dsh.ctx.tools;ctx.systemPrompt=dsh.ctx.systemPrompt;
+      guest={key:{id:guestPreset.GUEST_PRESET},handlers:new Map()};
+      guest.scope=dsh.makeScope(guest.key);
+      guest.ctx={...ctx,tools:guest.scope.tools,systemPrompt:guest.scope.systemPrompt,
+        inject(names,apply){if(names.every(name=>services.has(name)))apply(Object.assign(Object.create(guest.ctx),Object.fromEntries(names.map(name=>[name,services.get(name)]))));},
+        on(name,fn,options){if(!['agent/pre-step','agent/request','system-prompt/assemble'].includes(name))return()=>{};
+          const rows=guest.handlers.get(name)??[];
+          options?.prepend?rows.unshift(fn):rows.push(fn);guest.handlers.set(name,rows);
+          return()=>{const i=rows.indexOf(fn);if(i>=0)rows.splice(i,1);};},
+      };
+      services.set('agentPresets',{composedPreset:scope=>
+        [...agents.values()].find(agent=>agent.ctx===scope)?.session.header.agentPreset??'standard'});
+    }
+    services.set('agents',ctx.agents);services.set('sessions',ctx.sessions);
     services.set('workspaceRegistry',registry);
-    services.set('sessionController',{async create(){return {sessionId:'home'};},async resolveAgent(id){return {agent:agents.get(id)};},async rename(){},cancel(){}});
-    const persistence={async open(id){return {header:agents.get(id).session.header,inheritedEventCount:0,
-      async read(){return {events:existsSync(logFile(id))?JSON.parse(readFileSync(logFile(id),'utf8')):[]};},
-      async append(events){const old=existsSync(logFile(id))?JSON.parse(readFileSync(logFile(id),'utf8')):[];writeFileSync(logFile(id),JSON.stringify([...old,...events]));},
-      async flush(){},async close(){}};}};
+    services.set('sessionController',{
+      async create({workspaceId,sessionId='home',agentPreset}={}) {
+        const selected=registry.get(workspaceId)??workspace;
+        await selected.attachSession(sessionId);
+        if(!agents.has(sessionId))agentInfo.set(sessionId,makeAgent(sessionId,selected.path,agentPreset));
+        return {sessionId};
+      },
+      async resolveAgent(id){return agents.has(id)?{agent:agents.get(id)}:{error:{code:'session/not-found'}};},
+      async rename(){},cancel({sessionId}){agents.get(sessionId)?.cancel({kind:'user'});},
+    });
+    function persisted(header){
+      const {id}=header;
+      const events=()=>existsSync(logFile(id))?JSON.parse(readFileSync(logFile(id),'utf8')):[];
+      return {header,inheritedEventCount:0,async read(){return {events:events()};},
+        async append(added){
+          const log=[...events(),...added];
+          writeFileSync(logFile(id),JSON.stringify(log));
+          agentInfo.get(id)?.restore(log);
+        },
+        async flush(){},async close(){},
+      };
+    }
+    const persistence={
+      async open(id){
+        if(!agents.has(id)||!existsSync(logFile(id)))throw Object.assign(Error('Synthetic native log missing'),{name:'SessionNotFound'});
+        return persisted(agents.get(id).session.header);
+      },
+      async create(header){return persisted(header);},
+    };
     services.set('sessionPersistence',persistence);ctx.sessionPersistence=persistence;
     services.set('workingDirectory',{ensure:async()=>repo});
     services.set('fs',{resolve:async path=>resolve(repo,path),processPath:path=>path});
     services.set('profileContext',{dir:join(root,'profile')});ctx.profileContext=services.get('profileContext');
     if(recognizer)services.set('speechToText',recognizer);
-    for(const name of ['read','write','bash'])ctx.tools.register({name});
-    agentInfo=new Map(workspace.sessionIds.map(id=>[id,makeAgent(id)]));
+    if(!dsh)for(const name of ['read','write','bash'])ctx.tools.register({name});
+    agentInfo=new Map([workspace,...external.values()].flatMap(row=>row.sessionIds.map(id=>[
+      id,makeAgent(id,row.path,row===workspace?undefined:guestPreset.GUEST_PRESET),
+    ])));
+    if(policy)services.set('attachments',{admitPromptContent:async content=>structuredClone(content)});
+    configure?.(services);
     await corePlugin.apply(ctx,config);
     const host=services.get('petCore');
     if(host.workspace.status().state!=='ready')await bind(repo);
@@ -99,66 +170,117 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
     ctx.webServer={getOrigin:()=> 'http://fixture.invalid',register:()=>()=>{}};
     ctx.sessionController=services.get('sessionController');
     if(search)services.set('web',{search});
+    if(desktop)desktopPlugin.apply(ctx);
+    if(room){ctx.workspaceRegistry=registry;roomPlugin.apply(ctx);}
+    if(emotion)emotionPlugin.apply(ctx);
+    if(dsh)guestPreset.apply(guest.ctx);
     if(channels)channelsPlugin.apply(ctx,{deviceDirectory:join(root,'channels')});
     voicePlugin.apply(ctx,{deviceDirectory:join(root,'voice')});
   }
   async function bind(path){
     const host=services.get('petCore'),request=()=>host.operator.request('binding-'+sequence++);
     const before=value(await host.services.preferences.read(request(),{}));
-    const saved=value(await host.services.preferences.save(request(),{expectedRevision:before.revision,workspace:{id:'world',path,title:'Synthetic'},conversation:before.conversation}));
+    const saved=value(await host.services.preferences.save(request(),{expectedRevision:before.revision,workspace:{id:'world',path,title:'Synthetic'},conversation:{...before.conversation,...limits}}));
     value(await host.services.workspace.initialize(request(),{expectedPreferencesRevision:saved.revision}));workspace.path=path;
   }
   async function close(){const failures=[];for(const dispose of effects.splice(0).reverse())try{await dispose();}catch(error){failures.push(error);}if(failures.length)throw new AggregateError(failures,'假宿主关闭失败：'+failures.flatMap(error=>error.errors??[error]).map(error=>error.message).join('; '));}
-  await start();t.after(async()=>{await close();rmSync(root,{recursive:true,force:true});});
+  t.after(async()=>{try{await close();}finally{rmSync(root,{recursive:true,force:true});}});
+  await start();
   const service=name=>services.get(name);
   async function begin(id='home',message){
-    const {agent}=agentInfo.get(id);agent.status='running';
+    const {agent}=agentInfo.get(id);
+    const queued=message&&['nextStep','nextTurn'].some(key=>agent.inbox[key].some(row=>row.id===message.id));
+    if(queued)agent.inbox.remove(message.id);
+    agent.status='running';
     const turn=++sequence;
-    if(message)for(const key of ['nextStep','nextTurn'])agent.inbox[key]=agent.inbox[key].filter(row=>row.id!==message.id);
     message??={id:'owner-'+turn,role:'user',source:{kind:'user'},content:[{type:'text',text:'Synthetic owner input'}]};
-    await emit('agent/inbox/inserted',{agent,message});
+    if(!queued||!policy)await emit('agent/inbox/inserted',{agent,message});
     await emit('session/event',agent.session,agent.session.append('turn/start',{turn}));
-    await middleware('system-prompt/assemble',[{}, {agent}],async()=>{});
-    const decision=await middleware('agent/pre-step',[{agent,turn,step:1,messages:[message],signal:signal()}],async()=>({kind:'enter',messages:[]}));
-    assert.equal(decision.kind,'enter','原生准入必须成功');
-    for(const input of [message,...(decision.messages??[])])await emit('session/event',agent.session,agent.session.append('user/message',input));
-    const current=[...contexts].map(row=>({name:row.name,text:row.text({agent})})).filter(row=>row.text);
-    if(current.length)await emit('session/event',agent.session,agent.session.append('user/message',{id:'context-'+turn,role:'user',source:{kind:'runtime-context',form:'snapshot',sections:current},content:[{type:'text',text:current.map(row=>row.text).join('\n')}]}));
-    return {agent,turn};
+    const active={agent,turn,step:0};
+    await step(active,[message]);
+    return active;
   }
-  async function end(active,kind='completed'){
+  async function step(active,messages=[]){
     const {agent,turn}=active;
-    await emit('session/event',agent.session,agent.session.append('assistant/message',{turn,message:{role:'assistant',content:[{type:'text',text:'Synthetic model response'}]},stream:[]}));
-    agent.status='idle';await emit('session/event',agent.session,agent.session.append('turn/end',{turn,reason:{kind}}));
+    for(const message of messages)agent.inbox.remove(message.id);
+    active.toolSet?.dispose();
+    if(dsh)active.toolSet=await ctx.tools.resolve({agent,signal:signal()});
+    const promptContext={agent,scope:agent,toolSet:active.toolSet};
+    active.prompt=await middleware('system-prompt/assemble',[{},promptContext],async()=>dsh?agent.ctx.systemPrompt.assemble(promptContext):undefined);
+    const decision=await middleware('agent/pre-step',[{agent,turn,step:++active.step,messages,signal:signal()}],async()=>({kind:'enter',messages:[]}));
+    assert.equal(decision.kind,'enter','原生准入必须成功');
+    active.injections=decision.messages;
+    for(const input of [...(decision.messages??[]),...messages])await emit('session/event',agent.session,agent.session.append('user/message',input));
+    const current=active.prompt?.contexts??[...contexts].map(row=>({name:row.name,text:row.text({agent})})).filter(row=>row.text);
+    if(current.length)await emit('session/event',agent.session,agent.session.append('user/message',{id:`context-${turn}-${active.step}`,role:'user',source:{kind:'runtime-context',form:'snapshot',sections:current},content:[{type:'text',text:current.map(row=>row.text).join('\n')}]}));
+  }
+  async function end(active,kind='completed',text='Synthetic model response'){
+    const {agent,turn}=active;
+    active.toolSet?.dispose();
+    const stream=[];
+    async function* model(){
+      const split=text.indexOf('<pet-expression>')+5;
+      for await(const chunk of say(text)) {
+        if(chunk.type==='text-delta'&&split>4) {
+          yield {...chunk,text:text.slice(0,split)};
+          yield {...chunk,text:text.slice(split)};
+        } else yield chunk;
+      }
+    }
+    if(dsh)for await(const chunk of await middleware('llm/stream',[{sessionId:agent.id,signal:signal()}],model))stream.push(chunk);
+    const content=dsh?stream.flatMap(chunk=>chunk.type==='block-end'?[chunk.block]:[]):[{type:'text',text}];
+    await emit('session/event',agent.session,agent.session.append('assistant/message',{turn,message:{role:'assistant',content},stream}));
+    if(!policy)agent.status='idle';
+    await emit('session/event',agent.session,agent.session.append('turn/end',{turn,reason:{kind}}));
+    if(policy)agent.status='idle';
     await pause(3);
   }
   async function tool(active,name,args){
-    const {agent,turn}=active,info=agentInfo.get(agent.id),exec={agent,name,arguments:args,signal:signal(),token:Symbol(name)};
+    const {agent,turn}=active,info=agentInfo.get(agent.id);
     const callId='tool-'+sequence++;
+    const exec={agent,name,arguments:args,signal:signal(),token:Symbol(name),callId};
     await emit('session/event',agent.session,agent.session.append('tool/call',{turn,name,callId,arguments:JSON.stringify(args)}));
     let output,error;
     try {
       await middleware('tools/pre-execute',[exec]);
-      if([...info.restrictions].some(mask=>!mask.allow.includes(name)))throw Error('Native tool restriction: '+name);
-      const denial=[...guards].map(guard=>guard(exec)).find(Boolean);if(denial)throw Error(String(denial));
-      const row=tools.get(name),definition=info.localTools.get(name)??row?.tool;
-      assert.ok(definition,'工具已注册：'+name);
-      if(row?.options?.when)assert.equal(row.options.when({agent}),true,'工具在当前入口可用');
-      if(name==='write'){writeFileSync(resolve(repo,args.file_path),args.content);output='Written';}
-      else if(name==='read')output=readFileSync(resolve(repo,args.file_path),'utf8');
-      else output=await definition.execute(args,exec);
+      if(dsh){
+        const denial=ctx.tools.checkGuards(exec);
+        if(denial)throw Error(denial);
+        const definition=ctx.tools.executable(name,agent,active.toolSet);
+        if(!definition)throw Error('工具在当前入口不可用：'+name);
+        output=await definition.execute(args,exec);
+      } else {
+        if([...info.restrictions].some(mask=>!mask.allow.includes(name)))throw Error('Native tool restriction: '+name);
+        const denial=[...guards].map(guard=>guard(exec)).find(Boolean);if(denial)throw Error(String(denial));
+        const row=tools.get(name),definition=info.localTools.get(name)??row?.tool;
+        assert.ok(definition,'工具已注册：'+name);
+        if(row?.options?.when)assert.equal(row.options.when({agent}),true,'工具在当前入口可用');
+        if(name==='write'){writeFileSync(resolve(repo,args.file_path),args.content);output='Written';}
+        else if(name==='read')output=readFileSync(resolve(repo,args.file_path),'utf8');
+        else output=await definition.execute(args,exec);
+      }
     }catch(cause){error=cause;output=cause.message;}
     await emit('session/event',agent.session,agent.session.append('tool/result',{turn,message:{role:'tool',toolCallId:callId,isError:!!error,content:[{type:'text',text:String(output)}]}}));
     await emit('tools/result',exec);
     if(error)throw error;return typeof output==='string'&&output.startsWith('{')?JSON.parse(output):output;
   }
-  return {root,repo,config,workspace,warnings,sent,flushes,bind,begin,end,tool,emit,middleware,
+  return {root,repo,config,workspace,warnings,sent,flushes,cancellations,archives,registry,bind,begin,step,end,tool,emit,middleware,
+    home:()=>resolveCompanionHome(ctx,service('petCore')),
+    create:async sessionId=>(await service('sessionController').create({workspaceId:'world',sessionId})).sessionId,
+    schemas:({agent,toolSet})=>ctx.tools.schemas(agent,toolSet).map(schema=>schema.name),
+    registerTool:(...args)=>dsh.register(...args),
     service,get host(){return service('petCore');},get body(){return service('petBehavior');},get economy(){return service('petEconomy');},get life(){return service('petLife');},
-    agent:id=>agentInfo.get(id).agent,logFile,
-    async restart(){await close();await start();},
+    agent:id=>agentInfo.get(id).agent,agents:()=>[...agents.values()],logFile,
+    async restart(beforeStart){await close();beforeStart?.();await start();},
     set flushAllowed(value){flushAllowed=value;},
     async enable(){const preferences=(await service('petLife').snapshot('world')).preferences;
       await service('petLife').settings('world',preferences,{...preferences,wake:'',review:''});await service('petLife').control('world',true);await service('petBehavior').setAutonomy('world',true);},
     ownerAction:(action,id)=>service('petEconomy').ownerAction('world',action,id,signal()),
   };
+}
+
+export async function ownerPlan(f,steps,id){
+  const active=await f.begin(id),before=await f.tool(active,'life_plan_read',{view:'full'});
+  await f.tool(active,'life_plan_update',{expectedRevision:before.revision,plan:{goal:'Synthetic intention',reason:'Behavior preservation',steps,nextConsiderAt:null}});
+  await f.end(active);
 }

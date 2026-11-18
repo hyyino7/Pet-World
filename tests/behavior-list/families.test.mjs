@@ -4,14 +4,9 @@ import {readFileSync,existsSync} from 'node:fs';
 import {join} from 'node:path';
 import vm from 'node:vm';
 import {setTimeout as pause} from 'node:timers/promises';
-import {fixture,until} from './fixture.mjs';
+import {fixture,ownerPlan,until} from './fixture.mjs';
 import {readHearControlSource} from '../../dist/tests/behavior-list/entries.js';
 
-async function ownerPlan(f,steps){
-  const active=await f.begin(),before=await f.tool(active,'life_plan_read',{view:'full'});
-  await f.tool(active,'life_plan_update',{expectedRevision:before.revision,plan:{goal:'Synthetic intention',reason:'Behavior preservation',steps,nextConsiderAt:null}});
-  await f.end(active);
-}
 async function cursor(f,expected){await until(async()=>{await f.body.snapshot('world');return (await f.life.readPlan('world')).plan?.cursor===expected;},'计划自动推进到 '+expected);}
 
 test('计划完成事件自动续行一次并跨重启保留',async t=>{
