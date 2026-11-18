@@ -464,6 +464,8 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - 构建通过，指定快测 166 通过、0 失败、0 跳过。架构检查通过，基线新增和消失均为 0。构建已清理 Core 下旧工具策略产物。
 - 提交：Codex 沙箱写不了 index，由 Claude 原样提交。E1a 超过 15 个文件，拆成两个都能单独运行的提交：`41a9e63`（只读分类契约，已单独验证 build、登记口测试和 check:arch）、`e4d7911`（Life 接线）；E1b 为 `8bb8219`。
 
+- 返工结果：两条必修均已修复。构建通过，指定快测 168 通过、0 失败、0 跳过。`check:context-payload` 实跑 3 个合成 Life 轮次并识别 2 条历史投影。`check:arch` 通过，两份基线均新增 0。
+
 ## 审查结论
 
 ### A 批第一轮（Claude 核实 Codex 审查，返工）
@@ -555,4 +557,30 @@ Codex 只读挑刺，对照源码核实，基线条目和加总都对得上。�
 - 热卸载窗口：Cordis 卸载模块时先让服务不可见，等依赖它的插件清理完，才执行本模块的撤销（例如 `src/desktop/plugin.ts:19-22`）。这段时间里设置页可能同时看到 `desktop: null` 和仍在报告的能力行。旧代码在同一窗口里也会列出 Desktop 两行（显示为「已停用」），所以只是短暂显示不一致。可以考虑让登记跟着服务的可见性走。
 - 每次 `listCapabilities` 的工作区就绪检查从 1 次变成 7 次（`src/core/workspace.ts:417-432` 每次都同步读配置和存储清单），设置页等桌宠启动时每 700 毫秒查一次。要根治，需要让 `status()` 接收本次查询的上下文（B 批契约），建议在 M3 定登记表的查询上下文时一起处理。
 - 独立的 `createCore`（不装任何模块）现在只返回 Core 登记的 2 行，原来是 9 行。这符合方案「模块缺席即无行」，但 `./core` 的直接使用者会看到这个变化。
+
+### E1 批第一轮（Claude 核实 Codex 审查，返工）
+
+已核实：
+- 改动在 E1 允许范围内（含拍板点 11 扩大的契约文件和 `check-native-life.mjs`）。
+- Life 的准入条件、工具限制、拒绝文案、回顾续接、文件守卫和历史投影判断都原样搬进了适配器；回顾中断后续接的那一轮，历史投影仍和旧代码一样只按消息字段判断。
+- 已有测试只改了夹具接线和删掉 `lifeAdmission` 后的写法，断言没动。
+- E1b 按重命名计只改了 import。
+- 沙箱外 `pnpm run verify` 通过（139 个测试文件，模型调用 0），行为清单 52 条全部通过。
+- 基线删了 R4 `life/plugin.ts` 两条，另有 12 条 R8 重复项随守卫重写消失，只删不增。
+
+下面 2 条要修：
+
+1. **`check:context-payload` 会崩溃。** `scripts/checks/check-context-payload.mjs:49` 仍按旧签名调用 `lifeHistoryCandidates(prefix, surface.nodes)`，而 E1a 给它加了必传的 `classify` 参数（`src/core/native/history-maintenance.ts:31`）。所以在含已完成 Life 轮次的日志上会报 `TypeError: classify is not a function`。这是 `docs/development.md:152` 写明的命令，属于直接调用方，本批更新。改法：脚本里用 `SourceAdapterTable` 登记 Life 适配器，只调用只读 `classify`，不调用实时准入（和 `tests/core/history-maintenance.test.ts` 的夹具同一写法）。补一条用合成日志跑这个分析路径的测试，或者在现有测试里覆盖它。
+
+   已修：诊断脚本通过 `SourceAdapterTable` 登记 Life 适配器并传入只读分类。回归测试执行实际诊断脚本，验证合成日志里的旧 Life 结果会投影。
+
+2. **一个来源的 `classify` 抛错，会中止整次历史扫描。** `src/core/tables/sources.ts:41-47` 不捕获 `adapter.classify` 的异常，`lifeHistoryCandidates` 也不捕获，所以同一份历史里只要有一条消息分类出错，其余合格的 Life 轮次也都不会瘦身。这违反 2.2「适配器抛错只影响它负责的来源」。现在只有 Life 一个适配器，它的分类是纯函数，暴露不出来，但 E2 加入更多适配器后就会出现。改法：分类失败和「不认领」要区分开，分类失败时记日志，把这一轮当作受保护的（保留原样，不瘦身），继续处理其他轮次。补一条测试：混入一个分类时抛错的测试适配器后，Life 轮次照样被投影，出错的那一轮保持原样。
+
+   已修：来源表将分类异常和未知分支标为失败。历史维护记录来源及适配器，保留该轮原始结果并继续扫描。回归测试验证同轮已有 Life 结果仍受保护、后续合格轮次照常替换。
+
+### E1 批复查（第二轮，通过）
+
+- 第 1 条：已修。`check-context-payload.mjs` 改用 `SourceAdapterTable` 登记 Life 适配器，只调用只读分类；新测试用合成日志实际跑这个 CLI，能正常出报告并识别出可瘦身的结果。
+- 第 2 条：已修。来源表把分类抛错和未知分支都返回 `failed`，历史扫描把这一轮当作受保护的并记一条告警，其他 Life 轮次照常投影；新测试混入一个分类时抛错的适配器，验证出错那一轮保持原样、后面的 Life 轮次被替换。
+- 复跑：`pnpm run build` 通过；Life、历史维护和登记口快测 168 项通过、0 跳过；`check:arch` 通过（新增 0）。返工由 Claude 原样提交，合并前完整门禁再跑一次。
 
