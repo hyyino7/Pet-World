@@ -196,7 +196,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       scope.provide('sessionController',controller);
       scope.provide('agentPresets',{composedPreset:carrier=>[...agents.values()].find(agent=>agent.ctx===carrier)?.session.header.agentPreset});
       scope.provide('workingDirectory',{ensure:async agent=>agent.session.header.cwd});
-      scope.provide('fs',{resolve:async (path,{cwd})=>resolve(cwd,path),processPath:path=>path});
+      scope.provide('fs',{resolve:async (path,options)=>io.resolve ? io.resolve(path,options) : resolve(options.cwd,path),processPath:path=>path});
       scope.provide('sessionPersistence',{
         async open(sessionId) {
           if (!existsSync(logFile(sessionId))) throw Object.assign(Error('Missing synthetic session'),{name:'SessionNotFound'});

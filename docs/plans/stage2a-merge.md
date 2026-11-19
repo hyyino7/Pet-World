@@ -599,6 +599,23 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - `node --test dist/tests/economy/*.test.js tests/economy/*.test.mjs tests/regressions/*.test.mjs` 548/548 通过。验证使用合成夹具，改动留在工作树，完整门禁和提交由 Claude 处理。
 - 建议提交说明「搬迁钱包区到 `src/living/economy/` 并同步引用和架构基线」。
 
+### 第 3 批 · 3B
+
+- `src/living/index.ts` 复用 `RegistrationTable`，按 Cordis 根、Core 对象和隔离标签登记三区。`body/plugin.ts` 将可选服务观察改为按租约观察，卸载时停计时和订阅，再保存检查点。
+- `plan/{plugin,plan,review}.ts` 核对跨区租约，卸载时取消原生 home 轮次并等待队列和回顾 I/O。`economy/{plugin,access}.ts` 撤初始化器和文件守卫，取消解析并等跨区请求收尾，再关库释锁。入口同步抛出挂载错误，由 Cordis 等同一清理函数。
+- `arch/layers.json` 登记 `internal/status` 并移除 `living` 的三个旧服务读取声明。已同步 `dist/src/living/`，三个门面仍提供原对象和原有方法。
+- `tests/living/living-lifecycle.test.mjs` 新增 25 项 R6，覆盖六种实际装载顺序、三种先卸载、隔离、同名重挂、挂载回滚、晚到任务和清理。`tests/behavior-list/{entries-lifecycle.test,fixture}.mjs` 只接夹具，1A 测试主体及全部断言逐字核对一致。
+- `tests/behavior/{behavior-scheduling,garden-clock-continuity}.test.ts`、`tests/life/{life-body,life-clock-intent,life-core-integration,life-desktop-integration,life-domain-integration,life-sleep-continuity}.test.ts` 接入显式端口或登记替身。
+- `tests/regressions/{audit-r5-garden-clock,mapped-refresh-convergence,mapped-refused-movement,mapped-sleeping-inventory}.test.mjs`、`mapped-playback-context.test.ts` 及 `scripts/fixtures/synthetic-companion.mjs` 只改端口接线。
+- 实现前单跑 R6 的 4 个场景，2 过、2 失败，确认旧 Plan 回调晚到写盘和 Economy 解析未取消。实现后细则第一组快测 68/68（含 R6、1A 和 G9），第二组 182/182，`node --test tests/migrate/settlement.test.mjs` 2/2。
+- `pnpm run build`、`pnpm run check:types`、`pnpm run check:arch` 通过，规则 60、词表 1053 均无增减。`pnpm run build && pnpm run test:behavior-list` 通过，索引 11/11、行为 88/88。
+- 无偏离细则，仅使用合成数据。改动留在工作树，`pnpm run verify` 与提交由 Claude 处理。以下四组已在临时源码副本逐组通过构建、两组快测、架构和迁移结算测试，各组的 `dist/src/**` 随源码提交且不计阈值。
+- 第 1 组「登记三入口」。加入 `index.ts`，三个 `apply` 接登记但保留原读法，`arch/layers.json` 先登记 `internal/status`。附共享夹具的装载接线与 R6 排列、隔离用例。8 个文件，约 428 行。
+- 第 2 组「切换身体区读取与观察」。附 Body 端口夹具、旧 Plan 观察和实际计时器用例。15 个文件，328 行。
+- 第 3 组「切换计划区读取与退场」。附 Plan 端口夹具、原生 reader 探针及用例。11 个文件，约 347 行。
+- 第 4 组「切换钱包区读取与退场」。附 Economy 端口夹具、文件解析和挂载失败用例，移除旧 `reads`。11 个文件，约 395 行。本小节可单独提交。
+- `tests/regressions/room-refresh.test.mjs` 的 Body 原型夹具补接 `LivingView`，修复归第 2 组。Room 回归 6/6、两组快测 68/68 和 182/182、行为清单 88/88 通过。
+
 ## 审查结论
 
 ### 1A 第一轮验收（Codex 审查 + Claude 核实）

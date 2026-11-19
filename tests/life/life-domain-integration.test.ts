@@ -38,7 +38,7 @@ function fixture(t:TestContext) {
   let body:CompanionBehavior,economy:CompanionEconomy|undefined;
   const ctx={get:(name:string)=>name==='petBehavior'?body:name==='petEconomy'?economy:undefined,
     on:()=>()=>{},emit:(name:string,payload:unknown)=>{events.push({name,payload});},logger:()=>({warn(){}})} as unknown as Context;
-  const openEconomy=()=>{economy=new CompanionEconomy(ctx,host);economy.prepare(target);};
+  const openEconomy=()=>{economy=new CompanionEconomy(ctx,host,{body:()=>body});economy.prepare(target);};
   const start=()=>{openEconomy();body=new CompanionBehavior(ctx,host,{economy:()=>economy});};
   const plan=()=>new PersistentLifePlan(directory,'fish','storage','UTC');
   start();

@@ -3,6 +3,7 @@ import type { ToolExecution } from '@deepseek-ai/dsh-tools';
 import type {} from '@deepseek-ai/dsh-tools';
 import { realpathSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import {InFlight, settleCleanup} from '../index.js';
 
 /** This is a native file-tool guard, not an operating-system security boundary.
  * Installed DSH 0.2.2-rc.2 exposes whole-workspace write grants, without excluded roots.
@@ -58,39 +59,53 @@ const within = (directory: string, path: string): boolean => {
 /** Reuse DSH's own filesystem and current-directory resolution before its
  * monotonic guard. No replacement filesystem, assistant runtime or exec policy.
  * The owner RPC writes through the Economy owner and never calls file tools. */
-export function installEconomyAccessGuard(ctx: Context, directory: () => string | undefined): () => void {
+export function installEconomyAccessGuard(ctx: Context, directory: () => string | undefined,
+  onCleanup: (stop: () => Promise<void>) => void) {
   const native = ctx as unknown as NativeServices;
   const prepared = new Map<ToolExecution['token'], {directory: string; denial?: string}>();
-  const stopPrepare = ctx.on('tools/pre-execute', async (exec, next) => {
+  const abort = new AbortController(), inFlight = new InFlight();
+  const stops: (() => void)[] = [];
+  onCleanup(async () => {
+    abort.abort();
+    prepared.clear();
+    await settleCleanup(...stops.splice(0), () => inFlight.settled());
+  });
+  stops.push(ctx.on('tools/pre-execute', async (exec, next) => {
     if (!knownFiles.has(exec.name)) return next();
+    if (abort.signal.aborted) return {kind: 'cancel'};
     const protectedPath = directory(); if (!protectedPath) return next();
     const entry: {directory: string; denial?: string} = {directory: protectedPath}; prepared.set(exec.token, entry);
-    try {
-      const fs = native.get('fs') as FileSystem | undefined;
-      if (!fs) throw Error('Native filesystem is unavailable');
-      const working = native.get('workingDirectory') as WorkingDirectory | undefined;
-      if (exec.agent && !working) throw Error('Native working directory is unavailable');
-      const cwd = exec.agent ? await working!.ensure(exec.agent, exec.signal) : undefined;
-      const protectedDirectory = canonicalCandidate(protectedPath);
-      for (const path of requestedPaths(exec)) {
-        const target = await fs.resolve(path, {...(cwd === undefined ? {} : {cwd}), signal: exec.signal});
-        const resolvedPath = canonicalCandidate(fs.processPath(target));
-        const mutating = ['write', 'edit', 'apply_patch'].includes(exec.name)
-          || (exec.name === 'str_replace_editor' && (exec.arguments as Record<string, unknown>).command !== 'view');
-        if (within(protectedDirectory, resolvedPath) || (mutating && within(resolvedPath, protectedDirectory))) {
-          entry.denial = '经济账本由程序结算，请使用经济查询、商店和库存接口。'; break;
+    const signal = AbortSignal.any([exec.signal, abort.signal]);
+    await inFlight.run(async () => {
+      try {
+        const fs = native.get('fs') as FileSystem | undefined;
+        if (!fs) throw Error('Native filesystem is unavailable');
+        const working = native.get('workingDirectory') as WorkingDirectory | undefined;
+        if (exec.agent && !working) throw Error('Native working directory is unavailable');
+        const cwd = exec.agent ? await working!.ensure(exec.agent, signal) : undefined;
+        abort.signal.throwIfAborted();
+        const protectedDirectory = canonicalCandidate(protectedPath);
+        for (const path of requestedPaths(exec)) {
+          const target = await fs.resolve(path, {...(cwd === undefined ? {} : {cwd}), signal});
+          abort.signal.throwIfAborted();
+          const resolvedPath = canonicalCandidate(fs.processPath(target));
+          const mutating = ['write', 'edit', 'apply_patch'].includes(exec.name)
+            || (exec.name === 'str_replace_editor' && (exec.arguments as Record<string, unknown>).command !== 'view');
+          if (within(protectedDirectory, resolvedPath) || (mutating && within(resolvedPath, protectedDirectory))) {
+            entry.denial = '经济账本由程序结算，请使用经济查询、商店和库存接口。'; break;
+          }
         }
-      }
-    } catch {entry.denial = '经济账本路径暂时无法核对，请等待原生文件服务就绪后重试。';}
+      } catch {entry.denial = '经济账本路径暂时无法核对，请等待原生文件服务就绪后重试。';}
+    });
+    if (abort.signal.aborted) return {kind:'cancel'};
     return next();
-  });
-  const stopGuard = ctx.tools.guard(exec => {
+  }));
+  stops.push(ctx.tools.guard(exec => {
     if (!knownFiles.has(exec.name)) return;
     const current = directory(), saved = prepared.get(exec.token);
     if (!current && !saved) return;
     if (!saved || current !== saved.directory) return '经济工作区已改变，请重新发起文件操作。';
     return saved.denial;
-  });
-  const stopResult = ctx.on('tools/result', exec => {prepared.delete(exec.token);});
-  return () => {stopPrepare(); stopGuard(); stopResult(); prepared.clear();};
+  }));
+  stops.push(ctx.on('tools/result', exec => {prepared.delete(exec.token);}));
 }

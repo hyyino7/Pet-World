@@ -1,5 +1,5 @@
-import { mountLivingArea } from '../index.js';
 import { economyOverview, economyPage } from './tool-context.js';
+import { InFlight, LivingView, mountLivingArea, settleCleanup, withLivingCaller } from '../index.js';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { lstatSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -33,10 +33,14 @@ export class CompanionEconomy {
     host;
     current;
     closed = false;
-    constructor(ctx, host) {
+    living;
+    inFlight = new InFlight();
+    constructor(ctx, host, ports = {}) {
         this.ctx = ctx;
         this.host = host;
+        this.living = ports instanceof LivingView ? ports : new LivingView(ports);
     }
+    assertOpen() { check(!this.closed && this.living.isCurrent(), 'Economy is stopped'); }
     protectedDirectory() {
         const status = this.host.workspace.status();
         return status.target ? join(status.target.path, '.chatpet', 'data', 'economy') : undefined;
@@ -74,7 +78,7 @@ export class CompanionEconomy {
     }
     /** Initialization is schema preparation only: no allowance, gifts or goals. */
     prepare(target, legacyFile, initializing = false) {
-        check(!this.closed, 'Economy is stopped');
+        this.assertOpen();
         const storageId = this.host.workspace.storageId(), companionId = this.host.workspace.runtime.config.companionId;
         const key = canonical({ path: target.path, storageId, companionId });
         if (this.current?.key === key) {
@@ -99,7 +103,7 @@ export class CompanionEconomy {
         const store = new EconomyStore({ workspacePath: target.path, storageId, companionId, expectedInitialized,
             loadLegacyGarden: () => this.retainedGarden(target, legacyFile),
             guard: () => {
-                check(!this.closed, 'Economy is stopped');
+                this.assertOpen();
                 check(metadata.persisted(), 'Core database is absent or moved');
                 check(this.host.workspace.storageId() === storageId, 'Economy binding changed');
             } });
@@ -118,7 +122,7 @@ export class CompanionEconomy {
         return store;
     }
     bound(workspaceId) {
-        check(!this.closed, 'Economy is stopped');
+        this.assertOpen();
         const status = this.host.workspace.status();
         check(status.state === 'ready' && status.target?.id === workspaceId, 'Economy requires the current bound workspace');
         return this.prepare(status.target);
@@ -129,7 +133,7 @@ export class CompanionEconomy {
         return { ...row, effects: saved.effects ?? item?.effects ?? {}, label: saved.label ?? item?.name ?? row.itemId, ...(item?.presentationSlot ? { presentationSlot: item.presentationSlot } : {}) };
     }
     gardenClock(workspaceId) {
-        const live = this.ctx.get('petLife')?.bodyClockState?.(workspaceId);
+        const live = this.living.get('plan')?.bodyClockState?.(workspaceId);
         if (live)
             return live;
         const status = this.host.workspace.status();
@@ -138,12 +142,12 @@ export class CompanionEconomy {
             if (saved?.pauses !== undefined)
                 return saved;
         }
-        const enabled = this.ctx.get('petBehavior')?.gardenClockState?.(workspaceId);
+        const enabled = this.living.get('body')?.gardenClockState?.(workspaceId);
         return enabled === undefined ? undefined : { enabled };
     }
     committedGardenAt(workspaceId) {
         const status = this.host.workspace.status(), current = this.current;
-        if (status.state === 'ready' && status.target?.id === workspaceId
+        if (!this.closed && this.living.isCurrent() && status.state === 'ready' && status.target?.id === workspaceId
             && current?.target.id === workspaceId && current.target.path === status.target.path)
             return current.store.committedGardenAt();
     }
@@ -224,14 +228,19 @@ export class CompanionEconomy {
         }
     }
     async ownerAction(workspaceId, action, requestId, signal, validate = () => { }, trustedActor) {
-        const guard = () => { signal.throwIfAborted(); validate(); };
+        const guard = () => { this.assertOpen(); signal.throwIfAborted(); validate(); };
         guard();
         const store = this.bound(workspaceId);
         check(action && typeof action === 'object' && !Array.isArray(action), 'Invalid economic action');
         const actor = trustedActor ?? { kind: 'owner', id: this.host.workspace.runtime.config.ownerActorId, channel: 'settings' };
         check(actor.kind === 'owner' && actor.id === this.host.workspace.runtime.config.ownerActorId, 'Economic owner actions require the trusted owner');
         const quantity = action.quantity ?? 1;
-        let execution;
+        const finish = async (execution) => {
+            guard();
+            check(this.bound(workspaceId) === store, 'Economy binding changed');
+            const snapshot = await this.snapshot(workspaceId, guard);
+            return { ...snapshot, ...(execution ? { execution } : {}) };
+        };
         switch (action.kind) {
             case 'grant':
                 store.grantMoney(requestId, action.amount, typeof action.note === 'string' && action.note.trim() ? action.note : undefined, actor);
@@ -253,19 +262,19 @@ export class CompanionEconomy {
             }
             case 'feed': {
                 integer(quantity, 'food quantity', 1, 1);
-                const body = this.ctx.get('petBehavior');
+                const body = this.living.lookup('body');
                 check(body, 'The shared Body is unavailable');
-                execution = await body.consumeFood(workspaceId, { operationId: `owner-food:${digest(requestId).slice(7, 55)}`, itemId: action.itemId, interaction: { requestId, actor } }, guard);
-                break;
+                const admit = () => { guard(); check(body.isCurrent(), 'The shared Body changed'); };
+                return this.inFlight.run(async () => {
+                    const execution = await withLivingCaller(admit, () => body.value.consumeFood(workspaceId, { operationId: `owner-food:${digest(requestId).slice(7, 55)}`, itemId: action.itemId, interaction: { requestId, actor } }, guard));
+                    admit();
+                    return finish(execution);
+                });
             }
             default: throw Error('Unknown economic action');
         }
-        if (action.kind !== 'feed')
-            this.notifyFacts(workspaceId);
-        guard();
-        check(this.bound(workspaceId) === store, 'Economy binding changed');
-        const snapshot = await this.snapshot(workspaceId, guard);
-        return { ...snapshot, ...(execution ? { execution } : {}) };
+        this.notifyFacts(workspaceId);
+        return finish();
     }
     async settings(workspaceId, expectedVersion, next, requestId, signal, validate = () => { }) {
         signal.throwIfAborted();
@@ -278,17 +287,27 @@ export class CompanionEconomy {
         const { version: _schema, revision: _revision, ...patch } = next;
         // Serialize Body work first, then use saved clock intent. An unavailable
         // executor is not evidence that the owner paused natural crop time.
-        const behavior = this.ctx.get('petBehavior');
-        await behavior?.snapshot(workspaceId);
-        signal.throwIfAborted();
-        validate();
-        check(this.bound(workspaceId) === store, 'Economy binding changed');
-        store.configure(requestId, patch, version, this.gardenClock(workspaceId));
-        signal.throwIfAborted();
-        validate();
-        return this.snapshot(workspaceId, validate);
+        const body = this.living.lookup('body');
+        const admit = () => {
+            this.assertOpen();
+            signal.throwIfAborted();
+            validate();
+            if (body)
+                check(body.isCurrent(), 'The shared Body changed');
+        };
+        return this.inFlight.run(async () => {
+            if (body)
+                await withLivingCaller(admit, () => body.value.snapshot(workspaceId));
+            admit();
+            check(this.bound(workspaceId) === store, 'Economy binding changed');
+            store.configure(requestId, patch, version, this.gardenClock(workspaceId));
+            admit();
+            return this.snapshot(workspaceId, validate);
+        });
     }
-    close() { this.closed = true; this.current?.store.close(); this.current = undefined; }
+    stopAdmission() { this.closed = true; }
+    settled() { return this.inFlight.settled(); }
+    close() { this.stopAdmission(); const current = this.current; this.current = undefined; current?.store.close(); }
 }
 export const name = '22-Economy';
 export const inject = ['petCore', 'petWorld', 'tools', 'systemPrompt', 'agents'];
@@ -299,7 +318,7 @@ export function apply(ctx) {
         factIds: { type: 'array', items: { type: 'string' }, description: 'Read 1–16 original committed economic interaction receipts by exact fact IDs.' },
         section: { type: 'string', enum: ['catalog', 'ledger'], description: 'Optional paged catalog or recent ledger (up to 80 original recent entries).' },
         offset: { type: 'integer' }, limit: { type: 'integer' } };
-    return mountLivingArea(ctx, host, 'economy', () => new CompanionEconomy(ctx, host), service => {
+    return mountLivingArea(ctx, host, 'economy', view => new CompanionEconomy(ctx, host, view), service => {
         // Adopt an existing ready workspace before registering required schema paths.
         // Failed adoption leaves the original JSON and all unrelated records intact.
         const status = host.workspace.status();
@@ -315,7 +334,7 @@ export function apply(ctx) {
             return localFile(path) || host.workspace.runtime.store.meta(`economy.initialized:${host.workspace.storageId()}`) ? inventoryFiles : [];
         });
         ctx.provide('petEconomy', service);
-        stopAccess = installEconomyAccessGuard(ctx, () => service.protectedDirectory());
+        installEconomyAccessGuard(ctx, () => service.protectedDirectory(), stop => { stopAccess = stop; });
         const scope = (agent) => {
             if (!agent || agent.session.header.agentPreset === 'chatpet-channel-guest' || host.native.isGuest(agent.id) || !host.native.manages(agent.id))
                 return;
@@ -355,17 +374,13 @@ export function apply(ctx) {
                 return '生活经济暂不可用。保留现有计划与未决操作，勿假设交易成功或另建钱包；基础餐食与饮水仍免费。';
             }
         });
-    }, service => {
+    }, async (service) => {
+        service.stopAdmission();
         try {
-            stopAccess?.();
+            await settleCleanup(() => stopAccess?.(), () => stopInitializer?.(), () => service.settled());
         }
         finally {
-            try {
-                stopInitializer?.();
-            }
-            finally {
-                service.close();
-            }
+            service.close();
         }
     });
 }

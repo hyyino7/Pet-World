@@ -30,9 +30,8 @@ export const value = result => { assert.ok(result.ok, 'Synthetic public operatio
 const write = (file, text) => { mkdirSync(dirname(file), {recursive:true}); writeFileSync(file, text, {mode:0o600}); };
 export function openDomains(host) {
   let body, economy;
-  const ctx = {get:name => name === 'petBehavior' ? body : name === 'petEconomy' ? economy : undefined,
-    on:() => () => {}, emit() {}, logger:() => ({warn(){}})};
-  economy = new CompanionEconomy(ctx, host);
+  const ctx = {get:() => undefined, on:() => () => {}, emit() {}, logger:() => ({warn(){}})};
+  economy = new CompanionEconomy(ctx, host, {body:()=>body});
   economy.prepare(host.workspace.status().target);
   body = new CompanionBehavior(ctx, host, {economy:()=>economy});
   return {body, economy, async close() { await body.close(); economy.close(); }};

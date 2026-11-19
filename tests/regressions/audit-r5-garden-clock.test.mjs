@@ -34,7 +34,7 @@ function fixture(t,{service=false}={}) {
   const ctx={get:name=>name==='petEconomy'?economy:name==='petBehavior'?body:name==='petEmotion'&&emotionRead?{read:emotionRead,roomSnapshot:()=>undefined}:undefined,
     on:()=>()=>{},emit(){},logger:()=>({warn(){}})};
   const open=()=>{
-    economy=new CompanionEconomy(ctx,host);economy.prepare(target);
+    economy=new CompanionEconomy(ctx,host,{body:()=>body});economy.prepare(target);
     if(service)body=new CompanionBehavior(ctx,host,{economy:()=>economy});
     else room=new CompanionRoom(directory,()=>undefined,file=>economy.gardenPort(target.id,file));
   };

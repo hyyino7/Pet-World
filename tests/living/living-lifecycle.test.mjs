@@ -31,6 +31,33 @@ function ownedHooks(ctx, fiber) {
   });
 }
 
+function livingTimers(t) {
+  const set = globalThis.setTimeout, clear = globalThis.clearTimeout;
+  const pending = {body: new Set(), tick: new Set(), upstream: new Set(), alarm: new Set()};
+  const created = {body: 0, tick: 0, upstream: 0};
+  t.mock.method(globalThis, 'setTimeout', (callback, ms, ...args) => {
+    const stack = Error().stack;
+    const area = stack.includes('CompanionBehavior.arm') ? 'body'
+      : stack.includes('CompanionLife.scheduleTick') ? 'tick'
+      : stack.includes('/life/alarmTimer.js') ? 'upstream' : undefined;
+    if (!area) return set(callback, ms, ...args);
+    const handle = set((...values) => {
+      pending[area].delete(handle);
+      pending.alarm.delete(handle);
+      callback(...values);
+    }, ms, ...args);
+    pending[area].add(handle);
+    created[area]++;
+    if (area === 'upstream' && /\barm \([^\n]+\/alarmTimer\.js:/u.test(stack)) pending.alarm.add(handle);
+    return handle;
+  });
+  t.mock.method(globalThis, 'clearTimeout', handle => {
+    for (const handles of Object.values(pending)) handles.delete(handle);
+    clear(handle);
+  });
+  return {pending, created};
+}
+
 for (const order of orders) {
   for (const first of Object.keys(zones)) {
     test(`R6 ${order.join(' → ')}，先卸载 ${first} 再重挂`, async t => {
@@ -104,33 +131,6 @@ test('R6 只隔离目标服务自己的标签，同标签能重新找到原区',
   assert.notEqual(original.lookup('plan').lease.generation, old.lease.generation);
 });
 
-function livingTimers(t) {
-  const set = globalThis.setTimeout, clear = globalThis.clearTimeout;
-  const pending = {body: new Set(), tick: new Set(), upstream: new Set(), alarm: new Set()};
-  const created = {body: 0, tick: 0, upstream: 0};
-  t.mock.method(globalThis, 'setTimeout', (callback, ms, ...args) => {
-    const stack = Error().stack;
-    const area = stack.includes('CompanionBehavior.arm') ? 'body'
-      : stack.includes('CompanionLife.scheduleTick') ? 'tick'
-      : stack.includes('/life/alarmTimer.js') ? 'upstream' : undefined;
-    if (!area) return set(callback, ms, ...args);
-    const handle = set((...values) => {
-      pending[area].delete(handle);
-      pending.alarm.delete(handle);
-      callback(...values);
-    }, ms, ...args);
-    pending[area].add(handle);
-    created[area]++;
-    if (area === 'upstream' && /\barm \([^\n]+\/alarmTimer\.js:/u.test(stack)) pending.alarm.add(handle);
-    return handle;
-  });
-  t.mock.method(globalThis, 'clearTimeout', handle => {
-    for (const handles of Object.values(pending)) handles.delete(handle);
-    clear(handle);
-  });
-  return {pending, created};
-}
-
 test('R6 旧 Plan 观察恢复后不得写盘或在新代之前发布', async t => {
   const f = await cordisFixture(t);
   await f.body.snapshot(f.id);
@@ -201,6 +201,100 @@ test('R6 卸载停掉实际身体计时、计划 tick、上游闹钟和各自订
   await delay(10);
   assert.deepEqual(created, before);
   assert.ok(Object.values(pending).every(handles => handles.size === 0));
+});
+
+test('R6 Economy 卸载取消路径解析，并等守卫收尾后关库释锁', async t => {
+  const release = Promise.withResolvers();
+  let resolving, inFlight = 0, dispatched = 0, disposed = false;
+  const f = await cordisFixture(t, {io: {async resolve(path, {signal}) {
+    resolving = signal;
+    inFlight++;
+    try { await release.promise; signal.throwIfAborted(); return path; }
+    finally { inFlight--; }
+  }}});
+  const lock = join(f.repo, '.chatpet/data/economy/economy.lock');
+  const committed = await f.ownerAction({kind: 'grant', amount: 13}, 'r6-retained-grant');
+  assert.ok(existsSync(lock));
+  const exec = {name: 'write', token: Symbol('r6-file'), arguments: {file_path: join(f.repo, 'safe.md')},
+    signal: new AbortController().signal};
+  const operation = f.ctx.waterfall('tools/pre-execute', exec, async () => {dispatched++; return {kind: 'allow'};});
+  const outcome = Promise.allSettled([operation]);
+  let unloading;
+  try {
+    await eventually(() => resolving, 'Economy 原生解析已进入');
+    unloading = f.unload('economy').then(() => {disposed = true;});
+    await eventually(() => resolving.aborted || disposed, '解析取消或入口已退场');
+    assert.equal(resolving.aborted, true);
+    assert.equal(exec.signal.aborted, false);
+    assert.equal(disposed, false);
+    assert.equal(inFlight, 1);
+    assert.ok(existsSync(lock));
+  } finally {
+    release.resolve();
+    await outcome;
+    await unloading;
+  }
+  assert.equal(dispatched, 0);
+  assert.equal(inFlight, 0);
+  assert.equal(existsSync(lock), false);
+  await f.load('economy');
+  assert.equal((await f.economy.snapshot(f.id)).balance, committed.balance);
+});
+
+test('R6 Economy 卸载等待跨区设置请求，旧请求不能写配置', async t => {
+  const f = await cordisFixture(t);
+  await f.body.snapshot(f.id);
+  const before = await f.economy.snapshot(f.id);
+  const release = Promise.withResolvers();
+  let reads = 0, disposed = false;
+  const emotion = await f.ctx.plugin({apply(ctx) {
+    ctx.provide('petEmotion', {roomSnapshot() {}, async read() {
+      if (++reads === 1) await release.promise;
+    }});
+  }});
+  const lock = join(f.repo, '.chatpet/data/economy/economy.lock');
+  const signal = new AbortController().signal;
+  const operation = f.economy.settings(f.id, before.configurationVersion, {articlePrice: 23}, 'r6-stale-settings', signal);
+  const outcome = Promise.allSettled([operation]);
+  let unloading;
+  try {
+    await eventually(() => reads === 1, '设置的 Body 检查点已进入情绪读取');
+    unloading = f.unload('economy').then(() => {disposed = true;});
+    await eventually(() => !f.economy, 'Economy 门面已撤下');
+    await delay(10);
+    assert.equal(disposed, false);
+    assert.ok(existsSync(lock));
+  } finally {
+    release.resolve();
+    await outcome;
+    await unloading;
+    await f.body.snapshot(f.id);
+    await emotion.dispose();
+  }
+  await assert.rejects(operation, /Economy is stopped/);
+  assert.equal(existsSync(lock), false);
+  await f.load('economy');
+  assert.equal((await f.economy.snapshot(f.id)).configurationVersion, before.configurationVersion);
+});
+
+test('R6 Economy 挂载中途失败会撤登记并关库，之后可同名重挂', async t => {
+  const {LivingWorld} = await import('../../dist/src/living/index.js');
+  const f = await cordisFixture(t, {order: ['body', 'life']});
+  const world = LivingWorld.find(f.ctx, f.core);
+  const body = f.body, life = f.life;
+  const removeConflictingInitializer = f.core.workspace.registerInitializer('economy', () => {});
+  const lock = join(f.repo, '.chatpet/data/economy/economy.lock');
+  try {
+    await assert.rejects(f.load('economy'), /Workspace initializer already registered/);
+    assert.equal(f.economy, undefined);
+    assert.equal(world.lookup('economy'), undefined);
+    assert.equal(existsSync(lock), false);
+    assert.equal(f.body, body);
+    assert.equal(f.life, life);
+  } finally { removeConflictingInitializer(); }
+  await f.load('economy');
+  assert.equal(world.lookup('economy').value, f.economy);
+  assert.ok(existsSync(lock));
 });
 
 test('R6 Life 卸载等待原生持久日志的无信号读取关闭 reader', async t => {

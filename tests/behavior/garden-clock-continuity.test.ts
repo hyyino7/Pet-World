@@ -34,7 +34,7 @@ function fixture(t:TestContext) {
   let economy:CompanionEconomy;
   const services=new Map<string,unknown>();
   const context={get:(name:string)=>services.get(name)} as unknown as Context;
-  const openEconomy=()=>{economy=new CompanionEconomy(context,host);economy.prepare(target);};openEconomy();
+  const openEconomy=()=>{economy=new CompanionEconomy(context,host,{plan:()=>services.get('petLife') as CompanionLife|undefined});economy.prepare(target);};openEconomy();
   const openRoom=()=>new CompanionRoom(directory,()=>undefined,file=>economy.gardenPort(target.id,file));
   let room=openRoom();
   t.after(()=>{room.flush();economy.close();rmSync(root,{recursive:true,force:true});});

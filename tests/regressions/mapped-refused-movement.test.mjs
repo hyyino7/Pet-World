@@ -47,7 +47,7 @@ async function fixture(t,{mode='awake',tilled=false,money=0}={}) {
     emit(name,...args){for(const receive of listeners.get(name)??[])receive(...args);},logger};
   services.set('petLife',{running:()=>true,bodyClockState:()=>({enabled:true,restoreElapsed:false})});
   const start=()=>{
-    economy=new CompanionEconomy(ctx,host);services.set('petEconomy',economy);
+    economy=new CompanionEconomy(ctx,host,{body:()=>body,plan:()=>services.get('petLife')});services.set('petEconomy',economy);
     body=new CompanionBehavior(ctx,host,{economy:()=>economy,plan:()=>services.get('petLife')});services.set('petBehavior',body);room=new Room(ctx);
   };start();
   const signal=new AbortController().signal;
