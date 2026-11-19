@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import assert from 'node:assert/strict';
 import {setTimeout as delay} from 'node:timers/promises';
-import {CompanionBehavior} from '../../dist/src/behavior/plugin.js';
+import {CompanionBehavior} from '../../dist/src/living/body/plugin.js';
 import {Room} from '../../dist/src/room/plugin.js';
 import {roomAsset} from '../../dist/src/room/assets.js';
 import {emptyHomeState} from '#feiyu-home';

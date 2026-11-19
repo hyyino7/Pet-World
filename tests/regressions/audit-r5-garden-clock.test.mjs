@@ -6,8 +6,8 @@ import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
-import {CompanionRoom} from '../../dist/src/behavior/room.js';
-import {CompanionBehavior} from '../../dist/src/behavior/plugin.js';
+import {CompanionRoom} from '../../dist/src/living/body/room.js';
+import {CompanionBehavior} from '../../dist/src/living/body/plugin.js';
 import {CompanionEconomy} from '../../dist/src/economy/plugin.js';
 
 const HOUR=3_600_000;

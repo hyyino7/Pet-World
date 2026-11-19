@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { createLifeStore, LIFE_STATE_MAX_BYTES, type LifeStore } from '#dsh-world/life/lifeStore';
-import type { CompanionBehavior } from '../behavior/plugin.js';
+import type { CompanionBehavior } from '../living/body/plugin.js';
 import { PlannedAdmissionWaitError, type PlannedActivity, type PlannedAdmissionWait } from '../contracts/behavior.js';
-import { requirePresentationSlot } from '../behavior/playback.js';
-import {gardenReceiptText} from '../behavior/garden-receipt.js';
+import { requirePresentationSlot } from '../living/body/playback.js';
+import {gardenReceiptText} from '../living/body/garden-receipt.js';
 
 export type PlanStatus = 'active' | 'paused' | 'waiting' | 'completed' | 'cancelled';
 export interface LifeStep {

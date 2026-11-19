@@ -1,7 +1,7 @@
-import { type GardenClock } from '../economy/garden-clock.js';
-import type { CompanionEmotion } from '../emotion/plugin.js';
-import type { PlannedActivity, PlannedExecution, BehaviorAnimationContext } from '../contracts/behavior.js';
-import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
+import { type GardenClock } from '../../economy/garden-clock.js';
+import type { CompanionEmotion } from '../../emotion/plugin.js';
+import type { PlannedActivity, PlannedExecution, BehaviorAnimationContext } from '../../contracts/behavior.js';
+import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
 export interface RoomInteractionContext {
     requestId: string;
     actor: CompanionFactActor;

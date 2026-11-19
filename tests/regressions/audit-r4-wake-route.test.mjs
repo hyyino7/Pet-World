@@ -4,7 +4,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {HOME_LAYOUT,emptyHomeState,applyHomeAction,advanceHomeState,currentPosition,currentFacing,homeView,normalizeHomeState,normalizeFreePoint} from '#feiyu-home';
-import {CompanionBehavior} from '../../dist/src/behavior/plugin.js';
+import {CompanionBehavior} from '../../dist/src/living/body/plugin.js';
 
 const now=Date.UTC(2026,10,13,12),env={autonomy:false,goalPolicy:'planned'};
 function pendingSleep() {

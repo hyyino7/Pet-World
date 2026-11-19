@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
 import {emptyHomeState} from '#feiyu-home';
-import {CompanionBehavior} from '../../dist/src/behavior/plugin.js';
+import {CompanionBehavior} from '../../dist/src/living/body/plugin.js';
 import {CompanionVoice} from '../../dist/src/voice/plugin.js';
 import {canonical,digest} from '../../dist/src/core/storage.js';
 

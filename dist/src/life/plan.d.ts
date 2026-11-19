@@ -1,5 +1,5 @@
 import { type LifeStore } from '#dsh-world/life/lifeStore';
-import type { CompanionBehavior } from '../behavior/plugin.js';
+import type { CompanionBehavior } from '../living/body/plugin.js';
 import { type PlannedActivity, type PlannedAdmissionWait } from '../contracts/behavior.js';
 export type PlanStatus = 'active' | 'paused' | 'waiting' | 'completed' | 'cancelled';
 export interface LifeStep {

@@ -4,14 +4,14 @@ import { HOME_ACTIONS, HOME_LAYOUT, HOME_TOUCH_REACTION_MS, advanceHomeState, ne
 import { createGardenCaretaker, nextGardenCareBoundary } from '#feiyu-room/garden-autonomy';
 import { actGarden, loadGarden, saveGarden } from '#feiyu-room/garden-store';
 import { advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
-import { advanceGardenClock } from '../economy/garden-clock.js';
-import { LifeControlFileError } from '../life/control-file.js';
+import { advanceGardenClock } from '../../economy/garden-clock.js';
+import { LifeControlFileError } from '../../life/control-file.js';
 import { applyRoomAction, normalizeRoomState, roomView } from '#feiyu-room/room-state';
 import { randomUUID } from 'node:crypto';
 import { initialBodyState } from './initial-state.js';
-import { PlannedAdmissionWaitError } from '../contracts/behavior.js';
+import { PlannedAdmissionWaitError } from '../../contracts/behavior.js';
 import { requirePresentationSlot, animationSlotAllowed } from './playback.js';
-import { canonical, digest } from '../core/storage.js';
+import { canonical, digest } from '../../core/storage.js';
 import { gardenHomeProjection, gardenReceiptProjection, gardenReceiptText } from './garden-receipt.js';
 const terminalExecution = new Set(['completed', 'cancelled', 'failed']);
 const gardenActions = new Set(['visit', 'till', 'plant', 'water', 'fertilize', 'harvest', 'sell', 'buySeed', 'buyCompost']);

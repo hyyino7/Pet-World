@@ -6,7 +6,7 @@ import {dirname,join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 
 const base=process.env.CHATPET_PLAYBACK_TEST_MODULE
-  ? dirname(resolve(process.env.CHATPET_PLAYBACK_TEST_MODULE)) : resolve('dist/src/behavior');
+  ? dirname(resolve(process.env.CHATPET_PLAYBACK_TEST_MODULE)) : resolve('dist/src/living/body');
 const {animationAssets}=await import(pathToFileURL(join(base,'animation-map.js')));
 const read=file=>JSON.parse(readFileSync(file,'utf8'));
 const catalog=read('src/desktop/assets/catalog.json');

@@ -8,7 +8,7 @@ import type { CompanionToolTable } from '../core/tables/tools.js';
 type PlanTool = ToolDefinition & Partial<Omit<CompanionToolDeclaration, 'name'>>;
 export declare const lifePlanReadToolDeclaration: {
     name: string;
-    sources: readonly ("owner" | "life" | "review")[];
+    sources: readonly ("life" | "owner" | "review")[];
     historyOverview(_args: unknown, value: unknown): ({
         plan: object | null;
     } & {

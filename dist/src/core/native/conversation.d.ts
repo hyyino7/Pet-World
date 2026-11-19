@@ -8,7 +8,7 @@ import type { CompanionFact } from '../../contracts/interaction.js';
 import { type CompanionToolDeclaration, type SourceAdmission } from '../../contracts/tables.js';
 import { SourceAdapterTable } from '../tables/sources.js';
 import { CompanionToolTable } from '../tables/tools.js';
-export declare const OWNER_LIFE_TOOL_SOURCES: readonly ("owner" | "life" | "review")[];
+export declare const OWNER_LIFE_TOOL_SOURCES: readonly ("life" | "owner" | "review")[];
 export interface NativeScope {
     workspaceId: string;
     path: string;

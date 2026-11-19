@@ -1,9 +1,9 @@
 import type { Context } from '@deepseek-ai/cordis';
-import type { PetCoreHost } from '../core/index.js';
-import type { BehaviorChange, BehaviorSnapshot, PlannedActivity, PlannedExecution } from '../contracts/behavior.js';
+import type { PetCoreHost } from '../../core/index.js';
+import type { BehaviorChange, BehaviorSnapshot, PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 import { CompanionRoom } from './room.js';
 import type { RoomInteractionContext } from './room.js';
-export type { PlannedActivity, PlannedExecution } from '../contracts/behavior.js';
+export type { PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 /** The only home/garden runtime writer. It does not create agents or model turns. */
 export declare class CompanionBehavior {
     private ctx;
@@ -61,13 +61,13 @@ export declare class CompanionBehavior {
             phase: "idle" | "pending" | "moving" | "working" | "sleeping" | "completed";
             presentationKind?: "read" | "reading-wait" | "rest";
             readingState?: "unread" | "offered" | "confirmed";
-            animationContext?: import("../contracts/behavior.js").BehaviorAnimationContext;
+            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext;
         };
         ok: boolean;
         changed: boolean;
         event: any;
         room?: any;
-        fact?: import("../contracts/interaction.js").CompanionFact;
+        fact?: import("../../contracts/interaction.js").CompanionFact;
     }>;
     act(workspaceId: string, action: string, requestId?: string, channel?: string): Promise<{
         home: any;
@@ -80,16 +80,16 @@ export declare class CompanionBehavior {
             phase: "idle" | "pending" | "moving" | "working" | "sleeping" | "completed";
             presentationKind?: "read" | "reading-wait" | "rest";
             readingState?: "unread" | "offered" | "confirmed";
-            animationContext?: import("../contracts/behavior.js").BehaviorAnimationContext;
+            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext;
         };
         ok: boolean;
         changed: boolean;
         event: any;
         room?: any;
-        fact?: import("../contracts/interaction.js").CompanionFact;
+        fact?: import("../../contracts/interaction.js").CompanionFact;
     }>;
-    pendingFacts(workspaceId: string): Promise<import("../contracts/interaction.js").CompanionFact[]>;
-    readFacts(workspaceId: string, ids: readonly string[]): Promise<import("../contracts/interaction.js").CompanionFact[]>;
+    pendingFacts(workspaceId: string): Promise<import("../../contracts/interaction.js").CompanionFact[]>;
+    readFacts(workspaceId: string, ids: readonly string[]): Promise<import("../../contracts/interaction.js").CompanionFact[]>;
     acknowledgeFacts(workspaceId: string, ids: readonly string[]): Promise<void>;
     garden(workspaceId: string, operation: 'state' | 'act' | 'control', input?: unknown): Promise<ReturnType<CompanionRoom['garden']> & {
         home?: any;

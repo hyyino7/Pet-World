@@ -1,12 +1,12 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost, WorkspaceTarget } from '../core/index.js';
-import type { RoomEconomyPort } from '../behavior/room.js';
+import type { RoomEconomyPort } from '../living/body/room.js';
 import { EconomyStore } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
 import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
 export declare const economyStateToolDeclaration: {
     name: string;
-    sources: readonly ("owner" | "life" | "review")[];
+    sources: readonly ("life" | "owner" | "review")[];
     historyOverview(_args: unknown, value: unknown): (Omit<import("./types.js").EconomySnapshot & {
         ledger: import("./types.js").LedgerEntry[];
     }, "configuration" | "migration" | "ledger" | "inventory"> & {

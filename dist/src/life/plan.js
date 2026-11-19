@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { createLifeStore, LIFE_STATE_MAX_BYTES } from '#dsh-world/life/lifeStore';
 import { PlannedAdmissionWaitError } from '../contracts/behavior.js';
-import { requirePresentationSlot } from '../behavior/playback.js';
-import { gardenReceiptText } from '../behavior/garden-receipt.js';
+import { requirePresentationSlot } from '../living/body/playback.js';
+import { gardenReceiptText } from '../living/body/garden-receipt.js';
 const object = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 function check(value, message) { if (!value)
     throw Error(message); }

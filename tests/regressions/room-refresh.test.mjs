@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {CompanionBehavior} from '../../dist/src/behavior/plugin.js';
+import {CompanionBehavior} from '../../dist/src/living/body/plugin.js';
 import {emptyHomeState,advanceHomeState,homeView} from '../../vendor/feiyu-room-template/home-state.js';
 import {roomReaders} from '../fixtures/room-readers.mjs';
 

@@ -125,7 +125,7 @@ export declare class GroupGameplay {
             meaning: string;
             usage: string;
             count: number;
-            status: "rejected" | "confirmed" | "candidate";
+            status: "confirmed" | "candidate" | "rejected";
         }[];
         stickers: {
             id: string;
@@ -178,7 +178,7 @@ export declare class GroupGameplay {
         note?: undefined;
     } | {
         content: string;
-        status: "rejected" | "confirmed" | "candidate";
+        status: "confirmed" | "candidate" | "rejected";
         meaning: string;
     }[] | {
         updated: boolean;

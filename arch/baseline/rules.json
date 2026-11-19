@@ -186,7 +186,7 @@
       "target": "petBehavior",
       "expression": "get ( \"petBehavior\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -198,7 +198,7 @@
       "target": "petBehavior",
       "expression": "ctx . get ( fact . domain === \"body\" ? \"petBehavior\" : \"petEconomy\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -222,7 +222,7 @@
       "target": "petBehavior",
       "expression": "ctx . get ( \"petBehavior\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -246,7 +246,7 @@
       "target": "petBehavior",
       "expression": "ctx . get ( \"petBehavior\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -282,7 +282,7 @@
       "target": "petBehavior",
       "expression": "ctx . get ( \"petBehavior\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -306,7 +306,7 @@
       "target": "petBehavior",
       "expression": "ctx . get ( \"petBehavior\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {

@@ -57,11 +57,11 @@ for(const carrier of ['native','web']) {
 }
 
 const compiledBase=process.env.CHATPET_PLAYBACK_TEST_MODULE
-  ? dirname(resolve(process.env.CHATPET_PLAYBACK_TEST_MODULE)) : resolve('dist/src/behavior');
+  ? dirname(resolve(process.env.CHATPET_PLAYBACK_TEST_MODULE)) : resolve('dist/src/living/body');
 async function assets() {
   if(process.env.CHATPET_PLAYBACK_TEST_MODULE)return import(pathToFileURL(join(compiledBase,'animation-map.js')).href);
   return import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(
-    readFileSync('src/behavior/animation-map.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText).toString('base64'));
+    readFileSync('src/living/body/animation-map.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText).toString('base64'));
 }
 async function room() {return import(pathToFileURL(join(compiledBase,'../room/assets.js')).href);}
 function roomDeclarations(animationAssets) {

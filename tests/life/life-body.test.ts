@@ -9,8 +9,8 @@ import { currentPosition, emptyHomeState } from '#feiyu-home';
 import { createGarden } from '#feiyu-garden';
 import { DesktopFeatures } from '../../src/desktop/features.js';
 import { CompanionLife } from '../../src/life/plugin.js';
-import { CompanionBehavior } from '../../src/behavior/plugin.js';
-import { CompanionRoom } from '../../src/behavior/room.js';
+import { CompanionBehavior } from '../../src/living/body/plugin.js';
+import { CompanionRoom } from '../../src/living/body/room.js';
 import { CompanionRecordLibrary } from '../../src/core/records.js';
 import type { RoomMood } from '../../src/emotion/index.js';
 

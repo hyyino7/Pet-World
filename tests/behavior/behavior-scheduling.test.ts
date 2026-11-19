@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
 import {CompanionLife} from '../../src/life/plugin.js';
-import {CompanionBehavior} from '../../src/behavior/plugin.js';
+import {CompanionBehavior} from '../../src/living/body/plugin.js';
 import {CompanionRecordLibrary} from '../../src/core/records.js';
 import {PersistentLifePlan} from '../../src/life/plan.js';
 import type {BehaviorChange} from '../../src/contracts/behavior.js';

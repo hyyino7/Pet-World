@@ -1,3 +1,3 @@
 /** Compatibility import only. Behavior owns the one body/garden writer. */
-export { CompanionRoom } from '../behavior/room.js';
+export { CompanionRoom } from '../living/body/room.js';
 //# sourceMappingURL=room.js.map

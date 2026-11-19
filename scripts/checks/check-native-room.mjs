@@ -48,7 +48,7 @@ try {
   const prefs = unwrap(await host.services.preferences.read(req('read'),{}));
   const saved = unwrap(await host.services.preferences.save(req('bind'),{expectedRevision:prefs.revision,conversation:prefs.conversation,workspace:{id:ws.id,path:ws.path,title:ws.title}}));
   unwrap(await host.services.workspace.initialize(req('init'),{expectedPreferencesRevision:saved.revision}));
-  await ctx.plugin(await import('../../dist/src/behavior/plugin.js'));
+  await ctx.plugin(await import('../../dist/src/living/body/plugin.js'));
   await ctx.plugin(await import('../../dist/src/life/plugin.js'));
   const owner = await ctx.plugin(await import('../../dist/src/room/plugin.js'));
   const roomUrl = new URL('/chatpet-room/',ctx.webServer.getOrigin());

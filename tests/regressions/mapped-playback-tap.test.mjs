@@ -8,7 +8,7 @@ import {createRequire} from 'node:module';
 import {createContext,runInContext} from 'node:vm';
 import ts from 'typescript';
 
-const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/behavior/playback.js'));
+const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/living/body/playback.js'));
 const {resolveActivityPlayback,sampleActivityPlayback}=await import(playbackURL);
 const {CompanionRoom}=await import(new URL('./room.js',playbackURL));
 const {CompanionBehavior}=await import(new URL('./plugin.js',playbackURL));

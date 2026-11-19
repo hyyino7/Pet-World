@@ -7,7 +7,7 @@ import {pathToFileURL} from 'node:url';
 import {createRequire} from 'node:module';
 import {runInNewContext} from 'node:vm';
 import ts from 'typescript';
-const playbackFile=process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/behavior/playback.js');
+const playbackFile=process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/living/body/playback.js');
 const {resolveActivityPlayback}=await import(pathToFileURL(playbackFile));
 const {animationStickers}=await import(new URL('./animation-map.js',pathToFileURL(playbackFile)));
 const {PetPlatform}=await import(new URL('../desktop/platform/plugin.js',pathToFileURL(playbackFile)));

@@ -14,7 +14,7 @@ import { defaultLifePreferences, parseLifePreferences, type LifePreferences } fr
 import type { CompanionRecordLibrary, RecordOperation } from '../core/records.js';
 import { companionRecordPaths } from '../core/record-paths.js';
 import { installLifeReview, REVIEW_ALARM_FILE } from './review.js';
-import type {} from '../behavior/plugin.js';
+import type {} from '../living/body/plugin.js';
 import { PersistentLifePlan, parsePlanDraft } from './plan.js';
 import { registerPlanTools } from './plan-tools.js';
 import {presentFacts} from '../core/interaction-presentation.js';

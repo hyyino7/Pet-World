@@ -10,7 +10,7 @@ import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {Desktop} from '../../dist/src/desktop/index.js';
 import {adaptRoomApp,roomAsset} from '../../dist/src/room/assets.js';
-import {behaviorPresentation,companionFeelings,feelingLabels} from '../../dist/src/behavior/presentation.js';
+import {behaviorPresentation,companionFeelings,feelingLabels} from '../../dist/src/living/body/presentation.js';
 
 export function fixture(root,getOrigin=()=> 'http://127.0.0.1',services={}) {
   let target={id:'a',path:root}, turns=[], requests=0;

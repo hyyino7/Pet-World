@@ -3,17 +3,17 @@ import { existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { buildHomePromptLine } from '#feiyu-home';
-import { digest } from '../core/storage.js';
-import type { PetCoreHost } from '../core/index.js';
-import type { BehaviorActivity, BehaviorChange, BehaviorSnapshot, CompanionExpression, PlannedActivity, PlannedExecution } from '../contracts/behavior.js';
+import { digest } from '../../core/storage.js';
+import type { PetCoreHost } from '../../core/index.js';
+import type { BehaviorActivity, BehaviorChange, BehaviorSnapshot, CompanionExpression, PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
-import type { CompanionFactActor } from '../contracts/interaction.js';
+import type { CompanionFactActor } from '../../contracts/interaction.js';
 import type { RoomInteractionContext } from './room.js';
 import {gardenHomeProjection} from './garden-receipt.js';
-import { LifeControlFileError, readLifeControl } from '../life/control-file.js';
-export type { PlannedActivity, PlannedExecution } from '../contracts/behavior.js';
+import { LifeControlFileError, readLifeControl } from '../../life/control-file.js';
+export type { PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 
 interface Binding {id: string; path: string; storageId: string; room: CompanionRoom; fingerprint?: string; presentationFingerprint?: string}
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'] as const;

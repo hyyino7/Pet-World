@@ -1,5 +1,5 @@
-import type { BehaviorPresentation, CompanionExpression } from '../contracts/behavior.js';
-import { COMPANION_FEELINGS } from '../contracts/emotion.js';
+import type { BehaviorPresentation, CompanionExpression } from '../../contracts/behavior.js';
+import { COMPANION_FEELINGS } from '../../contracts/emotion.js';
 
 /** Shared semantic names; displays choose their own existing assets. */
 export const companionFeelings = COMPANION_FEELINGS;

@@ -8,7 +8,7 @@ import type {Agent} from '@deepseek-ai/dsh-agent';
 import {createCore} from '../../src/core/index.js';
 import {createWorldService} from '../../src/world/service.js';
 import {installCompanionFoundation} from '../../src/core/companion-foundation.js';
-import {CompanionBehavior} from '../../src/behavior/plugin.js';
+import {CompanionBehavior} from '../../src/living/body/plugin.js';
 import {CompanionLife} from '../../src/life/plugin.js';
 import {PersistentLifePlan} from '../../src/life/plan.js';
 import type {Result} from '../../src/contracts/common.js';

@@ -1,4 +1,4 @@
-import { type ActivityPlayback } from '../../behavior/playback.js';
+import { type ActivityPlayback } from '../../living/body/playback.js';
 /** Semantic exclusions from the shipped catalogue; these clips assert a physical activity. */
 export declare const eatingClips: Set<string>;
 export declare const sleepingClips: Set<string>;

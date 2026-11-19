@@ -11,7 +11,7 @@ import { registerWorldContext } from '../core/native/prompt.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
 import { isHistoryObject } from '../core/native/history-maintenance.js';
 import type { CompanionToolDeclaration } from '../contracts/tables.js';
-import type { RoomEconomyPort, RoomFoodReservation } from '../behavior/room.js';
+import type { RoomEconomyPort, RoomFoodReservation } from '../living/body/room.js';
 import { EconomyStore } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
 import { installEconomyAccessGuard } from './access.js';

@@ -1,4 +1,4 @@
-import { COMPANION_FEELINGS } from '../contracts/emotion.js';
+import { COMPANION_FEELINGS } from '../../contracts/emotion.js';
 /** Shared semantic names; displays choose their own existing assets. */
 export const companionFeelings = COMPANION_FEELINGS;
 export const feelingLabels = {

@@ -1,4 +1,4 @@
-import { resolveActivityPlayback, sampleActivityPlayback, type ActivityPlayback } from '../../behavior/playback.js';
+import { resolveActivityPlayback, sampleActivityPlayback, type ActivityPlayback } from '../../living/body/playback.js';
 
 /** Semantic exclusions from the shipped catalogue; these clips assert a physical activity. */
 export const eatingClips = new Set([

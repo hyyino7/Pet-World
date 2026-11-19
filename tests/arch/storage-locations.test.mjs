@@ -28,11 +28,11 @@ test('R5 对新旧身体、记录、相册及设备连接位置分别报告真�
     '.chatpet/diary/2026-01-01.md','.chatpet/data/life/diary/2026-01-01.md',
     '.chatpet/data/life/photos/album.sqlite','profile:chatpet-channels/account.json',
     '.chatpet/data/life/activity/2026-01-01.jsonl'];
-  const rows=workspace(t,{'src/behavior/files.ts':`import {writeFileSync} from 'node:fs';
+  const rows=workspace(t,{'src/living/body/files.ts':`import {writeFileSync} from 'node:fs';
     ${paths.map(path=>`writeFileSync(${JSON.stringify(path)},'synthetic');`).join('\n')}`}).scan().writers;
   assert.deepEqual(rows.map(r=>[r.container,r.containerOwner,r.owner]),[
-    ['.chatpet/data/behavior/home.json','behavior','behavior'],
-    ['.chatpet/data/life/home.json','life','behavior'],
+    ['.chatpet/data/behavior/home.json','living','living'],
+    ['.chatpet/data/life/home.json','life','living'],
     ['.chatpet/diary/**','core','core'],
     ['.chatpet/data/life/diary/**','life','core'],
     ['.chatpet/data/life/photos/album.sqlite','life','core'],

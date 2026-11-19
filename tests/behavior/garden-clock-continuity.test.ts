@@ -7,8 +7,8 @@ import {DatabaseSync} from 'node:sqlite';
 import {Context} from '@deepseek-ai/cordis';
 import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
-import {CompanionRoom} from '../../src/behavior/room.js';
-import * as behaviorPlugin from '../../src/behavior/plugin.js';
+import {CompanionRoom} from '../../src/living/body/room.js';
+import * as behaviorPlugin from '../../src/living/body/plugin.js';
 import {CompanionEconomy} from '../../src/economy/plugin.js';
 import type {PetCoreHost} from '../../src/core/index.js';
 

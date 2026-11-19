@@ -9,7 +9,7 @@ import type {PetCoreHost} from '../../src/core/index.js';
 import type {CompanionFactActor} from '../../src/contracts/interaction.js';
 import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
-import {CompanionBehavior} from '../../src/behavior/plugin.js';
+import {CompanionBehavior} from '../../src/living/body/plugin.js';
 import {CompanionEconomy} from '../../src/economy/plugin.js';
 import {PersistentLifePlan} from '../../src/life/plan.js';
 

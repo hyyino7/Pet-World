@@ -26,7 +26,7 @@ for(const [object,keys] of [[net,['connect','createConnection']],[net.Socket.pro
 syncBuiltinESMExports();
 after(()=>{for(const undo of restore.reverse())undo();syncBuiltinESMExports();assert.deepEqual(forbidden,[]);});
 
-const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/behavior/playback.js'));
+const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/living/body/playback.js'));
 const {PetPlatform}=await import(new URL('../desktop/platform/plugin.js',playbackURL));
 const {CompanionBehavior}=await import(new URL('./plugin.js',playbackURL));
 const {DEFAULT_COMPANION_SETTINGS}=await import(new URL('../core/companion-settings.js',playbackURL));

@@ -51,7 +51,7 @@
 
 第 3 批的五个小批都改 `src/living/**` 和 `arch/` 下的声明，按顺序做，前一批合并后再开下一批。第 4、5 批共用迁移步骤表、清单版本和「需要迁移」模式，也按顺序做。
 
-**停止条件落到批次上**（product.md:396）：任一批让 `src/living/` 下某个手写文件超过 1500 行、又拆不成内部清晰的区，停下来重新讨论切分（现在最大的 `src/behavior/room.ts` 是 1098 行）；同一条经济或身体相关的行为清单两轮修不好，止损；第 4 或第 5 批的迁移演练失败两轮，不进入 2b；同一个不变量第二次失守，按 G3 提前复盘，记进「故障家族」。
+**停止条件落到批次上**（product.md:396）：任一批让 `src/living/` 下某个手写文件超过 1500 行、又拆不成内部清晰的区，停下来重新讨论切分（现在最大的 `src/living/body/room.ts` 是 1134 行）；同一条经济或身体相关的行为清单两轮修不好，止损；第 4 或第 5 批的迁移演练失败两轮，不进入 2b；同一个不变量第二次失守，按 G3 提前复盘，记进「故障家族」。
 
 ---
 
@@ -173,11 +173,11 @@
 - `arch/storage.json`：`owner / containerOwner / writers / locations / moduleIds` 改成 `living`。`dataVersions` 的键 3A **不改**：给 `storage.json` 加一份「数据版本键 → 模块」的对照，`expectedManifest`（`scripts/migrate/context.mjs:22-26`，第 24 行会先因所有者不一致断言失败）和 R5 扫描按对照判定。键名切换放到第 4 批，和第一个数据步骤一起。
 - `package.json` `exports` 的三个目标指向 `dist/src/living/...`（高风险，键不变）。
 - 引用方逐路径改，范围以执行时的清单为准（只数相对 import 不够，还有直接路径和资源引用）。已知的有：`src/life/review.ts:13` 用 `import.meta.url` 找资源的相对路径；`scripts/build/build-pet-platform.mjs:19`；`scripts/checks/check-runtime-package.mjs:64,154-168` 的包内硬路径；`scripts/checks/check-native-life.mjs:71`；`scripts/lib/check-messaging.mjs:207`；`scripts/fixtures/synthetic-companion.mjs:33`；`scripts/checks/check-room-interactions.cjs:21`；`package.json` 里的测试路径；文档里的旧路径。`tests/behavior`、`tests/life`、`tests/economy` 目录本身不搬。
-- 基线：每个搬家提交用 `--write-baseline --move` 改键，条数不变（60 / 1061）。
+- 基线：每个搬家提交用 `--write-baseline --move` 改键，条数不变（60 / 1053）。
 
 **提交阈值预先声明**：三个搬家提交都是纯改名加引用行替换，文件数会超过 15；`dist/src/**` 的同步移动和改键后的基线不计入阈值，照常提交。
 
-**允许修改**：`scripts/arch/**`、`tests/arch/**`、`AGENTS.md`（只改基线规则一句）、`src/{behavior,life,economy,living}/**`、其他 `src/` 里的引用行、`scripts/**` 里的引用路径、`arch/layers.json`、`arch/storage.json`、`arch/baseline/*.json`（只经工具）、`scripts/migrate/context.mjs`（只改所有者对照）、`package.json` 的 `exports` 目标和测试路径、文档里的旧路径。
+**允许修改**：`scripts/arch/**`、`tests/arch/**`、`AGENTS.md`（只改基线规则一句）、`src/{behavior,life,economy,living}/**`、其他 `src/` 里的引用行、`scripts/**` 里的引用路径、`arch/layers.json`、`arch/storage.json`、`arch/baseline/*.json`（只经工具）、`scripts/migrate/context.mjs`（只改所有者对照）、`package.json` 的 `exports` 目标和测试路径、文档里的旧路径；`tests/**` 里指向搬走目录的 import 和路径（执行中补充，2026-11-19，Claude 定：只替换路径，不改断言和夹具逻辑）。`scripts/migrate/context.mjs` 不再需要改：1B 已把 v1 清单冻结进步骤表，`expectedManifest()` 不再按所有者断言（`scripts/migrate/context.mjs:24`），「数据版本键 → 模块」的对照只在架构检查需要时加。
 
 **验收**：`pnpm run verify`（它会带打包参数调用包检查，`scripts/checks/verify.mjs:19-23`；单跑 `check:package` 要传安装包路径）、`pnpm run build && pnpm run test:behavior-list` 全绿；`check:arch` 条数不变；逐个文件看补丁，`src/living/**` 只有改名和引用行。
 
@@ -190,8 +190,8 @@
 - **可见域**：Cordis 的 `get()` 按服务隔离域查找，只看活跃提供者（`node_modules/@deepseek-ai/cordis/src/reflect.ts:240-256`）。实例的键不能只是 `PetCoreHost`，要加上服务隔离域，保证跨域拿不到别的域的区。开工细则里写清键的构成。
 - **每个区留在自己入口的作用域里**：硬 `inject`、`ctx.effect`、定时器和订阅都留在原入口，卸载哪个入口只停哪个区，6.2 矩阵逐格不变。
 - **退场顺序**：Cordis 并行清理同级 effect（`node_modules/@deepseek-ai/cordis/src/fiber.ts:712-735`）。每个入口的卸载显式按「先撤登记、再停接单、再 `close()`」，不靠 effect 的先后。
-- **门面**：三个入口照旧 `ctx.provide` 旧服务名，提供的仍是各区现在的对象，方法和签名不变（`src/economy/plugin.ts:230`、`src/behavior/plugin.ts:347`、`src/life/plugin.ts:554` 的现位置）。
-- **事件这一步不动**：`pet/behavior.changed`、`pet/life.changed`、`pet/economy.fact` 的发布和订阅保持现状（Life 对 Body 事件的 `observation` 过滤、通知只入队不回滚已落盘写入，都原样留着；`src/life/plugin.ts:70-85`、`src/behavior/plugin.ts:66-89,195-215`、`src/economy/plugin.ts:162-166`）。3B 只替换服务名查找和 `src/behavior/plugin.ts:47,66-85` 的动态 `inject`。区之间的事件改直接调用留给 2b。
+- **门面**：三个入口照旧 `ctx.provide` 旧服务名，提供的仍是各区现在的对象，方法和签名不变（`src/economy/plugin.ts:230`、`src/living/body/plugin.ts:347`、`src/life/plugin.ts:554` 的现位置）。
+- **事件这一步不动**：`pet/behavior.changed`、`pet/life.changed`、`pet/economy.fact` 的发布和订阅保持现状（Life 对 Body 事件的 `observation` 过滤、通知只入队不回滚已落盘写入，都原样留着；`src/life/plugin.ts:70-85`、`src/living/body/plugin.ts:66-89,195-215`、`src/economy/plugin.ts:162-166`）。3B 只替换服务名查找和 `src/living/body/plugin.ts:47,66-85` 的动态 `inject`。区之间的事件改直接调用留给 2b。
 - **R6**：`src/living/` 带一条「关闭后不留尾巴」测试，放在 `verify` 收集得到的位置（`tests/**/*.test.mjs` 或 `.test.ts`）：六种实际激活顺序、三种先卸载、同名重挂、旧回调晚到；断言没有残留定时器、订阅和在途 I/O。
 - **R7**：卸载生活入口、显式暂停生活、卸载身体入口三种，由 1A 的入口测试覆盖。
 
@@ -244,7 +244,7 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/life/pl
 | 没有调用方 | `desktopRest()`（`src/life/plugin.ts:497-499`） | 删。它是门面类的公开方法，仓库内没有调用方；仓库外的使用在第 6 批隔离环境里和 `PetCoreHost` 一样盘点 |
 | 没有调用方 | `EconomyStore.bookmark()`（`src/economy/store.ts:304`） | 删；阅读确认走 `src/economy/store.ts:316-346` |
 | 只剩测试在调用 | `installLifeReviewFileGuard()`（`src/life/review-files.ts:62`，只有 `tests/life/life-review-files.test.ts:70,89` 调） | 删函数；两条测试改为经真实来源分支驱动（通用守卫在 `src/core/native/agent.ts:116-120`），断言不变 |
-| 未读参数 | `CompanionRoom.garden()` 的 `_legacyLifeEnabled`（`src/behavior/room.ts:1042`） | 删参数；第四个形参 `now` 前移，传了指定时间的调用和测试同步改，行为不变 |
+| 未读参数 | `CompanionRoom.garden()` 的 `_legacyLifeEnabled`（`src/living/body/room.ts:1042`） | 删参数；第四个形参 `now` 前移，传了指定时间的调用和测试同步改，行为不变 |
 | 纯转导出 | `src/life/room.ts` | 删，引用方（含 `scripts/checks/check-room-interactions.cjs:21`）改直接引用 |
 
 删旧代码不留兜底。`setMeta/close` 去重放到第 5 批。
@@ -292,9 +292,9 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/life/pl
 
 ## 第 5 批：`economy.initialized` 迁移
 
-**现状**：Economy 在 Core 的 `meta` 写 `economy.initialized:<storageId>`（`src/economy/plugin.ts:79-81,94-96`）。Body、Economy 和初始化的文件清单都拿它当「已采用 Economy」的证据（`src/behavior/plugin.ts:143`、`src/economy/plugin.ts:89,228`）。代码注释写明它故意放在独立的容器里，`economy.sqlite` 丢了旧钱包也不能复活（`src/economy/plugin.ts:87-89`）。
+**现状**：Economy 在 Core 的 `meta` 写 `economy.initialized:<storageId>`（`src/economy/plugin.ts:79-81,94-96`）。Body、Economy 和初始化的文件清单都拿它当「已采用 Economy」的证据（`src/living/body/plugin.ts:143`、`src/economy/plugin.ts:89,228`）。代码注释写明它故意放在独立的容器里，`economy.sqlite` 丢了旧钱包也不能复活（`src/economy/plugin.ts:87-89`）。
 
-**难点**：只把标记搬进 `economy.sqlite`，库丢了标记也一起丢。另外两个现有证据都不够：`data/economy/storage.json` 和库在同一个目录（`src/economy/store.ts:45,81`），整目录丢失时一起没了；身体检查点的 `economyGardenAuthority` 只在 Body 接上过经济端口后才写（`src/behavior/room.ts:146-147`），Economy 可以在 Body 从未加载时初始化和交易。
+**难点**：只把标记搬进 `economy.sqlite`，库丢了标记也一起丢。另外两个现有证据都不够：`data/economy/storage.json` 和库在同一个目录（`src/economy/store.ts:45,81`），整目录丢失时一起没了；身体检查点的 `economyGardenAuthority` 只在 Body 接上过经济端口后才写（`src/living/body/room.ts:146-147`），Economy 可以在 Body 从未加载时初始化和交易。
 
 **做法**（拍板点 10）：
 
@@ -492,6 +492,17 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - `node --test tests/arch/*.test.mjs` 39/39 通过。`pnpm run check:arch` 通过，60 / 1061，新增和消失均为 0。`pnpm run build` 通过。
 - 计算式导入仍按原表达式核对，需改写计算式本身的情况会被拒绝。三个搬家提交等待另一条分支合并；本次未搬源码、未改仓库基线，未读真实数据。
 - 建议提交说明「支持纯搬家时严格改写架构基线键（Claude 代提交）」。
+
+### 第 3 批 · 3A 身体区搬家
+
+- 将 `src/behavior/` 的 8 个文件移到 `src/living/body/`。逐个比对确认迁入文件只调整跨目录导入，外部引用、Room 资源、动画生成、`./25-Behavior` 导出目标、测试路径及文档链接均指向新位置。
+- `arch/layers.json` 和 `arch/storage.json` 由 `living` 承接身体区，沿用原存储路径和 `dataVersions.behavior`。按主人补充确认，`tests/arch/storage-locations.test.mjs` 两行断言中的三个模块 ID 改为 `living`，保留严格相等检查、夹具逻辑和旧容器的 `life` 归属。
+- `pnpm run check:arch -- --write-baseline --move <对照文件>` 完成改键。`pnpm run check:arch` 通过，基线 60 / 1053，新增和消失均为 0。
+- `pnpm run build` 与 `pnpm run check:types` 通过。随构建同步 `dist/src/`，隔离编译确认五个额外的 `.d.ts` 差异仅是等价的联合类型成员排序。
+- `node --test tests/arch/*.test.mjs` 39/39 通过。`node --test dist/tests/behavior/*.test.js tests/behavior-list/entries-lifecycle.test.mjs` 80/80 通过。
+- `pnpm run build && pnpm run test:behavior-list` 通过，索引 11/11，行为清单 87/87。另核对现有包入口可导入、两条 Room 模块资源 URL 均返回迁入产物。
+- 验证使用合成夹具。全量 `pnpm run verify` 留到合并前。改动留在工作树，由 Claude 代提交。
+- 建议提交说明「搬迁身体区到 `src/living/body/` 并同步引用和架构基线」。
 
 ## 审查结论
 

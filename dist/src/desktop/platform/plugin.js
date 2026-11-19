@@ -7,7 +7,7 @@ import { setTimeout as wait } from 'node:timers/promises';
 import { isDeepStrictEqual } from 'node:util';
 import { activityPresentation, eatingClips, physicalClips, sleepingClips, projectActivityConfig } from './activity.js';
 import { migratePresentation, resolvePresentationMigration } from './migration.js';
-import { companionFeelings } from '../../behavior/presentation.js';
+import { companionFeelings } from '../../living/body/presentation.js';
 const load = createRequire(import.meta.url);
 const root = dirname(load.resolve('her-world/package.json'));
 const vendor = join(root, 'vendor', 'dsh-pet', 'platform');

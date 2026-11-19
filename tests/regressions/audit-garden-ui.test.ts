@@ -9,7 +9,7 @@ import type {PetCoreHost} from '../../src/core/index.js';
 import {roomAsset} from '../../src/room/assets.js';
 import {CROPS,GARDEN_RULES,createGarden} from '#feiyu-garden';
 import {emptyHomeState} from '#feiyu-home';
-import {CompanionBehavior} from '../../src/behavior/plugin.js';
+import {CompanionBehavior} from '../../src/living/body/plugin.js';
 
 // Minimal DOM boundary: execute the entire served UI, including its real
 // render and click handlers, without launching a window or renderer.

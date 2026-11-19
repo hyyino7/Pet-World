@@ -65,7 +65,7 @@ try {
   const saved = unwrap(await host.services.preferences.save(request('bind'), {expectedRevision:prefs.revision, conversation:prefs.conversation,
     workspace:{id:workspace.id, path:workspace.path, title:workspace.title}}));
   unwrap(await host.services.workspace.initialize(request('init'), {expectedPreferencesRevision:saved.revision}));
-  await ctx.plugin(await import('../../dist/src/behavior/plugin.js'));
+  await ctx.plugin(await import('../../dist/src/living/body/plugin.js'));
   const bubbles = [];
   await ctx.plugin({apply(scope){scope.provide('petDesktop',{status:()=>({running:true}),presentLife:text=>bubbles.push(text)});}});
   const mountLife = async () => {lifeComponent = await ctx.plugin(await import('../../dist/src/life/plugin.js'));return ctx.petLife;};

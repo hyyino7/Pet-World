@@ -40,7 +40,7 @@ try {
   const saved=unwrap(await host.services.preferences.save(request('bind'),{expectedRevision:prefs.revision,conversation:prefs.conversation,
     workspace:{id:workspace.id,path:workspace.path,title:workspace.title}}));
   unwrap(await host.services.workspace.initialize(request('init'),{expectedPreferencesRevision:saved.revision}));
-  await ctx.plugin(await import('../../dist/src/behavior/plugin.js'));
+  await ctx.plugin(await import('../../dist/src/living/body/plugin.js'));
   await ctx.plugin(await import('../../dist/src/life/plugin.js'));
   const {PersistentLifePlan}=await import('../../dist/src/life/plan.js');
   const plan=new PersistentLifePlan(join(root,'.chatpet/data/life'),'fish',host.workspace.storageId(),'UTC');

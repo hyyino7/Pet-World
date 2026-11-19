@@ -6,7 +6,7 @@ import {pathToFileURL} from 'node:url';
 import {resolve} from 'node:path';
 import ts from 'typescript';
 
-const root = process.env.CHATPET_PLAYBACK_TEST_MODULE || resolve('dist/src/behavior/playback.js');
+const root = process.env.CHATPET_PLAYBACK_TEST_MODULE || resolve('dist/src/living/body/playback.js');
 const shared = await import(pathToFileURL(root).href);
 const {animationAssets}=await import(new URL('./animation-map.js',pathToFileURL(root)));
 const {resolveActivityPlayback, sampleActivityPlayback} = shared;

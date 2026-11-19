@@ -16,7 +16,7 @@
     "./client": "./src/desktop/platform/client.js",
     "./20-Emotion": "./dist/src/emotion/plugin.js",
     "./22-Economy": "./dist/src/economy/plugin.js",
-    "./25-Behavior": "./dist/src/behavior/plugin.js",
+    "./25-Behavior": "./dist/src/living/body/plugin.js",
     "./30-Desktop": "./dist/src/desktop/plugin.js",
     "./35-PetPlatform": "./dist/src/desktop/platform/plugin.js",
     "./70-Voice": "./dist/src/voice/plugin.js",
