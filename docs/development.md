@@ -13,7 +13,7 @@
 rm -rf .venv node_modules && mise install && uv venv --managed-python && uv pip install --python .venv/bin/python -r vendor/mnemosyne/requirements-test.lock && pnpm install --frozen-lockfile --ignore-scripts
 ```
 
-该命令按锁文件重建两个可丢弃目录，移除手工加装的依赖；pnpm 使用默认共享 store。若旧 shell 曾加载 `scripts/env.sh`，先开新终端，清掉旧 PATH 和项目 store 覆盖。离线且依赖已可用时，直接使用现有环境。
+该命令按锁文件重建两个可丢弃目录，移除手工加装的依赖；pnpm 使用默认共享 store。离线且依赖已可用时，直接使用现有环境。
 
 ```sh
 pnpm run check:env
@@ -110,7 +110,7 @@ node scripts/companion-backup.mjs restore --installation /tmp/her-world-syntheti
 
 原有恢复 CLI 的输出不属于迁移/盘点的固定原因与隐私输出契约；真实数据检查点不能把其原始输出交给 Agent。开发演练只用合成副本。
 
-真实副本检查点（M3、阶段 2、阶段 3 还会再做）在独立设备上跑：源机退出 DSH 后，打包伙伴 Repo、安装包和源码 bundle，用隔空投送或移动硬盘传过去，不经云端；新设备按 [portability.md](portability.md)「Move to another device」安装绑定，再盘点、迁移、回退、续做。设备 profile 里的语音、附件不随 Repo 走，新设备上为空属于预期。盘点只给出未登记 kind 的个数；要查是哪几种，只按冒号前的前缀聚合计数，不输出完整 kind 和字段值。恢复命令的输出重定向到本机日志，只取退出码和 `restored` 字段。
+真实副本检查点（阶段 2、阶段 3 还会再做）在独立设备上跑：源机退出 DSH 后，打包伙伴 Repo、安装包和源码 bundle，用隔空投送或移动硬盘传过去，不经云端；新设备按 [portability.md](portability.md)「Move to another device」安装绑定，再盘点、迁移、回退、续做。设备 profile 里的语音、附件不随 Repo 走，新设备上为空属于预期。盘点只给出未登记 kind 的个数；要查是哪几种，只按冒号前的前缀聚合计数，不输出完整 kind 和字段值。恢复命令的输出重定向到本机日志，只取退出码和 `restored` 字段。
 
 <a id="baseline-counting"></a>
 ## 典型修改的计数
@@ -143,6 +143,10 @@ pnpm run verify
 - `test:native-services`：跨会话 Bank 召回及 provider 重启。
 - `test:native-life`：限定作用域的回顾读写、越界拒绝、纠正/撤回、原生历史恢复及压缩连续性。
 - `test:room-refresh`：可选的 macOS Room 合成器与窗口检查。
+- 没有包脚本、只能手动运行的三条窗口检查，先 `pnpm run build`；Electron 用 DSH 自带的 `~/.dsh/electron/Electron.app/Contents/MacOS/Electron`：
+  - `tests/manual/room-canvas.cjs`：用 Electron 直接运行，隔离的 Chromium 合成回归，不连正在运行的 Room。
+  - `tests/manual/companion-settings-window.cjs`：用 Electron 直接运行，需要已安装的 DSH（`DSH_APP` 改安装路径），设置页处理器用临时 Repo。
+  - `node scripts/checks/check-standalone-window.mjs`：独立桌宠窗口探针（`tests/desktop/standalone-window-probe.cjs`），`DSH_CHATBOT_ELECTRON_PATH` 可改 Electron 路径。
 
 这些检查不安装或更新 DSH。已安装环境里的主人验收，与源码、包和脚本宿主验证分开。
 

@@ -61,7 +61,7 @@ Her World（npm 包 `her-world`）是跑在 DSH 里的伙伴插件：同一个�
   - `vendor/**`、`references/`
   - 生成文件，名单在 `arch/layers.json` 各模块的 `generated` 里（例如 `src/desktop/platform/client.js`）。要改就改它的生成源
   - `arch/baseline/**`：只能用 `pnpm run check:arch -- --write-baseline` 改，而且只能删除条目
-- 提交：一个提交只做一件事；单个提交不超过 15 个文件、600 行改动。脚本生成的基线文件和抄录的样例不计入阈值，但要在方案里预先声明。
+- 提交：一个提交只做一件事；单个提交不超过 15 个文件、600 行改动。`pnpm run build` 生成的 `dist/src/**`、脚本生成的基线文件和抄录的样例不计入阈值，但照常提交，并在方案里预先声明（构建产物一条来自 M2 方案拍板点 9：每改一个 `src/*.ts` 就多出 `.js` 和 `.d.ts`，C2、E2 等批按模块提交都靠它）。
 
 ## 目录
 
