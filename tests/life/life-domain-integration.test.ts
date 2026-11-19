@@ -38,7 +38,8 @@ function fixture(t:TestContext) {
   let body:CompanionBehavior,economy:CompanionEconomy|undefined;
   const ctx={get:(name:string)=>name==='petBehavior'?body:name==='petEconomy'?economy:undefined,
     on:()=>()=>{},emit:(name:string,payload:unknown)=>{events.push({name,payload});},logger:()=>({warn(){}})} as unknown as Context;
-  const start=()=>{economy=new CompanionEconomy(ctx,host);economy.prepare(target);body=new CompanionBehavior(ctx,host);};
+  const openEconomy=()=>{economy=new CompanionEconomy(ctx,host);economy.prepare(target);};
+  const start=()=>{openEconomy();body=new CompanionBehavior(ctx,host,{economy:()=>economy});};
   const plan=()=>new PersistentLifePlan(directory,'fish','storage','UTC');
   start();
   t.after(async()=>{await body.close();economy?.close();rmSync(root,{recursive:true,force:true});});
@@ -46,7 +47,7 @@ function fixture(t:TestContext) {
     ownerAction:(action:unknown,id:string)=>{assert.ok(economy);return economy.ownerAction(target.id,action,id,new AbortController().signal,undefined,owner);},
     async restart(){await body.close();economy?.close();start();await body.setAutonomy(target.id,true);},
     unloadEconomy(){economy?.close();economy=undefined;},
-    restoreEconomy(){economy=new CompanionEconomy(ctx,host);economy.prepare(target);},
+    restoreEconomy:openEconomy,
     savedBody:()=>JSON.parse(readFileSync(join(directory,'home.json'),'utf8')),
   };
   return result;

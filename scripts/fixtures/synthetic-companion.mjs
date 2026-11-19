@@ -34,7 +34,7 @@ export function openDomains(host) {
     on:() => () => {}, emit() {}, logger:() => ({warn(){}})};
   economy = new CompanionEconomy(ctx, host);
   economy.prepare(host.workspace.status().target);
-  body = new CompanionBehavior(ctx, host);
+  body = new CompanionBehavior(ctx, host, {economy:()=>economy});
   return {body, economy, async close() { await body.close(); economy.close(); }};
 }
 export async function generateSynthetic(out, variant = 'current') {

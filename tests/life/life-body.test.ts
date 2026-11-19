@@ -95,7 +95,7 @@ test('the desktop and room use one saved body through pending sleep, arrival, ca
   } as unknown as Context;
   features = new DesktopFeatures(context, host, (type, value) => frames.push({type, value}), () => true, () => false);
   life = new CompanionLife(context, host, 'standard');
-  behavior = new CompanionBehavior(context, host);
+  behavior = new CompanionBehavior(context, host, {plan:()=>life});
   await behavior.setAutonomy(target.id, true);
   t.after(async () => {await life.close(); await behavior.close(); await features.close();});
   const desktop = (path: string) => features.request({path, method: 'POST'});

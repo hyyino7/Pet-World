@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
+import {LivingView} from '../../dist/src/living/index.js';
 import {CompanionBehavior} from '../../dist/src/living/body/plugin.js';
 import {emptyHomeState,advanceHomeState,homeView} from '../../vendor/feiyu-room-template/home-state.js';
 import {roomReaders} from '../fixtures/room-readers.mjs';
@@ -10,7 +11,8 @@ function bodyFixture() {
   let now=1_000_000,state=emptyHomeState(now);const events=[];
   const room={get state(){return state;},tick(){now++;state=advanceHomeState(state,now,{goalPolicy:'planned',autonomy:false,passive:true}).state;},
     presentationActivity:()=>undefined,plannedState:()=>null,nextWakeAt:()=>null,view:()=>homeView(state,now,{}),garden(){this.tick();return{ok:true,garden:{plots:[]}};}};
-  const body=Object.assign(Object.create(CompanionBehavior.prototype),{binding:{id:'a',storageId:'a',room},serial:Promise.resolve(),revision:0,bootId:'boot',autonomous:true,
+  const body=Object.assign(Object.create(CompanionBehavior.prototype),{living:new LivingView(),
+    binding:{id:'a',storageId:'a',room},serial:Promise.resolve(),revision:0,bootId:'boot',autonomous:true,
     synchronize(){},arm(){},refreshEmotion:async()=>{},ctx:{emit(_name,event){events.push(event);},get(){throw Error('Use native notification subscribers, not direct Desktop restore');}},
     host:{workspace:{runtime:{identity:()=>({displayName:'Fixture'})}}}});
   return{body,events,room};

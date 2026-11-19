@@ -3,6 +3,7 @@ import type { PetCoreHost } from '../../core/index.js';
 import type { BehaviorChange, BehaviorSnapshot, PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 import { CompanionRoom } from './room.js';
 import type { RoomInteractionContext } from './room.js';
+import { LivingView, type LivingPorts } from '../index.js';
 export type { PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 /** The only home/garden runtime writer. It does not create agents or model turns. */
 export declare class CompanionBehavior {
@@ -11,6 +12,8 @@ export declare class CompanionBehavior {
     private binding?;
     private serial;
     private closed;
+    private closing?;
+    private readonly living;
     private autonomous;
     private fault?;
     private publicationFault?;
@@ -22,7 +25,8 @@ export declare class CompanionBehavior {
     private deadlineAt?;
     private awaitingRecovery;
     private conditions;
-    constructor(ctx: Context, host: PetCoreHost);
+    constructor(ctx: Context, host: PetCoreHost, ports?: LivingPorts | LivingView);
+    activate(): void;
     private enqueue;
     private arm;
     private advanceRoom;

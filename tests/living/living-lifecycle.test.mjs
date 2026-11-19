@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import {existsSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {existsSync} from 'node:fs';
+import {setTimeout as delay} from 'node:timers/promises';
 import test from 'node:test';
 import {Context} from '@deepseek-ai/cordis';
 import {cordisFixture, eventually} from '../behavior-list/entries-lifecycle.test.mjs';
@@ -99,4 +100,103 @@ test('R6 只隔离目标服务自己的标签，同标签能重新找到原区',
   assert.equal(LivingWorld.find(isolated, f.core), undefined);
   assert.equal(original.lookup('plan').value, f.life);
   assert.notEqual(original.lookup('plan').lease.generation, old.lease.generation);
+});
+
+function livingTimers(t) {
+  const set = globalThis.setTimeout, clear = globalThis.clearTimeout;
+  const pending = {body: new Set(), tick: new Set(), upstream: new Set(), alarm: new Set()};
+  const created = {body: 0, tick: 0, upstream: 0};
+  t.mock.method(globalThis, 'setTimeout', (callback, ms, ...args) => {
+    const stack = Error().stack;
+    const area = stack.includes('CompanionBehavior.arm') ? 'body'
+      : stack.includes('CompanionLife.scheduleTick') ? 'tick'
+      : stack.includes('/life/alarmTimer.js') ? 'upstream' : undefined;
+    if (!area) return set(callback, ms, ...args);
+    const handle = set((...values) => {
+      pending[area].delete(handle);
+      pending.alarm.delete(handle);
+      callback(...values);
+    }, ms, ...args);
+    pending[area].add(handle);
+    created[area]++;
+    if (area === 'upstream' && /\barm \([^\n]+\/alarmTimer\.js:/u.test(stack)) pending.alarm.add(handle);
+    return handle;
+  });
+  t.mock.method(globalThis, 'clearTimeout', handle => {
+    for (const handles of Object.values(pending)) handles.delete(handle);
+    clear(handle);
+  });
+  return {pending, created};
+}
+
+test('R6 旧 Plan 观察恢复后不得写盘或在新代之前发布', async t => {
+  const f = await cordisFixture(t);
+  await f.body.snapshot(f.id);
+  await f.body.setAutonomy(f.id, true);
+  const changes = [];
+  const stop = f.ctx.on('pet/behavior.changed', change => changes.push(change));
+  const release = [Promise.withResolvers(), Promise.withResolvers()];
+  let reads = 0;
+  const emotion = await f.ctx.plugin({apply(ctx) {
+    ctx.provide('petEmotion', {roomSnapshot() {}, async read() {
+      const index = reads++;
+      await release[index]?.promise;
+    }});
+  }});
+  try {
+    const home = join(f.directory, 'home.json');
+    const saved = readFileSync(home, 'utf8');
+    t.mock.timers.tick(60_000);
+    f.ctx.emit('pet/life.changed');
+    await eventually(() => reads === 1, '旧 Plan 的观察已到达情绪读取');
+    await f.unload('life');
+    await f.load('life');
+    const newClock = t.mock.method(f.life, 'bodyClockState');
+    release[0].resolve();
+    await eventually(() => reads === 2, '新 Plan 的观察已到达情绪读取');
+    assert.equal(newClock.mock.callCount(), 1, '只有新观察可读取新 Plan 的时钟');
+    assert.equal(readFileSync(home, 'utf8'), saved, '旧 Plan 的观察写了身体检查点');
+    assert.deepEqual(changes, [], '旧 Plan 的观察发布了身体变化');
+  } finally {
+    for (const gate of release) gate.resolve();
+    await f.body.snapshot(f.id);
+    stop();
+    await emotion.dispose();
+  }
+});
+
+test('R6 卸载停掉实际身体计时、计划 tick、上游闹钟和各自订阅', async t => {
+  const {pending, created} = livingTimers(t);
+  const f = await cordisFixture(t);
+  const fibers = {body: f.fiber('body'), life: f.fiber('life'), economy: f.fiber('economy')};
+  await f.enable('23:30');
+  await f.body.act(f.id, 'water', 'r6-timed-care');
+  await eventually(() => pending.body.size && pending.alarm.size, '物理和上游闹钟已调度');
+  assert.ok(ownedHooks(f.ctx, fibers.life).length > 0);
+  assert.ok(ownedHooks(f.ctx, fibers.body).length > 0);
+  await f.unload('body');
+  assert.equal(pending.body.size, 0);
+  assert.equal(ownedHooks(f.ctx, fibers.body).length, 0);
+  assert.ok(ownedHooks(f.ctx, fibers.life).length > 0);
+  assert.ok(ownedHooks(f.ctx, fibers.economy).length > 0);
+  f.ctx.emit('pet/life.changed');
+  assert.ok(pending.tick.size > 0);
+  await f.unload('life');
+  assert.equal(pending.tick.size, 0);
+  assert.equal(pending.upstream.size, 0);
+  assert.equal(ownedHooks(f.ctx, fibers.life).length, 0);
+  assert.ok(ownedHooks(f.ctx, fibers.economy).length > 0);
+  await f.unload('economy');
+  assert.equal(ownedHooks(f.ctx, fibers.economy).length, 0);
+
+  const before = {...created};
+  f.ctx.emit('pet/core.changed');
+  f.ctx.emit('pet/emotion.changed', f.id);
+  f.ctx.emit('pet/life.changed');
+  f.ctx.emit('pet/behavior.changed', {workspaceId: f.id, reason: 'transition'});
+  f.ctx.emit('pet/economy.fact', f.id);
+  t.mock.timers.tick(3_600_000);
+  await delay(10);
+  assert.deepEqual(created, before);
+  assert.ok(Object.values(pending).every(handles => handles.size === 0));
 });

@@ -8,6 +8,7 @@ import type {PetCoreHost} from '../../src/core/index.js';
 import type {CompanionFactActor} from '../../src/contracts/interaction.js';
 import type {PlannedExecution} from '../../src/contracts/behavior.js';
 import {CompanionBehavior} from '../../src/living/body/plugin.js';
+import type {CompanionLife} from '../../src/living/plan/plugin.js';
 import {CompanionRoom} from '../../src/living/body/room.js';
 import {resolveActivityPlayback,sampleActivityPlayback} from '../../src/living/body/playback.js';
 import {CompanionEconomy} from '../../src/living/economy/plugin.js';
@@ -52,12 +53,13 @@ async function behaviorFixture(t:TestContext,homeOverrides:Record<string,unknown
   const target={id:'world',path:root,sessionIds:[]},admission={bodyClockState:()=>({enabled:true,restoreElapsed:true})};
   const host={workspace:{status:()=>({state:'ready',target}),storageId:()=> 'storage',runtime:{config:{companionId:'fish',ownerActorId:owner.id},
     identity:()=>({displayName:'Fixture'}),store:{meta:()=>undefined}}}} as unknown as PetCoreHost;
-  const logger=Object.assign(()=>({warn(){}}),{warn(){}}),ctx={get:(name:string)=>name==='petLife'?admission:undefined,
+  const logger=Object.assign(()=>({warn(){}}),{warn(){}}),ctx={get:()=>undefined,
     on:()=>()=>{},emit(){},logger} as unknown as Context;
-  let body=new CompanionBehavior(ctx,host);await body.roomState(target.id);
+  const createBody=()=>new CompanionBehavior(ctx,host,{plan:()=>admission as unknown as CompanionLife});
+  let body=createBody();await body.roomState(target.id);
   t.after(async()=>{await body.close();rmSync(root,{recursive:true,force:true});});
   return {root,directory,target,get body(){return body;},saved:()=>JSON.parse(readFileSync(join(directory,'home.json'),'utf8')),
-    async reopen(){await body.close();body=new CompanionBehavior(ctx,host);return body.roomState(target.id);}};
+    async reopen(){await body.close();body=createBody();return body.roomState(target.id);}};
 }
 
 test('plan parsing admits only registered slots compatible with executable fields',()=>{

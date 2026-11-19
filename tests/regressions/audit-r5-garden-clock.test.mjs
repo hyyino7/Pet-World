@@ -35,7 +35,7 @@ function fixture(t,{service=false}={}) {
     on:()=>()=>{},emit(){},logger:()=>({warn(){}})};
   const open=()=>{
     economy=new CompanionEconomy(ctx,host);economy.prepare(target);
-    if(service)body=new CompanionBehavior(ctx,host);
+    if(service)body=new CompanionBehavior(ctx,host,{economy:()=>economy});
     else room=new CompanionRoom(directory,()=>undefined,file=>economy.gardenPort(target.id,file));
   };
   open();
