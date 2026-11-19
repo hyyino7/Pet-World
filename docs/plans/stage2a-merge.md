@@ -568,3 +568,33 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - 两个分支都改了「执行结果」，合并第二个分支时两段都要保留。
 
 **复查（返工一轮后）**：必须修 1–3 已修好，`status` 的段级状态（`segment`）也已加上。快测（迁移测试加 Memory 门禁）140/140 通过，`test:behavior-list` 52 条通过。`--resume` 遇到已收尾的段时改成不写任何日志（`tests/migrate/normal.test.mjs` 相应改断言），这是有意的行为变化，不算放宽断言。上面列的「合并时由 Claude 同步」各项照旧。
+
+### 3A 第一轮验收（Codex 审查 + Claude 核实）
+
+**必须修**：无。
+
+**建议修（不影响合并）**
+
+- `scripts/arch/lib/move.mjs:37-39`：R1 表达式由扫描器的 `normalize` 序列化，导入语句前带 JSDoc（如 `/** @see X */`）时，序列化结果已不能当 TypeScript 重新解析，`--move` 会把这条当成一增一减而拒绝改键。`scripts/arch/lib/move.mjs:78-83`：省略扩展名的 `require('../x/y')` 在 R1 里记的目标不带扩展名，对照用真实文件名对不上，同样拒绝。两处都是拒绝（不会放过错误的改键），现有 60 条基线里没有命中这两种写法的条目，2a 后续各批也不再整目录搬家。以后真碰上再修，届时补一条带 JSDoc、一条省略扩展名的搬家测试。
+- `arch/baseline/writers.json` 仍有 52 处 `src/behavior|life|economy` 路径和旧模块名。它是只作报告、不参与棘轮的 R5 快照（[architecture.md](../architecture.md) 棘轮一段），现在没有生成脚本，按 AGENTS.md 又不能手改。建议第 6 批收尾时决定是删掉它，还是给 `check:arch` 加一个重新生成它的入口。
+- `6ad0387` 单独检出时有 9 个回归测试失败（`3f32338` 已修，提交说明里写明了），不满足方案「每个提交后都能跑门禁」。分支没推送，可以改写历史，但只影响以后在这段历史上二分，建议不改写，记录在案即可。
+
+**没有采纳的审查意见**：Codex 报 `tests/regressions/mapped-*.test.mjs` 在 `CHATPET_PLAYBACK_TEST_MODULE` 指向 main 的旧布局产物时会找不到依赖。这个环境变量在 `scripts/`、`docs/`、`.github/` 和 `package.json` 里都没有使用方，方案也没有要求新测试能跑旧布局的产物；测试只换路径，正是方案允许修改末尾那条补充的口径。不算问题。
+
+**核实结果**
+
+1. 纯搬家：31 个文件逐个和 main 原文件比对，差异只有相对 import 和 `src/living/plan/review.ts:13` 的资源路径多退一级；`review-writing.ts` 被 git 识别成删除加新增，内容也只差两行 `export … from` 的路径。行号没有变，所以文档里的 `文件:行号` 只需换路径。
+2. 改键工具：R1 的 `expression` 不是字符串替换，而是先把模块说明符抽掉比对其余语法，再要求新扫描里的说明符从引用方新位置解析到搬家后的目标（`relativeImportShape` 里的 `resolveImport` 核对）；改写后与新扫描做 multiset 比对，多一条少一条都抛错。独立复核：把 main 的 `rules.json` 按目录前缀和模块名（`behavior|life|economy → living`）映射后，与分支的 60 条完全相等；`vocabulary.json` 1053 条连行列都一一对上；改写过的 3 条 R1 表达式按 `posix.join` 从新位置解析都落在 `target`。三项要求的测试（纯改名通过、改了作用域被拒、对照漏文件被拒）在 `tests/arch/baseline-move.test.mjs` 里。
+3. `package.json`：只改了 `./22-Economy`、`./25-Behavior`、`./40-Life` 三个 `exports` 的目标，键不变；`files`、`imports` 没动；`pnpm run verify` 里的打包校验通过。
+4. `tests/arch/known-violations.test.mjs` 的 R5 夹具：写入方从 `src/life/files.ts` 换成 `src/room/files.ts`，原因是三区并成 `living` 后，计划区写钱包区的库就成了模块内写入。换成 Room 后，8 个用例的期望里 `violation` 全部原样保留（7 个 `true`、1 个 `null`），只有 `economy.sqlite` 的拥有者从 `economy` 改成 `living`。测试原意（不含 `data/` 的通配只匹配自身路径、跨模块写入照样报违规）保住了，没有放宽。`tests/arch/storage-locations.test.mjs` 只改了模块 ID，严格相等和夹具逻辑不变。
+5. `arch/storage.json`：`owner`、`containerOwner`、`writers`、`locations`、`moduleIds` 改成 `living`，`dataVersions` 的键和 main 完全一致。仓库代码里没有读取 `dataVersions` 的地方，所以 3A 不需要「数据版本键 → 模块」对照。
+6. `arch/layers.json`：`living` 的 `services`、`publishes`、`subscribes` 是三个旧模块的并集，`reads` 三者本来就一样。按拍板点 1，三区成了一个模块，区和区之间的发布和订阅权限也跟着合并了，以后检查不再区分是哪个区在发。这是方案已经接受的后果。
+7. 旧路径：`git grep` 查过（不含 `dist`、`vendor`、`references`、基线和方案），代码里剩下的 `../economy/` 等都是 `living` 内部的同级引用，或者是 `tests/behavior/` 测试目录（方案规定不搬）。
+8. 运行：沙箱外，`pnpm run build` 之后工作区干净（`dist` 和源码一致）；`node --test tests/arch/*.test.mjs` 39/39；`pnpm run check:arch` 60 / 1053，新增 0、消失 0；`pnpm run verify` 1477/1477，打包校验通过；`pnpm run test:behavior-list` 索引 11/11、行为清单 87 条。
+9. 和新 main 的关系：第 2 批已合进 main（`d7469c6`）。`git merge-tree` 试合并 3A 和新 main，没有冲突；第 2 批新增的代码和测试里没有 `src/behavior|life|economy` 或对应 dist 路径。合并时要在合并后的状态上重跑 `pnpm run verify` 和行为清单。
+
+**合并时由 Claude 同步的文档**
+
+- `AGENTS.md:13` 一页入口还写着「behavior · life · economy」，改成 `living`（body · plan · economy）。
+- `docs/decisions.md` 里「目录合并」那条被搬家提交按路径替换成了「`living/body/`、`living/plan/`、`living/economy/` 合并成第二层一个实例」，意思变了。改回描述原来的三个目录并进 `src/living/`。
+- `docs/product.md:102,105,106` 的度量表还写着第二层 `economy`、`behavior`、`life` 模块和 `src/behavior/plugin.ts`、`src/life/*` 路径。数字是当时测的，保留；模块名和路径加上现在的位置。
