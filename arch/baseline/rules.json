@@ -210,7 +210,7 @@
       "target": "petEconomy",
       "expression": "ctx . get ( fact . domain === \"body\" ? \"petBehavior\" : \"petEconomy\" )",
       "from": "core",
-      "to": "economy",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -270,7 +270,7 @@
       "target": "petEconomy",
       "expression": "ctx . get ( \"petEconomy\" )",
       "from": "core",
-      "to": "economy",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {

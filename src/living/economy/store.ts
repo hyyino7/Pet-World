@@ -3,10 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { CROPS, GARDEN_RULES, createGarden, normalizeGarden, advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
-import { canonical, check, digest, integer, reject, text, unavailable } from '../core/storage.js';
+import { canonical, check, digest, integer, reject, text, unavailable } from '../../core/storage.js';
 import { effectiveEconomyConfiguration,defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
 import type { BodyUseProof, CatalogItem, EconomyConfiguration, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, InventoryItem, ItemUse, LedgerEntry, ReadingBookmark, ReadingContent, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
-import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
+import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
 import { advanceGardenClock, type GardenClock } from './garden-clock.js';
 
 const cropRows = CROPS as any[];

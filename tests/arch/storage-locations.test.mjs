@@ -42,12 +42,13 @@ test('R5 对新旧身体、记录、相册及设备连接位置分别报告真�
 });
 
 test('R5 真实 Economy 建表使用已登记数据库，Core records 建表不归属 Channels kind',t=>{
-  const rows=workspace(t,Object.fromEntries(['economy/store.ts','core/storage.ts'].map(file=>
+  const rows=workspace(t,Object.fromEntries(['living/economy/store.ts','core/storage.ts'].map(file=>
     ['src/'+file,readFileSync(join(repository,'src',file),'utf8')]))).scan().writers.filter(r=>r.reason==='创建表');
   assert.equal(rows.length,13);
   for(const row of rows) {
-    const owner=row.file.includes('/economy/')?'economy':'core';
-    assert.equal(row.container,`.chatpet/data/${owner}/${owner}.sqlite#${row.target}`);
+    const directory=row.file.includes('/economy/')?'economy':'core';
+    const owner=directory==='economy'?'living':'core';
+    assert.equal(row.container,`.chatpet/data/${directory}/${directory}.sqlite#${row.target}`);
     assert.equal(row.owner,owner);assert.equal(row.containerOwner,owner);assert.equal(row.violation,false);
   }
 });

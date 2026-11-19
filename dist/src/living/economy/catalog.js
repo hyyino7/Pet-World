@@ -1,5 +1,5 @@
 import { CROPS } from '#feiyu-garden';
-import { digest } from '../core/storage.js';
+import { digest } from '../../core/storage.js';
 /** Original texts are products, never preset biography, memories or completed experiences. */
 const originalTexts = [
     { itemId: 'reading:window-and-rain', title: '窗边的一场雨', text: '雨先落在远处的屋顶上，细细的声音一层层靠近窗边。窗沿的小水珠汇在一起，停了一会儿，终于沿着玻璃滑下去。屋里的杯子还带着一点热气，桌面上留着半页没有读完的文字。\n\n人有时会想把一天安排得满满的，好像只有每一刻都有用处，这一天才算没有白过。可雨从不催促。它把路面洗亮，把叶子的颜色洗深，也给匆忙的行人留下一小段避雨的时间。等待本身，似乎也能成为一天的一部分。\n\n等雨小一些，窗外传来车轮经过积水的声音。书页还停在原处，杯子也还是那只杯子。变化并不总要轰轰烈烈；偶尔，它只是让眼前熟悉的东西，重新有了值得留意的细节。' },

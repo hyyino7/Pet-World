@@ -190,8 +190,8 @@
 - **可见域**：Cordis 的 `get()` 按服务隔离域查找，只看活跃提供者（`node_modules/@deepseek-ai/cordis/src/reflect.ts:240-256`）。实例的键不能只是 `PetCoreHost`，要加上服务隔离域，保证跨域拿不到别的域的区。开工细则里写清键的构成。
 - **每个区留在自己入口的作用域里**：硬 `inject`、`ctx.effect`、定时器和订阅都留在原入口，卸载哪个入口只停哪个区，6.2 矩阵逐格不变。
 - **退场顺序**：Cordis 并行清理同级 effect（`node_modules/@deepseek-ai/cordis/src/fiber.ts:712-735`）。每个入口的卸载显式按「先撤登记、再停接单、再 `close()`」，不靠 effect 的先后。
-- **门面**：三个入口照旧 `ctx.provide` 旧服务名，提供的仍是各区现在的对象，方法和签名不变（`src/economy/plugin.ts:230`、`src/living/body/plugin.ts:347`、`src/living/plan/plugin.ts:554` 的现位置）。
-- **事件这一步不动**：`pet/behavior.changed`、`pet/life.changed`、`pet/economy.fact` 的发布和订阅保持现状（Life 对 Body 事件的 `observation` 过滤、通知只入队不回滚已落盘写入，都原样留着；`src/living/plan/plugin.ts:70-85`、`src/living/body/plugin.ts:66-89,195-215`、`src/economy/plugin.ts:162-166`）。3B 只替换服务名查找和 `src/living/body/plugin.ts:47,66-85` 的动态 `inject`。区之间的事件改直接调用留给 2b。
+- **门面**：三个入口照旧 `ctx.provide` 旧服务名，提供的仍是各区现在的对象，方法和签名不变（`src/living/economy/plugin.ts:230`、`src/living/body/plugin.ts:347`、`src/living/plan/plugin.ts:554` 的现位置）。
+- **事件这一步不动**：`pet/behavior.changed`、`pet/life.changed`、`pet/economy.fact` 的发布和订阅保持现状（Life 对 Body 事件的 `observation` 过滤、通知只入队不回滚已落盘写入，都原样留着；`src/living/plan/plugin.ts:70-85`、`src/living/body/plugin.ts:66-89,195-215`、`src/living/economy/plugin.ts:162-166`）。3B 只替换服务名查找和 `src/living/body/plugin.ts:47,66-85` 的动态 `inject`。区之间的事件改直接调用留给 2b。
 - **R6**：`src/living/` 带一条「关闭后不留尾巴」测试，放在 `verify` 收集得到的位置（`tests/**/*.test.mjs` 或 `.test.ts`）：六种实际激活顺序、三种先卸载、同名重挂、旧回调晚到；断言没有残留定时器、订阅和在途 I/O。
 - **R7**：卸载生活入口、显式暂停生活、卸载身体入口三种，由 1A 的入口测试覆盖。
 
@@ -242,7 +242,7 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 | 项 | 位置 | 做法 |
 | --- | --- | --- |
 | 没有调用方 | `desktopRest()`（`src/living/plan/plugin.ts:497-499`） | 删。它是门面类的公开方法，仓库内没有调用方；仓库外的使用在第 6 批隔离环境里和 `PetCoreHost` 一样盘点 |
-| 没有调用方 | `EconomyStore.bookmark()`（`src/economy/store.ts:304`） | 删；阅读确认走 `src/economy/store.ts:316-346` |
+| 没有调用方 | `EconomyStore.bookmark()`（`src/living/economy/store.ts:304`） | 删；阅读确认走 `src/living/economy/store.ts:316-346` |
 | 只剩测试在调用 | `installLifeReviewFileGuard()`（`src/living/plan/review-files.ts:62`，只有 `tests/life/life-review-files.test.ts:70,89` 调） | 删函数；两条测试改为经真实来源分支驱动（通用守卫在 `src/core/native/agent.ts:116-120`），断言不变 |
 | 未读参数 | `CompanionRoom.garden()` 的 `_legacyLifeEnabled`（`src/living/body/room.ts:1042`） | 删参数；第四个形参 `now` 前移，传了指定时间的调用和测试同步改，行为不变 |
 | 纯转导出 | `src/living/plan/room.ts` | 删，引用方（含 `scripts/checks/check-room-interactions.cjs:21`）改直接引用 |
@@ -292,9 +292,9 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 
 ## 第 5 批：`economy.initialized` 迁移
 
-**现状**：Economy 在 Core 的 `meta` 写 `economy.initialized:<storageId>`（`src/economy/plugin.ts:79-81,94-96`）。Body、Economy 和初始化的文件清单都拿它当「已采用 Economy」的证据（`src/living/body/plugin.ts:143`、`src/economy/plugin.ts:89,228`）。代码注释写明它故意放在独立的容器里，`economy.sqlite` 丢了旧钱包也不能复活（`src/economy/plugin.ts:87-89`）。
+**现状**：Economy 在 Core 的 `meta` 写 `economy.initialized:<storageId>`（`src/living/economy/plugin.ts:79-81,94-96`）。Body、Economy 和初始化的文件清单都拿它当「已采用 Economy」的证据（`src/living/body/plugin.ts:143`、`src/living/economy/plugin.ts:89,228`）。代码注释写明它故意放在独立的容器里，`economy.sqlite` 丢了旧钱包也不能复活（`src/living/economy/plugin.ts:87-89`）。
 
-**难点**：只把标记搬进 `economy.sqlite`，库丢了标记也一起丢。另外两个现有证据都不够：`data/economy/storage.json` 和库在同一个目录（`src/economy/store.ts:45,81`），整目录丢失时一起没了；身体检查点的 `economyGardenAuthority` 只在 Body 接上过经济端口后才写（`src/living/body/room.ts:146-147`），Economy 可以在 Body 从未加载时初始化和交易。
+**难点**：只把标记搬进 `economy.sqlite`，库丢了标记也一起丢。另外两个现有证据都不够：`data/economy/storage.json` 和库在同一个目录（`src/living/economy/store.ts:45,81`），整目录丢失时一起没了；身体检查点的 `economyGardenAuthority` 只在 Body 接上过经济端口后才写（`src/living/body/room.ts:146-147`），Economy 可以在 Body 从未加载时初始化和交易。
 
 **做法**（拍板点 10）：
 
@@ -303,9 +303,9 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 - 运行时的「已采用」判定：独立证据 **或** `economy.sqlite` 的标记 **或** `storage.json` **或** 身体的 `economyGardenAuthority`。任一成立而库缺失就拒绝，不建空库、不导入旧菜园。
 - 迁移步骤 `0003-economy-marker`：
   - 只处理 key 里的 `storageId` 等于当前绑定、值里的 `companionId / path` 也对得上的那一条；Core 里还有别的 `economy.initialized:*`，或者唯一一条对不上当前绑定，就停下（原因码），由主人决定。盘点（`scripts/migrate/inventory.mjs:29` 现在只报有没有）改为报条数和是否属于当前绑定。
-  - 离线写入只打开**已存在、身份和 schema 都对**的库，不走会 `mkdir`、建表、导入旧菜园的初始化路径（`src/economy/store.ts:34-107`）。库缺失或身份不对就停下。
+  - 离线写入只打开**已存在、身份和 schema 都对**的库，不走会 `mkdir`、建表、导入旧菜园的初始化路径（`src/living/economy/store.ts:34-107`）。库缺失或身份不对就停下。
   - 顺序：写库内标记 → 写独立证据 → 两者都耐久后删 Core 的键。完成判定三件事都成立。续做能区分「从未采用」（Core 没键、目标都没有）和「源已删、目标缺失」（不可能出现的不一致，报错停下）。
-- 两个 Store 重复的 `setMeta / close`：`CoreStore`（`src/core/storage.ts:165-167,201-206`）和 `EconomyStore`（`src/economy/store.ts:127,466`）逻辑相同（访问性和写法略有差异）。抽成第一层的一个小函数（例如 `src/core/sqlite.ts`），两边调用，行为不变。
+- 两个 Store 重复的 `setMeta / close`：`CoreStore`（`src/core/storage.ts:165-167,201-206`）和 `EconomyStore`（`src/living/economy/store.ts:127,466`）逻辑相同（访问性和写法略有差异）。抽成第一层的一个小函数（例如 `src/core/sqlite.ts`），两边调用，行为不变。
 
 **测试**：从未加载 Body、整个 `data/economy/` 丢失、空壳库、旧菜园存在、错误绑定，五种都拒绝复活旧钱包；缺库拒绝的现有测试（`tests/behavior-list/domains.test.mjs:98-104`）断言不改；「身体效果已生效、库存结算失败后重启」在迁移前后一致，扩展 `tests/migrate/settlement.test.mjs:12-55`；R5 报告里 Economy 不再写 Core 的 `meta`。
 
@@ -513,6 +513,15 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - 搬家前 `6ad0387` 上已复现两处 Body 旧相对导入错误（`tests/regressions/mapped-refused-movement.test.mjs:27`、`tests/regressions/mapped-sleeping-inventory.test.mjs:29`），均指向不存在的 `dist/src/living/core/index.js`。Body 路径修复需单独确认范围。全量 `pnpm run verify` 留到合并前。
 - 建议提交说明「搬迁计划区到 `src/living/plan/` 并同步引用和架构基线」。改动留在工作树，由 Claude 代提交。
 - `playback.js` 搬到 `dist/src/living/body/` 后，回归测试指向 Core、Channels、Desktop 和 Room 的相对路径少退一级。已修正 `tests/regressions/` 下 `mapped-channel-path-binding.test.mjs`、`mapped-group-name-wake.test.mjs`、`mapped-platform-admission.test.mjs`、`mapped-playback-carriers.test.mjs`、`mapped-playback-feedback.test.mjs`、`mapped-playback-tap.test.mjs`、`mapped-refresh-convergence.test.mjs` 的 17 处路径。
+
+### 第 3 批 · 3A 钱包区搬家
+
+- 将 `src/economy/` 的 7 个文件搬到 `src/living/economy/`，按导入解析位置归一后逐文件核对一致。同步 14 份构建产物、`./22-Economy` 导出目标、包内校验、脚本和测试路径，核对包入口可导入。
+- 身体、计划、钱包三区由 `arch/layers.json` 的 `living` 模块统一登记。同步第三层依赖及 `arch/storage.json` 的所有者，沿用原数据路径和版本键。R5 夹具通过源码路径维持跨模块写入场景，容器路径和归属仍做严格比较。
+- 基线按 `pnpm run check:arch -- --write-baseline --move <对照文件>` 改键。`pnpm run check:arch` 通过，基线 60 / 1053，新增 0、消失 0。全仓 `git grep` 确认代码引用指向新位置，包括两处从 `playback.js` 解析的 `../economy/`。
+- `pnpm run build`、`pnpm run check:types` 通过。`node --test tests/arch/*.test.mjs` 39/39 通过。`pnpm run build && pnpm run test:behavior-list` 的索引 11/11、行为清单 87/87 通过。
+- `node --test dist/tests/economy/*.test.js tests/economy/*.test.mjs tests/regressions/*.test.mjs` 548/548 通过。验证使用合成夹具，改动留在工作树，完整门禁和提交由 Claude 处理。
+- 建议提交说明「搬迁钱包区到 `src/living/economy/` 并同步引用和架构基线」。
 
 ## 审查结论
 

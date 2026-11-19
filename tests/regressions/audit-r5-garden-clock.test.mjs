@@ -8,7 +8,7 @@ import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
 import {CompanionRoom} from '../../dist/src/living/body/room.js';
 import {CompanionBehavior} from '../../dist/src/living/body/plugin.js';
-import {CompanionEconomy} from '../../dist/src/economy/plugin.js';
+import {CompanionEconomy} from '../../dist/src/living/economy/plugin.js';
 
 const HOUR=3_600_000;
 function fixture(t,{service=false}={}) {

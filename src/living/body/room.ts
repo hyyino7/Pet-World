@@ -4,7 +4,7 @@ import { HOME_ACTIONS, HOME_LAYOUT, HOME_TOUCH_REACTION_MS, advanceHomeState, ne
 import { createGardenCaretaker, nextGardenCareBoundary } from '#feiyu-room/garden-autonomy';
 import { actGarden, loadGarden, saveGarden } from '#feiyu-room/garden-store';
 import { advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
-import { advanceGardenClock, type GardenClock } from '../../economy/garden-clock.js';
+import { advanceGardenClock, type GardenClock } from '../economy/garden-clock.js';
 import { LifeControlFileError } from '../plan/control-file.js';
 import { applyRoomAction, normalizeRoomState, roomView } from '#feiyu-room/room-state';
 import type { CompanionEmotion } from '../../emotion/plugin.js';

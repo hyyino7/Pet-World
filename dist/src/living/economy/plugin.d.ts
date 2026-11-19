@@ -1,9 +1,9 @@
 import type { Context } from '@deepseek-ai/cordis';
-import type { PetCoreHost, WorkspaceTarget } from '../core/index.js';
-import type { RoomEconomyPort } from '../living/body/room.js';
+import type { PetCoreHost, WorkspaceTarget } from '../../core/index.js';
+import type { RoomEconomyPort } from '../body/room.js';
 import { EconomyStore } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
-import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
+import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
 export declare const economyStateToolDeclaration: {
     name: string;
     sources: readonly ("life" | "owner" | "review")[];
@@ -68,7 +68,7 @@ export declare class CompanionEconomy {
     acknowledgeFacts(workspaceId: string, ids: readonly string[]): Promise<void>;
     private notifyFacts;
     ownerAction(workspaceId: string, action: any, requestId: string, signal: AbortSignal, validate?: () => void, trustedActor?: CompanionFactActor): Promise<{
-        execution?: import("../contracts/behavior.js").PlannedExecution | undefined;
+        execution?: import("../../contracts/behavior.js").PlannedExecution | undefined;
         workspaceId: string;
         ledger: import("./types.js").LedgerEntry[];
         configurationVersion: string;

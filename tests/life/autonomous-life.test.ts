@@ -13,7 +13,7 @@ import {createLifeSourceAdapter} from '../../src/living/plan/tool-policy.js';
 import type {PetCoreHost} from '../../src/core/index.js';
 import type {Context} from '@deepseek-ai/cordis';
 import type {CoreRuntime} from '../../src/core/runtime.js';
-import {EconomyStore} from '../../src/economy/store.js';
+import {EconomyStore} from '../../src/living/economy/store.js';
 import {bytesDigest} from '../../src/core/storage.js';
 
 const owner={kind:'owner' as const,id:'owner-one',channel:'room'};

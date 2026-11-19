@@ -1,4 +1,4 @@
-import { type GardenClock } from '../../economy/garden-clock.js';
+import { type GardenClock } from '../economy/garden-clock.js';
 export declare class LifeControlFileError extends Error {
     constructor(cause?: unknown);
 }
@@ -8,6 +8,6 @@ export declare function lifeDirectories(workspacePath: string): readonly [string
 export declare function readLifeControl(workspacePath: string): GardenClock | undefined;
 export declare function readLifeSettings(workspacePath: string): {
     enabled: boolean;
-    pauses: readonly import("../../economy/garden-clock.js").GardenPause[] | undefined;
+    pauses: readonly import("../economy/garden-clock.js").GardenPause[] | undefined;
     preferences: import("./library.js").LifePreferences | undefined;
 } | undefined;

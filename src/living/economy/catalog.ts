@@ -1,5 +1,5 @@
 import { CROPS } from '#feiyu-garden';
-import { digest } from '../core/storage.js';
+import { digest } from '../../core/storage.js';
 import type { CatalogItem, EconomyConfiguration, ReadingContent } from './types.js';
 
 /** Original texts are products, never preset biography, memories or completed experiences. */

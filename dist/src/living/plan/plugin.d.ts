@@ -3,7 +3,7 @@ import type { PetCoreHost } from '../../core/index.js';
 import { type LifePreferences } from './library.js';
 import type { RecordOperation } from '../../core/records.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
-import { type GardenClock } from '../../economy/garden-clock.js';
+import { type GardenClock } from '../economy/garden-clock.js';
 /** The upstream fact layer is the only state writer. World owns scheduling,
  * journal and native home recovery; Core owns every model step and Memory. */
 export declare class CompanionLife {

@@ -10,7 +10,7 @@ import type {CompanionFactActor} from '../../src/contracts/interaction.js';
 import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
 import {CompanionBehavior} from '../../src/living/body/plugin.js';
-import {CompanionEconomy} from '../../src/economy/plugin.js';
+import {CompanionEconomy} from '../../src/living/economy/plugin.js';
 import {PersistentLifePlan} from '../../src/living/plan/plan.js';
 
 const meal='food:improved-meal';

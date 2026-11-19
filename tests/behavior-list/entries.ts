@@ -6,7 +6,7 @@ export const readHearControlSource = () => readFileSync(new URL('../../../src/de
 
 export * as corePlugin from '../../src/core/plugin.js';
 export * as behaviorPlugin from '../../src/living/body/plugin.js';
-export * as economyPlugin from '../../src/economy/plugin.js';
+export * as economyPlugin from '../../src/living/economy/plugin.js';
 export * as lifePlugin from '../../src/living/plan/plugin.js';
 export * as channelsPlugin from '../../src/channels/plugin.js';
 export * as voicePlugin from '../../src/voice/plugin.js';

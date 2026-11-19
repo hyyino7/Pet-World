@@ -1,6 +1,6 @@
 import {lstatSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {parseGardenPauses, type GardenClock} from '../../economy/garden-clock.js';
+import {parseGardenPauses, type GardenClock} from '../economy/garden-clock.js';
 import {parseLifePreferences} from './library.js';
 
 export class LifeControlFileError extends Error {

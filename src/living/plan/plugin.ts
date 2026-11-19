@@ -23,7 +23,7 @@ import { CONTRACT_VERSION } from '../../contracts/version.js';
 import {readFactReferences} from './facts.js';
 import {createLifeSourceAdapter} from './tool-policy.js';
 import type {TableRegistration} from '../../contracts/tables.js';
-import {recordGardenPause, type GardenClock, type GardenPause} from '../../economy/garden-clock.js';
+import {recordGardenPause, type GardenClock, type GardenPause} from '../economy/garden-clock.js';
 import {lifeDirectories, readLifeControl, readLifeSettings, safeLifeFile} from './control-file.js';
 
 type Runtime = ReturnType<typeof createLifeRuntime>;

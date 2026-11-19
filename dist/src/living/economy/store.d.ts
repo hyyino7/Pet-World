@@ -1,5 +1,5 @@
 import type { BodyUseProof, CatalogItem, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, ItemUse, LedgerEntry, ReadingBookmark, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
-import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
+import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
 import { type GardenClock } from './garden-clock.js';
 /** One bound SQLite aggregate owns money, every item, garden jobs and their receipts.
  * No CoreStore or assistant is constructed here. The existing Core binding guard

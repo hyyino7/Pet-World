@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {advanceGarden, createGarden} from '#feiyu-garden';
-import {advanceGardenClock, parseGardenPauses} from '../../dist/src/economy/garden-clock.js';
+import {advanceGardenClock, parseGardenPauses} from '../../dist/src/living/economy/garden-clock.js';
 
 test('分段只推进已提交时钟之后的启用时间，区间优先于旧开关',()=>{
   const start=10_000_000, hour=3_600_000;

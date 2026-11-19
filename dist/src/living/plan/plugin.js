@@ -15,7 +15,7 @@ import { presentFacts } from '../../core/interaction-presentation.js';
 import { CONTRACT_VERSION } from '../../contracts/version.js';
 import { readFactReferences } from './facts.js';
 import { createLifeSourceAdapter } from './tool-policy.js';
-import { recordGardenPause } from '../../economy/garden-clock.js';
+import { recordGardenPause } from '../economy/garden-clock.js';
 import { lifeDirectories, readLifeControl, readLifeSettings, safeLifeFile } from './control-file.js';
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
 /** The upstream fact layer is the only state writer. World owns scheduling,

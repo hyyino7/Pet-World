@@ -153,7 +153,7 @@ try {
   }});
   const {CompanionRoom}=await import(pathToFileURL(join(root,'dist/src/living/body/room.js')));
   const {PersistentLifePlan}=await import(pathToFileURL(join(root,'dist/src/living/plan/plan.js')));
-  const {EconomyStore}=await import(pathToFileURL(join(root,'dist/src/economy/store.js')));
+  const {EconomyStore}=await import(pathToFileURL(join(root,'dist/src/living/economy/store.js')));
   const {roomAsset}=await import(pathToFileURL(join(root,'dist/src/room/assets.js')));
   const {resolveActivityPlayback,sampleActivityPlayback}=await import(pathToFileURL(join(root,'dist/src/living/body/playback.js')));
   const sleeping=resolveActivityPlayback({her:{kind:'sleep',asleep:true,spot:'bed'},behavior:{activityId:'sleep-fixture',phase:'sleeping',startedAt:1000}});

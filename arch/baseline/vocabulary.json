@@ -3363,48 +3363,6 @@
       "line": 480,
       "column": 35,
       "scope": "factory/EconomyPanel/send",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "<module>",
-        "line": 14
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 14,
-      "column": 26,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/console/client.js",
-        "scope": "factory/EconomyPanel/send",
-        "line": 480
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/console/client.js",
-      "line": 480,
-      "column": 35,
-      "scope": "factory/EconomyPanel/send",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
       "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
       "values": [
@@ -3551,6 +3509,48 @@
       "line": 960,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
+      "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/console/client.js",
+        "scope": "factory/EconomyPanel/send",
+        "line": 480
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/console/client.js",
+      "line": 480,
+      "column": 35,
+      "scope": "factory/EconomyPanel/send",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "<module>",
+        "line": 14
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 14,
+      "column": 26,
+      "scope": "<module>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
       "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
       "values": [
@@ -5554,65 +5554,6 @@
       "line": 22,
       "column": 42,
       "scope": "<module>",
-      "target": "{\"file\":\"src/economy/plugin.ts\",\"scope\":\"CompanionEconomy/gardenPort/transaction\"}",
-      "expression": "{ STALE_BINDING : \"工作区绑定已改变，请刷新。\" , STALE_REVISION : \"设置已被其他操作修改，请刷新后重新编辑。\" , CONFLICT : \"设置已被其他操作修改，请刷新后重新编辑。\" , INVALID_ARGUMENT : \"设置值无效，请检查填写内容。\" , UNAUTHORIZED : \"当前连接没有修改设置的权限。\" , DISABLED : \"Core 当前不可用，请检查核心模块状态。\" , UNAVAILABLE : \"00-Core 尚未就绪，请检查核心模块是否启用。\" , WORLD_UNAVAILABLE : \"大肥鱼的 World 组件尚未加载。\" , PROFILE_UNAVAILABLE : \"人设预览无法加载。请检查角色、用户资料和上下文字符上限。\" , MEMORY_UNAVAILABLE : \"长期记忆服务尚未配置或不可用。\" , NOT_FOUND : \"所选工作区不存在，请刷新工作区列表。\" , WORKSPACE_INVALID : \"绑定 Repo 的 .chatpet 资料无法加载。请检查 manifest.json、SOUL.md、USER.md 和 core.json 后刷新。原文件未被覆盖。\" , LIMIT_REACHED : \"已达到当前资源或调用限制，请检查设置后重试。\" , INELIGIBLE : \"相关来源已撤回或无法校验，当前内容暂不展示。\" , CANCELLED : \"请求已取消，请刷新核对实际保存结果。\" , ENOENT : \"工作区资料尚未初始化或已移动，请在工作区页检查绑定与初始化状态。\" , OUTCOME_UNKNOWN : \"部分设置可能已保存，请刷新读取实际状态后再继续。\" , }",
-      "values": [
-        "CANCELLED",
-        "CONFLICT",
-        "DISABLED",
-        "ENOENT",
-        "INELIGIBLE",
-        "INVALID_ARGUMENT",
-        "LIMIT_REACHED",
-        "MEMORY_UNAVAILABLE",
-        "NOT_FOUND",
-        "OUTCOME_UNKNOWN",
-        "PROFILE_UNAVAILABLE",
-        "STALE_BINDING",
-        "STALE_REVISION",
-        "UNAUTHORIZED",
-        "UNAVAILABLE",
-        "WORKSPACE_INVALID",
-        "WORLD_UNAVAILABLE"
-      ],
-      "shape": "labels",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/plugin.ts",
-        "scope": "CompanionEconomy/gardenPort/transaction",
-        "line": 148
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/plugin.ts",
-      "line": 148,
-      "column": 24,
-      "scope": "CompanionEconomy/gardenPort/transaction",
-      "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"CONFLICT\" , \"DISABLED\" ]",
-      "values": [
-        "CONFLICT",
-        "DISABLED",
-        "INELIGIBLE",
-        "INVALID_ARGUMENT",
-        "LIMIT_REACHED",
-        "NOT_FOUND"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/console/settings.ts",
-        "scope": "<module>",
-        "line": 22
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/console/settings.ts",
-      "line": 22,
-      "column": 42,
-      "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchEconomy\"}",
       "expression": "{ STALE_BINDING : \"工作区绑定已改变，请刷新。\" , STALE_REVISION : \"设置已被其他操作修改，请刷新后重新编辑。\" , CONFLICT : \"设置已被其他操作修改，请刷新后重新编辑。\" , INVALID_ARGUMENT : \"设置值无效，请检查填写内容。\" , UNAUTHORIZED : \"当前连接没有修改设置的权限。\" , DISABLED : \"Core 当前不可用，请检查核心模块状态。\" , UNAVAILABLE : \"00-Core 尚未就绪，请检查核心模块是否启用。\" , WORLD_UNAVAILABLE : \"大肥鱼的 World 组件尚未加载。\" , PROFILE_UNAVAILABLE : \"人设预览无法加载。请检查角色、用户资料和上下文字符上限。\" , MEMORY_UNAVAILABLE : \"长期记忆服务尚未配置或不可用。\" , NOT_FOUND : \"所选工作区不存在，请刷新工作区列表。\" , WORKSPACE_INVALID : \"绑定 Repo 的 .chatpet 资料无法加载。请检查 manifest.json、SOUL.md、USER.md 和 core.json 后刷新。原文件未被覆盖。\" , LIMIT_REACHED : \"已达到当前资源或调用限制，请检查设置后重试。\" , INELIGIBLE : \"相关来源已撤回或无法校验，当前内容暂不展示。\" , CANCELLED : \"请求已取消，请刷新核对实际保存结果。\" , ENOENT : \"工作区资料尚未初始化或已移动，请在工作区页检查绑定与初始化状态。\" , OUTCOME_UNKNOWN : \"部分设置可能已保存，请刷新读取实际状态后再继续。\" , }",
       "values": [
@@ -5651,6 +5592,65 @@
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"<module>\"}",
       "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"DISABLED\" ]",
       "values": [
+        "DISABLED",
+        "INELIGIBLE",
+        "INVALID_ARGUMENT",
+        "LIMIT_REACHED",
+        "NOT_FOUND"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/console/settings.ts",
+        "scope": "<module>",
+        "line": 22
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/console/settings.ts",
+      "line": 22,
+      "column": 42,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"CompanionEconomy/gardenPort/transaction\"}",
+      "expression": "{ STALE_BINDING : \"工作区绑定已改变，请刷新。\" , STALE_REVISION : \"设置已被其他操作修改，请刷新后重新编辑。\" , CONFLICT : \"设置已被其他操作修改，请刷新后重新编辑。\" , INVALID_ARGUMENT : \"设置值无效，请检查填写内容。\" , UNAUTHORIZED : \"当前连接没有修改设置的权限。\" , DISABLED : \"Core 当前不可用，请检查核心模块状态。\" , UNAVAILABLE : \"00-Core 尚未就绪，请检查核心模块是否启用。\" , WORLD_UNAVAILABLE : \"大肥鱼的 World 组件尚未加载。\" , PROFILE_UNAVAILABLE : \"人设预览无法加载。请检查角色、用户资料和上下文字符上限。\" , MEMORY_UNAVAILABLE : \"长期记忆服务尚未配置或不可用。\" , NOT_FOUND : \"所选工作区不存在，请刷新工作区列表。\" , WORKSPACE_INVALID : \"绑定 Repo 的 .chatpet 资料无法加载。请检查 manifest.json、SOUL.md、USER.md 和 core.json 后刷新。原文件未被覆盖。\" , LIMIT_REACHED : \"已达到当前资源或调用限制，请检查设置后重试。\" , INELIGIBLE : \"相关来源已撤回或无法校验，当前内容暂不展示。\" , CANCELLED : \"请求已取消，请刷新核对实际保存结果。\" , ENOENT : \"工作区资料尚未初始化或已移动，请在工作区页检查绑定与初始化状态。\" , OUTCOME_UNKNOWN : \"部分设置可能已保存，请刷新读取实际状态后再继续。\" , }",
+      "values": [
+        "CANCELLED",
+        "CONFLICT",
+        "DISABLED",
+        "ENOENT",
+        "INELIGIBLE",
+        "INVALID_ARGUMENT",
+        "LIMIT_REACHED",
+        "MEMORY_UNAVAILABLE",
+        "NOT_FOUND",
+        "OUTCOME_UNKNOWN",
+        "PROFILE_UNAVAILABLE",
+        "STALE_BINDING",
+        "STALE_REVISION",
+        "UNAUTHORIZED",
+        "UNAVAILABLE",
+        "WORKSPACE_INVALID",
+        "WORLD_UNAVAILABLE"
+      ],
+      "shape": "labels",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/plugin.ts",
+        "scope": "CompanionEconomy/gardenPort/transaction",
+        "line": 148
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/plugin.ts",
+      "line": 148,
+      "column": 24,
+      "scope": "CompanionEconomy/gardenPort/transaction",
+      "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"CONFLICT\" , \"DISABLED\" ]",
+      "values": [
+        "CONFLICT",
         "DISABLED",
         "INELIGIBLE",
         "INVALID_ARGUMENT",
@@ -6813,89 +6813,6 @@
       "line": 31,
       "column": 18,
       "scope": "<module>",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/readingOperation\"}",
-      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered",
-        "unread"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/readingOperation",
-        "line": 313
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 313,
-      "column": 112,
-      "scope": "EconomyStore/readingOperation",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 31
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 31,
-      "column": 18,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered",
-        "unread"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 65
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 65,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered",
-        "unread"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 31
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 31,
-      "column": 18,
-      "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"readingStatus\"}",
       "expression": "\"unread\" | \"offered\" | \"confirmed\"",
       "values": [
@@ -6977,6 +6894,89 @@
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
+      "line": 31,
+      "column": 18,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/readingOperation\"}",
+      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered",
+        "unread"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/readingOperation",
+        "line": 313
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 313,
+      "column": 112,
+      "scope": "EconomyStore/readingOperation",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 31
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 31,
+      "column": 18,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered",
+        "unread"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 65
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 65,
+      "column": 11,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered",
+        "unread"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 31
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
       "line": 34,
       "column": 98,
       "scope": "<module>",
@@ -7012,98 +7012,6 @@
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
         "line": 34
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 45,
-      "column": 16,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 273,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 45
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 45,
-      "column": 16,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 11
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 11,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 45
       }
     },
     {
@@ -7188,6 +7096,98 @@
       ],
       "shape": "array",
       "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 45
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 45,
+      "column": 16,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
+      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/configure/this . mutate:callback3",
+        "line": 273
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 273,
+      "column": 68,
+      "scope": "EconomyStore/configure/this . mutate:callback3",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 45
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 45,
+      "column": 16,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 11
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 11,
+      "column": 44,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "union",
+      "relation": "重复",
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
@@ -8848,51 +8848,6 @@
       "line": 83,
       "column": 11,
       "scope": "<module>",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "<module>",
-        "line": 14
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 14,
-      "column": 26,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 83
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 83,
-      "column": 11,
-      "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
       "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
       "values": [
@@ -9250,6 +9205,51 @@
       "line": 83,
       "column": 11,
       "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "<module>",
+        "line": 14
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 14,
+      "column": 26,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 83
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 83,
+      "column": 11,
+      "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
       "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
       "values": [
@@ -9570,60 +9570,6 @@
       "line": 19,
       "column": 21,
       "scope": "<module>",
-      "target": "{\"file\":\"src/economy/plugin.ts\",\"scope\":\"CompanionEconomy/gardenPort/transaction\"}",
-      "expression": "\"INVALID_ARGUMENT\" | \"UNAUTHORIZED\" | \"NOT_FOUND\" | \"NOT_IMPLEMENTED\" | \"DISABLED\" | \"INCOMPATIBLE\" | \"CONFLICT\" | \"STALE_REVISION\" | \"STALE_BINDING\" | \"INELIGIBLE\" | \"EXPIRED_USE\" | \"LIMIT_REACHED\"",
-      "values": [
-        "CONFLICT",
-        "DISABLED",
-        "EXPIRED_USE",
-        "INCOMPATIBLE",
-        "INELIGIBLE",
-        "INVALID_ARGUMENT",
-        "LIMIT_REACHED",
-        "NOT_FOUND",
-        "NOT_IMPLEMENTED",
-        "STALE_BINDING",
-        "STALE_REVISION",
-        "UNAUTHORIZED"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/plugin.ts",
-        "scope": "CompanionEconomy/gardenPort/transaction",
-        "line": 148
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/plugin.ts",
-      "line": 148,
-      "column": 24,
-      "scope": "CompanionEconomy/gardenPort/transaction",
-      "target": "{\"file\":\"src/contracts/common.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"CONFLICT\" , \"DISABLED\" ]",
-      "values": [
-        "CONFLICT",
-        "DISABLED",
-        "INELIGIBLE",
-        "INVALID_ARGUMENT",
-        "LIMIT_REACHED",
-        "NOT_FOUND"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/common.ts",
-        "scope": "<module>",
-        "line": 19
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/common.ts",
-      "line": 19,
-      "column": 21,
-      "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchEconomy\"}",
       "expression": "\"INVALID_ARGUMENT\" | \"UNAUTHORIZED\" | \"NOT_FOUND\" | \"NOT_IMPLEMENTED\" | \"DISABLED\" | \"INCOMPATIBLE\" | \"CONFLICT\" | \"STALE_REVISION\" | \"STALE_BINDING\" | \"INELIGIBLE\" | \"EXPIRED_USE\" | \"LIMIT_REACHED\"",
       "values": [
@@ -9657,6 +9603,60 @@
       "target": "{\"file\":\"src/contracts/common.ts\",\"scope\":\"<module>\"}",
       "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"DISABLED\" ]",
       "values": [
+        "DISABLED",
+        "INELIGIBLE",
+        "INVALID_ARGUMENT",
+        "LIMIT_REACHED",
+        "NOT_FOUND"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/common.ts",
+        "scope": "<module>",
+        "line": 19
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/common.ts",
+      "line": 19,
+      "column": 21,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"CompanionEconomy/gardenPort/transaction\"}",
+      "expression": "\"INVALID_ARGUMENT\" | \"UNAUTHORIZED\" | \"NOT_FOUND\" | \"NOT_IMPLEMENTED\" | \"DISABLED\" | \"INCOMPATIBLE\" | \"CONFLICT\" | \"STALE_REVISION\" | \"STALE_BINDING\" | \"INELIGIBLE\" | \"EXPIRED_USE\" | \"LIMIT_REACHED\"",
+      "values": [
+        "CONFLICT",
+        "DISABLED",
+        "EXPIRED_USE",
+        "INCOMPATIBLE",
+        "INELIGIBLE",
+        "INVALID_ARGUMENT",
+        "LIMIT_REACHED",
+        "NOT_FOUND",
+        "NOT_IMPLEMENTED",
+        "STALE_BINDING",
+        "STALE_REVISION",
+        "UNAUTHORIZED"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/plugin.ts",
+        "scope": "CompanionEconomy/gardenPort/transaction",
+        "line": 148
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/plugin.ts",
+      "line": 148,
+      "column": 24,
+      "scope": "CompanionEconomy/gardenPort/transaction",
+      "target": "{\"file\":\"src/contracts/common.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"CONFLICT\" , \"DISABLED\" ]",
+      "values": [
+        "CONFLICT",
         "DISABLED",
         "INELIGIBLE",
         "INVALID_ARGUMENT",
@@ -10653,7 +10653,7 @@
       "line": 62,
       "column": 70,
       "scope": "trackCompanionWriting/ctx . on:callback1",
-      "target": "{\"file\":\"src/economy/access.ts\",\"scope\":\"<module>\"}",
+      "target": "{\"file\":\"src/living/economy/access.ts\",\"scope\":\"<module>\"}",
       "expression": "[ \"read\" , \"write\" , \"edit\" ]",
       "values": [
         "edit",
@@ -10663,14 +10663,14 @@
       "shape": "array",
       "relation": "子集",
       "other": {
-        "file": "src/economy/access.ts",
+        "file": "src/living/economy/access.ts",
         "scope": "<module>",
         "line": 20
       }
     },
     {
       "rule": "R8",
-      "file": "src/economy/access.ts",
+      "file": "src/living/economy/access.ts",
       "line": 20,
       "column": 29,
       "scope": "<module>",
@@ -10688,52 +10688,6 @@
         "file": "src/core/companion-writing.ts",
         "scope": "trackCompanionWriting/ctx . on:callback1",
         "line": 62
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/core/native/agent.ts",
-      "line": 20,
-      "column": 23,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/plugin.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"petCore\" , \"petWorld\" , \"agents\" , \"systemPrompt\" , \"tools\" ]",
-      "values": [
-        "agents",
-        "petCore",
-        "petWorld",
-        "systemPrompt",
-        "tools"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/plugin.ts",
-        "scope": "<module>",
-        "line": 233
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/plugin.ts",
-      "line": 233,
-      "column": 21,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/core/native/agent.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"petCore\" , \"petWorld\" , \"tools\" , \"systemPrompt\" , \"agents\" ]",
-      "values": [
-        "agents",
-        "petCore",
-        "petWorld",
-        "systemPrompt",
-        "tools"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/core/native/agent.ts",
-        "scope": "<module>",
-        "line": 20
       }
     },
     {
@@ -10767,6 +10721,52 @@
       "scope": "<module>",
       "target": "{\"file\":\"src/core/native/agent.ts\",\"scope\":\"<module>\"}",
       "expression": "[ \"petCore\" , \"petWorld\" , \"systemPrompt\" , \"agents\" , \"tools\" ]",
+      "values": [
+        "agents",
+        "petCore",
+        "petWorld",
+        "systemPrompt",
+        "tools"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/core/native/agent.ts",
+        "scope": "<module>",
+        "line": 20
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/core/native/agent.ts",
+      "line": 20,
+      "column": 23,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"petCore\" , \"petWorld\" , \"agents\" , \"systemPrompt\" , \"tools\" ]",
+      "values": [
+        "agents",
+        "petCore",
+        "petWorld",
+        "systemPrompt",
+        "tools"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/plugin.ts",
+        "scope": "<module>",
+        "line": 233
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/plugin.ts",
+      "line": 233,
+      "column": 21,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/core/native/agent.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"petCore\" , \"petWorld\" , \"tools\" , \"systemPrompt\" , \"agents\" ]",
       "values": [
         "agents",
         "petCore",
@@ -11137,49 +11137,6 @@
       "line": 6,
       "column": 9,
       "scope": "<module>",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"completed\" | \"cancelled\" | \"failed\" | \"unknown\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "unknown"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "<module>",
-        "line": 14
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 14,
-      "column": 26,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/core/native/result.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/core/native/result.ts",
-        "scope": "<module>",
-        "line": 6
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/core/native/result.ts",
-      "line": 6,
-      "column": 9,
-      "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
       "expression": "\"completed\" | \"cancelled\" | \"failed\" | \"unknown\"",
       "values": [
@@ -11351,6 +11308,49 @@
       "line": 6,
       "column": 9,
       "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"completed\" | \"cancelled\" | \"failed\" | \"unknown\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "unknown"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "<module>",
+        "line": 14
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 14,
+      "column": 26,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/core/native/result.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/core/native/result.ts",
+        "scope": "<module>",
+        "line": 6
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/core/native/result.ts",
+      "line": 6,
+      "column": 9,
+      "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
       "expression": "\"completed\" | \"cancelled\" | \"failed\" | \"unknown\"",
       "values": [
@@ -11393,7 +11393,7 @@
       "line": 14,
       "column": 50,
       "scope": "open",
-      "target": "{\"file\":\"src/economy/access.ts\",\"scope\":\"<module>\"}",
+      "target": "{\"file\":\"src/living/economy/access.ts\",\"scope\":\"<module>\"}",
       "expression": "\"read\" | \"write\"",
       "values": [
         "read",
@@ -11402,14 +11402,14 @@
       "shape": "union",
       "relation": "子集",
       "other": {
-        "file": "src/economy/access.ts",
+        "file": "src/living/economy/access.ts",
         "scope": "<module>",
         "line": 20
       }
     },
     {
       "rule": "R8",
-      "file": "src/economy/access.ts",
+      "file": "src/living/economy/access.ts",
       "line": 20,
       "column": 29,
       "scope": "<module>",
@@ -11481,59 +11481,6 @@
       "line": 10,
       "column": 30,
       "scope": "reject",
-      "target": "{\"file\":\"src/economy/plugin.ts\",\"scope\":\"CompanionEconomy/gardenPort/transaction\"}",
-      "expression": "\"INVALID_ARGUMENT\" | \"UNAUTHORIZED\" | \"NOT_FOUND\" | \"CONFLICT\" | \"STALE_REVISION\" | \"STALE_BINDING\" | \"INELIGIBLE\" | \"DISABLED\" | \"LIMIT_REACHED\" | \"NOT_IMPLEMENTED\" | \"INCOMPATIBLE\"",
-      "values": [
-        "CONFLICT",
-        "DISABLED",
-        "INCOMPATIBLE",
-        "INELIGIBLE",
-        "INVALID_ARGUMENT",
-        "LIMIT_REACHED",
-        "NOT_FOUND",
-        "NOT_IMPLEMENTED",
-        "STALE_BINDING",
-        "STALE_REVISION",
-        "UNAUTHORIZED"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/plugin.ts",
-        "scope": "CompanionEconomy/gardenPort/transaction",
-        "line": 148
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/plugin.ts",
-      "line": 148,
-      "column": 24,
-      "scope": "CompanionEconomy/gardenPort/transaction",
-      "target": "{\"file\":\"src/core/storage.ts\",\"scope\":\"reject\"}",
-      "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"CONFLICT\" , \"DISABLED\" ]",
-      "values": [
-        "CONFLICT",
-        "DISABLED",
-        "INELIGIBLE",
-        "INVALID_ARGUMENT",
-        "LIMIT_REACHED",
-        "NOT_FOUND"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/core/storage.ts",
-        "scope": "reject",
-        "line": 10
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/core/storage.ts",
-      "line": 10,
-      "column": 30,
-      "scope": "reject",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchEconomy\"}",
       "expression": "\"INVALID_ARGUMENT\" | \"UNAUTHORIZED\" | \"NOT_FOUND\" | \"CONFLICT\" | \"STALE_REVISION\" | \"STALE_BINDING\" | \"INELIGIBLE\" | \"DISABLED\" | \"LIMIT_REACHED\" | \"NOT_IMPLEMENTED\" | \"INCOMPATIBLE\"",
       "values": [
@@ -11566,6 +11513,59 @@
       "target": "{\"file\":\"src/core/storage.ts\",\"scope\":\"reject\"}",
       "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"DISABLED\" ]",
       "values": [
+        "DISABLED",
+        "INELIGIBLE",
+        "INVALID_ARGUMENT",
+        "LIMIT_REACHED",
+        "NOT_FOUND"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/core/storage.ts",
+        "scope": "reject",
+        "line": 10
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/core/storage.ts",
+      "line": 10,
+      "column": 30,
+      "scope": "reject",
+      "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"CompanionEconomy/gardenPort/transaction\"}",
+      "expression": "\"INVALID_ARGUMENT\" | \"UNAUTHORIZED\" | \"NOT_FOUND\" | \"CONFLICT\" | \"STALE_REVISION\" | \"STALE_BINDING\" | \"INELIGIBLE\" | \"DISABLED\" | \"LIMIT_REACHED\" | \"NOT_IMPLEMENTED\" | \"INCOMPATIBLE\"",
+      "values": [
+        "CONFLICT",
+        "DISABLED",
+        "INCOMPATIBLE",
+        "INELIGIBLE",
+        "INVALID_ARGUMENT",
+        "LIMIT_REACHED",
+        "NOT_FOUND",
+        "NOT_IMPLEMENTED",
+        "STALE_BINDING",
+        "STALE_REVISION",
+        "UNAUTHORIZED"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/plugin.ts",
+        "scope": "CompanionEconomy/gardenPort/transaction",
+        "line": 148
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/plugin.ts",
+      "line": 148,
+      "column": 24,
+      "scope": "CompanionEconomy/gardenPort/transaction",
+      "target": "{\"file\":\"src/core/storage.ts\",\"scope\":\"reject\"}",
+      "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"CONFLICT\" , \"DISABLED\" ]",
+      "values": [
+        "CONFLICT",
         "DISABLED",
         "INELIGIBLE",
         "INVALID_ARGUMENT",
@@ -13659,1345 +13659,6 @@
     },
     {
       "rule": "R8",
-      "file": "src/economy/plugin.ts",
-      "line": 148,
-      "column": 24,
-      "scope": "CompanionEconomy/gardenPort/transaction",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchEconomy\"}",
-      "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"CONFLICT\" , \"DISABLED\" ]",
-      "values": [
-        "CONFLICT",
-        "DISABLED",
-        "INELIGIBLE",
-        "INVALID_ARGUMENT",
-        "LIMIT_REACHED",
-        "NOT_FOUND"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/dispatchEconomy",
-        "line": 478
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 478,
-      "column": 48,
-      "scope": "CompanionRoom/dispatchEconomy",
-      "target": "{\"file\":\"src/economy/plugin.ts\",\"scope\":\"CompanionEconomy/gardenPort/transaction\"}",
-      "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"DISABLED\" ]",
-      "values": [
-        "DISABLED",
-        "INELIGIBLE",
-        "INVALID_ARGUMENT",
-        "LIMIT_REACHED",
-        "NOT_FOUND"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/plugin.ts",
-        "scope": "CompanionEconomy/gardenPort/transaction",
-        "line": 148
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/plugin.ts",
-      "line": 194,
-      "column": 5,
-      "scope": "CompanionEconomy/ownerAction",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"transaction\"}",
-      "expression": "switch ( action . kind ) { case \"grant\" : store . grantMoney ( requestId , action . amount , typeof action . note === \"string\" && action . note . trim (  ) ? action . note : undefined , actor ) ; break ; case \"gift\" : store . giftItem ( requestId , action . itemId , quantity , typeof action . note === \"string\" && action . note . trim (  ) ? action . note : undefined , actor ) ; break ; case \"buy\" : store . purchase ( requestId , action . itemId , quantity , actor ) ; break ; case \"sell\" : store . sell ( requestId , action . itemId , quantity , actor ) ; break ; case \"importReading\" : { const sourceName = action . source ?. name ; check ( typeof sourceName === \"string\" && sourceName . length > 0 && sourceName . length <= 200 , \"Invalid reading source\" ) ; store . importBook ( requestId , { itemId : TemplateHead:\"reading:owner-\" digest ( requestId ) . slice ( 7 , 39 ) LastTemplateToken:\"\" , title : action . title , text : action . content , ... ( action . format === undefined ? {  } : { format : action . format } ) , source : { kind : \"owner-import\" , name : sourceName } } , actor ) ; break ; } case \"feed\" : { integer ( quantity , \"food quantity\" , 1 , 1 ) ; const body = this . ctx . get ( \"petBehavior\" ) ; check ( body , \"The shared Body is unavailable\" ) ; execution = await body . consumeFood ( workspaceId , { operationId : TemplateHead:\"owner-food:\" digest ( requestId ) . slice ( 7 , 55 ) LastTemplateToken:\"\" , itemId : action . itemId , interaction : { requestId , actor } } , guard ) ; break ; } default : throw Error ( \"Unknown economic action\" ) ; }",
-      "values": [
-        "buy",
-        "feed",
-        "gift",
-        "grant",
-        "importReading",
-        "sell"
-      ],
-      "shape": "switch",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "transaction",
-        "line": 41
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 41,
-      "column": 50,
-      "scope": "transaction",
-      "target": "{\"file\":\"src/economy/plugin.ts\",\"scope\":\"CompanionEconomy/ownerAction\"}",
-      "expression": "\"buy\" | \"sell\"",
-      "values": [
-        "buy",
-        "sell"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/plugin.ts",
-        "scope": "CompanionEconomy/ownerAction",
-        "line": 194
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/plugin.ts",
-      "line": 233,
-      "column": 21,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/emotion/plugin.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"petCore\" , \"petWorld\" , \"tools\" , \"systemPrompt\" , \"agents\" ]",
-      "values": [
-        "agents",
-        "petCore",
-        "petWorld",
-        "systemPrompt",
-        "tools"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/emotion/plugin.ts",
-        "scope": "<module>",
-        "line": 314
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/emotion/plugin.ts",
-      "line": 314,
-      "column": 23,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/plugin.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"petCore\" , \"petWorld\" , \"systemPrompt\" , \"agents\" , \"tools\" ]",
-      "values": [
-        "agents",
-        "petCore",
-        "petWorld",
-        "systemPrompt",
-        "tools"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/plugin.ts",
-        "scope": "<module>",
-        "line": 233
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/plugin.ts",
-      "line": 233,
-      "column": 21,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"petCore\" , \"petWorld\" , \"tools\" , \"systemPrompt\" , \"agents\" ]",
-      "values": [
-        "agents",
-        "petCore",
-        "petWorld",
-        "systemPrompt",
-        "tools"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "<module>",
-        "line": 541
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 541,
-      "column": 23,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/plugin.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"petCore\" , \"petWorld\" , \"agents\" , \"sessions\" , \"tools\" , \"systemPrompt\" ]",
-      "values": [
-        "agents",
-        "petCore",
-        "petWorld",
-        "sessions",
-        "systemPrompt",
-        "tools"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/plugin.ts",
-        "scope": "<module>",
-        "line": 233
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/plugin.ts",
-      "line": 257,
-      "column": 214,
-      "scope": "apply",
-      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
-      "expression": "[ \"overview\" , \"full\" ]",
-      "values": [
-        "full",
-        "overview"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan-tools.ts",
-        "scope": "registerPlanTools",
-        "line": 78
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan-tools.ts",
-      "line": 78,
-      "column": 181,
-      "scope": "registerPlanTools",
-      "target": "{\"file\":\"src/economy/plugin.ts\",\"scope\":\"apply\"}",
-      "expression": "[ \"overview\" , \"full\" ]",
-      "values": [
-        "full",
-        "overview"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/plugin.ts",
-        "scope": "apply",
-        "line": 257
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/plugin.ts",
-      "line": 257,
-      "column": 214,
-      "scope": "apply",
-      "target": "{\"file\":\"src/room/tool-context.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"overview\" , \"full\" ]",
-      "values": [
-        "full",
-        "overview"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/room/tool-context.ts",
-        "scope": "<module>",
-        "line": 5
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/room/tool-context.ts",
-      "line": 5,
-      "column": 55,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/plugin.ts\",\"scope\":\"apply\"}",
-      "expression": "[ \"overview\" , \"full\" ]",
-      "values": [
-        "full",
-        "overview"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/plugin.ts",
-        "scope": "apply",
-        "line": 257
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/plugin.ts",
-      "line": 259,
-      "column": 35,
-      "scope": "apply",
-      "target": "{\"file\":\"src/economy/tool-context.ts\",\"scope\":\"economyPage\"}",
-      "expression": "[ \"catalog\" , \"ledger\" ]",
-      "values": [
-        "catalog",
-        "ledger"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/tool-context.ts",
-        "scope": "economyPage",
-        "line": 14
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/tool-context.ts",
-      "line": 14,
-      "column": 97,
-      "scope": "economyPage",
-      "target": "{\"file\":\"src/economy/plugin.ts\",\"scope\":\"apply\"}",
-      "expression": "\"catalog\" | \"ledger\"",
-      "values": [
-        "catalog",
-        "ledger"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/plugin.ts",
-        "scope": "apply",
-        "line": 259
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 14,
-      "column": 26,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "<module>",
-        "line": 72
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 72,
-      "column": 63,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "<module>",
-        "line": 14
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 14,
-      "column": 26,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/updateExecution\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/updateExecution",
-        "line": 369
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 369,
-      "column": 9,
-      "scope": "CompanionRoom/updateExecution",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"failed\" ]",
-      "values": [
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "<module>",
-        "line": 14
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 14,
-      "column": 26,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/parkExecution\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/parkExecution",
-        "line": 388
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 388,
-      "column": 26,
-      "scope": "CompanionRoom/parkExecution",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "<module>",
-        "line": 14
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 14,
-      "column": 26,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/tickAvailable\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/tickAvailable",
-        "line": 960
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 960,
-      "column": 24,
-      "scope": "CompanionRoom/tickAvailable",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "<module>",
-        "line": 14
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 14,
-      "column": 26,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "PersistentLifePlan/control",
-        "line": 285
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 285,
-      "column": 12,
-      "scope": "PersistentLifePlan/control",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "<module>",
-        "line": 14
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 249,
-      "column": 66,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"growMs\" , \"seedCost\" ]",
-      "values": [
-        "growMs",
-        "seedCost"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 21
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 21,
-      "column": 58,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "\"growMs\" | \"seedCost\"",
-      "values": [
-        "growMs",
-        "seedCost"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 249
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 273,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 11
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 11,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 273,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/constructor",
-        "line": 119
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 119,
-      "column": 36,
-      "scope": "CompanionRoom/constructor",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 273,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/setAutonomy",
-        "line": 258
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 258,
-      "column": 43,
-      "scope": "CompanionRoom/setAutonomy",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 273,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan-tools.ts",
-        "scope": "registerPlanTools",
-        "line": 124
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan-tools.ts",
-      "line": 124,
-      "column": 98,
-      "scope": "registerPlanTools",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 273,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "<module>",
-        "line": 24
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 24,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 273,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-        "line": 132
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 132,
-      "column": 28,
-      "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 282,
-      "column": 100,
-      "scope": "EconomyStore/importBook",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"article\" | \"book\"",
-      "values": [
-        "article",
-        "book"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 28
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 28,
-      "column": 12,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/importBook\"}",
-      "expression": "\"article\" | \"book\"",
-      "values": [
-        "article",
-        "book"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/importBook",
-        "line": 282
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 313,
-      "column": 112,
-      "scope": "EconomyStore/readingOperation",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 65
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 65,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/readingOperation\"}",
-      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered",
-        "unread"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/readingOperation",
-        "line": 313
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 313,
-      "column": 112,
-      "scope": "EconomyStore/readingOperation",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"readingStatus\"}",
-      "expression": "\"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "readingStatus",
-        "line": 53
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 53,
-      "column": 73,
-      "scope": "readingStatus",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/readingOperation\"}",
-      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered",
-        "unread"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/readingOperation",
-        "line": 313
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/store.ts",
-      "line": 313,
-      "column": 112,
-      "scope": "EconomyStore/readingOperation",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/presentationActivity\"}",
-      "expression": "\"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/presentationActivity",
-        "line": 834
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 834,
-      "column": 95,
-      "scope": "CompanionRoom/presentationActivity",
-      "target": "{\"file\":\"src/economy/store.ts\",\"scope\":\"EconomyStore/readingOperation\"}",
-      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered",
-        "unread"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/store.ts",
-        "scope": "EconomyStore/readingOperation",
-        "line": 313
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 11,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/constructor",
-        "line": 119
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 119,
-      "column": 36,
-      "scope": "CompanionRoom/constructor",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 11
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 11,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/setAutonomy",
-        "line": 258
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 258,
-      "column": 43,
-      "scope": "CompanionRoom/setAutonomy",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 11
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 11,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan-tools.ts",
-        "scope": "registerPlanTools",
-        "line": 124
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan-tools.ts",
-      "line": 124,
-      "column": 98,
-      "scope": "registerPlanTools",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 11
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 11,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "<module>",
-        "line": 24
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 24,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 11
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 11,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-        "line": 132
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 132,
-      "column": 28,
-      "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 11
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 43,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"reserved\" | \"consumed\" | \"cancelled\"",
-      "values": [
-        "cancelled",
-        "consumed",
-        "reserved"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "<module>",
-        "line": 25
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 25,
-      "column": 25,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"reserved\" | \"consumed\" | \"cancelled\"",
-      "values": [
-        "cancelled",
-        "consumed",
-        "reserved"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 43
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 65,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"readingStatus\"}",
-      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered",
-        "unread"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "readingStatus",
-        "line": 53
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 53,
-      "column": 73,
-      "scope": "readingStatus",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered",
-        "unread"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 65
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 65,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/presentationActivity\"}",
-      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered",
-        "unread"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/presentationActivity",
-        "line": 834
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 834,
-      "column": 95,
-      "scope": "CompanionRoom/presentationActivity",
-      "target": "{\"file\":\"src/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
-      "values": [
-        "confirmed",
-        "offered",
-        "unread"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/economy/types.ts",
-        "scope": "<module>",
-        "line": 65
-      }
-    },
-    {
-      "rule": "R8",
       "file": "src/emotion/index.ts",
       "line": 13,
       "column": 24,
@@ -15186,6 +13847,52 @@
         "file": "src/emotion/index.ts",
         "scope": "<module>",
         "line": 50
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/emotion/plugin.ts",
+      "line": 314,
+      "column": 23,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"petCore\" , \"petWorld\" , \"systemPrompt\" , \"agents\" , \"tools\" ]",
+      "values": [
+        "agents",
+        "petCore",
+        "petWorld",
+        "systemPrompt",
+        "tools"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/plugin.ts",
+        "scope": "<module>",
+        "line": 233
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/plugin.ts",
+      "line": 233,
+      "column": 21,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/emotion/plugin.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"petCore\" , \"petWorld\" , \"tools\" , \"systemPrompt\" , \"agents\" ]",
+      "values": [
+        "agents",
+        "petCore",
+        "petWorld",
+        "systemPrompt",
+        "tools"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/emotion/plugin.ts",
+        "scope": "<module>",
+        "line": 314
       }
     },
     {
@@ -16124,6 +14831,92 @@
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
+      "line": 25,
+      "column": 25,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"reserved\" | \"consumed\" | \"cancelled\"",
+      "values": [
+        "cancelled",
+        "consumed",
+        "reserved"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 43
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 43,
+      "column": 11,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"reserved\" | \"consumed\" | \"cancelled\"",
+      "values": [
+        "cancelled",
+        "consumed",
+        "reserved"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "<module>",
+        "line": 25
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 41,
+      "column": 50,
+      "scope": "transaction",
+      "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"CompanionEconomy/ownerAction\"}",
+      "expression": "\"buy\" | \"sell\"",
+      "values": [
+        "buy",
+        "sell"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/plugin.ts",
+        "scope": "CompanionEconomy/ownerAction",
+        "line": 194
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/plugin.ts",
+      "line": 194,
+      "column": 5,
+      "scope": "CompanionEconomy/ownerAction",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"transaction\"}",
+      "expression": "switch ( action . kind ) { case \"grant\" : store . grantMoney ( requestId , action . amount , typeof action . note === \"string\" && action . note . trim (  ) ? action . note : undefined , actor ) ; break ; case \"gift\" : store . giftItem ( requestId , action . itemId , quantity , typeof action . note === \"string\" && action . note . trim (  ) ? action . note : undefined , actor ) ; break ; case \"buy\" : store . purchase ( requestId , action . itemId , quantity , actor ) ; break ; case \"sell\" : store . sell ( requestId , action . itemId , quantity , actor ) ; break ; case \"importReading\" : { const sourceName = action . source ?. name ; check ( typeof sourceName === \"string\" && sourceName . length > 0 && sourceName . length <= 200 , \"Invalid reading source\" ) ; store . importBook ( requestId , { itemId : TemplateHead:\"reading:owner-\" digest ( requestId ) . slice ( 7 , 39 ) LastTemplateToken:\"\" , title : action . title , text : action . content , ... ( action . format === undefined ? {  } : { format : action . format } ) , source : { kind : \"owner-import\" , name : sourceName } } , actor ) ; break ; } case \"feed\" : { integer ( quantity , \"food quantity\" , 1 , 1 ) ; const body = this . ctx . get ( \"petBehavior\" ) ; check ( body , \"The shared Body is unavailable\" ) ; execution = await body . consumeFood ( workspaceId , { operationId : TemplateHead:\"owner-food:\" digest ( requestId ) . slice ( 7 , 55 ) LastTemplateToken:\"\" , itemId : action . itemId , interaction : { requestId , actor } } , guard ) ; break ; } default : throw Error ( \"Unknown economic action\" ) ; }",
+      "values": [
+        "buy",
+        "feed",
+        "gift",
+        "grant",
+        "importReading",
+        "sell"
+      ],
+      "shape": "switch",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "transaction",
+        "line": 41
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
       "line": 41,
       "column": 50,
       "scope": "transaction",
@@ -16201,6 +14994,131 @@
         "file": "src/living/body/room.ts",
         "scope": "transaction",
         "line": 41
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 53,
+      "column": 73,
+      "scope": "readingStatus",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/readingOperation\"}",
+      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered",
+        "unread"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/readingOperation",
+        "line": 313
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 313,
+      "column": 112,
+      "scope": "EconomyStore/readingOperation",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"readingStatus\"}",
+      "expression": "\"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "readingStatus",
+        "line": 53
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 53,
+      "column": 73,
+      "scope": "readingStatus",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered",
+        "unread"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 65
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 65,
+      "column": 11,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"readingStatus\"}",
+      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered",
+        "unread"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "readingStatus",
+        "line": 53
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 72,
+      "column": 63,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "<module>",
+        "line": 14
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 14,
+      "column": 26,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "<module>",
+        "line": 72
       }
     },
     {
@@ -16755,6 +15673,94 @@
         "file": "src/living/body/room.ts",
         "scope": "<module>",
         "line": 85
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 119,
+      "column": 36,
+      "scope": "CompanionRoom/constructor",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
+      "values": [
+        "bladder",
+        "hunger",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/configure/this . mutate:callback3",
+        "line": 273
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 273,
+      "column": 68,
+      "scope": "EconomyStore/configure/this . mutate:callback3",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/constructor",
+        "line": 119
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 119,
+      "column": 36,
+      "scope": "CompanionRoom/constructor",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
+      "values": [
+        "bladder",
+        "hunger",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 11
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 11,
+      "column": 44,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
+      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/constructor",
+        "line": 119
       }
     },
     {
@@ -17339,6 +16345,94 @@
       "line": 258,
       "column": 43,
       "scope": "CompanionRoom/setAutonomy",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
+      "values": [
+        "bladder",
+        "hunger",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/configure/this . mutate:callback3",
+        "line": 273
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 273,
+      "column": 68,
+      "scope": "EconomyStore/configure/this . mutate:callback3",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/setAutonomy",
+        "line": 258
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 258,
+      "column": 43,
+      "scope": "CompanionRoom/setAutonomy",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
+      "values": [
+        "bladder",
+        "hunger",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 11
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 11,
+      "column": 44,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
+      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/setAutonomy",
+        "line": 258
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 258,
+      "column": 43,
+      "scope": "CompanionRoom/setAutonomy",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
       "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
       "values": [
@@ -17598,6 +16692,89 @@
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
+      "line": 369,
+      "column": 9,
+      "scope": "CompanionRoom/updateExecution",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"failed\" ]",
+      "values": [
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "<module>",
+        "line": 14
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 14,
+      "column": 26,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/updateExecution\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/updateExecution",
+        "line": 369
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 388,
+      "column": 26,
+      "scope": "CompanionRoom/parkExecution",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "<module>",
+        "line": 14
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 14,
+      "column": 26,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/parkExecution\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/parkExecution",
+        "line": 388
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
       "line": 388,
       "column": 26,
       "scope": "CompanionRoom/parkExecution",
@@ -17634,6 +16811,53 @@
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/parkExecution",
         "line": 388
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 478,
+      "column": 48,
+      "scope": "CompanionRoom/dispatchEconomy",
+      "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"CompanionEconomy/gardenPort/transaction\"}",
+      "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"DISABLED\" ]",
+      "values": [
+        "DISABLED",
+        "INELIGIBLE",
+        "INVALID_ARGUMENT",
+        "LIMIT_REACHED",
+        "NOT_FOUND"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/plugin.ts",
+        "scope": "CompanionEconomy/gardenPort/transaction",
+        "line": 148
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/plugin.ts",
+      "line": 148,
+      "column": 24,
+      "scope": "CompanionEconomy/gardenPort/transaction",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchEconomy\"}",
+      "expression": "[ \"INVALID_ARGUMENT\" , \"NOT_FOUND\" , \"INELIGIBLE\" , \"LIMIT_REACHED\" , \"CONFLICT\" , \"DISABLED\" ]",
+      "values": [
+        "CONFLICT",
+        "DISABLED",
+        "INELIGIBLE",
+        "INVALID_ARGUMENT",
+        "LIMIT_REACHED",
+        "NOT_FOUND"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/dispatchEconomy",
+        "line": 478
       }
     },
     {
@@ -19222,6 +18446,89 @@
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
+      "line": 834,
+      "column": 95,
+      "scope": "CompanionRoom/presentationActivity",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/readingOperation\"}",
+      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered",
+        "unread"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/readingOperation",
+        "line": 313
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 313,
+      "column": 112,
+      "scope": "EconomyStore/readingOperation",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/presentationActivity\"}",
+      "expression": "\"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/presentationActivity",
+        "line": 834
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 834,
+      "column": 95,
+      "scope": "CompanionRoom/presentationActivity",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered",
+        "unread"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 65
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 65,
+      "column": 11,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/presentationActivity\"}",
+      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered",
+        "unread"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/presentationActivity",
+        "line": 834
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
       "line": 895,
       "column": 67,
       "scope": "CompanionRoom/preserveAcceptedSleepWait",
@@ -19663,6 +18970,48 @@
       "line": 960,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "<module>",
+        "line": 14
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 14,
+      "column": 26,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/tickAvailable\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/tickAvailable",
+        "line": 960
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 960,
+      "column": 24,
+      "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
       "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
       "values": [
@@ -20083,6 +19432,657 @@
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
         "line": 1101
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/plugin.ts",
+      "line": 233,
+      "column": 21,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"petCore\" , \"petWorld\" , \"tools\" , \"systemPrompt\" , \"agents\" ]",
+      "values": [
+        "agents",
+        "petCore",
+        "petWorld",
+        "systemPrompt",
+        "tools"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/plan/plugin.ts",
+        "scope": "<module>",
+        "line": 541
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plugin.ts",
+      "line": 541,
+      "column": 23,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"petCore\" , \"petWorld\" , \"agents\" , \"sessions\" , \"tools\" , \"systemPrompt\" ]",
+      "values": [
+        "agents",
+        "petCore",
+        "petWorld",
+        "sessions",
+        "systemPrompt",
+        "tools"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/plugin.ts",
+        "scope": "<module>",
+        "line": 233
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/plugin.ts",
+      "line": 257,
+      "column": 214,
+      "scope": "apply",
+      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
+      "expression": "[ \"overview\" , \"full\" ]",
+      "values": [
+        "full",
+        "overview"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/plan/plan-tools.ts",
+        "scope": "registerPlanTools",
+        "line": 78
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plan-tools.ts",
+      "line": 78,
+      "column": 181,
+      "scope": "registerPlanTools",
+      "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"apply\"}",
+      "expression": "[ \"overview\" , \"full\" ]",
+      "values": [
+        "full",
+        "overview"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/plugin.ts",
+        "scope": "apply",
+        "line": 257
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/plugin.ts",
+      "line": 257,
+      "column": 214,
+      "scope": "apply",
+      "target": "{\"file\":\"src/room/tool-context.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"overview\" , \"full\" ]",
+      "values": [
+        "full",
+        "overview"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/room/tool-context.ts",
+        "scope": "<module>",
+        "line": 5
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/room/tool-context.ts",
+      "line": 5,
+      "column": 55,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"apply\"}",
+      "expression": "[ \"overview\" , \"full\" ]",
+      "values": [
+        "full",
+        "overview"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/plugin.ts",
+        "scope": "apply",
+        "line": 257
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/plugin.ts",
+      "line": 259,
+      "column": 35,
+      "scope": "apply",
+      "target": "{\"file\":\"src/living/economy/tool-context.ts\",\"scope\":\"economyPage\"}",
+      "expression": "[ \"catalog\" , \"ledger\" ]",
+      "values": [
+        "catalog",
+        "ledger"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/tool-context.ts",
+        "scope": "economyPage",
+        "line": 14
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/tool-context.ts",
+      "line": 14,
+      "column": 97,
+      "scope": "economyPage",
+      "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"apply\"}",
+      "expression": "\"catalog\" | \"ledger\"",
+      "values": [
+        "catalog",
+        "ledger"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/plugin.ts",
+        "scope": "apply",
+        "line": 259
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 14,
+      "column": 26,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/plan/plan.ts",
+        "scope": "PersistentLifePlan/control",
+        "line": 285
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plan.ts",
+      "line": 285,
+      "column": 12,
+      "scope": "PersistentLifePlan/control",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "<module>",
+        "line": 14
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 249,
+      "column": 66,
+      "scope": "EconomyStore/configure/this . mutate:callback3",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"growMs\" , \"seedCost\" ]",
+      "values": [
+        "growMs",
+        "seedCost"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 21
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 21,
+      "column": 58,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
+      "expression": "\"growMs\" | \"seedCost\"",
+      "values": [
+        "growMs",
+        "seedCost"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/configure/this . mutate:callback3",
+        "line": 249
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 273,
+      "column": 68,
+      "scope": "EconomyStore/configure/this . mutate:callback3",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 11
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 11,
+      "column": 44,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
+      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/configure/this . mutate:callback3",
+        "line": 273
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 273,
+      "column": 68,
+      "scope": "EconomyStore/configure/this . mutate:callback3",
+      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/plan/plan-tools.ts",
+        "scope": "registerPlanTools",
+        "line": 124
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plan-tools.ts",
+      "line": 124,
+      "column": 98,
+      "scope": "registerPlanTools",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/configure/this . mutate:callback3",
+        "line": 273
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 273,
+      "column": 68,
+      "scope": "EconomyStore/configure/this . mutate:callback3",
+      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/plan/plan.ts",
+        "scope": "<module>",
+        "line": 24
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plan.ts",
+      "line": 24,
+      "column": 11,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
+      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/configure/this . mutate:callback3",
+        "line": 273
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 273,
+      "column": 68,
+      "scope": "EconomyStore/configure/this . mutate:callback3",
+      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/plan/plan.ts",
+        "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
+        "line": 132
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plan.ts",
+      "line": 132,
+      "column": 28,
+      "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/configure/this . mutate:callback3",
+        "line": 273
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 282,
+      "column": 100,
+      "scope": "EconomyStore/importBook",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"article\" | \"book\"",
+      "values": [
+        "article",
+        "book"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 28
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 28,
+      "column": 12,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/importBook\"}",
+      "expression": "\"article\" | \"book\"",
+      "values": [
+        "article",
+        "book"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/importBook",
+        "line": 282
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 313,
+      "column": 112,
+      "scope": "EconomyStore/readingOperation",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 65
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 65,
+      "column": 11,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/readingOperation\"}",
+      "expression": "\"unread\" | \"offered\" | \"confirmed\"",
+      "values": [
+        "confirmed",
+        "offered",
+        "unread"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "EconomyStore/readingOperation",
+        "line": 313
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 11,
+      "column": 44,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
+      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/plan/plan-tools.ts",
+        "scope": "registerPlanTools",
+        "line": 124
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plan-tools.ts",
+      "line": 124,
+      "column": 98,
+      "scope": "registerPlanTools",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 11
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 11,
+      "column": 44,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/plan/plan.ts",
+        "scope": "<module>",
+        "line": 24
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plan.ts",
+      "line": 24,
+      "column": 11,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 11
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 11,
+      "column": 44,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
+      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "union",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/plan/plan.ts",
+        "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
+        "line": 132
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plan.ts",
+      "line": 132,
+      "column": 28,
+      "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
+      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
+      "values": [
+        "bladder",
+        "energy",
+        "hunger",
+        "pain",
+        "thirst"
+      ],
+      "shape": "array",
+      "relation": "重复",
+      "other": {
+        "file": "src/living/economy/types.ts",
+        "scope": "<module>",
+        "line": 11
       }
     },
     {
@@ -23399,16 +23399,6 @@
     },
     {
       "rule": "R8",
-      "file": "src/economy/types.ts",
-      "line": 38,
-      "column": 52,
-      "scope": "<module>",
-      "target": "kind",
-      "expression": "kind : string ;",
-      "shape": "bare string"
-    },
-    {
-      "rule": "R8",
       "file": "src/emotion/index.ts",
       "line": 33,
       "column": 3,
@@ -23512,6 +23502,16 @@
       "file": "src/living/body/room.ts",
       "line": 33,
       "column": 62,
+      "scope": "<module>",
+      "target": "kind",
+      "expression": "kind : string ;",
+      "shape": "bare string"
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/types.ts",
+      "line": 38,
+      "column": 52,
       "scope": "<module>",
       "target": "kind",
       "expression": "kind : string ;",

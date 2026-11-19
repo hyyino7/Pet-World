@@ -10,7 +10,7 @@ import type {PlannedExecution} from '../../src/contracts/behavior.js';
 import {CompanionBehavior} from '../../src/living/body/plugin.js';
 import {CompanionRoom} from '../../src/living/body/room.js';
 import {resolveActivityPlayback,sampleActivityPlayback} from '../../src/living/body/playback.js';
-import {CompanionEconomy} from '../../src/economy/plugin.js';
+import {CompanionEconomy} from '../../src/living/economy/plugin.js';
 import {parsePlanDraft,PersistentLifePlan} from '../../src/living/plan/plan.js';
 import {emptyHomeState,applyHomeAction,applyCatalogFood} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';

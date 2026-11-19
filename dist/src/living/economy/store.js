@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { CROPS, GARDEN_RULES, createGarden, normalizeGarden, advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
-import { canonical, check, digest, integer, reject, text, unavailable } from '../core/storage.js';
+import { canonical, check, digest, integer, reject, text, unavailable } from '../../core/storage.js';
 import { effectiveEconomyConfiguration, defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
 import { advanceGardenClock } from './garden-clock.js';
 const cropRows = CROPS;

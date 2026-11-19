@@ -5,19 +5,19 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 import { lstatSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { PetCoreHost, WorkspaceTarget } from '../core/index.js';
-import { bytesDigest, canonical, check, digest, integer } from '../core/storage.js';
-import { registerWorldContext } from '../core/native/prompt.js';
-import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
-import { isHistoryObject } from '../core/native/history-maintenance.js';
-import type { CompanionToolDeclaration } from '../contracts/tables.js';
-import type { RoomEconomyPort, RoomFoodReservation } from '../living/body/room.js';
+import type { PetCoreHost, WorkspaceTarget } from '../../core/index.js';
+import { bytesDigest, canonical, check, digest, integer } from '../../core/storage.js';
+import { registerWorldContext } from '../../core/native/prompt.js';
+import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
+import { isHistoryObject } from '../../core/native/history-maintenance.js';
+import type { CompanionToolDeclaration } from '../../contracts/tables.js';
+import type { RoomEconomyPort, RoomFoodReservation } from '../body/room.js';
 import { EconomyStore } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
 import { installEconomyAccessGuard } from './access.js';
-import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
+import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
 import type { GardenClock } from './garden-clock.js';
-import { readLifeControl } from '../living/plan/control-file.js';
+import { readLifeControl } from '../plan/control-file.js';
 
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];
 const access = {mode:'bounded',detail:'余额与物品由程序结算。原生文件工具防误改；同一系统账户的命令和其他插件仍可访问文件。'} as const;
@@ -190,7 +190,7 @@ export class CompanionEconomy {
     const actor:CompanionFactActor=trustedActor??{kind:'owner',id:this.host.workspace.runtime.config.ownerActorId,channel:'settings'};
     check(actor.kind==='owner'&&actor.id===this.host.workspace.runtime.config.ownerActorId,'Economic owner actions require the trusted owner');
     const quantity=action.quantity??1;
-    let execution:import('../contracts/behavior.js').PlannedExecution|undefined;
+    let execution:import('../../contracts/behavior.js').PlannedExecution|undefined;
     switch(action.kind) {
       case 'grant':store.grantMoney(requestId,action.amount,typeof action.note==='string'&&action.note.trim()?action.note:undefined,actor);break;
       case 'gift':store.giftItem(requestId,action.itemId,quantity,typeof action.note==='string'&&action.note.trim()?action.note:undefined,actor);break;

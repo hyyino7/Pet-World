@@ -57,7 +57,7 @@ test('R5 常量 kind 定位读写调用，区分拥有者和 Core 物理容器',
     [4,'channel-received','读','channels','core',true],[5,'channel-received','写','channels','core',true],[6,'channel-usage','写','channels','core',true],
   ]);
   assert.deepEqual(rows.filter(r=>r.file.includes('desktop/')).map(r=>[r.line,r.access,r.owner,r.violation]),[[3,'读','desktop',true],[4,'写','desktop',true]]);
-  assert.ok(rows.some(r=>r.target==='economy.initialized:*'&&r.line===3&&r.owner==='economy'&&r.containerOwner==='core'&&r.violation));
+  assert.ok(rows.some(r=>r.target==='economy.initialized:*'&&r.line===3&&r.owner==='living'&&r.containerOwner==='core'&&r.violation));
   const output=[];report(result,s=>output.push(s));
   assert.ok(output.some(s=>s.includes('写入模块=channels 操作=写')&&s.includes('业务拥有者=channels')));
 });
@@ -106,11 +106,11 @@ test('R5 不含 data/ 的通配声明只匹配自身路径，不能使其他文�
     ['.chatpet/self.history/entry.md','records','core','core',true],
     ['profile:chatpet-channels/account.json','channels','channels','channels',true],
     ['profile:chatpet-voice/cache/clip.wav','voice','voice','voice',true],
-    ['data/economy/economy.sqlite','economy','economy','economy',true],
+    ['data/economy/economy.sqlite','economy','living','living',true],
     ['.chatpet/data/memory/data/memory.db','memory','memory','memory',true],
     ['unregistered.json',undefined,'?','?',null],
   ];
-  const work=workspace(t,{'src/living/plan/files.ts':`import {writeFileSync} from 'node:fs';
+  const work=workspace(t,{'src/room/files.ts':`import {writeFileSync} from 'node:fs';
     export function write() {
       ${cases.map(([path])=>`writeFileSync(${JSON.stringify(path)},'fixture');`).join('\n')}
     }`});

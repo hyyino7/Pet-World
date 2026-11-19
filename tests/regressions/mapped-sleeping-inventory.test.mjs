@@ -29,7 +29,7 @@ const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolv
 const {createCore}=await import(new URL('../../core/index.js',playbackURL));
 const {digest}=await import(new URL('../../core/storage.js',playbackURL));
 const {CompanionBehavior}=await import(new URL('./plugin.js',playbackURL));
-const {CompanionEconomy}=await import(new URL('../../economy/plugin.js',playbackURL));
+const {CompanionEconomy}=await import(new URL('../economy/plugin.js',playbackURL));
 const {PersistentLifePlan}=await import(new URL('../plan/plan.js',playbackURL));
 const {settingsHandler}=await import(new URL('../../console/settings.js',playbackURL));
 const meal='food:improved-meal',requestId='sleeping-inventory-meal';
