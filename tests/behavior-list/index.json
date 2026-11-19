@@ -933,6 +933,17 @@
       "families": [
         "计划推进与完成契约"
       ]
+    },
+    {
+      "id": "2A2-01",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/setup-config.test.mjs",
+      "name": "换包后 Core 配置仍在",
+      "l1Stage": "阶段 2",
+      "families": [
+        "换包后 Core 配置仍在"
+      ]
     }
   ]
 }

@@ -22,18 +22,19 @@
 
 1. 在源设备上确认工作区页面显示存储已完成。Core 必须真的从 `.chatpet/data/core/` 运行；Repo 里只是有文档或另一个数据库文件，不能证明这一点。
 2. 完全退出 DSH，然后复制完整的伙伴 Repo，包括隐藏的 `.chatpet/` 和数据库附属文件。只用 Git 克隆带不走被忽略的个人数据。不要把无关的 dsh-chatbot 伙伴合并进来。
-3. 在新设备上安装 DSH 和下载的插件包，配置这台设备的账号和模型。如果复制来的 Repo 里有已配置的 Memory Bank，还要提供一个兼容、带好依赖的 Python 环境。关闭 DSH，运行包里的 setup 命令（示例包含 Memory）：
+3. 在新设备上安装并打开一次 DSH，配置账号和模型，完全退出后运行 `her-world` 包提供的 setup 命令。若复制来的 Repo 有 Memory Bank，还要提供一个兼容且已装好依赖的 Python 环境。
 
    ```sh
    dafeiyu-setup \
-     --archive "/absolute/path/to/downloaded/dsh-Chatpet.tgz" \
      --resume-repo "/absolute/path/to/copied-companion-repo" \
      --memory-python "/absolute/path/to/device/venv/bin/python" \
-     --apply --offline --no-backup
+     --apply
    ```
 
-   这条命令就是已安装包里的 `scripts/install-dsh.mjs`；PATH 里没有 Node 时，也可以用 DSH 自带的 Electron 以 Node 模式运行。不需要开发检出，也不需要仓库内的工具链。设备运行时准备会离线复制你提供的兼容本地环境，不下载依赖，也不替换全局 Python。如果这个伙伴从没配置过长期 Memory，省略 `--memory-python`：它那个空的或只有近期互动的容器不是 Bank，续用时不需要解释器。已经声明或拥有的 Bank 缺失或无效时仍然报错，不当作未配置。续用绝不新建替代 Bank 来让副本看起来有效。去掉 `--no-backup` 就改用安装器默认的备份策略。
-4. setup 读取保留下来的 Core 身份和范围以及已有的 Bank，改写宿主路径，记录实际安装的路径。重新打开 DSH，通过原生工作区选择器绑定复制来的 Repo，并初始化它的文档。允许出现新的原生工作区 ID；可搬迁的存储身份不变。恢复完整日志用的是 DSH 的原生持久化，不发送模型消息。本机的渠道连接和权限要另行配置。
+   setup 交给 DSH 安装 npm 上的稳定版 `her-world`。用 `--version <版本>` 指定版本。缓存中已有该包和依赖时，可以加 `--offline`。包内入口为 `scripts/install-dsh.mjs`，也可以用 DSH 自带的 Electron 以 Node 模式运行。设备运行时准备会离线复制提供的本地 Python 环境。伙伴从未配置长期 Memory 时，省略 `--memory-python`。已声明或拥有的 Bank 缺失或无效时，setup 会报错。`--no-backup` 可关闭默认备份，每次应用仍会保留此前的 profile 补丁和回执快照（若存在）。
+4. setup 将 Core 身份、范围和本机路径写入当前 profile 的 `cordis.patch.yml`。验证安装后生成 `chatpet-installation/installation.json`。重新打开 DSH，通过原生工作区选择器绑定复制来的 Repo 并初始化文档。新建的原生工作区 ID 可以不同，恢复的日志和存储身份沿用复制来的 Repo。本机渠道连接和权限要另行配置。
+
+已经用旧 setup 安装的设备，可在退出 DSH 后运行 `dafeiyu-setup migrate-core-config` 核对配置。加 `--apply` 将有效配置移入当前 profile，或为已有覆盖补写回执。两个模式都离线运行，适用于启用或停用的插件。遇到冲突时，命令会返回原因码供核对。
 
 初始化会区分「文档已就绪」和「可搬迁存储已完整」。设置页显示 Core/Memory 的实际位置，不会把外部引导数据库说成已完成的安装。setup 可以离线完成已经识别的绑定；缺失或被删的 `.chatpet/` 绝不会在应用启动时被悄悄重建。
 

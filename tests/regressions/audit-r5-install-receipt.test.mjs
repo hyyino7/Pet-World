@@ -1,112 +1,150 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
-import {join, dirname} from 'node:path';
-import {tmpdir} from 'node:os';
-import {createHash, randomUUID} from 'node:crypto';
+import {join, basename} from 'node:path';
 import vm from 'node:vm';
+import {profileFixture} from '../behavior-list/setup-config.test.mjs';
+import {createCore} from '../../dist/src/core/index.js';
 
-// Execute the real installation receipt/apply suffix. Only host/runtime/CLI
-// boundaries are substituted; all receipt bytes and transitions use real files.
-const installer=fs.readFileSync(new URL('../../scripts/install-dsh.mjs',import.meta.url),'utf8');
-assert.equal(installer.split('const paths = value =>').length,2);
-const suffix=installer.slice(installer.indexOf('const paths = value =>'));
-const write=(file,value)=>{fs.mkdirSync(dirname(file),{recursive:true});fs.writeFileSync(file,value);};
 const json=file=>JSON.parse(fs.readFileSync(file,'utf8'));
-function fixture(t,options={}) {
-  const root=fs.realpathSync(fs.mkdtempSync(join(tmpdir(),'fish-install-receipt-')));
-  t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
-  const dir=join(root,'receipts'),stage=join(dir,'prepared-attempt'),profileDir=join(root,'profile');
-  fs.mkdirSync(stage,{recursive:true});fs.mkdirSync(profileDir,{recursive:true});
-  const config={companionId:'fish',scopeId:'scope',ownerActorId:'owner',dataDir:join(root,'repo','.chatpet','data','core')};
-  const old={status:'installed',packageInstalled:true,profileDir,config:{...config,dataDir:join(root,'old-core')},actualPaths:{coreDataDir:join(root,'old-core')}};
-  const stable=join(dir,'installation.json'),oldBytes=JSON.stringify(old,null,2)+'\n';
-  if(!options.fresh)write(stable,oldBytes);
-  write(join(profileDir,'package.json'),JSON.stringify({dependencies:{'her-world':'old'},dsh:{profile:{bundles:['her-world']}}}));
-  const configPath=join(profileDir,'cordis.patch.yml'),patch='retain owner patch\n';write(configPath,patch);
-  const installedBundle=join(profileDir,'node_modules','her-world','cordis.patch.yml');
-  write(installedBundle,JSON.stringify([{insert:[{id:'00-Core',config:old.config}]}]));
-  const hostCalls=[];let publications=0;
-  const context=vm.createContext({
-    ...fs,join,dirname,randomUUID,createHash,assert,
-    renameSync(from,to){
-      if(options.publishFailure && ++publications===2)throw Error('fixture final receipt publication failure');
-      return fs.renameSync(from,to);
-    },
-    process:{argv:['node','install-dsh.mjs','--no-backup',...(options.apply?['--apply']:[])],pid:process.pid,env:{}},
-    console:{log(){}},dir,stage,profileDir,config,configPath,patch,installedBundle,
-    profile:'desktop',app:join(root,'inert-app'),packageRoot:join(root,'inert-source'),
-    prepared:join(stage,'prepared.tgz'),installedConfig:old.config,
-    sourceConfig:config,configuredBeforeBinding:config,
-    binding:options.initializationFailure?{state:'ready',root:join(root,'repo'),target:{id:'workspace'}}:{state:'unbound'},
-    relocation:options.initializationFailure?{root:join(root,'repo'),data:join(root,'repo','.chatpet','data'),entries:[]}:null,
-    deviceRuntimePlan:options.runtimeFailure?{python:'/inert/python'}:null,
-    assertStopped(){hostCalls.push('writer-check');},
-    spawnSync(){hostCalls.push('process-check');return {status:options.running?0:1,stdout:options.running?'999999999':''};},
-    applyDeviceRuntime(){hostCalls.push('runtime');throw Error('fixture runtime failure');},
-    relocateRepoStorage(){hostCalls.push('relocate');return [];},
-    bundleYaml:{load:text=>JSON.parse(text)},entryListSchema:{},
-    inspectRepoBinding(){hostCalls.push('binding-check');return {state:'pending'};},
-    registerHooks(){throw Error('Unexpected native peer loading');},
-    run(_command,args){
-      hostCalls.push('package-cli');
-      if(options.cliFailure)throw Error('fixture package CLI failure');
-      write(installedBundle,JSON.stringify([{insert:[{id:'00-Core',config}]}]));
-      if(options.changedPatch)write(configPath,'unexpected patch');
-    },
-  });
-  context.process.exit=code=>{throw Object.assign(Error('fixture exit'),{fixtureExit:code});};
-  if(options.initializationFailure)fs.mkdirSync(join(root,'repo','.chatpet'),{recursive:true});
-  return {root,dir,stage,stable,old,oldBytes,config,hostCalls,context,
-    run:()=>new vm.Script('(async()=>{'+suffix+'\n})()').runInContext(context)};
+function fixture(t, {fresh = false, runtime = false} = {}) {
+  const f = profileFixture(t), repo = join(f.home, 'repo');
+  const config = {companionId: 'fish', scopeId: 'scope', ownerActorId: 'owner', displayName: '', character: '',
+    dataDir: join(repo, '.chatpet/data/core')};
+  const memory = runtime ? {python: join(f.home, 'python'), dataDir: join(f.home, 'bank')} : undefined;
+  const oldConfig = {...config, dataDir: join(f.home, 'old-core'), ...(runtime ? {memory} : {})};
+  const old = {status:'installed', packageInstalled:true, profileDir: f.profileDir, config: oldConfig,
+    actualPaths:{coreDataDir: oldConfig.dataDir, memoryDataDir: memory?.dataDir ?? null, memoryPython: memory?.python ?? null}};
+  const oldBytes = JSON.stringify(old, null, 2) + '\n';
+  const patch = '# retain owner patch\n[]\n';
+  fs.writeFileSync(f.patchPath, patch);
+  if (!fresh) {
+    f.installFixture(oldConfig);
+    fs.mkdirSync(f.receiptDir, {recursive: true});
+    fs.writeFileSync(f.receiptPath, oldBytes);
+  }
+  return {...f, repo, config, oldConfig, oldBytes, patch,
+    args: ['--data-dir', config.dataDir, '--no-backup']};
 }
 
-test('R5: preparation preserves the completed receipt byte-for-byte and records its own planned binding',async t=>{
+function failure(f, options, reason, args = f.args) {
+  const result = f.command(['--apply', ...args], options);
+  assert.equal(result.status, 1, result.stderr);
+  const report = JSON.parse(result.stderr.trim().split('\n').at(-1));
+  assert.equal(report.reason, reason);
+  return report;
+}
+
+function attemptStage(f) {
+  const stage = fs.readdirSync(f.receiptDir, {withFileTypes: true}).filter(entry => entry.isDirectory() && entry.name.startsWith('prepared-'));
+  assert.equal(stage.length, 1);
+  return join(f.receiptDir, stage[0].name);
+}
+
+test('R5: preparation preserves the completed receipt byte-for-byte and records its own planned binding',t=>{
   const f=fixture(t);
-  await assert.rejects(f.run(),error=>error.fixtureExit===0);
-  assert.equal(fs.readFileSync(f.stable,'utf8'),f.oldBytes);
-  const attempt=json(join(f.stage,'installation.json'));
+  const {attemptReceipt} = f.checked(f.args);
+  assert.equal(fs.readFileSync(f.receiptPath,'utf8'),f.oldBytes);
+  const attempt=json(attemptReceipt);
   assert.equal(attempt.status,'prepared');assert.equal(attempt.config.dataDir,f.config.dataDir);
-  assert.deepEqual(f.hostCalls,[]);
+  assert.deepEqual(f.calls(),[]);
 });
-test('R5: fresh preparation creates no installed receipt',async t=>{
-  const f=fixture(t,{fresh:true});await assert.rejects(f.run(),error=>error.fixtureExit===0);
-  assert.equal(fs.existsSync(f.stable),false);assert.equal(json(join(f.stage,'installation.json')).status,'prepared');
+test('R5: fresh preparation creates no installed receipt',t=>{
+  const f=fixture(t,{fresh:true}), {attemptReceipt} = f.checked(f.args);
+  assert.equal(fs.existsSync(f.receiptPath),false);assert.equal(json(attemptReceipt).status,'prepared');
 });
-for(const [options,reason] of [[{running:true},/Quit DSH/],[{runtimeFailure:true},/fixture runtime failure/]]) {
-  test('R5: failed pre-install gate retains the last completed receipt: '+reason,async t=>{
-    const f=fixture(t,{apply:true,...options});await assert.rejects(f.run(),reason);
-    assert.equal(fs.readFileSync(f.stable,'utf8'),f.oldBytes);
-    assert.equal(f.hostCalls.includes('package-cli'),false);
+for(const [options,reason] of [[{running:true},'dsh-running'],[{runtime:true},'device-runtime-failed']]) {
+  test('R5: failed pre-install gate retains the last completed receipt: '+reason,t=>{
+    const f=fixture(t,options);
+    failure(f, options, reason);
+    assert.equal(fs.readFileSync(f.receiptPath,'utf8'),f.oldBytes);
+    assert.equal(f.calls().some(call=>call.args),false);
   });
 }
-for(const [options,reason] of [[{cliFailure:true},/fixture package CLI failure/],[{changedPatch:true},/patch changed/],[{initializationFailure:true},/Workspace is no longer initialized/]]) {
+for(const [options,reason] of [[{cliFailure:'mutated'},'package-install-failed'],[{changedPatch:true},'profile-patch-changed'],[{initializationFailure:true},'workspace-initialization-failed']]) {
   test('R5: uncertain apply refuses to advertise a completed binding and retains the previous receipt: '+reason,async t=>{
-    const f=fixture(t,{apply:true,...options});await assert.rejects(f.run(),reason);
-    const current=json(f.stable);
+    const f=fixture(t);
+    const mode = {...options}, args = [...f.args];
+    if (options.initializationFailure) {
+      fs.mkdirSync(f.repo);
+      const host = createCore(f.oldConfig);
+      try {
+        const prefs = await host.services.preferences.read(host.operator.request('receipt-read'), {});
+        assert.equal(prefs.ok, true);
+        const saved = await host.services.preferences.save(host.operator.request('receipt-bind'), {expectedRevision: prefs.value.revision,
+          workspace: {id: 'workspace', path: f.repo, title:'Workspace'}, conversation: prefs.value.conversation});
+        assert.equal(saved.ok, true);
+        assert.equal((await host.services.workspace.initialize(host.operator.request('receipt-initialize'), {expectedPreferencesRevision: saved.value.revision})).ok, true);
+      } finally { await host.close(); }
+      mode.breakWorkspace = join(f.repo, '.chatpet/manifest.json');
+      args[1] = f.oldConfig.dataDir;
+    }
+    assert.equal(failure(f, mode, reason, args).status, 'applying');
+    const current=json(f.receiptPath);
     assert.equal(current.status,'applying');assert.equal(current.packageInstalled,undefined);
     assert.equal(fs.readFileSync(current.previousReceipt,'utf8'),f.oldBytes);
-    assert.equal(current.attemptReceipt,join(f.stage,'installation.json'));
+    assert.equal(current.attemptReceipt,join(attemptStage(f),'installation.json'));
+    assert.equal(fs.readFileSync(current.previousPatch,'utf8'),f.patch);
     if(options.initializationFailure)assert.equal(json(current.attemptReceipt).status,'needs-initialization');
   });
 }
-test('R5: verified apply publishes only the actual completed binding after native boundaries succeed',async t=>{
-  const f=fixture(t,{apply:true});await f.run();
-  const installed=json(f.stable);
+test('R5: verified apply publishes only the actual completed binding after native boundaries succeed',t=>{
+  const f=fixture(t);
+  fs.mkdirSync(f.config.dataDir,{recursive:true});
+  fs.writeFileSync(join(f.config.dataDir,'core.lock'),'999999999:fixture');
+  f.checked([...f.args, '--apply']);
+  const installed=json(f.receiptPath);
   assert.equal(installed.status,'installed');assert.equal(installed.packageInstalled,true);
   assert.equal(installed.enabled,true);assert.equal(installed.config.dataDir,f.config.dataDir);
   assert.equal(installed.actualPaths.coreDataDir,f.config.dataDir);
-  assert.equal(fs.readFileSync(join(f.stage,'previous-installation.json'),'utf8'),f.oldBytes);
-  assert.deepEqual(installed,json(join(f.stage,'installation.json')));
-  assert.deepEqual(fs.readdirSync(f.dir).sort(),['installation.json','prepared-attempt']);
-  assert.ok(f.hostCalls.indexOf('writer-check')<f.hostCalls.indexOf('package-cli'));
+  const files = fs.readdirSync(f.receiptDir).sort(), stage = attemptStage(f);
+  assert.equal(fs.readFileSync(join(stage,'previous-installation.json'),'utf8'),f.oldBytes);
+  assert.deepEqual(installed,json(join(stage,'installation.json')));
+  assert.deepEqual(files,['installation.json',basename(stage)]);
+  const calls = f.calls(), packageCall = calls.find(call=>call.args);
+  assert.ok(calls.includes('writer-check') && calls.indexOf('writer-check')<calls.indexOf(packageCall));
+  assert.equal(packageCall.status, 'applying');
+  assert.equal(packageCall.args[4], 'her-world@latest');
+  assert.deepEqual(f.coreConfig(), installed.config);
 });
-test('R5: failed final receipt publication retains a non-completed marker, previous bytes and no partial temporary file',async t=>{
-  const f=fixture(t,{apply:true,publishFailure:true});await assert.rejects(f.run(),/final receipt publication failure/);
-  const current=json(f.stable);assert.equal(current.status,'applying');
+test('R5: failed final receipt publication retains a non-completed marker, previous bytes and no partial temporary file',t=>{
+  const f=fixture(t);
+  failure(f, {publishFailure:true}, 'receipt-write-failed');
+  const current=json(f.receiptPath);assert.equal(current.status,'applying');
   assert.equal(fs.readFileSync(current.previousReceipt,'utf8'),f.oldBytes);
   assert.equal(json(current.attemptReceipt).status,'installed');
-  assert.deepEqual(fs.readdirSync(f.dir).sort(),['installation.json','prepared-attempt']);
+  assert.deepEqual(fs.readdirSync(f.receiptDir).sort(), ['installation.json',basename(attemptStage(f))]);
+});
+
+test('R5: untouched offline install failure restores prior profile patch and receipt even with --no-backup', t => {
+  const f = fixture(t), bundle = fs.readFileSync(f.bundlePatch), manifest = fs.readFileSync(f.manifest);
+  assert.equal(failure(f, {cliFailure: 'untouched'}, 'package-install-failed', [...f.args, '--offline']).status, 'failed');
+  assert.equal(fs.readFileSync(f.patchPath, 'utf8'), f.patch);
+  assert.equal(fs.readFileSync(f.receiptPath, 'utf8'), f.oldBytes);
+  assert.deepEqual(fs.readFileSync(f.bundlePatch), bundle);
+  assert.deepEqual(fs.readFileSync(f.manifest), manifest);
+  assert.equal(f.calls().find(call => call.args).offline, true);
+  const stage = attemptStage(f);
+  assert.equal(fs.readFileSync(join(stage, 'previous-cordis.patch.yml'), 'utf8'), f.patch);
+  assert.equal(fs.readFileSync(join(stage, 'previous-installation.json'), 'utf8'), f.oldBytes);
+});
+
+test('R5: a patch write failure leaves the old binding and never invokes package installation', t => {
+  const f = fixture(t);
+  assert.equal(failure(f, {writeFailure: true}, 'patch-write-failed').status, 'failed');
+  assert.equal(fs.readFileSync(f.patchPath, 'utf8'), f.patch);
+  assert.equal(fs.readFileSync(f.receiptPath, 'utf8'), f.oldBytes);
+  assert.equal(f.calls().some(call => call.args), false);
+});
+
+test('R5: a fresh offline cache miss removes the new patch and applying receipt, allowing a retry', t => {
+  const f = fixture(t, {fresh: true});
+  fs.rmSync(f.patchPath);
+  assert.equal(failure(f, {cliFailure: 'untouched'}, 'package-install-failed', [...f.args, '--offline']).status, 'failed');
+  assert.equal(fs.existsSync(f.patchPath), false);
+  assert.equal(fs.existsSync(f.receiptPath), false);
+  assert.equal(f.checked([...f.args, '--apply']).status, 'installed');
+  assert.ok(f.coreConfig().companionId);
 });
 
 // Invalid receipts must be rejected by the actual backup CLI before Core,

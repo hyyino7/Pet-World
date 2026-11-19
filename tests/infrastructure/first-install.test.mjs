@@ -1,53 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { syncBuiltinESMExports } from 'node:module';
-import vm from 'node:vm';
 import { createCore } from '../../dist/src/core/index.js';
-import { prepareCoreConfiguration } from '../../scripts/lib/core-config.mjs';
 import { fileHashes, inspectRepoBinding, prepareRepoStorage, relocateRepoStorage } from '../../scripts/lib/repo-storage.mjs';
+import { profileFixture } from '../behavior-list/setup-config.test.mjs';
 
 const value = result => { assert.ok(result.ok, JSON.stringify(result.error)); return result.value; };
 
-// Exercise the actual default setup prefix, stopping before installed discovery.
-// Every host/account/archive boundary is replaced; no installer process runs.
-function defaultConfiguration(root) {
-  const entry = new URL('../../scripts/install-dsh.mjs', import.meta.url), source = readFileSync(entry, 'utf8');
-  const marker = '// Preserve every portable Bundle declaration and';
-  const homeImport = "const { resolveDshHome } = await import(require.resolve('@deepseek-ai/dsh-home-paths'));";
-  assert.equal(source.split(marker).length, 2);
-  const prefix = source.slice(0, source.indexOf(marker)).replace(/^#![^\n]*\n/, '').replace(/^import [^\n]+;\n/gm, '');
-  assert.equal(prefix.split(homeImport).length, 2);
-  const home = join(root, 'dsh-home'), spawns = [];
-  const context = vm.createContext({ assert, join, resolve, dirname, isAbsolute, fileURLToPath, prepareCoreConfiguration, structuredClone,
-    process: { versions: { electron: 'fixture' }, argv: ['node', fileURLToPath(entry), '--dsh-home', home, '--profile', 'fixture'] },
-    createRequire: () => Object.assign(name => { throw Error('Unexpected host dependency: ' + name); }, { resolve: name => name }),
-    resolveDshHomeFixture: () => ({ resolveDshHome: () => home }),
-    readFileSync: () => '# Isolated native profile\n', existsSync: () => true,
-    mkdirSync() {}, chmodSync() {}, mkdtempSync: () => join(root, 'prepared'),
-    randomUUID: (() => { let sequence = 0; return () => 'first-install-' + ++sequence; })(),
-    spawnSync: (...args) => { spawns.push(args); return { status: 0 }; },
-  });
-  vm.runInContext(prefix.replace(homeImport, 'const { resolveDshHome } = resolveDshHomeFixture();')
-    .replaceAll('import.meta.url', JSON.stringify(entry.href)) + '\nglobalThis.preparedConfig=config;', context);
-  assert.equal(spawns.length, 1);
-  assert.equal(spawns[0][0], '/usr/bin/tar', 'Archive extraction is simulated; no Electron or model runs');
-  const config = JSON.parse(JSON.stringify(context.preparedConfig));
-  assert.equal(config.dataDir, join(home, 'codex-pet/core'));
-  return config;
-}
-
 function fixture(t) {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), 'chatpet-first-install-'))), repo = join(root, 'repo');
+  let host;
+  t.after(async () => { if (host) await host.close(); });
+  const setup = profileFixture(t), root = setup.home, repo = join(root, 'repo');
   mkdirSync(repo);
-  const config = defaultConfiguration(root);
-  let host = createCore(config), sequence = 0;
+  const {attemptReceipt} = setup.checked([]);
+  const {config} = JSON.parse(readFileSync(attemptReceipt));
+  assert.deepEqual(setup.calls(), [], 'Setup planning starts no package process, Electron, or model');
+  assert.equal(config.dataDir, join(root, 'codex-pet/core'));
+  host = createCore(config);
+  let sequence = 0;
   const request = () => host.operator.request('first-install-' + ++sequence);
-  t.after(async () => { await host.close(); rmSync(root, { recursive: true, force: true }); });
   return {
     root, repo, config, request, get host() { return host; },
     async close() { await host.close(); },

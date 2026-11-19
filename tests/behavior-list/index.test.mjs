@@ -6,8 +6,8 @@ import {join, resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 const index = JSON.parse(readFileSync(new URL('./index.json', import.meta.url), 'utf8'));
 const categories = ['计划续行','同请求重试不重复生效','效果已落盘后结算失败再重启','睡眠中投喂的终态','种地时钟不倒退','离线消耗额度','日记按原日期恢复','历史日记保护','输入持久化先于确认','送达与记忆召回分开','阅读必须有真实文本','QQ 收件恢复','换目录时在途请求不写旧目录','隐藏后取消显示定时器','缺库不得空白替代'];
-const families = ['日记与回顾','种地时钟','计划推进与完成契约','关闭后晚到的录音与取消'];
-test('索引覆盖十五类和四个 L1 故障家族并保留合法固定身份', () => {
+const families = ['日记与回顾','种地时钟','计划推进与完成契约','关闭后晚到的录音与取消','换包后 Core 配置仍在'];
+test('索引覆盖十五类和五个 L1 故障家族并保留合法固定身份', () => {
   assert.equal(index.version, 1);
   const ids = new Set(), identities = new Set();
   for (const row of index.entries) {
