@@ -2,7 +2,7 @@ import { constants, closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, open
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { EmotionFile } from '../emotion/state.js';
-import { defaultLifePreferences, parseLifePreferences } from '../life/library.js';
+import { defaultLifePreferences, parseLifePreferences } from '../living/plan/library.js';
 import { check } from './storage.js';
 
 const DIRECTORIES = ['data', 'data/core', 'data/core/native-sessions', 'data/memory', 'data/emotion',

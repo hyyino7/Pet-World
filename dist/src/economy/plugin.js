@@ -9,7 +9,7 @@ import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
 import { isHistoryObject } from '../core/native/history-maintenance.js';
 import { EconomyStore } from './store.js';
 import { installEconomyAccessGuard } from './access.js';
-import { readLifeControl } from '../life/control-file.js';
+import { readLifeControl } from '../living/plan/control-file.js';
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];
 const access = { mode: 'bounded', detail: '余额与物品由程序结算。原生文件工具防误改；同一系统账户的命令和其他插件仍可访问文件。' };
 export const economyStateToolDeclaration = {

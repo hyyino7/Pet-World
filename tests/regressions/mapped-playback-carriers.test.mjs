@@ -63,7 +63,7 @@ async function assets() {
   return import('data:text/javascript;base64,'+Buffer.from(ts.transpileModule(
     readFileSync('src/living/body/animation-map.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText).toString('base64'));
 }
-async function room() {return import(pathToFileURL(join(compiledBase,'../room/assets.js')).href);}
+async function room() {return import(pathToFileURL(join(compiledBase,'../../room/assets.js')).href);}
 function roomDeclarations(animationAssets) {
   const source=readFileSync('vendor/feiyu-room-template/public/room/actor.js','utf8');
   const tree=ts.createSourceFile('actor.js',source,ts.ScriptTarget.Latest,true);

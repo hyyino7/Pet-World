@@ -21,7 +21,7 @@
     "./35-PetPlatform": "./dist/src/desktop/platform/plugin.js",
     "./70-Voice": "./dist/src/voice/plugin.js",
     "./10-Memory": "./dist/src/memory/plugin.js",
-    "./40-Life": "./dist/src/life/plugin.js",
+    "./40-Life": "./dist/src/living/plan/plugin.js",
     "./50-Room": "./dist/src/room/plugin.js",
     "./60-Channels": "./dist/src/channels/plugin.js",
     "./channel-guest": "./dist/src/channels/guest.js"

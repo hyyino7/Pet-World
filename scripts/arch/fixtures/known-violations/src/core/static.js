@@ -1,1 +1,1 @@
-export * from '../life/plugin.js';
+export * from '../living/plan/plugin.js';

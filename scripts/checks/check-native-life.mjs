@@ -68,7 +68,7 @@ try {
   await ctx.plugin(await import('../../dist/src/living/body/plugin.js'));
   const bubbles = [];
   await ctx.plugin({apply(scope){scope.provide('petDesktop',{status:()=>({running:true}),presentLife:text=>bubbles.push(text)});}});
-  const mountLife = async () => {lifeComponent = await ctx.plugin(await import('../../dist/src/life/plugin.js'));return ctx.petLife;};
+  const mountLife = async () => {lifeComponent = await ctx.plugin(await import('../../dist/src/living/plan/plugin.js'));return ctx.petLife;};
   let life = await mountLife();
   assert.deepEqual(host.native.sourceTable.policyRows().map(row=>row.row),[1,2,3,4]);
   if (!process.argv.includes('--review-only')) {

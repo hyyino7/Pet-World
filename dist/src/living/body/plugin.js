@@ -7,7 +7,7 @@ import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
 import { gardenHomeProjection } from './garden-receipt.js';
-import { LifeControlFileError, readLifeControl } from '../../life/control-file.js';
+import { LifeControlFileError, readLifeControl } from '../plan/control-file.js';
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
 const owners = new WeakMap();
 /** The only home/garden runtime writer. It does not create agents or model turns. */

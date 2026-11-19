@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createLifeRuntime} from '../../vendor/dsh-world/lib/life/runtime.js';
 import {createLifeStore} from '../../vendor/dsh-world/lib/life/lifeStore.js';
-import {reviewDiaryStatus} from '../../dist/src/life/review-completion.js';
+import {reviewDiaryStatus} from '../../dist/src/living/plan/review-completion.js';
 
 async function fixture(t) {
   const root=mkdtempSync(join(tmpdir(),'life-review-runtime-')),records=join(root,'.chatpet'),directory=join(records,'data/life');

@@ -8,7 +8,7 @@ import { createCore } from '../../dist/src/core/index.js';
 import { CompanionRoom } from '../../dist/src/living/body/room.js';
 import { CompanionBehavior } from '../../dist/src/living/body/plugin.js';
 import { CompanionEconomy } from '../../dist/src/economy/plugin.js';
-import { PersistentLifePlan } from '../../dist/src/life/plan.js';
+import { PersistentLifePlan } from '../../dist/src/living/plan/plan.js';
 import { EmotionFile } from '../../dist/src/emotion/state.js';
 import { RecentLedger } from '../../dist/src/emotion/recent.js';
 import { DesktopImages } from '../../dist/src/desktop/images.js';

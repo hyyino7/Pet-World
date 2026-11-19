@@ -5,14 +5,14 @@ import {join} from 'node:path';
 import {workspace, saveBaseline, check} from './helpers.mjs';
 
 const caller = 'src/core/imports.ts';
-const target = 'src/life/words.ts';
+const target = 'src/living/plan/words.ts';
 const movedCaller = 'src/core/nested/imports.ts';
-const movedTarget = 'src/life/nested/words.ts';
+const movedTarget = 'src/living/plan/nested/words.ts';
 const moveFile = 'move.json';
 const moveArgs = ['--write-baseline', '--move', moveFile];
 const paths = {[caller]: movedCaller, [target]: movedTarget};
-const oldImport = '../life/words.js';
-const newImport = '../../life/nested/words.js';
+const oldImport = '../living/plan/words.js';
+const newImport = '../../living/plan/nested/words.js';
 const callerSource = specifier => `
   import { words } from '${specifier}';
   export function load() {
@@ -66,13 +66,13 @@ test('纯搬家能改写引用方、R1 目标及相对路径和 R8 双向位置'
 
 test('引用方位置不变时，也按解析结果识别搬家后的相对导入', t => {
   const work = workspace(t, {
-    [caller]: "export type Words = import('../life/words.js').Words;",
+    [caller]: "export type Words = import('../living/plan/words.js').Words;",
     [target]: 'export type Words = string[];',
   });
   assert.equal(saveBaseline(work).rules.length, 1);
   work.write(movedTarget, '');
   renameSync(join(work.root, target), join(work.root, movedTarget));
-  work.write(caller, "export type Words = import('../life/./nested/words.js').Words;");
+  work.write(caller, "export type Words = import('../living/plan/./nested/words.js').Words;");
   work.write(moveFile, JSON.stringify({[target]: movedTarget}));
   const result = check(work.root, moveArgs);
   assert.equal(result.status, 0, result.stderr);

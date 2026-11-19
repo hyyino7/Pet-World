@@ -11,7 +11,7 @@ import {CompanionBehavior} from '../../src/living/body/plugin.js';
 import {CompanionRoom} from '../../src/living/body/room.js';
 import {resolveActivityPlayback,sampleActivityPlayback} from '../../src/living/body/playback.js';
 import {CompanionEconomy} from '../../src/economy/plugin.js';
-import {parsePlanDraft,PersistentLifePlan} from '../../src/life/plan.js';
+import {parsePlanDraft,PersistentLifePlan} from '../../src/living/plan/plan.js';
 import {emptyHomeState,applyHomeAction,applyCatalogFood} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
 const meal='food:improved-meal';

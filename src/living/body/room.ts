@@ -5,7 +5,7 @@ import { createGardenCaretaker, nextGardenCareBoundary } from '#feiyu-room/garde
 import { actGarden, loadGarden, saveGarden } from '#feiyu-room/garden-store';
 import { advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
 import { advanceGardenClock, type GardenClock } from '../../economy/garden-clock.js';
-import { LifeControlFileError } from '../../life/control-file.js';
+import { LifeControlFileError } from '../plan/control-file.js';
 import { applyRoomAction, normalizeRoomState, roomView } from '#feiyu-room/room-state';
 import type { CompanionEmotion } from '../../emotion/plugin.js';
 import { randomUUID } from 'node:crypto';

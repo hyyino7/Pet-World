@@ -27,8 +27,8 @@ syncBuiltinESMExports();
 after(()=>{for(const restore of restores.reverse())restore();syncBuiltinESMExports();assert.deepEqual(forbidden,[]);});
 
 const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/living/body/playback.js'));
-const {createCore}=await import(new URL('../core/index.js',playbackURL));
-const {CompanionChannels}=await import(new URL('../channels/plugin.js',playbackURL));
+const {createCore}=await import(new URL('../../core/index.js',playbackURL));
+const {CompanionChannels}=await import(new URL('../../channels/plugin.js',playbackURL));
 const deferred=()=>{let resolve;const promise=new Promise(done=>{resolve=done;});return {promise,resolve};};
 const value=result=>{assert.equal(result.ok,true,JSON.stringify(result));return result.value;};
 

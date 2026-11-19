@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {roomOverview,gardenOverview} from '../../src/room/tool-context.js';
 import {economyOverview,economyPage} from '../../src/economy/tool-context.js';
-import {planOverview} from '../../src/life/tool-context.js';
+import {planOverview} from '../../src/living/plan/tool-context.js';
 import {presentFacts} from '../../src/core/interaction-presentation.js';
 import {Room} from '../../src/room/plugin.js';
 import {HOME_LAYOUT,emptyHomeState,homeView} from '#feiyu-home';

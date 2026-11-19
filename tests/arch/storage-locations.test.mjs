@@ -32,12 +32,12 @@ test('R5 对新旧身体、记录、相册及设备连接位置分别报告真�
     ${paths.map(path=>`writeFileSync(${JSON.stringify(path)},'synthetic');`).join('\n')}`}).scan().writers;
   assert.deepEqual(rows.map(r=>[r.container,r.containerOwner,r.owner]),[
     ['.chatpet/data/behavior/home.json','living','living'],
-    ['.chatpet/data/life/home.json','life','living'],
+    ['.chatpet/data/life/home.json','living','living'],
     ['.chatpet/diary/**','core','core'],
-    ['.chatpet/data/life/diary/**','life','core'],
-    ['.chatpet/data/life/photos/album.sqlite','life','core'],
+    ['.chatpet/data/life/diary/**','living','core'],
+    ['.chatpet/data/life/photos/album.sqlite','living','core'],
     ['profile:chatpet-channels/**','channels','channels'],
-    ['.chatpet/data/life/activity/**','life','life'],
+    ['.chatpet/data/life/activity/**','living','living'],
   ]);
 });
 

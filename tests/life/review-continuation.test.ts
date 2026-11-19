@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
-import {createLifeSourceAdapter,registerLifeToolPolicy} from '../../src/life/tool-policy.js';
+import {createLifeSourceAdapter,registerLifeToolPolicy} from '../../src/living/plan/tool-policy.js';
 import {apply} from '../../src/core/native/agent.js';
 import {CoreNative} from '../../src/core/native/conversation.js';
 import type {CoreRuntime} from '../../src/core/runtime.js';

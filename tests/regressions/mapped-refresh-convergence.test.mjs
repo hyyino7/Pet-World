@@ -27,9 +27,9 @@ syncBuiltinESMExports();
 after(()=>{for(const undo of restore.reverse())undo();syncBuiltinESMExports();assert.deepEqual(forbidden,[]);});
 
 const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/living/body/playback.js'));
-const {PetPlatform}=await import(new URL('../desktop/platform/plugin.js',playbackURL));
+const {PetPlatform}=await import(new URL('../../desktop/platform/plugin.js',playbackURL));
 const {CompanionBehavior}=await import(new URL('./plugin.js',playbackURL));
-const {DEFAULT_COMPANION_SETTINGS}=await import(new URL('../core/companion-settings.js',playbackURL));
+const {DEFAULT_COMPANION_SETTINGS}=await import(new URL('../../core/companion-settings.js',playbackURL));
 const deferred=()=>{let resolve;const promise=new Promise(done=>{resolve=done;});return{promise,resolve};};
 const snapshot=(revision=1,bootId='fixture-boot',label='Quiet rest')=>({
   her:{kind:'idle',activity:label,asleep:false},body:{energy:.8},

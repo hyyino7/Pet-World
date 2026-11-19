@@ -152,7 +152,7 @@ try {
     if(result.url.startsWith('file:')){const file=fileURLToPath(result.url);assert.ok(!['src','dist','vendor'].some(name=>file.startsWith(join(checkout,name)+'/')),'Development implementation import: '+file);}return result;
   }});
   const {CompanionRoom}=await import(pathToFileURL(join(root,'dist/src/living/body/room.js')));
-  const {PersistentLifePlan}=await import(pathToFileURL(join(root,'dist/src/life/plan.js')));
+  const {PersistentLifePlan}=await import(pathToFileURL(join(root,'dist/src/living/plan/plan.js')));
   const {EconomyStore}=await import(pathToFileURL(join(root,'dist/src/economy/store.js')));
   const {roomAsset}=await import(pathToFileURL(join(root,'dist/src/room/assets.js')));
   const {resolveActivityPlayback,sampleActivityPlayback}=await import(pathToFileURL(join(root,'dist/src/living/body/playback.js')));
@@ -165,7 +165,7 @@ try {
   assert.equal(sharedCode.status,200);assert.match(await sharedCode.text(),/export function sampleActivityPlayback/);
 
   const {createCore}=await import(pathToFileURL(join(root,'dist/src/core/index.js')));
-  const lifeSettings=await import(pathToFileURL(join(root,'dist/src/life/library.js')));
+  const lifeSettings=await import(pathToFileURL(join(root,'dist/src/living/plan/library.js')));
   assert.equal('LifeLibrary' in lifeSettings,false,'Retired duplicate Life archive must not ship');
   assert.equal('requireLifeSchedule' in lifeSettings,false,'Unused fixed-schedule guard must not ship');
   const {loadPortableRepo}=await import(pathToFileURL(join(root,'scripts/lib/portable-repo.mjs')));

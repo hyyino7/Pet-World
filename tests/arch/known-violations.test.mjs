@@ -10,7 +10,7 @@ test('R1 覆盖四种扩展名、动态 import、createRequire 别名与 package
   const found=result.rules.filter(r=>r.rule==='R1');
   assert.equal(found.length,10);
   for(const suffix of ['imports.ts','dynamic.mjs','require.cjs','static.js'])assert.ok(found.some(r=>r.file.endsWith(suffix)),suffix);
-  for(const target of ['src/life/plugin.js','src/room/plugin.js','src/desktop/plugin.js'])assert.ok(found.some(r=>r.target===target),target);
+  for(const target of ['src/living/plan/plugin.js','src/room/plugin.js','src/desktop/plugin.js'])assert.ok(found.some(r=>r.target===target),target);
 });
 test('R2 覆盖 bind、解构、对象别名、scope、计算名、inject 和未知目标',t=>{
   const rows=workspace(t,{},'known-violations').scan().rules.filter(r=>r.rule==='R2'&&r.file.endsWith('/services.ts'));
@@ -25,7 +25,7 @@ test('R3 上层事件被拒绝，原生订阅已登记；未声明发布被拒�
 test('R1 未解析的模板依赖明示未知，内联类型导入和完整模板走同一解析器',t=>{
   const rows=workspace(t,{},'known-violations').scan().rules.filter(r=>r.rule==='R1'&&r.file.endsWith('/resolution.ts'));
   assert.deepEqual(rows.map(r=>[r.line,r.target,r.reason]),[
-    [4,'?','无法静态判定本地依赖'],[13,'src/life/plugin.js','依赖方向违规'],[18,'src/life/plugin.js','依赖方向违规'],
+    [4,'?','无法静态判定本地依赖'],[13,'src/living/plan/plugin.js','依赖方向违规'],[18,'src/living/plan/plugin.js','依赖方向违规'],
   ]);
 });
 test('R2 模板和计算解构不再漏报，完整插值与常量计算名保留真实目标',t=>{
@@ -63,7 +63,7 @@ test('R5 常量 kind 定位读写调用，区分拥有者和 Core 物理容器',
 });
 test('R8 联合、数组、switch、schema const/enum、子集和公开裸 string',t=>{
   const result=workspace(t,{},'known-violations').scan();
-  for(const [file,line] of [['life/vocabulary.ts',1],['life/vocabulary.ts',2],['life/vocabulary.ts',7],['room/vocabulary.ts',1],['room/vocabulary.ts',3],['room/vocabulary.ts',4]])assert.ok(result.vocabulary.some(r=>r.file==='src/'+file&&r.line===line),`${file}:${line}`);
+  for(const [file,line] of [['living/plan/vocabulary.ts',1],['living/plan/vocabulary.ts',2],['living/plan/vocabulary.ts',7],['room/vocabulary.ts',1],['room/vocabulary.ts',3],['room/vocabulary.ts',4]])assert.ok(result.vocabulary.some(r=>r.file==='src/'+file&&r.line===line),`${file}:${line}`);
   assert.equal(result.bare.length,4);
   assert.ok(result.vocabulary.some(r=>r.relation==='子集'));
   assert.equal(result.judgments.length,2);
@@ -73,7 +73,7 @@ test('干净样例 R1–R5、R8 全部零违规，合法原生服务与集合不
   assert.deepEqual(result.rules,[]);assert.deepEqual(result.vocabulary,[]);assert.deepEqual(result.writers,[]);
 });
 test('生成文件跳过而生成源仍接受依赖和词表检查',t=>{
-  const work=workspace(t,{'src/core/generated.js':"import '../life/plugin.js';",'scripts/build/source.mjs':"import '../../src/life/plugin.js'; const words=['a','b','c'];",'src/life/words.ts':"const words=['a','b','c'];"});
+  const work=workspace(t,{'src/core/generated.js':"import '../living/plan/plugin.js';",'scripts/build/source.mjs':"import '../../src/living/plan/plugin.js'; const words=['a','b','c'];",'src/living/plan/words.ts':"const words=['a','b','c'];"});
   const path='arch/layers.json';
   const layers=JSON.parse(readFileSync(join(work.root,path),'utf8'));
   layers.modules.core.generated=[{file:'src/core/generated.js',sources:['scripts/build/source.mjs']}];
@@ -85,7 +85,7 @@ test('生成文件跳过而生成源仍接受依赖和词表检查',t=>{
   assert.ok(result.vocabulary.some(r=>r.file==='scripts/build/source.mjs'));
 });
 test('R5 文件读写和 SQLite 建表都出报告，无法判断的路径明示未知',t=>{
-  const work=workspace(t,{'src/life/files.ts':`import {readFileSync,writeFileSync} from 'node:fs';
+  const work=workspace(t,{'src/living/plan/files.ts':`import {readFileSync,writeFileSync} from 'node:fs';
     export function write(root,db,dynamic) {
       writeFileSync(join(root,'.chatpet','data','emotion','state.json'),'{}');
       readFileSync(join(root,'.chatpet','SOUL.md'));
@@ -110,7 +110,7 @@ test('R5 不含 data/ 的通配声明只匹配自身路径，不能使其他文�
     ['.chatpet/data/memory/data/memory.db','memory','memory','memory',true],
     ['unregistered.json',undefined,'?','?',null],
   ];
-  const work=workspace(t,{'src/life/files.ts':`import {writeFileSync} from 'node:fs';
+  const work=workspace(t,{'src/living/plan/files.ts':`import {writeFileSync} from 'node:fs';
     export function write() {
       ${cases.map(([path])=>`writeFileSync(${JSON.stringify(path)},'fixture');`).join('\n')}
     }`});

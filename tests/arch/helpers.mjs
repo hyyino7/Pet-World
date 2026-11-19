@@ -14,7 +14,7 @@ export function workspace(t,contents={},fixture) {
   for(const module of Object.values(layers.modules))module.generated=[];
   write('arch/layers.json',JSON.stringify(layers));
   write('arch/storage.json',readFileSync(join(repository,'arch/storage.json'),'utf8'));
-  write('package.json',JSON.stringify({type:'module',imports:{'#upper/*':'./src/life/*.js'}}));
+  write('package.json',JSON.stringify({type:'module',imports:{'#upper/*':'./src/living/plan/*.js'}}));
   if(fixture)cpSync(join(repository,'scripts/arch/fixtures',fixture,'src'),join(root,'src'),{recursive:true});
   for(const [file,content] of Object.entries(contents))write(file,content);
   return {root,write,scan:()=>scan(root)};

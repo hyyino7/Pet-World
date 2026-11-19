@@ -41,8 +41,8 @@ try {
     workspace:{id:workspace.id,path:workspace.path,title:workspace.title}}));
   unwrap(await host.services.workspace.initialize(request('init'),{expectedPreferencesRevision:saved.revision}));
   await ctx.plugin(await import('../../dist/src/living/body/plugin.js'));
-  await ctx.plugin(await import('../../dist/src/life/plugin.js'));
-  const {PersistentLifePlan}=await import('../../dist/src/life/plan.js');
+  await ctx.plugin(await import('../../dist/src/living/plan/plugin.js'));
+  const {PersistentLifePlan}=await import('../../dist/src/living/plan/plan.js');
   const plan=new PersistentLifePlan(join(root,'.chatpet/data/life'),'fish',host.workspace.storageId(),'UTC');
   await plan.commit(0,{goal:'Keep resting',reason:'My continuing choice',steps:[{id:'rest',kind:'hold',activity:'Rest quietly'}],nextConsiderAt:null});
   const originalPlan=plan.read();

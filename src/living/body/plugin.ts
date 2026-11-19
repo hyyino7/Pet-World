@@ -12,7 +12,7 @@ import { resolveActivityPlayback } from './playback.js';
 import type { CompanionFactActor } from '../../contracts/interaction.js';
 import type { RoomInteractionContext } from './room.js';
 import {gardenHomeProjection} from './garden-receipt.js';
-import { LifeControlFileError, readLifeControl } from '../../life/control-file.js';
+import { LifeControlFileError, readLifeControl } from '../plan/control-file.js';
 export type { PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 
 interface Binding {id: string; path: string; storageId: string; room: CompanionRoom; fingerprint?: string; presentationFingerprint?: string}

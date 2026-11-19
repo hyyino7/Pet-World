@@ -4,7 +4,7 @@ import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import type {PetCoreHost} from '../../src/core/index.js';
-import {parseLifePreferences} from '../../src/life/library.js';
+import {parseLifePreferences} from '../../src/living/plan/library.js';
 import {CompanionRecordLibrary} from '../../src/core/records.js';
 import {initializeCompanionRecords} from '../../src/core/record-paths.js';
 import {CompanionVoice} from '../../src/voice/plugin.js';

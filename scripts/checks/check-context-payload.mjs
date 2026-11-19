@@ -6,15 +6,15 @@ import {zstdDecompressSync} from 'node:zlib';
 import {foldSurface,deriveEventMessage} from '@deepseek-ai/dsh-session/surface';
 import {roomOverview,gardenOverview} from '../../dist/src/room/tool-context.js';
 import {economyOverview} from '../../dist/src/economy/tool-context.js';
-import {planOverview} from '../../dist/src/life/tool-context.js';
+import {planOverview} from '../../dist/src/living/plan/tool-context.js';
 import {presentFacts} from '../../dist/src/core/interaction-presentation.js';
 import {lifeHistoryCandidates,historicalStateOverview} from '../../dist/src/core/native/history-maintenance.js';
 import {CoreNative} from '../../dist/src/core/native/conversation.js';
-import {createLifeSourceAdapter} from '../../dist/src/life/tool-policy.js';
+import {createLifeSourceAdapter} from '../../dist/src/living/plan/tool-policy.js';
 import {createChannelSourceAdapter} from '../../dist/src/channels/sessions.js';
 import {roomHistoryTools} from '../../dist/src/room/plugin.js';
 import {economyStateToolDeclaration} from '../../dist/src/economy/plugin.js';
-import {lifePlanReadToolDeclaration} from '../../dist/src/life/plan-tools.js';
+import {lifePlanReadToolDeclaration} from '../../dist/src/living/plan/plan-tools.js';
 
 const args=process.argv.slice(2);if(args[0]==='--')args.shift();
 const [file,...options]=args;

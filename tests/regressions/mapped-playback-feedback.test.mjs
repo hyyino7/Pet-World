@@ -10,7 +10,7 @@ import ts from 'typescript';
 const playbackFile=process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/living/body/playback.js');
 const {resolveActivityPlayback}=await import(pathToFileURL(playbackFile));
 const {animationStickers}=await import(new URL('./animation-map.js',pathToFileURL(playbackFile)));
-const {PetPlatform}=await import(new URL('../desktop/platform/plugin.js',pathToFileURL(playbackFile)));
+const {PetPlatform}=await import(new URL('../../desktop/platform/plugin.js',pathToFileURL(playbackFile)));
 const upstream=createRequire(import.meta.url)(resolve('vendor/dsh-pet/platform/runtime.mjs'));
 const source=readFileSync('vendor/feiyu-room-template/public/room/app.js','utf8');
 const tree=ts.createSourceFile('app.js',source,ts.ScriptTarget.Latest,true);

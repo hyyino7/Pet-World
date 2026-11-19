@@ -24,11 +24,11 @@ syncBuiltinESMExports();
 after(()=>{for(const undo of restore.reverse())undo();syncBuiltinESMExports();assert.deepEqual(forbidden,[]);});
 
 const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/living/body/playback.js'));
-const {createCore}=await import(new URL('../core/index.js',playbackURL));
-const {GroupSocial,defaultWake}=await import(new URL('../channels/group-social.js',playbackURL));
-const {createGroupGameplay}=await import(new URL('../channels/group-material.js',playbackURL));
-const {createMessaging}=await import(new URL('../channels/messaging.js',playbackURL));
-const {defaults,messagingPreferences,allowedIdentity}=await import(new URL('../channels/messaging-settings.js',playbackURL));
+const {createCore}=await import(new URL('../../core/index.js',playbackURL));
+const {GroupSocial,defaultWake}=await import(new URL('../../channels/group-social.js',playbackURL));
+const {createGroupGameplay}=await import(new URL('../../channels/group-material.js',playbackURL));
+const {createMessaging}=await import(new URL('../../channels/messaging.js',playbackURL));
+const {defaults,messagingPreferences,allowedIdentity}=await import(new URL('../../channels/messaging-settings.js',playbackURL));
 const value=result=>{assert.equal(result.ok,true,JSON.stringify(result));return result.value;};
 const settings=patch=>({...defaultWake,atMention:false,nameMention:true,question:false,maxPerMinute:60,maxPerHour:1000,...patch});
 const identity=(messageId,group='10',extra={})=>({channel:'qq',accountId:'42',speakerId:'qq:7',speakerName:'Visitor',

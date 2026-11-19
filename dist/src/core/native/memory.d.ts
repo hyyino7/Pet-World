@@ -1,7 +1,7 @@
 import type { CoreRuntime } from '../runtime.js';
 import { MemoryConnection, type MemoryConfig } from '../../memory/client.js';
 import type { SessionEvent } from '@deepseek-ai/dsh-session';
-import { type DialogueQuery } from '../../life/review-dialogue.js';
+import { type DialogueQuery } from '../../living/plan/review-dialogue.js';
 /** One asynchronous Memory operation, using the existing configuration revision.
  * This is an ephemeral scope snapshot, not another conversation execution. */
 export interface NativeMemoryBinding {
@@ -43,7 +43,7 @@ export declare class NativeMemory {
         }[];
     }>;
     dialogueForDay(workspaceId: string, sessionIds: readonly string[], input: DialogueQuery): Promise<{
-        items: import("../../life/review-dialogue.js").DialogueLine[];
+        items: import("../../living/plan/review-dialogue.js").DialogueLine[];
         nextOffset: number | undefined;
         coverage: "partial" | "eligible";
     }>;

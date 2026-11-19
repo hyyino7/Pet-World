@@ -9,9 +9,9 @@ import {runInNewContext} from 'node:vm';
 
 const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/living/body/playback.js'));
 const {CompanionRoom}=await import(new URL('./room.js',playbackURL));
-const {PetPlatform}=await import(new URL('../desktop/platform/plugin.js',playbackURL));
-const {DesktopFeatures}=await import(new URL('../desktop/features.js',playbackURL));
-const {DEFAULT_COMPANION_SETTINGS}=await import(new URL('../core/companion-settings.js',playbackURL));
+const {PetPlatform}=await import(new URL('../../desktop/platform/plugin.js',playbackURL));
+const {DesktopFeatures}=await import(new URL('../../desktop/features.js',playbackURL));
+const {DEFAULT_COMPANION_SETTINGS}=await import(new URL('../../core/companion-settings.js',playbackURL));
 const upstream=createRequire(import.meta.url)(resolve('vendor/dsh-pet/platform/runtime.mjs'));
 
 function fixture(t) {

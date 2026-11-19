@@ -5,8 +5,8 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
-import {CompanionLife} from '../../src/life/plugin.js';
-import {readLifeControl} from '../../src/life/control-file.js';
+import {CompanionLife} from '../../src/living/plan/plugin.js';
+import {readLifeControl} from '../../src/living/plan/control-file.js';
 import {CompanionRecordLibrary} from '../../src/core/records.js';
 
 function fixture(t:TestContext,enabled?:boolean) {

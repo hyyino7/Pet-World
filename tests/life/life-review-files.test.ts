@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
-import {assertLifeReviewFile,installLifeReviewFileGuard,type LifeReviewFileAccess} from '../../src/life/review-files.js';
+import {assertLifeReviewFile,installLifeReviewFileGuard,type LifeReviewFileAccess} from '../../src/living/plan/review-files.js';
 
 function fixture(t:TestContext) {
   const root=mkdtempSync(join(tmpdir(),'life-review-files-'));t.after(()=>rmSync(root,{recursive:true,force:true}));

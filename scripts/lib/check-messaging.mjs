@@ -205,7 +205,7 @@ export async function checkMessaging({ctx,host,workspace,deviceDirectory,home,mo
     await mockLife.dispose();
     setProgram(async function*(){yield* say('Home ready');});
     const behaviorComponent=ctx.get('petBehavior')?undefined:await ctx.plugin(await import('../../dist/src/living/body/plugin.js'));
-    const lifeComponent=await ctx.plugin(await import('../../dist/src/life/plugin.js'));
+    const lifeComponent=await ctx.plugin(await import('../../dist/src/living/plan/plugin.js'));
     const channelsComponent=await ctx.plugin(await import('../../dist/src/channels/plugin.js'),{deviceDirectory:join(deviceDirectory,'host')});
     const life=ctx.petLife, channels=ctx.petChannels, request=(op,input={})=>channels.request(workspace.id,op,input);
     await life.control(workspace.id,true);

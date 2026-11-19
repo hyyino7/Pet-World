@@ -10,8 +10,8 @@ import {CoreNative,OWNER_LIFE_TOOL_SOURCES} from '../../dist/src/core/native/con
 import {historicalStateOverview} from '../../dist/src/core/native/history-maintenance.js';
 import {CompanionToolTable} from '../../dist/src/core/tables/tools.js';
 import {apply as applyRoom} from '../../dist/src/room/plugin.js';
-import {registerPlanTool} from '../../dist/src/life/plan-tools.js';
-import {createLifeSourceAdapter} from '../../dist/src/life/tool-policy.js';
+import {registerPlanTool} from '../../dist/src/living/plan/plan-tools.js';
+import {createLifeSourceAdapter} from '../../dist/src/living/plan/tool-policy.js';
 import {fixture,signal} from '../behavior-list/fixture.mjs';
 import {policyHost} from '../behavior-list/policy-host.mjs';
 
