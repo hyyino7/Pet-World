@@ -5,6 +5,7 @@ import { createGardenCaretaker, nextGardenCareBoundary } from '#feiyu-room/garde
 import { actGarden, loadGarden, saveGarden } from '#feiyu-room/garden-store';
 import { advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
 import { advanceGardenClock } from '../economy/garden-clock.js';
+import { LifeControlFileError } from '../life/control-file.js';
 import { applyRoomAction, normalizeRoomState, roomView } from '#feiyu-room/room-state';
 import { randomUUID } from 'node:crypto';
 import { initialBodyState } from './initial-state.js';
@@ -158,7 +159,7 @@ export class CompanionRoom {
         safeFile(this.gardenFile);
         return saveGarden(this.gardenFile, state);
     }
-    gardenUnavailable(now) {
+    gardenUnavailable(now, clockFault) {
         const parked = this.currentExecution();
         if (parked && ['paused', 'interrupted', 'cancelled'].includes(parked.status) && parked.kind !== 'garden'
             && !(parked.status === 'cancelled' && parked.kind === 'economy') && !parked.parkedAt)
@@ -179,8 +180,9 @@ export class CompanionRoom {
         if (advanced.changed)
             this.dirty = true;
         const planned = this.currentExecution();
-        if (planned?.status === 'running' && ['garden', 'economy', 'read'].includes(planned.kind) && (planned.phase !== 'waiting' || planned.awaitingInput !== undefined))
-            this.updateExecution(planned, { phase: 'waiting', reason: '经济组件暂不可用，保留原执行编号并等待恢复', awaitingInput: undefined }, now);
+        if (planned?.status === 'running' && (planned.kind === 'garden' || !clockFault && ['economy', 'read'].includes(planned.kind))
+            && (planned.phase !== 'waiting' || planned.awaitingInput !== undefined || clockFault && planned.reason !== clockFault.message))
+            this.updateExecution(planned, { phase: 'waiting', reason: clockFault?.message ?? '经济组件暂不可用，保留原执行编号并等待恢复', awaitingInput: undefined }, now);
         const current = this.currentExecution(), active = this.state.route?.target ?? this.state.dwell?.target;
         if (current?.status === 'running' && current.kind === 'body' && current.effectAppliedAt && (current.input.action !== 'sleep' || this.state.asleep))
             this.updateExecution(current, { status: 'completed', phase: 'completed' }, now);
@@ -206,7 +208,7 @@ export class CompanionRoom {
             this.checkpoint(this.state, now);
             this.lastUnavailableCheckpoint = now;
         }
-        return { unavailable: true, status: 'waiting', message: this.economyFault || '经济组件暂不可用，菜园及原任务保留并等待恢复' };
+        return { unavailable: true, status: 'waiting', message: clockFault?.message ?? (this.economyFault || '经济组件暂不可用，菜园及原任务保留并等待恢复') };
     }
     requestedActive(now = Date.now()) {
         return this.state.companionAction && !this.state.companionAction.completedAt &&
@@ -412,13 +414,21 @@ export class CompanionRoom {
         if (row.parkedAt)
             return;
         if (row.kind === 'garden') {
-            if (!this.economyPort() && this.gardenAuthorityUnavailable()) {
+            let result;
+            try {
+                if (this.economyPort() || !this.gardenAuthorityUnavailable())
+                    result = this.caretaker.control({ type: cancel ? 'cancel' : 'pause', requestId: row.operationId }, now);
+            }
+            catch (error) {
+                if (!(error instanceof LifeControlFileError))
+                    throw error;
+            }
+            if (!result) {
                 const target = this.state.route?.target ?? this.state.dwell?.target;
                 this.state = pausePlannedHomeActivity(this.state, target?.gardenJobId || row.operationId, now);
                 this.checkpoint(this.state, now);
                 return;
             }
-            const result = this.caretaker.control({ type: cancel ? 'cancel' : 'pause', requestId: row.operationId }, now);
             if (!result.ok && !['completed', 'cancelled', 'failed'].includes(result.status ?? ''))
                 throw Error(result.message);
             if (result.status === 'completed' || result.status === 'failed')
@@ -670,11 +680,19 @@ export class CompanionRoom {
         row.phase = this.state.route ? 'moving' : row.kind === 'garden' ? 'pending' : 'working';
         this.checkpoint(this.state, now);
     }
-    planAdmissionWait(operationId, now, ownerMeal = false) {
+    planAdmissionWait(operationId, now, ownerMeal = false, gardenRequired = false) {
         // Legacy/owner jobs are accepted work too, even before they own a route.
         // Do not discard them or allow an unrelated plan to slip between jobs.
         const available = this.economyPort();
-        const garden = !available && this.gardenAuthorityUnavailable() ? undefined : this.loadGardenState(now);
+        let garden;
+        try {
+            if (available || !this.gardenAuthorityUnavailable())
+                garden = this.loadGardenState(now);
+        }
+        catch (error) {
+            if (gardenRequired || !(error instanceof LifeControlFileError))
+                throw error;
+        }
         if (garden?.care.pendingConflict)
             throw Error('菜园还有等待主人决定的安排，先处理原安排再接收计划');
         if (garden && [garden.care.task, ...garden.care.queue].some((job) => job && !(ownerMeal && job.pausedAt) && job.requestId !== operationId
@@ -741,7 +759,7 @@ export class CompanionRoom {
         const current = this.currentExecution();
         if (current && !terminalExecution.has(current.status))
             throw Error('身体已有未结束的计划，先恢复或取消原执行');
-        const wait = this.planAdmissionWait(input.operationId, now, ownerMeal);
+        const wait = this.planAdmissionWait(input.operationId, now, ownerMeal, input.kind === 'garden');
         // This typed refusal is emitted only here, before checkpoint or dispatch.
         // Errors from reads, checkpoints, dispatch and resume carry no such proof.
         if (wait)
@@ -1034,7 +1052,7 @@ export class CompanionRoom {
         const current = this.currentExecution();
         if (current && current.operationId !== operationId && !terminalExecution.has(current.status))
             throw Error('身体已由另一项计划接手');
-        if (this.planAdmissionWait(operationId, now))
+        if (this.planAdmissionWait(operationId, now, false, row.kind === 'garden'))
             throw Error('身体仍在完成主人已安排的活动，完成后再恢复原执行');
         if (this.state.route || this.state.dwell || this.state.command || this.state.freeTarget || this.state.sleepPending)
             throw Error('身体仍在完成新的安排，原计划保持暂停，完成后再恢复');
@@ -1096,6 +1114,8 @@ export class CompanionRoom {
             return this.tickAvailable(now, economy);
         }
         catch (error) {
+            if (error instanceof LifeControlFileError)
+                return this.gardenUnavailable(now, error);
             if (!this.economyBlocked)
                 throw error;
             return this.gardenUnavailable(now);
@@ -1302,63 +1322,72 @@ export class CompanionRoom {
         }
         if (!this.economyPort() && this.gardenAuthorityUnavailable())
             return { ok: false, status: 'waiting', message: '经济组件暂不可用，原菜园与交易保留并等待恢复', garden: this.gardenUnavailable(now) };
-        const action = record(input);
-        if (operation === 'control') {
-            const planned = this.currentExecution();
-            if (['pause', 'resume', 'cancel'].includes(String(action.type)) && typeof action.requestId === 'string'
-                && this.executions()[action.requestId]?.kind === 'garden') {
-                const execution = action.type === 'pause' ? this.pausePlanned(action.requestId, now)
-                    : action.type === 'resume' ? this.resumePlanned(action.requestId, now) : this.cancelPlanned(action.requestId, now);
-                return { ok: execution.status !== 'failed', accepted: execution.status === 'running', status: execution.status,
-                    message: execution.reason || (execution.status === 'running' ? '本次园艺已继续；后续生活安排是否恢复以生活计划为准' : '已更新原园艺执行状态'), execution,
-                    garden: this.tick(now), home: this.view(now) };
-            }
-            // Asking or deferring care must not first interrupt the very activity
-            // the owner chose to finish. Reuse a running garden operation unchanged.
-            let result = this.caretaker.control(action, now);
-            if (action.type === 'careNow' && action.decision === 'force') {
-                if (planned?.kind === 'garden' && ['paused', 'interrupted'].includes(planned.status) && result.ok
-                    && (result.status === 'paused' || result.accepted === true)) {
-                    const execution = this.resumePlanned(planned.operationId, now);
-                    if (execution.status !== 'running')
-                        return { ok: execution.status === 'completed', accepted: false, status: execution.status,
-                            message: execution.reason || '原园艺任务没有继续执行', execution, garden: this.tick(now), home: this.view(now) };
-                    // The original paused response has no write/effect. Only that case
-                    // needs control again after resuming; an accepted result is reused.
-                    if (result.accepted !== true)
-                        result = this.caretaker.control(action, now);
-                    return { ...result, message: '仅继续本次园艺；后续生活安排是否恢复以生活计划为准', execution,
+        try {
+            const action = record(input);
+            if (operation === 'control') {
+                this.gardenClock();
+                const planned = this.currentExecution();
+                if (['pause', 'resume', 'cancel'].includes(String(action.type)) && typeof action.requestId === 'string'
+                    && this.executions()[action.requestId]?.kind === 'garden') {
+                    const execution = action.type === 'pause' ? this.pausePlanned(action.requestId, now)
+                        : action.type === 'resume' ? this.resumePlanned(action.requestId, now) : this.cancelPlanned(action.requestId, now);
+                    return { ok: execution.status !== 'failed', accepted: execution.status === 'running', status: execution.status,
+                        message: execution.reason || (execution.status === 'running' ? '本次园艺已继续；后续生活安排是否恢复以生活计划为准' : '已更新原园艺执行状态'), execution,
                         garden: this.tick(now), home: this.view(now) };
                 }
-                if (result.ok && result.accepted === true && planned?.kind !== 'garden') {
-                    this.interruptPlanned(now, '主人选择先去菜园，原活动已暂停');
+                // Asking or deferring care must not first interrupt the very activity
+                // the owner chose to finish. Reuse a running garden operation unchanged.
+                let result = this.caretaker.control(action, now);
+                if (action.type === 'careNow' && action.decision === 'force') {
+                    if (planned?.kind === 'garden' && ['paused', 'interrupted'].includes(planned.status) && result.ok
+                        && (result.status === 'paused' || result.accepted === true)) {
+                        const execution = this.resumePlanned(planned.operationId, now);
+                        if (execution.status !== 'running')
+                            return { ok: execution.status === 'completed', accepted: false, status: execution.status,
+                                message: execution.reason || '原园艺任务没有继续执行', execution, garden: this.tick(now), home: this.view(now) };
+                        // The original paused response has no write/effect. Only that case
+                        // needs control again after resuming; an accepted result is reused.
+                        if (result.accepted !== true)
+                            result = this.caretaker.control(action, now);
+                        return { ...result, message: '仅继续本次园艺；后续生活安排是否恢复以生活计划为准', execution,
+                            garden: this.tick(now), home: this.view(now) };
+                    }
+                    if (result.ok && result.accepted === true && planned?.kind !== 'garden') {
+                        this.interruptPlanned(now, '主人选择先去菜园，原活动已暂停');
+                        result = { ...result, garden: this.tick(now), home: this.view(now) };
+                    }
+                }
+                else if (result.ok && result.accepted === true && result.status !== 'completed' && !['careNow', 'auto', 'state'].includes(String(action.type))) {
+                    this.interruptPlanned(now, '新的菜园安排打断了当前计划');
                     result = { ...result, garden: this.tick(now), home: this.view(now) };
                 }
+                if (result.home?.emotion)
+                    result.home.emotion.source = 'chatpet-emotion';
+                return result;
             }
-            else if (result.ok && result.accepted === true && result.status !== 'completed' && !['careNow', 'auto', 'state'].includes(String(action.type))) {
+            if (operation !== 'act')
+                throw Error('未知的菜园操作');
+            this.tick(now);
+            const port = this.economyPort();
+            if (!port)
+                safeFile(this.gardenFile);
+            const revision = port ? this.loadGardenState(now).economyRevision : undefined;
+            const clock = this.gardenClock();
+            const result = port ? port.actGarden(action, now, clock) : this.actLegacyGarden(action, now, clock);
+            // The authoritative action is committed once. A refusal must not retire
+            // accepted Body work. An old Economy receipt has no new revision; a new
+            // commit interrupts against the latest checkpoint.
+            const committed = result.ok && !(Number.isSafeInteger(revision) && result.garden?.economyRevision === revision);
+            if (committed && action.type !== 'state')
                 this.interruptPlanned(now, '新的菜园安排打断了当前计划');
-                result = { ...result, garden: this.tick(now), home: this.view(now) };
-            }
-            if (result.home?.emotion)
-                result.home.emotion.source = 'chatpet-emotion';
-            return result;
+            return { ...result, garden: committed ? this.tick(now) : result.garden };
         }
-        if (operation !== 'act')
-            throw Error('未知的菜园操作');
-        this.tick(now);
-        const port = this.economyPort();
-        if (!port)
-            safeFile(this.gardenFile);
-        const revision = port ? this.loadGardenState(now).economyRevision : undefined;
-        const clock = this.gardenClock();
-        const result = port ? port.actGarden(action, now, clock) : this.actLegacyGarden(action, now, clock);
-        // The authoritative action is committed once. A refusal must not retire
-        // accepted Body work. An old Economy receipt has no new revision; a new
-        // commit interrupts against the latest checkpoint.
-        const committed = result.ok && !(Number.isSafeInteger(revision) && result.garden?.economyRevision === revision);
-        if (committed && action.type !== 'state')
-            this.interruptPlanned(now, '新的菜园安排打断了当前计划');
-        return { ...result, garden: committed ? this.tick(now) : result.garden };
+        catch (error) {
+            if (!(error instanceof LifeControlFileError))
+                throw error;
+            const garden = this.gardenUnavailable(now, error);
+            return { ok: false, status: garden.status, message: garden.message, garden };
+        }
     }
     actLegacyGarden(action, now, clock) {
         if (clock.pauses === undefined)

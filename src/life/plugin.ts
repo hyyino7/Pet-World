@@ -23,7 +23,8 @@ import { CONTRACT_VERSION } from '../contracts/version.js';
 import {readFactReferences} from './facts.js';
 import {createLifeSourceAdapter} from './tool-policy.js';
 import type {TableRegistration} from '../contracts/tables.js';
-import {parseGardenPauses, recordGardenPause, type GardenClock, type GardenPause} from '../economy/garden-clock.js';
+import {recordGardenPause, type GardenClock, type GardenPause} from '../economy/garden-clock.js';
+import {lifeDirectories, readLifeControl, readLifeSettings, safeLifeFile} from './control-file.js';
 
 type Runtime = ReturnType<typeof createLifeRuntime>;
 interface Workspace { id: string; path: string; sessionIds: readonly string[]; attachSession(id: string): Promise<void> }
@@ -38,13 +39,6 @@ interface Native {
 }
 interface Bound { id: string; path: string; directory: string; library: CompanionRecordLibrary; plan: PersistentLifePlan }
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'] as const;
-
-function safeLifeFile(file: string) {
-  const stat = lstatSync(file,{throwIfNoEntry:false});
-  if (stat && (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1))
-    throw Error('生活数据文件无效，已保留原文件');
-  return stat;
-}
 
 /** The upstream fact layer is the only state writer. World owns scheduling,
  * journal and native home recovery; Core owns every model step and Memory. */
@@ -109,27 +103,6 @@ export class CompanionLife {
     const current = this.current();
     return !this.closed && this.enabled && !!this.runtime && current?.id === this.binding?.id && current?.path === this.binding?.path;
   }
-  /** Reads the committed control without starting Life or creating files. */
-  static bodyClockState(workspacePath: string): (GardenClock & {preferences?: LifePreferences}) | undefined {
-    let directory=workspacePath;
-    for (const part of ['.chatpet','data','life']) {
-      directory=join(directory,part);
-      const stat=lstatSync(directory,{throwIfNoEntry:false});
-      if (!stat) return;
-      if (!stat.isDirectory() || stat.isSymbolicLink()) throw Error('生活时钟控制目录无效，原数据已保留');
-    }
-    const file=join(directory,'control.json');
-    if (!safeLifeFile(file)) return;
-    const raw=readFileSync(file,'utf8');
-    const invalid='生活开关文件无效，已保留原文件';
-    let settings;
-    try {settings=JSON.parse(raw);}
-    catch (cause) {throw Error(invalid,{cause});}
-    if (!settings || settings.version!==1 || typeof settings.enabled!=='boolean') throw Error(invalid);
-    const preferences=settings.preferences===undefined ? undefined : parseLifePreferences(settings.preferences);
-    const pauses=parseGardenPauses(settings.pauses,settings.enabled);
-    return {enabled:settings.enabled,preferences,pauses};
-  }
   /** Saved clock intent is independent of native planner readiness. This read
    * never waits on Life's queue or initializes a missing control directory. */
   bodyClockState(workspaceId:string):(GardenClock & {restoreElapsed:boolean})|undefined {
@@ -151,14 +124,13 @@ export class CompanionLife {
   }
   private publishRest() { this.ctx.get('petDesktop')?.features?.restore(false); }
   private directory(root: string) {
-    let dir = root;
-    for (const part of ['.chatpet', 'data', 'life']) {
-      dir = join(dir, part);
+    const directories = lifeDirectories(root);
+    for (const dir of directories) {
       if (!existsSync(dir)) mkdirSync(dir, {mode: 0o700});
       const stat = lstatSync(dir);
       if (!stat.isDirectory() || stat.isSymbolicLink()) throw Error('生活数据目录无效');
     }
-    return dir;
+    return directories[2];
   }
   private async synchronize() {
     const selected = this.current();
@@ -170,7 +142,7 @@ export class CompanionLife {
     if (!current || this.closed) return;
     const directory = this.directory(current.path);
     for (const name of ['home.json', 'life.json']) safeLifeFile(join(directory, name));
-    const settings=readLifeControl(current.path);
+    const settings=readLifeSettings(current.path);
     this.enabled=settings?.enabled ?? false;
     this.restoredClock=this.enabled;
     this.pauses=settings?.pauses;
@@ -565,9 +537,6 @@ export class CompanionLife {
     });
   }
 }
-
-export const readLifeControl = CompanionLife.bodyClockState;
-
 export const name = '40-Life';
 export const inject = ['petCore', 'petWorld', 'agents', 'sessions', 'tools', 'systemPrompt'];
 export interface Config { agentPreset?: string }

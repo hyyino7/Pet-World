@@ -534,7 +534,7 @@
     {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 131,
+      "line": 125,
       "column": 27,
       "scope": "CompanionLife/publishRest",
       "target": "petDesktop",
@@ -546,7 +546,7 @@
     {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 180,
+      "line": 167,
       "column": 5,
       "scope": "CompanionLife/startRuntime",
       "target": "petDesktop",
@@ -558,7 +558,7 @@
     {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 288,
+      "line": 275,
       "column": 25,
       "scope": "CompanionLife/startRuntime/send",
       "target": "petDesktop",
@@ -570,7 +570,7 @@
     {
       "rule": "R2",
       "file": "src/life/plugin.ts",
-      "line": 294,
+      "line": 281,
       "column": 31,
       "scope": "CompanionLife/startRuntime/send",
       "target": "petChannels",
@@ -610,7 +610,7 @@
     {
       "rule": "R1",
       "file": "src/memory/client.ts",
-      "line": 53,
+      "line": 55,
       "column": 41,
       "scope": "MemoryConnection/open",
       "target": "?",
@@ -620,7 +620,7 @@
     {
       "rule": "R1",
       "file": "src/memory/client.ts",
-      "line": 54,
+      "line": 56,
       "column": 36,
       "scope": "MemoryConnection/open",
       "target": "?",

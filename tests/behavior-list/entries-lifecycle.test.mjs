@@ -526,6 +526,31 @@ if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1]))
     assertCrop(committedGarden(f),2,Date.now());
   });
 
+  test('Life 卸载后损坏的暂停区间只阻挡菜园，身体照常',async t=>{
+    const f = await clockFixture(t);
+    await f.unload('life');
+    f.states([true,false,true]);
+    const file = join(f.directory,'control.json');
+    const committed = committedGarden(f);
+    const invalidPauses = '{"version":1,"enabled":true,"pauses":[{"from":10,"to":null}]}\n';
+    writeFileSync(file,invalidPauses);
+    t.mock.timers.tick(3*hour);
+    const meal = await f.body.roomAction(f.id,{action:'feed'},'主人');
+    assert.equal(meal.ok,true);
+    assert.equal(meal.changed,true);
+    assert.equal(meal.fact.result.status,'completed');
+    assert.ok(meal.fact.result.after.hunger < meal.fact.result.before.hunger);
+    for (const result of [await f.body.garden(f.id,'state'),await till(f),
+      await f.body.garden(f.id,'control',{type:'auto',enabled:true})]) {
+      assert.equal(result.ok,false);
+      assert.equal(result.garden.unavailable,true);
+      assert.match(result.garden.message,/生活开关文件无效/);
+    }
+    assert.throws(()=>f.economy.gardenPort(f.id).loadGarden(Date.now()),/生活开关文件无效/);
+    assert.deepEqual(committedGarden(f),committed);
+    assert.equal(readControl(f),invalidPauses);
+  });
+
   test('缺少 Life 和 Body 时 Economy 改配置仍按区间结算',async t=>{
     const f = await clockFixture(t);
     await f.unload('body');

@@ -7,7 +7,7 @@ import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
 import { gardenHomeProjection } from './garden-receipt.js';
-import { readLifeControl } from '../life/plugin.js';
+import { LifeControlFileError, readLifeControl } from '../life/control-file.js';
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
 const owners = new WeakMap();
 /** The only home/garden runtime writer. It does not create agents or model turns. */
@@ -224,7 +224,15 @@ export class CompanionBehavior {
                     energyFloor: (settings?.offlineEnergyFloorPercent ?? 35) / 100
                 };
             }, () => this.ctx.get('petLife')?.bodyClockState?.(id) ?? readLifeControl(target.path)) };
-        const admission = this.ctx.get('petLife')?.bodyClockState?.(id);
+        let admission;
+        try {
+            admission = this.ctx.get('petLife')?.bodyClockState?.(id);
+        }
+        catch (error) {
+            if (!(error instanceof LifeControlFileError))
+                throw error;
+            // Room reports an invalid clock at the garden boundary.
+        }
         if (admission) {
             this.autonomous = admission.enabled;
             this.binding.room.setAutonomy(admission.enabled, Date.now(), admission.restoreElapsed);

@@ -12,7 +12,7 @@ import { resolveActivityPlayback } from './playback.js';
 import type { CompanionFactActor } from '../contracts/interaction.js';
 import type { RoomInteractionContext } from './room.js';
 import {gardenHomeProjection} from './garden-receipt.js';
-import { readLifeControl } from '../life/plugin.js';
+import { LifeControlFileError, readLifeControl } from '../life/control-file.js';
 export type { PlannedActivity, PlannedExecution } from '../contracts/behavior.js';
 
 interface Binding {id: string; path: string; storageId: string; room: CompanionRoom; fingerprint?: string; presentationFingerprint?: string}
@@ -148,7 +148,12 @@ export class CompanionBehavior {
         hours:settings?.offlineBodyHours ?? 4,needCeiling:(settings?.offlineNeedCeilingPercent ?? 70)/100,
         energyFloor:(settings?.offlineEnergyFloorPercent ?? 35)/100};},
       ()=>this.ctx.get('petLife')?.bodyClockState?.(id) ?? readLifeControl(target.path))};
-    const admission=this.ctx.get('petLife')?.bodyClockState?.(id);
+    let admission;
+    try { admission=this.ctx.get('petLife')?.bodyClockState?.(id); }
+    catch (error) {
+      if (!(error instanceof LifeControlFileError)) throw error;
+      // Room reports an invalid clock at the garden boundary.
+    }
     if(admission) {
       this.autonomous=admission.enabled;this.binding.room.setAutonomy(admission.enabled,Date.now(),admission.restoreElapsed);
     }

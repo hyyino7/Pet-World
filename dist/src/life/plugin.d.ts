@@ -31,10 +31,6 @@ export declare class CompanionLife {
     private enqueue;
     private current;
     running(): boolean;
-    /** Reads the committed control without starting Life or creating files. */
-    static bodyClockState(workspacePath: string): (GardenClock & {
-        preferences?: LifePreferences;
-    }) | undefined;
     /** Saved clock intent is independent of native planner readiness. This read
      * never waits on Life's queue or initializes a missing control directory. */
     bodyClockState(workspaceId: string): (GardenClock & {
@@ -263,7 +259,6 @@ export declare class CompanionLife {
     }>;
     close(): Promise<void>;
 }
-export declare const readLifeControl: typeof CompanionLife.bodyClockState;
 export declare const name = "40-Life";
 export declare const inject: string[];
 export interface Config {

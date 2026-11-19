@@ -169,4 +169,37 @@
 2. **补齐菜园装卸与旧存档的行为验收**。3 个文件。
    - 包含 `tests/behavior-list/entries-lifecycle.test.mjs` 的其余新增用例和夹具、`tests/behavior-list/index.json` 的登记及本方案执行结果。
 
+### 返工一轮
+
+- 暂停区间无效时，Body 沿用菜园不可用的等待路径，提示「生活开关文件无效」，继续推进身体和执行显式照料。菜园和 `control.json` 保留原样。
+- `readLifeControl`、文件检查与解析移至新增的 `src/life/control-file.ts`，纳入本轮已授权的 `src/life` 范围。Body 和 Economy 只读 `enabled` 和 `pauses`，Life 绑定时校验 `preferences`。重新生成对应的 `dist/src/**`。
+- `synchronize()` 在工作区 `storageId` 变化时重新绑定。L1 `G3-GARDEN-17`（阶段 2，种地时钟）命名为「Life 卸载后损坏的暂停区间只阻挡菜园，身体照常」，保留无效暂停区间的全部断言，索引同步更名。
+- Core 就绪检查会拒绝无效偏好（`src/core/initialization.ts:64`），已移除 L1 中无法进入的 `invalidPreferences` 分支。保留 `life-clock-intent` 对读取器容忍无效偏好、Life 严格校验偏好和开口暂停区间 `[{from, to: null}]` 的单元测试。
+- 收尾重跑 `pnpm run build` 通过。验收快测（含 `garden-clock` 单测）58 通过、0 失败；行为清单 87 通过、0 失败；索引自测 11 通过、0 失败。此前 `pnpm run check:types` 通过，旧 JSON 菜园补充用例 1 通过、0 失败，Body 调度、Life 领域集成和 Economy 恢复补充回归 45 通过、0 失败。所有验证使用合成数据。
+- `pnpm run check:arch -- --write-baseline` 在 `arch/baseline/vocabulary.json` 生成 8 条已消失 R8 记录的删除，同时刷新两份基线的报告信息。随后两次 `pnpm run check:arch` 均通过，新增和待删除记录均为 0 条。
+- 建议一组提交「隔离无效生活时钟并补齐菜园行为验收」，包含 5 个源码文件、3 个测试及索引文件和本方案，共 9 个手写文件；随附 `arch/baseline/{rules,vocabulary}.json` 和 7 个 `dist/src/**` 构建产物，生成文件另计。
+
 ## 审查结论
+
+验收会话（Codex 只读审查 + Claude 核实）重跑结果：快测 56/56 通过；`pnpm run verify` 1468/1468 通过；`pnpm run test:behavior-list` 行为 86 条、索引自测 11 条全部通过，2A1A-12、2A1A-13 按 2/12 通过。改动范围都在「允许修改」内，三个提交（不计 `dist/`）都没超过阈值。
+
+专门判断的四点：
+
+1. `readLifeControl` 引入：没有运行时循环（`life/plugin` 对 `behavior/plugin` 只有 `import type`，不会引入 `economy/plugin`），导入链里也没有模块顶层的副作用调用；`arch/layers.json` 允许这两个依赖。代价是 Body 引入的本地模块从 10 个变成 37 个，Economy 从 13 个变成 37 个，还会带进 `#dsh-world/life/runtime` 等生活运行时。列为建议修 1。
+2. 拍板点 2 的拒绝没有残留（`src/` 里搜不到）；R5 测试只改了调用方式（布尔值改成 `{enabled}`），断言和前提与 main 一致。
+3. Body 不存区间副本（`src/behavior/` 里只在 `room.ts:175,1107` 读取 `pauses`）；`arch/storage.json` 只改了 `life` 条目。
+4. 推进菜园的入口都经过 `advanceGardenClock`：Body 的读取和照料（`room.ts:159-167`，caretaker 经 `room.ts:133`）、手工动作（`room.ts:1097-1098`）、旧 JSON（`room.ts:166,1106-1112`）、Economy 的读取、动作、视图和改配置（`store.ts:433-437,461-469,278`）。拿到区间就只按区间算；布尔值只在 `pauses === undefined` 时沿用（`garden-clock.ts:45-46`、`room.ts:175`、`economy/plugin.ts:112-121`）。
+
+### 必须修
+
+1. **`control.json` 一出错，卸载 Life 后身体的显式操作也全部失败** — `src/behavior/room.ts:159-161,172-176`
+   - 触发：`control.json` 的 `version`、`enabled` 和 `preferences` 有效，所以 Core 判定工作区就绪（`src/core/initialization.ts:63-64`；更正：初稿写成「只校验 `version`、`enabled`」，其实 Core 也校验 `preferences`，所以 `preferences` 无效时工作区不会就绪，这条触发不了）；但 `pauses` 无效。不论 Life 服务在不在，`lifeClock()` 最后都会走到 `readLifeControl` 并抛出（Life 在场但没绑定成功时，实例方法 `bodyClockState()` 也调它）。
+   - 影响：`gardenClock()` 在 `loadGardenState` 的 try 外面抛错，不会设置 `economyBlocked`。`tick()` 只在 `economyBlocked` 时转入菜园不可用路径（`room.ts:891-895`），而 caretaker 每次 tick 都会读菜园（`room.ts:925` → `room.ts:133`），`advanceRoom` 又把异常继续抛出去（`src/behavior/plugin.ts:112-117`）。结果是 `roomAction` 里免费喂食、喂水这类和菜园无关的操作也全部失败。
+   - 为什么必须修：违反 [architecture.md 6.2](../architecture.md#62-三个旧入口的语义)「卸载 `40-Life` 后 Behavior 仍接收显式操作」，是这次新增的退化：改之前 Life 不在时 Body 根本不读 `control.json`。
+   - 修法要求：读区间失败时，只让菜园走现有的不可用路径（报「生活开关文件无效」、不写菜园、保留原文件），身体照常 tick 和执行显式操作。补一条 L1：卸载 Life，把 `control.json` 写成 `pauses` 无效，断言免费照料成功、菜园返回不可用且不提交、文件原样保留。
+
+### 建议修（不影响合并）
+
+1. 把 `readLifeControl`（连同 `safeLifeFile` 和解析）挪到独立的小模块，例如 `src/life/control-file.ts`，`src/life/plugin.ts` 再从那里引入。Body、Economy 就不用再把整个 Life 插件和生活运行时拉进来。顺手改的话，和必须修 1 放在同一轮。
+2. `synchronize()` 加了 `storageId` 变化时重新绑定（`src/life/plugin.ts:165-166`）。它和 `bodyClockState()` 原有的 `storageId` 判断一致，但不在方案的改动说明里，「执行结果」要补一句。
+3. `tests/life/life-clock-intent.test.ts:52-59` 用 `intent()` 去掉了 `pauses` 再比较，原有字段的断言没变；可以顺手再断言一下暂停后 `pauses` 的形状。

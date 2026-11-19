@@ -17,7 +17,7 @@ import type { EconomyConfigurationPatch, ItemUse } from './types.js';
 import { installEconomyAccessGuard } from './access.js';
 import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
 import type { GardenClock } from './garden-clock.js';
-import { readLifeControl } from '../life/plugin.js';
+import { readLifeControl } from '../life/control-file.js';
 
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];
 const access = {mode:'bounded',detail:'余额与物品由程序结算。原生文件工具防误改；同一系统账户的命令和其他插件仍可访问文件。'} as const;

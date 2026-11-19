@@ -5,7 +5,8 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
-import {CompanionLife,readLifeControl} from '../../src/life/plugin.js';
+import {CompanionLife} from '../../src/life/plugin.js';
+import {readLifeControl} from '../../src/life/control-file.js';
 import {CompanionRecordLibrary} from '../../src/core/records.js';
 
 function fixture(t:TestContext,enabled?:boolean) {
@@ -54,6 +55,9 @@ test('explicit owner disable and re-enable do not catch up the paused interval',
     return {enabled,restoreElapsed};
   };
   assert.deepEqual(intent(),{enabled:false,restoreElapsed:false});
+  const expectedPauses=[{from:Date.now(),to:null}];
+  assert.deepEqual(f.life.bodyClockState('world')?.pauses,expectedPauses);
+  assert.deepEqual(readLifeControl(f.root)?.pauses,expectedPauses);
   t.mock.timers.tick(60*60_000);
   await assert.rejects(f.life.control('world',true),/native home unavailable/);
   assert.deepEqual(intent(),{enabled:true,restoreElapsed:false});
@@ -107,4 +111,14 @@ test('the standalone control reader reports malformed files and invalid pause hi
     assert.throws(()=>readLifeControl(f.root),/生活开关文件无效/);
     assert.equal(readFileSync(file,'utf8'),raw);
   }
+});
+
+test('clock discovery tolerates invalid preferences while Life refuses to bind or rewrite them',async t=>{
+  const f=fixture(t,true),file=join(f.directory,'control.json');
+  const raw='{"version":1,"enabled":true,"pauses":[],"preferences":null}';
+  writeFileSync(file,raw);
+  assert.deepEqual(readLifeControl(f.root),{enabled:true,pauses:[]});
+  assert.deepEqual(f.life.bodyClockState('world'),{enabled:true,restoreElapsed:true,pauses:[]});
+  await assert.rejects(f.life.control('world',false),/生活设置无效/);
+  assert.equal(readFileSync(file,'utf8'),raw);
 });

@@ -1083,6 +1083,19 @@
       ]
     },
     {
+      "id": "G3-GARDEN-17",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "Life 卸载后损坏的暂停区间只阻挡菜园，身体照常",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
       "id": "2A1A-14",
       "categories": [
         "日记按原日期恢复"
