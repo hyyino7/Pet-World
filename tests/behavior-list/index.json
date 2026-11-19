@@ -736,6 +736,203 @@
       "policyCells": [
         "5.8.2#6/生命周期"
       ]
+    },
+    {
+      "id": "2A1A-01",
+      "categories": [],
+      "level": "L1",
+      "file": "dist/tests/core/context-contracts.test.js",
+      "name": "真实 Life 输入在首次模型 schema 解析前已安装工具限制",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A1A-02",
+      "categories": [],
+      "level": "L2",
+      "file": "dist/tests/core/context-contracts.test.js",
+      "name": "环境准备过程中作用域失效会同时丢弃环境和互动段",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A1A-03",
+      "categories": [],
+      "level": "L2",
+      "file": "dist/tests/core/context-contracts.test.js",
+      "name": "环境先准备事实且单个领域读取失败保留另一领域事实",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A1A-04",
+      "categories": [
+        "输入持久化先于确认"
+      ],
+      "level": "L1",
+      "file": "dist/tests/core/context-contracts.test.js",
+      "name": "原生互动确认按段名和逐条投影匹配落盘快照",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A1A-05",
+      "categories": [],
+      "level": "L1",
+      "file": "dist/tests/core/context-contracts.test.js",
+      "name": "请求内退休旧环境与召回且落盘原文、系统提示、计划和回执保留",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A1A-06",
+      "categories": [],
+      "level": "L1",
+      "file": "dist/tests/core/context-contracts.test.js",
+      "name": "重启按目录和前缀恢复 guest 与 Room 且拒绝不匹配的 guest 预设",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A1A-07",
+      "categories": [],
+      "level": "L1",
+      "file": "dist/tests/core/context-contracts.test.js",
+      "name": "Life 运行、暂停和卸载时前台都打开同一共享 home",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A1A-08",
+      "categories": [
+        "输入持久化先于确认"
+      ],
+      "level": "L2",
+      "file": "dist/tests/core/interaction-context.test.js",
+      "name": "a failed or absent native persistence participant retains owner prompt facts",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A1A-09",
+      "categories": [
+        "输入持久化先于确认"
+      ],
+      "level": "L2",
+      "file": "dist/tests/core/interaction-context.test.js",
+      "name": "scope and domain replacement during flush reject acknowledgement",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A1A-10",
+      "categories": [
+        "输入持久化先于确认"
+      ],
+      "level": "L1",
+      "file": "dist/tests/life/life-core-integration.test.js",
+      "name": "failed persistence, failed turns and absent effective context retain facts for a later owner turn",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A1A-11",
+      "categories": [
+        "计划续行"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "卸载 Life 取消原生轮次并以原编号恢复在途身体计划",
+      "l1Stage": "阶段 2",
+      "families": [
+        "计划推进与完成契约"
+      ]
+    },
+    {
+      "id": "2A1A-12",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "卸载 body 跨暂停再启用时的作物结算",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "2A1A-13",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "卸载 economy 跨暂停再启用时的作物结算",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "2A1A-14",
+      "categories": [
+        "日记按原日期恢复"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "卸载 body 后 Life 回顾仍调度并写入原日期日记",
+      "l1Stage": "阶段 2",
+      "families": [
+        "日记与回顾"
+      ]
+    },
+    {
+      "id": "2A1A-15",
+      "categories": [
+        "日记按原日期恢复"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "卸载 economy 后 Life 回顾仍调度并写入原日期日记",
+      "l1Stage": "阶段 2",
+      "families": [
+        "日记与回顾"
+      ]
+    },
+    {
+      "id": "2A1A-16",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "暂停 Life 取消回顾轮次但同一回顾的文件授权仍可复核",
+      "l1Stage": "阶段 2",
+      "families": [
+        "日记与回顾"
+      ]
+    },
+    {
+      "id": "2A1A-17",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "三入口全卸载后普通聊天、无身体环境段、相册和历史活动仍可用",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A1A-18",
+      "categories": [
+        "效果已落盘后结算失败再重启",
+        "计划续行"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/families.test.mjs",
+      "name": "Life 原生计划在身体效果落盘后跨重启只结算一次并自动续行",
+      "l1Stage": "阶段 2",
+      "families": [
+        "计划推进与完成契约"
+      ]
     }
   ]
 }
