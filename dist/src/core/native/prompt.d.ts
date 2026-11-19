@@ -9,6 +9,7 @@ declare module '@deepseek-ai/dsh-llm' {
         } & ContextFormed;
     }
 }
+export declare const ENVIRONMENT_CONTEXT = "chatpet.environment";
 /** Retire only this adapter's superseded operational views, retaining every
  * original native event and all other producers' context sections. Keeping the
  * latest equal snapshot avoids needless prefix edits between unchanged steps.

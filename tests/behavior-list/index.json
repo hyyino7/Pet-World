@@ -1156,6 +1156,15 @@
       ]
     },
     {
+      "id": "2A1A-19",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "三入口全卸载后重开原会话会退休旧环境和互动快照",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
       "id": "2A2-01",
       "categories": [],
       "level": "L1",

@@ -1,6 +1,6 @@
 import { acknowledgePromptFacts } from '../core/interaction-context.js';
 import { INTERACTION_CONTEXT, presentFacts } from '../core/interaction-presentation.js';
-import { registerWorldContext } from '../core/native/prompt.js';
+import { ENVIRONMENT_CONTEXT, registerWorldContext } from '../core/native/prompt.js';
 import { check } from '../core/storage.js';
 import { withLivingCaller } from './index.js';
 export function installLivingPrompt(ctx, host, world, ownerScope) {
@@ -24,7 +24,7 @@ export function installLivingPrompt(ctx, host, world, ownerScope) {
         if (frame?.agent === agent && isCurrent(frame))
             return frame;
     };
-    const environment = registerWorldContext(ctx, 'chatpet.environment', 14, agent => read(agent)?.text ?? '', async (agent) => {
+    const environment = registerWorldContext(ctx, ENVIRONMENT_CONTEXT, 14, agent => read(agent)?.text ?? '', async (agent) => {
         if (stopped)
             return;
         discard(agent.id);

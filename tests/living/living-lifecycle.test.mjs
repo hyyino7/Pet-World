@@ -57,9 +57,10 @@ test('3C 事实准备期间 Economy 重挂会作废两段，下一轮仍能读�
   assert.ok(observations.every(ids=>!ids.includes('prepare-economy') || ids.includes(fresh.requestId)),
     'Native evidence must never observe the retired Economy preparation');
   const interactions = sections.find(row=>row.name==='chatpet.interactions');
-  // Other prompt providers may ask DSH to reassemble. That pass must use the new lease.
-  if (sections.some(row=>row.name==='chatpet.environment')) assert.ok(interactions?.text.includes(fresh.id));
-  else assert.equal(interactions,undefined);
+  // Prompt reassembly must render both sections using the new lease.
+  assert.ok(sections.some(row=>row.name==='chatpet.environment'));
+  assert.ok(interactions);
+  assert.ok(JSON.parse(interactions.text).facts.some(fact=>fact.id===fresh.id));
   assert.equal((await f.body.pendingFacts(f.id)).length, 1);
   assert.equal((await f.economy.pendingFacts(f.id)).length, 2);
   const next = await f.input('Inspect them again.');
