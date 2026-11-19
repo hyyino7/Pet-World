@@ -144,7 +144,9 @@ test('Life 原生计划在身体效果落盘后跨重启只结算一次并自动
     return 'Plan accepted';
   };
   await f.enable();
-  const home=await f.agent(f.life.homeSessionId());
+  const homeId=await eventually(()=>f.life.homeSessionId(),'生活打开共享 home');
+  const {agent:home}=await f.ctx.sessionController.resolveAgent(homeId);
+  assert.ok(home);
   const plan=await eventually(async()=>{
     const {plan}=await f.life.readPlan(f.id);
     return plan?.operationId && (await f.economy.snapshot(f.id)).pendingUses.some(row=>row.opId===plan.operationId) && plan;
@@ -186,6 +188,7 @@ test('Life 原生计划在身体效果落盘后跨重启只结算一次并自动
   assert.equal(countUsed(after),1);
   assert.equal(after.ledger.find(row=>row.kind==='use-consume').requestId,plan.operationId);
   assert.equal(await eventually(()=>f.life.homeSessionId(),'生活恢复原 home'),home.id);
+  assert.deepEqual(f.sessionCreateCalls,[home.id]);
   assert.equal((await f.body.snapshot(f.id)).needs.hunger,hunger);
   assert.equal(checkpoint().plannedExecutions[plan.operationId].effectAppliedAt,applied.effectAppliedAt);
   assert.equal(f.calls.filter(call=>call.messages.some(message=>message.source.kind==='dsh-world-life')).length,1);

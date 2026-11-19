@@ -113,11 +113,14 @@ test('请求内退休旧环境与召回且落盘原文、系统提示、计划�
   await f.body.act(f.id,'water','native-water','desktop');
   const [receipt]=await f.body.pendingFacts(f.id);
   assert.ok(views(first.agent).some(event=>event?.seq===oldRecall.seq));
-  f.model=async()=> 'Second reply';
+  f.model=async ({agent}:Call)=>{
+    const visible = views(agent);
+    assert.equal(visible.filter(event=>sectionNames(event).includes('chatpet.environment')).length,1);
+    assert.ok(!visible.some(event=>event?.seq===oldRecall.seq || event?.seq===oldSnapshot.seq));
+    return 'Second reply';
+  };
   const second:Call=await f.input('I am here.');
   assert.equal(second.system,first.system);
-  assert.equal(views(second.agent).filter(event=>sectionNames(event).includes('chatpet.environment')).length,1);
-  assert.ok(!views(second.agent).some(event=>event?.seq===oldRecall.seq || event?.seq===oldSnapshot.seq));
   const saved:SessionEvent[]=JSON.parse(readFileSync(f.logFile(second.agent.id),'utf8')).events;
   assert.deepEqual(saved.slice(0,original.length),original);
   const requestStart=saved.findIndex((event,i)=>i>=original.length && event.type==='step/start');
@@ -184,4 +187,5 @@ test('Life 运行、暂停和卸载时前台都打开同一共享 home',async t=
   f.states([true,false,true]);
   assert.equal((await resolveCompanionHome(f.ctx,f.core)).id,home.id);
   assert.doesNotMatch((await f.input('Foreground after unload',home.id)).system,/当前的自主规划投递会话/);
+  assert.deepEqual(f.sessionCreateCalls,[home.id]);
 });

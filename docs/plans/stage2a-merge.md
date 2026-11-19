@@ -454,4 +454,29 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 | 6.2 说暂停停止回顾，在途回顾是否撤权待核（`docs/architecture.md:575`）。 | 暂停拒绝新的回顾准入，并取消已准入的原生轮次，原信号上的读写中止。在轮次收尾前独立复核文件权限时，已准入的租约仍有效，原日期日记可读写。 | `tests/behavior-list/entries-lifecycle.test.mjs:384`、`src/life/plugin.ts:307`、`src/life/plugin.ts:475`、`src/life/plugin.ts:531`、`src/life/tool-policy.ts:104`、`src/core/life-review-files.ts:25` |
 | 5.9 的「原样 JSON」需要明确匹配粒度（`docs/architecture.md:493`）。 | 确认要求固定段名、正文包含该段文本、逐条事实投影结构相等。JSON 重排键或增加空白仍能确认，投影值不同则保留待确认回执。 | `tests/core/context-contracts.test.ts:72`、`src/core/interaction-presentation.ts:21` |
 
+### 1A 第一轮返工
+
+- 夹具为未指定 ID 的会话生成新 ID，2A1A-07、2A1A-11、2A1A-18 验证 home 只创建一次。2A1A-11 推进时钟后核对 Life 消费原 `operationId` 的完成回执并推进游标。执行工具前断言 `tools/pre-execute` 返回 `allow`，2A1A-05 在第二轮模型回调中检查替换。
+- 1A 快测 30/30 通过。`pnpm run build && pnpm run test:behavior-list` 首次因 `dist` 短暂缺失退出，重跑后构建、索引 11/11、行为清单 70/70 均通过。
+- `pnpm run verify` 通过环境、类型、架构和构建检查。Node 测试 1431 项通过，1 项在 `tests/memory/memory-process.test.mjs:81` 遇到 `spawnSync /bin/ps EPERM`。本轮未观察到回环失败，Python 测试及发布、打包检查留待 Claude 在沙箱外完整重跑。
+
 ## 审查结论
+
+### 1A 第一轮验收（Codex 审查 + Claude 核实）
+
+**必须修**
+
+1. `tests/behavior-list/entries-lifecycle.test.mjs:161-165` 夹具里，不带 `sessionId` 的 `sessionController.create()` 固定返回 `home`，已有同名会话时直接复用。上游 home 新建正好走这条路（`vendor/dsh-world/lib/life/home.js:65` 的 `host.createSession(...)` 不传 ID）。结果是暂停、卸载、重启后就算代码新建了一个 home，也拿到同一个 ID，2A1A-07、2A1A-18 等「同一共享 home」断言照样通过。第 4 批要改 home 的创建路径，这张安全网必须能拦住这种情况。改法：不带 ID 的创建每次分配新 ID（Room、guest、`f.agent()` 显式传 ID 的保持不变）；在 home 相关测试里断言恢复时没有再新建会话。
+2. `tests/behavior-list/entries-lifecycle.test.mjs:314-318`（2A1A-11）里，重新加载后的断言（Life 在运行、计划还是原 `operationId`、Body 回执还是 `running`）在卸载前就成立，证明不了方案 1A 表要求的「重新加载后按原 `operationId` 继续」。改法：重新加载后推进时钟，让原步骤走到完成边界，断言 Life 消费的是同一编号的完成回执、游标前进。
+
+**建议修（不影响合并，返工时可以一起做）**
+
+- `tests/behavior-list/entries-lifecycle.test.mjs:126` 丢掉了 `tools/pre-execute` 的返回值。真实 DSH 管线会执行这个返回值给出的 `deny`、`cancel`、`ask`（`@deepseek-ai/dsh-tools` 的 `lib/pipeline.js:386-404`）。现有的 `src/` 处理器都是记下拒绝原因、交给守卫执行，所以差异清单第 3 行今天仍然成立；但以后要是改成用返回值拒绝，2A1A-16 会误报成功。最低改法：断言 `gate.kind === 'allow'`，否则按拒绝处理。
+- `tests/core/context-contracts.test.ts:116-120`（2A1A-05）的可见历史是在整轮结束后才检查的。在第二轮的模型回调里检查旧环境和旧召回已经不可见，才能证明替换发生在模型拿到请求之前。
+- 夹具 `cordisFixture` 是从测试文件 `entries-lifecycle.test.mjs` 导出的，然后被另外两个测试文件引用。以后有机会，把它挪到一个不叫 `*.test.*` 的夹具模块里（这次的允许修改名单里没有新夹具文件，所以这次不改）。
+
+**核实结果**：范围在允许修改名单内，没有改 `src/`、`scripts/`；没有删测试、没有 skip、没有放宽断言；快测 30/30 通过；三个新文件都只用 `mkdtemp` 合成目录，不读本机 DSH profile 和家目录。
+
+**待主人决定（验收不要求改）**：2A1A-12、2A1A-13 固定的是「暂停区间也长作物」的现状（差异清单第 1、2 行）。它违反「种地时钟」不变量，按故障家族算是第 3 次失守。是否在 3A 之前做 G3 复盘并单独修复，由主人决定；修复之后这两条的断言要随之翻转。
+
+**复查（返工一轮后）**：必须修 1、2 已修好，两条建议修（工具准入返回值、2A1A-05 在模型回调里检查）也已做。快测 30/30 通过，`test:behavior-list` 70 条通过。种地时钟一项仍待主人决定。

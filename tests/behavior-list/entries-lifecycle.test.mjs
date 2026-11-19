@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
 import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
@@ -72,7 +73,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
   }
   const logFile = sessionId => join(root, sessionId+'.json');
   const saved = sessionId => JSON.parse(readFileSync(logFile(sessionId),'utf8'));
-  const calls = [], cancellations = [];
+  const calls = [], cancellations = [], sessionCreateCalls = [];
   let ctx, native, components, effects = [], snapshot = sections=>sections, model = async call => {
     if (call.messages.some(message=>message.source.kind==='dsh-world-life' && message.source.purpose!=='review' && !('facts' in message.source)))
       await submitPlan(call,[]);
@@ -123,8 +124,9 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
           const tool = async (name,args,executionSignal=signal) => {
             const exec = {agent,name,arguments:args,signal:executionSignal,token:Symbol(name),callId:'call-'+(++sequence)};
             session.append('tool/call',{turn,step,callId:exec.callId,name,arguments:JSON.stringify(args)});
-            await ctx.waterfall(carrier,'tools/pre-execute',exec,async()=>({kind:'allow'}));
             try {
+              const gate = await ctx.waterfall(carrier,'tools/pre-execute',exec,async()=>({kind:'allow'}));
+              assert.equal(gate.kind,'allow',`执行 ${name} 前必须取得工具准入`);
               const denial = ctx.tools.checkGuards(exec);
               if (denial) throw Error(denial);
               const definition = ctx.tools.executable(name,agent,toolSet);
@@ -158,7 +160,8 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
     agents = new Map();
     components = new Map();
     const controller = {
-      async create({workspaceId,sessionId='home',agentPreset='standard'}) {
+      async create({workspaceId,sessionId=randomUUID(),agentPreset='standard'}) {
+        sessionCreateCalls.push(sessionId);
         const selected = registry.get(workspaceId);
         await selected.attachSession(sessionId);
         if (!agents.has(sessionId)) await make(sessionId,selected.path,agentPreset);
@@ -226,7 +229,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
   t.after(async()=>{try { await stop(); } finally { rmSync(root,{recursive:true,force:true}); }});
   await start();
   return {
-    id, repo, directory, calls, cancellations, saved, logFile, load, unload,
+    id, repo, directory, calls, cancellations, sessionCreateCalls, saved, logFile, load, unload,
     get registry() { return registry; }, get bound() { return registry.get(id); },
     get ctx() { return ctx; }, get core() { return ctx.petCore; },
     get body() { return ctx.petBehavior; }, get life() { return ctx.petLife; }, get economy() { return ctx.petEconomy; },
@@ -256,10 +259,10 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
   };
 }
 
-export async function submitPlan(call, steps) {
+export async function submitPlan(call, steps, nextConsiderAt = null) {
   const {revision} = JSON.parse(await call.tool('life_plan_read',{view:'full'}));
   return JSON.parse(await call.tool('life_plan_update',{expectedRevision:revision,
-    plan:{goal:'Continue living',reason:'Scripted decision',steps,nextConsiderAt:null}}));
+    plan:{goal:'Continue living',reason:'Scripted decision',steps,nextConsiderAt}}));
 }
 
 const lifeInput = call=>call.messages.some(message=>message.source.kind==='dsh-world-life');
@@ -292,7 +295,8 @@ if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1]))
     let entered;
     f.model = async call=>{
       if (!lifeInput(call)) return 'Owner reply';
-      await submitPlan(call,[hold('rest',10)]);
+      const nextConsiderAt = new Date(Date.now()+60*60_000).toISOString();
+      await submitPlan(call,[hold('rest',10)],nextConsiderAt);
       entered=call;
       await new Promise(resolve=>call.signal.addEventListener('abort',resolve,{once:true}));
       return 'Cancelled reply';
@@ -314,8 +318,22 @@ if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1]))
     await f.load('life');
     await eventually(()=>f.life.running(),'Life 重新启用');
     f.states([true,true,true]);
+    assert.equal(f.life.homeSessionId(),call.agent.id);
+    assert.deepEqual(f.sessionCreateCalls,[call.agent.id]);
     assert.equal((await f.life.readPlan(f.id)).plan.operationId,plan.operationId);
     assert.equal((await f.body.inspectPlanned(f.id,plan.operationId)).status,'running');
+    assert.equal(plan.cursor,0);
+    assert.ok(receipt.until);
+    t.mock.timers.setTime(Date.parse(receipt.until)+1);
+    const completedReceipt = await f.body.inspectPlanned(f.id,plan.operationId);
+    assert.equal(completedReceipt.operationId,plan.operationId);
+    assert.equal(completedReceipt.status,'completed');
+    const resumed = await eventually(async()=>{
+      const {plan:current} = await f.life.readPlan(f.id);
+      return current?.cursor===1 && current;
+    },'Life 消费原步骤的完成回执后推进游标');
+    assert.equal(resumed.id,plan.id);
+    assert.deepEqual(resumed.execution,completedReceipt);
   });
 
   for (const [key, states] of [
