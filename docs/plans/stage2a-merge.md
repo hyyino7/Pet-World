@@ -485,6 +485,14 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - Memory 门禁通过合成宿主触发 `turn/end`，验证确认丢失时回合仍完成并记录故障，重启后按原观察 ID 补账。
 - 合成验证中迁移 136/136、Memory 门禁 4/4、构建及行为清单 52/52 通过。`verify` 的 Node 测试 1432 通过、1 失败，原因是 `tests/memory/memory-process.test.mjs:81` 遇到 `spawnSync /bin/ps EPERM`，由 Claude 在沙箱外重跑。
 
+### 第 3 批 · 3A 第一个提交（改键工具）
+
+- `scripts/arch/` 新增 `--write-baseline --move <对照文件>`，用导入语法树核对 R1 新位置的相对路径，复用 multiset 比对，两份基线均一一对应才写入。
+- `AGENTS.md` 只更新基线规则。新增 7 项合成测试，实现前均因 CLI 尚无 `--move` 而失败。
+- `node --test tests/arch/*.test.mjs` 39/39 通过。`pnpm run check:arch` 通过，60 / 1061，新增和消失均为 0。`pnpm run build` 通过。
+- 计算式导入仍按原表达式核对，需改写计算式本身的情况会被拒绝。三个搬家提交等待另一条分支合并；本次未搬源码、未改仓库基线，未读真实数据。
+- 建议提交说明「支持纯搬家时严格改写架构基线键（Claude 代提交）」。
+
 ## 审查结论
 
 ### 1A 第一轮验收（Codex 审查 + Claude 核实）

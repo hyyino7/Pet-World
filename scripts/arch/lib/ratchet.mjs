@@ -19,12 +19,19 @@ export function compareBaseline(current,baseline) {
   for(const [id,count] of saved)for(let i=actual.get(id)??0;i<count;i++)removed.push(JSON.parse(id));
   return {added,removed,ok:!added.length&&!removed.length};
 }
-export function updateBaselines(groups,write=false) {
+export function updateBaselines(groups,write=false,rewrite) {
   // 全部比较完成之后才写；任一新增都会阻止其他文件被部分收紧。
   const results=groups.map(({file,items})=>{
-    const baseline=existsSync(file)?readJson(file).entries:[];
-    return {file,items,...compareBaseline(items,baseline)};
+    const exists=existsSync(file);
+    if(rewrite&&!exists)throw Error(`搬家改键需要现有基线：${file}`);
+    const baseline=exists?readJson(file).entries:[];
+    return {file,items,...compareBaseline(items,rewrite?rewrite(baseline,items):baseline)};
   });
+  if(rewrite&&results.some(r=>!r.ok)) {
+    const differences=results.filter(r=>!r.ok).map(r=>
+      `${r.file} 新增 ${r.added.length}，消失 ${r.removed.length}；首条差异 ${JSON.stringify(r.added[0]??r.removed[0])}`);
+    throw Error(`搬家改键必须与新扫描一一对应：${differences.join('\n')}`);
+  }
   if(write && results.some(r=>r.added.length))throw Error('--write-baseline 只能删条目，拒绝新增（缺失基线也不能重新初始化）');
   if(write)for(const {file,items} of results) {
     mkdirSync(dirname(file),{recursive:true});

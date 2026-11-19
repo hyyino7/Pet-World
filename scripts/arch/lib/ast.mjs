@@ -21,12 +21,12 @@ export function member(node) {
   return ts.isPropertyAccessExpression(node)?key(node.name):ts.isElementAccessExpression(node)?key(node.argumentExpression):undefined;
 }
 // 用语法叶子而非正则去空白：字符串、模板正文里的空格有意义。
-export function normalize(node) {
+export function normalize(node, literalText = token => token.text) {
   const words=[];
   const visit=token=>{
     const children=token.getChildren();
     if(children.length){children.forEach(visit);return;}
-    if(ts.isStringLiteralLike(token))words.push(JSON.stringify(token.text));
+    if(ts.isStringLiteralLike(token))words.push(JSON.stringify(literalText(token)));
     else if([ts.SyntaxKind.TemplateHead,ts.SyntaxKind.TemplateMiddle,ts.SyntaxKind.TemplateTail].includes(token.kind))words.push(ts.SyntaxKind[token.kind]+':'+JSON.stringify(token.text));
     else words.push(token.getText());
   };

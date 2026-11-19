@@ -8,7 +8,7 @@ export function moduleOf(layers,file) {
   return Object.entries(layers.modules).find(([,m])=>file.startsWith(m.root))?.[0]
     ?? Object.entries(layers.modules).find(([,m])=>m.generated.some(g=>g.sources.includes(file)))?.[0];
 }
-function resolveImport(file,name,imports) {
+export function resolveImport(file,name,imports) {
   if(name.startsWith('#')) {
     const match=Object.entries(imports).find(([pattern])=>pattern.includes('*')?name.startsWith(pattern.split('*')[0])&&name.endsWith(pattern.split('*')[1]):pattern===name);
     if(!match)return '?';
