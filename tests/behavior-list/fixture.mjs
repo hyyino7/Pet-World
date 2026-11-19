@@ -23,7 +23,7 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
   const root=realpathSync(mkdtempSync(join(tmpdir(),'behavior-list-'))),repo=join(root,'workspace');mkdirSync(repo);
   const config={dataDir:join(root,'core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fixture',character:'Synthetic companion'};
   if(memory)config.memory={python:resolve('.venv/bin/python'),dataDir:join(repo,'.chatpet/data/memory')};
-  let services,handlers,effects,agents,ctx,sections,contexts,tools,guards,dsh,guest,flushAllowed=true,sequence=0;
+  let services,handlers,effects,agents,ctx,sections,contexts,tools,guards,dsh,guest,routes,flushAllowed=true,sequence=0;
   const warnings=[],sent=[],flushes=[],cancellations=[],archives=[];
   const logFile=id=>join(root,`native-${id}.json`);
   const workspace={id:'world',path:repo,sessionIds:['home','owner-b','guest'],async attachSession(id){if(!this.sessionIds.includes(id))this.sessionIds.push(id);}};
@@ -171,7 +171,11 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
     if(economy)economyPlugin.apply(ctx);
     if(life)lifePlugin.apply(ctx);
     if(memory)memoryPlugin.apply(ctx);
-    ctx.webServer={getOrigin:()=> 'http://fixture.invalid',register:()=>()=>{}};
+    routes=new Map();
+    ctx.webServer={getOrigin:()=> 'http://fixture.invalid',register(route){
+      routes.set(route.path,route);
+      return ()=>routes.delete(route.path);
+    }};
     ctx.sessionController=services.get('sessionController');
     if(search)services.set('web',{search});
     if(desktop)desktopPlugin.apply(ctx);
@@ -273,7 +277,7 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
     create:async sessionId=>(await service('sessionController').create({workspaceId:'world',sessionId})).sessionId,
     schemas:({agent,toolSet})=>ctx.tools.schemas(agent,toolSet).map(schema=>schema.name),
     registerTool:(...args)=>dsh.register(...args),
-    service,get host(){return service('petCore');},get body(){return service('petBehavior');},get economy(){return service('petEconomy');},get life(){return service('petLife');},
+    service,route:path=>routes.get(path),get host(){return service('petCore');},get body(){return service('petBehavior');},get economy(){return service('petEconomy');},get life(){return service('petLife');},
     agent:id=>agentInfo.get(id).agent,agents:()=>[...agents.values()],logFile,
     async restart(beforeStart){await close();beforeStart?.();await start();},
     set flushAllowed(value){flushAllowed=value;},

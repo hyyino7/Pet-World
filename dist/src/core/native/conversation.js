@@ -45,6 +45,7 @@ export class CoreNative {
     sourceTable = new SourceAdapterTable(this.toolTable);
     companionPorts = new CompanionPorts();
     playbackProviders = new RegistrationTable();
+    reviewCompaction = new RegistrationTable();
     resolveNativeScope;
     attachGuest;
     turns = new Map();
@@ -88,6 +89,12 @@ export class CoreNative {
     memoryFor(_sessionId) {
         // The current component switch applies at the next turn, including retained chats.
         return this.memoryEnabled ? this.memory : undefined;
+    }
+    registerReviewCompaction(request) {
+        return this.reviewCompaction.register('review', request);
+    }
+    requestReviewCompaction(sessionId) {
+        this.reviewCompaction.get('review')?.value(sessionId);
     }
     /** Native DSH owns the turn. Core retains only input references and selected policy metadata. */
     observeInputs(sessionId, turn, messages, scope = this.current(sessionId)) {

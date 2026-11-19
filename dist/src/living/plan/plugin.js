@@ -229,7 +229,8 @@ export class CompanionLife {
             options: { worldDir: bound.directory, roomDir: bound.path, diaryDir: bound.library.paths.diaryDir, selfFile: bound.library.paths.selfFile, timeZone: this.timeZone,
                 schedule: () => this.preferences, alarmFile: REVIEW_ALARM_FILE },
             dailyBudget: () => this.preferences.dailyBudget ?? undefined,
-            photos: () => bound.library.album(),
+            // The upstream runtime only forwards this store to photoTools.
+            photos: () => bound.library.photoTools,
             reviewDiaryStatus: (day, session, messageId) => {
                 if (!active() || !member(session.id))
                     throw Error('Review workspace or home changed');
@@ -237,11 +238,11 @@ export class CompanionLife {
                     sessionIds: this.current().sessionIds, isHome: id => this.isHome(id) }, day, session, messageId);
             },
             afterReview: () => {
-                if (!active() || !this.preferences.compactAfterReview)
+                if (!active() || !this.preferences.compactAfterReview || !this.running())
                     return;
                 const id = store.read().homeSessionId;
                 if (id)
-                    this.ctx.emit('pet/life.review', id);
+                    host.native.requestReviewCompaction(id);
             },
             inWorkspace: id => canWrite()
                 && this.current()?.sessionIds.includes(id) === true && !host.native.isGuest(id),
@@ -746,7 +747,7 @@ export const name = '40-Life';
 export const inject = ['petCore', 'petWorld', 'agents', 'sessions', 'tools', 'systemPrompt'];
 export function apply(ctx, config = {}) {
     const host = ctx.petCore;
-    return mountLivingArea(ctx, host, 'plan', view => new CompanionLife(ctx, host, config.agentPreset ?? 'standard', view), life => {
+    return mountLivingArea(ctx, host, 'plan', view => new CompanionLife(ctx, host, config.agentPreset ?? 'standard', view), (life, view) => {
         life.activate();
         ctx.provide('petLife', life);
         life.registerSource();
@@ -762,6 +763,13 @@ export function apply(ctx, config = {}) {
                 };
             },
         }).revoke);
+        const ports = host.native.companionPorts;
+        if (!ports.scopeFor(ctx, 'petLife'))
+            return;
+        const isHome = (id) => view.lookup('plan')?.value === life && life.isHome(id);
+        const album = ports.register('lifeOwnsAlbum', isHome);
+        const review = ports.register('isRunningLifeHome', isHome);
+        return () => settleCleanup(album.revoke, review.revoke);
     });
 }
 //# sourceMappingURL=plugin.js.map

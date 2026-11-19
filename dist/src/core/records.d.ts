@@ -22,6 +22,17 @@ export declare class CompanionRecordLibrary {
         forget(id: string): void;
         close(): void;
     };
+    readonly photoTools: Readonly<{
+        keep: (image: StoredImageAttachment, description?: string | undefined, tags?: readonly string[] | undefined) => import("#dsh-world/life/photos").PhotoSummary;
+        list: (limit?: number | undefined, offset?: number | undefined) => {
+            photos: import("#dsh-world/life/photos").PhotoSummary[];
+            total: number;
+            hasMore: boolean;
+            limit: number;
+            offset: number;
+        };
+        forget: (id: string) => void;
+    }>;
     dates(activityDays?: () => readonly string[]): string[];
     journal(day: string, readActivity?: (day: string) => ReturnType<ActivityReader['activity']>): {
         day: string;

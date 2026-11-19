@@ -28,6 +28,11 @@ export class CompanionRecordLibrary {
     for (const name of ['album.sqlite', 'album.sqlite-wal', 'album.sqlite-shm', 'album.sqlite-journal', 'index.json']) checked(join(dir, name));
     return this.photos = createPhotoStore(this.paths.photoDirectory);
   }
+  readonly photoTools = Object.freeze({
+    keep: (...args: Parameters<PhotoStore['keep']>) => this.album().keep(...args),
+    list: (...args: Parameters<PhotoStore['list']>) => this.album().list(...args),
+    forget: (...args: Parameters<PhotoStore['forget']>) => this.album().forget(...args),
+  });
   dates(activityDays: () => readonly string[] = () => []) {
     checked(this.paths.diaryDir, true);
     return [...new Set([...createDiaryReader(this.paths.diaryDir).dates(), ...activityDays()])].sort().reverse();

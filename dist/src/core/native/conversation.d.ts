@@ -37,6 +37,7 @@ export declare class CoreNative {
     readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
     readonly companionPorts: CompanionPorts;
     private readonly playbackProviders;
+    private readonly reviewCompaction;
     resolveNativeScope?: (sessionId: string) => NativeScope | undefined;
     attachGuest?: (context: Context) => void;
     private readonly turns;
@@ -51,6 +52,8 @@ export declare class CoreNative {
     setMemoryEnabledForNewSessions(enabled: boolean): void;
     memoryEnabledForNewSessions(): boolean;
     memoryFor(_sessionId: string): NativeMemory | undefined;
+    registerReviewCompaction(request: (sessionId: string) => void): import("../../contracts/tables.js").TableRegistration;
+    requestReviewCompaction(sessionId: string): void;
     /** Native DSH owns the turn. Core retains only input references and selected policy metadata. */
     observeInputs(sessionId: string, turn: number, messages: readonly UserMessage[], scope?: NativeScope): string[];
     /** Called only by scoped native input/prompt adapters, never a model tool. */

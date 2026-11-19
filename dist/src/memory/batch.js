@@ -5,8 +5,8 @@ export function installMemoryBatch(ctx, host) {
     const store = host.workspace.runtime.store;
     const running = new Map();
     const reviews = new Set();
-    ctx.on('pet/life.review', id => { if (host.native.memoryFor(id))
-        reviews.add(id); }, { global: true });
+    const requests = host.native.registerReviewCompaction(id => { if (host.native.memoryFor(id))
+        reviews.add(id); });
     const matches = (row) => {
         const status = host.workspace.status();
         return status.state === 'ready' && status.target?.id === row.workspaceId && status.target.path === row.path;
@@ -32,7 +32,7 @@ export function installMemoryBatch(ctx, host) {
             throw Error('Native compaction service is unavailable');
         const binding = await memory.prepare(row.sessionId);
         if (!matches(row) || signal.aborted)
-            return;
+            return false;
         memory.assertBinding(binding);
         let pending = row.summary;
         const recovered = [...agent.session.snapshotEvents()].reverse().find(event => String(event.type) === 'compaction/summary' && event.time >= row.lastActivity);
@@ -44,7 +44,7 @@ export function installMemoryBatch(ctx, host) {
         if (!pending) {
             const result = await compaction.compactNow(agent, signal);
             if (!matches(row) || signal.aborted)
-                return;
+                return false;
             memory.assertBinding(binding);
             if (result) {
                 pending = { seq: result.summarySeq,
@@ -92,13 +92,14 @@ export function installMemoryBatch(ctx, host) {
         // Maintenance serializes waking input; preserve any newly completed turns.
         const { summary: _summary, error: _error, ...clean } = latest;
         store.put('memory-batch', row.sessionId, { ...clean, turns: Math.max(0, latest.turns - (pending?.turns ?? row.turns)), failures: 0, retryAt: 0 });
+        return true;
     }
     const interval = setInterval(() => {
         for (const row of store.all('memory-batch')) {
             if (!row.turns || !matches(row) || running.has(row.sessionId))
                 continue;
             const configured = host.workspace.companionConfiguration(), now = Date.now();
-            const review = reviews.has(row.sessionId) && ctx.get('petLife')?.isHome(row.sessionId);
+            const review = reviews.has(row.sessionId) && host.native.companionPorts.get('isRunningLifeHome')?.(row.sessionId);
             const dueTurns = configured.memorySummaryTurns != null && row.turns >= configured.memorySummaryTurns;
             const dueIdle = configured.memorySummaryIdleMinutes != null && now - row.lastActivity >= configured.memorySummaryIdleMinutes * 60_000;
             if (!review && !dueTurns && !dueIdle)
@@ -112,8 +113,8 @@ export function installMemoryBatch(ctx, host) {
                 continue;
             const abort = new AbortController();
             store.put('memory-batch', row.sessionId, { ...row, lastAttempt: now });
-            const done = run(row, agent, abort.signal).then(() => {
-                if (!abort.signal.aborted && review)
+            const done = run(row, agent, abort.signal).then(consumed => {
+                if (consumed && !abort.signal.aborted && review)
                     reviews.delete(row.sessionId);
             }).catch(error => {
                 const latest = store.get('memory-batch', row.sessionId);
@@ -134,9 +135,11 @@ export function installMemoryBatch(ctx, host) {
     interval.unref();
     const stop = async () => {
         clearInterval(interval);
+        const revoke = requests.revoke();
+        reviews.clear();
         for (const job of running.values())
             job.abort.abort();
-        await Promise.all([...running.values()].map(job => job.done));
+        await Promise.all([...running.values()].map(job => job.done).concat(revoke));
     };
     ctx.effect(() => stop);
     return stop;

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {unlinkSync} from 'node:fs';
+import {createUserMessage} from '@deepseek-ai/dsh-llm';
 import {fixture,signal,until} from './fixture.mjs';
 import {footer,assertEmotion,assertObservation,prepareMemory} from './policy-evidence.mjs';
 
@@ -98,6 +99,30 @@ test('Room 电视达到自主步数上限，并在自主时限取消原生轮次
   await until(()=>f.cancellations.some(row=>row.id===tv.agent.id),'自主时限到点取消 Room 电视',750);
   await f.end(tv.active,'aborted');
   await failure;
+});
+
+test('3C 电视接管期间相册 schema 和旧工具均不可用，电视请求收尾后恢复',async t=>{
+  const f=await setup(t);
+  const chat=await privateChat(f,'Open the album.');
+  const name='pet_list_photos';
+  const old=chat.agent.ctx.tools.executable(name,chat.agent,chat.active.toolSet);
+  assert.ok(old);
+  await f.end(chat.active);
+  await chat.pending;
+  const tv=await television(f);
+  assert.ok(!f.schemas(tv.active).includes(name));
+  const owner=createUserMessage({source:{kind:'user'},content:[{type:'text',text:'Owner takes over.'}]});
+  tv.agent.steer(owner);
+  await f.step(tv.active,[owner]);
+  assert.ok(!f.schemas(tv.active).includes(name));
+  await assert.rejects(f.tool(tv.active,name,{}),/电视画面只能用于观后感/);
+  await assert.rejects(old.execute({},{agent:tv.agent,signal:signal()}),/相册需要当前工作区/);
+  await f.end(tv.active);
+  await tv.pending;
+  const next=await f.begin(tv.agent.id);
+  assert.ok(f.schemas(next).includes(name));
+  assert.equal((await f.tool(next,name,{})).total,0);
+  await f.end(next);
 });
 
 test('Room 调用方取消会传到原生轮次',async t=>{

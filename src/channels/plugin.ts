@@ -79,7 +79,7 @@ export class CompanionChannels {
     if (!home || !this.local || !this.host.native.memoryFor(home)) return '生活会话或记忆整理未启用';
     if (!this.host.workspace.runtime.store.get<{turns:number}>('memory-batch', home)?.turns)
       return '当前没有待整理的已完成对话';
-    this.ctx.emit('pet/life.review', home);
+    this.host.native.requestReviewCompaction(home);
     return undefined;
   }
   async reach(workspaceId: string, push: Push) {

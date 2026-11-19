@@ -32,6 +32,11 @@ export class CompanionRecordLibrary {
             checked(join(dir, name));
         return this.photos = createPhotoStore(this.paths.photoDirectory);
     }
+    photoTools = Object.freeze({
+        keep: (...args) => this.album().keep(...args),
+        list: (...args) => this.album().list(...args),
+        forget: (...args) => this.album().forget(...args),
+    });
     dates(activityDays = () => []) {
         checked(this.paths.diaryDir, true);
         return [...new Set([...createDiaryReader(this.paths.diaryDir).dates(), ...activityDays()])].sort().reverse();

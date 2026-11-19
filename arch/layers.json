@@ -18,7 +18,7 @@
       "dependencies": ["core","memory","emotion","contracts","world"],
       "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion"],
       "publishes": [],
-      "subscribes": ["pet/life.review","session/event"],
+      "subscribes": ["session/event"],
       "generated": []
     },
     "emotion": {
@@ -57,7 +57,7 @@
       "services": ["petBehavior","petLife","petEconomy"],
       "dependencies": ["core","memory","emotion","contracts","world","living"],
       "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion"],
-      "publishes": ["pet/behavior.changed","pet/economy.fact","pet/life.changed","pet/life.review"],
+      "publishes": ["pet/behavior.changed","pet/economy.fact","pet/life.changed"],
       "subscribes": ["agent/disposed","agent/pre-step","internal/status","pet/behavior.changed","pet/core.changed","pet/economy.fact","pet/emotion.changed","pet/emotion.expression","pet/life.changed","session/event","tools/pre-execute","tools/result"],
       "generated": [
         {"file":"src/living/body/animation-map.ts","sources":["scripts/build/build-animation-map.mjs"]}
@@ -106,7 +106,7 @@
       "services": ["petChannels"],
       "dependencies": ["core","memory","emotion","contracts","world","living","channels"],
       "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion","petBehavior","petLife","petEconomy","petChannels"],
-      "publishes": ["pet/life.review"],
+      "publishes": [],
       "subscribes": ["agent/pre-step","pet/core.changed","pet/life.changed","session/event"],
       "generated": []
     },

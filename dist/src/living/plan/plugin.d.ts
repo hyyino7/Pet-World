@@ -281,7 +281,6 @@ declare module '@deepseek-ai/cordis' {
         petLife: CompanionLife;
     }
     interface Events {
-        'pet/life.review'(sessionId: string): void;
         'pet/life.changed'(): void;
     }
 }

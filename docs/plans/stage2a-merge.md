@@ -714,6 +714,19 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - 返工共 8 个文件。`src/living/plan/plugin.ts` 约 114 行，`src/living/index.ts` 约 35 行，`tests/living/living-lifecycle.test.mjs` 约 146 行，本方案约 15 行。构建同步 `dist/src/living/{index,plan/plugin}.{js,d.ts}` 4 个文件约 173 行。1A 入口测试文件与返工前逐字一致，验证均使用合成目录中的真实 Cordis 入口。
 - 建议一个提交，说明「修复计划区显式暂停和卸载收尾时丢失的暂停回执与 home 花费」。改动留在 `codex/2a-3b-instance` 工作树。
 
+### 第 3 批 · 3C
+
+- 01 回顾对话搬入 Core，更新 Memory 和测试引用。3 个文件，12 行（+6 / −6）。`review-dialogue` 快测 1/1。
+- 02 相册工具搬入 Core，更新 Core、Life 引用和相册证据路径。4 个文件，10 行（+5 / −5）。工具声明、相册和入口快测 34/34。
+- 03 生活三区登记环境、互动事实和活动只读接口，在原生落盘后复核绑定、三区租约和准备结果再确认。14 个文件，571 行（+441 / −130）。契约、入口和 R6 快测 81/81，另跑菜园时钟 8/8。
+- 04 Core 与 Life 共用受限相册句柄，经登记保住 home 和电视门控。Life 与 Bridge 直调回顾整理。15 个文件，243 行（+203 / −40）。整理、相册门控和工具声明快测 33/33，重跑第 3 组 81/81。
+- 行数为增删之和，排除 `dist/src/**` 及基线。逐组临时副本的 `pnpm run build`、`pnpm run check:arch` 和细则快测全部通过。
+- 旧实现红测确认查询创建缺失活动目录、Economy 旧准备进入证据、Plan 重挂后旧轮次确认事实，以及受限相册和直调入口缺席。各用例在对应组通过。
+- `pnpm run check:types`、`pnpm run test:life-integration`（171/171、940/940）、`pnpm run build && pnpm run test:behavior-list`（索引 11/11、行为 88/88）通过。
+- `pnpm run check:arch -- --report` 核对第一层 23 → 22 → 21 → 9 → 5，最终仅剩细则指定五条；全仓 R1–R4 为 60 → 42，R8 为 1053，零新增。
+- 无范围偏离。按拍板更新 2A1A-17，`policy-life` 原断言沿用。缺目录用支持的旧版合成清单验证，共享登记仅在 Core 原生作用域可用时接线。验证只用合成数据。
+- 四组补丁在 `/tmp/her-world-3c-patches/`，从 `13ae820` 顺序应用后纳入补丁的文件与工作树逐字节一致。Claude 在沙箱外执行 `pnpm run verify`。
+
 ## 审查结论
 
 ### 1A 第一轮验收（Codex 审查 + Claude 核实）
