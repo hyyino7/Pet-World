@@ -25,6 +25,7 @@ export declare class LivingWorld {
         world: LivingWorld;
         release: (generation?: symbol) => void;
     };
+    retainCore(ctx: Context, host: PetCoreHost, area: Area): (() => void | Promise<void>) | undefined;
     register<K extends Area>(area: K, value: Areas[K], fiber: Fiber): {
         isLatestGeneration: () => boolean;
         lease: RegistrationLease;
@@ -52,7 +53,7 @@ export declare class LivingView {
     watch<K extends Area>(ctx: Context, area: K, notify: (area: AreaReference<Areas[K]> | undefined, isObserved: () => boolean) => void): () => void;
 }
 export declare function settleCleanup(...steps: (() => void | Promise<void>)[]): Promise<void>;
-export declare function mountLivingArea<K extends Area>(ctx: Context, host: PetCoreHost, area: K, create: (view: LivingView) => Areas[K], start: (value: Areas[K]) => void, close?: (value: Areas[K]) => void | Promise<void>): void;
+export declare function mountLivingArea<K extends Area>(ctx: Context, host: PetCoreHost, area: K, create: (view: LivingView) => Areas[K], start: (value: Areas[K], view: LivingView) => void | (() => void | Promise<void>), close?: (value: Areas[K]) => void | Promise<void>): void;
 export declare const livingCaller: () => (() => void) | undefined;
 export declare function withLivingCaller<T>(validate: () => void, call: () => T): T;
 export declare class InFlight {

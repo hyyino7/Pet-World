@@ -7399,13 +7399,13 @@
       "other": {
         "file": "src/core/native/conversation.ts",
         "scope": "CoreNative/observeFacts",
-        "line": 197
+        "line": 199
       }
     },
     {
       "rule": "R8",
       "file": "src/core/native/conversation.ts",
-      "line": 197,
+      "line": 199,
       "column": 98,
       "scope": "CoreNative/observeFacts",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -9439,13 +9439,13 @@
       "other": {
         "file": "src/core/native/conversation.ts",
         "scope": "CoreNative/observeFacts",
-        "line": 198
+        "line": 200
       }
     },
     {
       "rule": "R8",
       "file": "src/core/native/conversation.ts",
-      "line": 198,
+      "line": 200,
       "column": 26,
       "scope": "CoreNative/observeFacts",
       "target": "{\"file\":\"src/contracts/common.ts\",\"scope\":\"<module>\"}",
@@ -10051,13 +10051,13 @@
       "other": {
         "file": "src/core/native/conversation.ts",
         "scope": "CoreNative/observeFacts",
-        "line": 198
+        "line": 200
       }
     },
     {
       "rule": "R8",
       "file": "src/core/native/conversation.ts",
-      "line": 198,
+      "line": 200,
       "column": 26,
       "scope": "CoreNative/observeFacts",
       "target": "{\"file\":\"src/contracts/interaction.ts\",\"scope\":\"<module>\"}",
@@ -10133,13 +10133,13 @@
       "other": {
         "file": "src/core/native/conversation.ts",
         "scope": "CoreNative/observeFacts",
-        "line": 197
+        "line": 199
       }
     },
     {
       "rule": "R8",
       "file": "src/core/native/conversation.ts",
-      "line": 197,
+      "line": 199,
       "column": 98,
       "scope": "CoreNative/observeFacts",
       "target": "{\"file\":\"src/contracts/interaction.ts\",\"scope\":\"<module>\"}",
@@ -10832,7 +10832,7 @@
     {
       "rule": "R8",
       "file": "src/core/native/conversation.ts",
-      "line": 197,
+      "line": 199,
       "column": 98,
       "scope": "CoreNative/observeFacts",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
@@ -10871,13 +10871,13 @@
       "other": {
         "file": "src/core/native/conversation.ts",
         "scope": "CoreNative/observeFacts",
-        "line": 197
+        "line": 199
       }
     },
     {
       "rule": "R8",
       "file": "src/core/native/conversation.ts",
-      "line": 197,
+      "line": 199,
       "column": 98,
       "scope": "CoreNative/observeFacts",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
@@ -10914,13 +10914,13 @@
       "other": {
         "file": "src/core/native/conversation.ts",
         "scope": "CoreNative/observeFacts",
-        "line": 197
+        "line": 199
       }
     },
     {
       "rule": "R8",
       "file": "src/core/native/conversation.ts",
-      "line": 197,
+      "line": 199,
       "column": 98,
       "scope": "CoreNative/observeFacts",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -10959,13 +10959,13 @@
       "other": {
         "file": "src/core/native/conversation.ts",
         "scope": "CoreNative/observeFacts",
-        "line": 197
+        "line": 199
       }
     },
     {
       "rule": "R8",
       "file": "src/core/native/conversation.ts",
-      "line": 197,
+      "line": 199,
       "column": 98,
       "scope": "CoreNative/observeFacts",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -11004,13 +11004,13 @@
       "other": {
         "file": "src/core/native/conversation.ts",
         "scope": "CoreNative/observeFacts",
-        "line": 197
+        "line": 199
       }
     },
     {
       "rule": "R8",
       "file": "src/core/native/conversation.ts",
-      "line": 197,
+      "line": 199,
       "column": 98,
       "scope": "CoreNative/observeFacts",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -11047,13 +11047,13 @@
       "other": {
         "file": "src/core/native/conversation.ts",
         "scope": "CoreNative/observeFacts",
-        "line": 197
+        "line": 199
       }
     },
     {
       "rule": "R8",
       "file": "src/core/native/conversation.ts",
-      "line": 197,
+      "line": 199,
       "column": 98,
       "scope": "CoreNative/observeFacts",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/factSource\"}",
@@ -11087,13 +11087,13 @@
       "other": {
         "file": "src/core/native/conversation.ts",
         "scope": "CoreNative/observeFacts",
-        "line": 197
+        "line": 199
       }
     },
     {
       "rule": "R8",
       "file": "src/core/native/conversation.ts",
-      "line": 198,
+      "line": 200,
       "column": 26,
       "scope": "CoreNative/observeFacts",
       "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
@@ -11128,7 +11128,7 @@
       "other": {
         "file": "src/core/native/conversation.ts",
         "scope": "CoreNative/observeFacts",
-        "line": 198
+        "line": 200
       }
     },
     {

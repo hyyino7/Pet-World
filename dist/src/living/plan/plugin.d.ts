@@ -237,7 +237,7 @@ export declare class CompanionLife {
     } | {
         diary: string | null;
         day: string;
-        activity: import("../../../vendor/dsh-world/lib/life/types.js").ActivityRecord[];
+        activity: readonly import("../../../vendor/dsh-world/lib/life/types.js").ActivityRecord[];
         dialogue?: undefined;
         diaries?: undefined;
         removed?: undefined;

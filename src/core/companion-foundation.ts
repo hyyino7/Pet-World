@@ -9,12 +9,9 @@ import { renderTemplate } from '#dsh-world/worldPrompt';
 import type { PetCoreHost } from './index.js';
 import type { PetWorld } from '../world/service.js';
 import { check } from './storage.js';
-import { registerWorldPrompt, registerWorldContext } from './native/prompt.js';
+import { registerWorldPrompt } from './native/prompt.js';
 import { readSelfPrompt, trackCompanionWriting, type CompanionWritingScope } from './companion-writing.js';
 import { companionRecordPaths } from './record-paths.js';
-import type { CompanionFact, CompanionFactSource } from '../contracts/interaction.js';
-import {INTERACTION_CONTEXT,presentFacts} from './interaction-presentation.js';
-import {acknowledgePromptFacts} from './interaction-context.js';
 
 interface NativeWorkspace {
   id: string; path: string; sessionIds: readonly string[];
@@ -138,7 +135,7 @@ export function renderCompanionFoundation(ctx: Context, host: PetCoreHost, world
   const scope = companionWritingScope(ctx,host); if (!scope) return '';
   const get = (ctx as unknown as NativeServices).get.bind(ctx);
   return renderTemplate(host.workspace.foundation().text,
-    {memory:!!host.native.memoryFor(agent.id),emotion:!!get('petEmotion'),behavior:!!get('petBehavior'),records:true},
+    {memory:!!host.native.memoryFor(agent.id),emotion:!!get('petEmotion'),behavior:host.native.companionPorts.get('bodyAvailable')?.() ?? false,records:true},
     {selfFile:join(scope.directory,'self.md')});
 }
 
@@ -146,38 +143,16 @@ export function installCompanionFoundation(ctx: Context, host: PetCoreHost, worl
   owners.set(host,ctx);
   const prepared = new WeakMap<Agent,{workspaceId:string; text:string}>();
   const getScope = () => companionWritingScope(ctx,host);
-  const ownerScope = (agent: Agent) => {
+  const stopScope = host.native.companionPorts.bind(ctx, agent => {
     if (agent.session.header.agentPreset === 'chatpet-channel-guest' || host.native.isGuest(agent.id)
       || world.sessionStatus(agent.session)?.state !== 'ready') return;
     const current = workspace(ctx,host), scope = getScope();
     if (!current || !scope || !scope.sessionIds.includes(agent.id) || current.registry.archivedSessionIds.includes(agent.id)) return;
-    return {scope, key:JSON.stringify([scope.id,current.target.path,host.workspace.storageId()])};
-  };
-  const environments = new WeakMap<Agent,{
-    key:string; text:string; facts:CompanionFact[]; behavior:unknown; life:unknown;
-  }>();
-  const factTurns=new Map<string,{agent:Agent;key:string;workspaceId:string;turn?:number;sources:{service:CompanionFactSource;facts:CompanionFact[]}[]}>();
-  const stopFactStep=ctx.on('agent/pre-step',async(payload,next)=>{
-    const prepared=factTurns.get(payload.agent.id);
-    if(prepared && ownerScope(payload.agent)?.key===prepared.key)prepared.turn=payload.turn;
-    return next();
+    return {workspaceId:scope.id, path:current.target.path, storageId:host.workspace.storageId()};
   });
-  const stopFactDisposed=ctx.on('agent/disposed',({agent})=>{factTurns.delete(agent.id);host.native.clearPreparedFacts?.(agent.id);});
   const stopWriting = trackCompanionWriting(ctx,host,getScope);
   const stopHomeEvents = ctx.on('session/event',(session,event) => {
     if (event.type === 'turn/end') homes.get(host)?.home.turnEnded(session.id);
-    if(event.type!=='turn/end')return;
-    const delivered=factTurns.get(session.id);
-    if(!delivered || delivered.turn!==event.data.turn)return;
-    factTurns.delete(session.id);
-    if(event.data.reason.kind!=='completed' || ownerScope(delivered.agent)?.key!==delivered.key)return;
-    // Never await the domain queue from the native event/flush callback.
-    void acknowledgePromptFacts({turn:event.data.turn,workspaceId:delivered.workspaceId,sources:delivered.sources,
-      events:()=>[...session.surface.nodes].flatMap(seq=>{const event=session.eventAt(seq);return event?[event]:[];}),flush:()=>ctx.sessions.flush(session),validate:()=>{
-        check(ownerScope(delivered.agent)?.key===delivered.key,'Interaction context workspace changed');
-        for(const source of delivered.sources)for(const fact of source.facts)
-          check(ctx.get(fact.domain==='body'?'petBehavior':'petEconomy')===source.service,'Interaction domain service changed');
-      }}).catch(error=>ctx.logger('chatpet-environment').warn('Interaction acknowledgement retained for retry',error));
   });
   let lastHomeTitle = '';
   const refreshHomeTitle = () => {
@@ -195,57 +170,6 @@ export function installCompanionFoundation(ctx: Context, host: PetCoreHost, worl
   const stopIdentity = ctx.on('pet/core.changed',refreshHomeTitle);
   const stopIdentityTurn = ctx.on('agent/request',(_request,next) => {refreshHomeTitle(); return next();});
   const foundation = registerWorldPrompt(ctx,'chatpet.foundation',12,agent => renderCompanionFoundation(ctx,host,world,agent));
-  // Physical continuity belongs to the companion, not its autonomous scheduler
-  // or whichever native conversation happens to be the current home.
-  const environment = registerWorldContext(ctx,'chatpet.environment',14,agent => {
-    const current = ownerScope(agent), saved = environments.get(agent);
-    return current && saved?.key === current.key && saved.behavior === ctx.get('petBehavior') && saved.life === ctx.get('petLife') ? saved.text : '';
-  },async agent => {
-    environments.delete(agent);
-    const current = ownerScope(agent); if (!current) return;
-    host.native.clearPreparedFacts?.(agent.id);
-    const behavior = ctx.get('petBehavior'), life = ctx.get('petLife');
-    let body = '', plan = '';
-    const sources:{service:CompanionFactSource;facts:CompanionFact[]}[]=[];
-    if (behavior) {
-      try {
-        // Establish the selected body's binding before its synchronous prompt
-        // projection. This never enables autonomous Life or starts a model turn.
-        await behavior.snapshot(current.scope.id);
-        body = behavior.promptLine(current.scope.id);
-      } catch (error) {
-        body = '当前身体状态暂不可读；不要根据旧对话推定现在的位置、活动或动作结果。';
-        ctx.logger('chatpet-environment').warn('Shared body context is unavailable',error);
-      }
-    }
-    if (life) {
-      try { plan = life.currentPlanSummary(current.scope.id); }
-      catch (error) {
-        plan = '当前生活计划暂不可读；保留已有安排，不根据旧聊天猜测执行进度或重新派工。';
-        ctx.logger('chatpet-environment').warn('Shared life plan context is unavailable',error);
-      }
-    }
-    for(const service of [behavior,ctx.get('petEconomy')]) {
-      if(!service?.pendingFacts)continue;
-      try {sources.push({service,facts:(await service.pendingFacts(current.scope.id)).slice(0,16)});}
-      catch(error) {ctx.logger('chatpet-environment').warn('Pending interaction facts remain unavailable',error);}
-    }
-    if (ownerScope(agent)?.key !== current.key || behavior !== ctx.get('petBehavior') || life !== ctx.get('petLife')) return;
-    const facts=sources.flatMap(source=>source.facts);
-    if(facts.length) {
-      host.native.observeFacts?.(agent.id,facts);
-      // This is prepared per native request. Only its completed turn may
-      // acknowledge it, even when autonomous Life is disabled.
-      factTurns.set(agent.id,{agent,key:current.key,workspaceId:current.scope.id,sources});
-    }
-    const relation = '【同一个伙伴与身体】桌宠、房间画面和当前对话是同一个你的不同入口，画面中的身体不是另一个宠物。聊天可以表达动作和感受；身体活动是否执行、是否完成，以共享身体状态和工具结果为准，动画片段结束不代表生活活动结束。切换对话不重置生活计划，交流后按真实进度继续；不要因为换了会话就重新执行或消费。';
-    const capabilities = behavior ? '移动、身体互动和菜园操作通过当前实际可用的原生工具执行；文字描述不会自动产生动作、金钱或物品。' : '当前没有共享身体执行服务；不要假装已查询或控制画面身体。';
-    environments.set(agent,{key:current.key,behavior,life,facts,text:[relation,capabilities,body,plan].filter(Boolean).join('\n\n')});
-  });
-  const interactions = registerWorldContext(ctx,INTERACTION_CONTEXT,15,agent => {
-    const current=ownerScope(agent), saved=environments.get(agent);
-    return current && saved?.key===current.key && saved.behavior===ctx.get('petBehavior') && saved.life===ctx.get('petLife') && saved.facts.length ? presentFacts(saved.facts) : '';
-  });
   const records = registerWorldPrompt(ctx,'chatpet.records',13,agent => {
     const scope = getScope();
     if (!scope || world.sessionStatus(agent.session)?.state !== 'ready') return '';
@@ -262,7 +186,7 @@ export function installCompanionFoundation(ctx: Context, host: PetCoreHost, worl
     if (text && getScope()?.id === scope.id) prepared.set(agent,{workspaceId:scope.id,text});
   });
   return () => {
-    foundation(); environment(); interactions(); records(); self(); stopWriting(); stopHomeEvents(); stopFactStep();stopFactDisposed();factTurns.clear();stopIdentity(); stopIdentityTurn();
+    foundation(); records(); self(); stopWriting(); stopHomeEvents(); stopScope(); stopIdentity(); stopIdentityTurn();
     homes.delete(host); if (owners.get(host) === ctx) owners.delete(host);
   };
 }

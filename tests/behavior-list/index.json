@@ -1137,7 +1137,7 @@
       "categories": [],
       "level": "L1",
       "file": "tests/behavior-list/entries-lifecycle.test.mjs",
-      "name": "三入口全卸载后普通聊天、无身体环境段、相册和历史活动仍可用",
+      "name": "活动记录随可见生活入口提供，三入口全卸载后普通聊天、相册和日记仍可用",
       "l1Stage": "阶段 2",
       "families": []
     },

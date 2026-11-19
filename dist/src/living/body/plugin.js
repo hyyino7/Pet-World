@@ -537,9 +537,12 @@ export const name = '25-Behavior';
 export const inject = ['petCore'];
 export function apply(ctx) {
     const host = ctx.petCore;
-    return mountLivingArea(ctx, host, 'body', view => new CompanionBehavior(ctx, host, view), behavior => {
+    return mountLivingArea(ctx, host, 'body', view => new CompanionBehavior(ctx, host, view), (behavior, view) => {
         behavior.activate();
         ctx.provide('petBehavior', behavior);
+        const ports = host.native?.companionPorts;
+        if (ports?.scopeFor(ctx, 'petBehavior'))
+            return ports.register('bodyAvailable', () => view.lookup('body')?.value === behavior).revoke;
     });
 }
 //# sourceMappingURL=plugin.js.map

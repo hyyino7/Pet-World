@@ -12,12 +12,13 @@ import { COMPANION_TOOL_SOURCES, type CompanionToolDeclaration, type Registratio
 import { SourceAdapterTable } from '../tables/sources.js';
 import { RegistrationTable } from '../tables/registry.js';
 import { CompanionToolTable } from '../tables/tools.js';
+import { CompanionPorts, type CompanionBinding } from '../tables/companion-ports.js';
 
 export const OWNER_LIFE_TOOL_SOURCES = Object.freeze(COMPANION_TOOL_SOURCES.filter(
   source => source === 'owner' || source === 'life' || source === 'review',
 ));
 
-export interface NativeScope { workspaceId: string; path: string; storageId: string; guest: boolean }
+export interface NativeScope extends CompanionBinding { guest: boolean }
 export function matchesNativeScope(current: NativeScope | undefined, expected: NativeScope): boolean {
   return !!current && current.workspaceId === expected.workspaceId && current.path === expected.path
     && current.storageId === expected.storageId && current.guest === expected.guest;
@@ -86,6 +87,7 @@ export class CoreNative {
   private memoryEnabled = true;
   readonly toolTable = new CompanionToolTable();
   readonly sourceTable = new SourceAdapterTable<NativeSourceContext>(this.toolTable);
+  readonly companionPorts = new CompanionPorts();
   private readonly playbackProviders = new RegistrationTable<ResolvePlaybackEvidence>();
   resolveNativeScope?: (sessionId: string) => NativeScope | undefined;
   attachGuest?: (context: Context) => void;

@@ -391,8 +391,11 @@ declare module '@deepseek-ai/cordis' {
 }
 export function apply(ctx: Context) {
   const host=ctx.petCore;
-  return mountLivingArea(ctx,host,'body',view=>new CompanionBehavior(ctx,host,view),behavior=>{
+  return mountLivingArea(ctx,host,'body',view=>new CompanionBehavior(ctx,host,view),(behavior,view)=>{
     behavior.activate();
     ctx.provide('petBehavior',behavior);
+    const ports = host.native?.companionPorts;
+    if (ports?.scopeFor(ctx, 'petBehavior'))
+      return ports.register('bodyAvailable', () => view.lookup('body')?.value === behavior).revoke;
   });
 }

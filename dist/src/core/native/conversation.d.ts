@@ -8,11 +8,9 @@ import type { CompanionFact } from '../../contracts/interaction.js';
 import { type CompanionToolDeclaration, type SourceAdmission } from '../../contracts/tables.js';
 import { SourceAdapterTable } from '../tables/sources.js';
 import { CompanionToolTable } from '../tables/tools.js';
+import { CompanionPorts, type CompanionBinding } from '../tables/companion-ports.js';
 export declare const OWNER_LIFE_TOOL_SOURCES: readonly ("life" | "owner" | "review")[];
-export interface NativeScope {
-    workspaceId: string;
-    path: string;
-    storageId: string;
+export interface NativeScope extends CompanionBinding {
     guest: boolean;
 }
 export declare function matchesNativeScope(current: NativeScope | undefined, expected: NativeScope): boolean;
@@ -37,6 +35,7 @@ export declare class CoreNative {
     private memoryEnabled;
     readonly toolTable: CompanionToolTable;
     readonly sourceTable: SourceAdapterTable<NativeSourceContext>;
+    readonly companionPorts: CompanionPorts;
     private readonly playbackProviders;
     resolveNativeScope?: (sessionId: string) => NativeScope | undefined;
     attachGuest?: (context: Context) => void;
