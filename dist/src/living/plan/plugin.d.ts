@@ -13,6 +13,7 @@ export declare class CompanionLife {
     private preset;
     private binding?;
     private runtime?;
+    private drainingRuntime?;
     private enabled;
     private restoredClock;
     private pauses?;
@@ -38,6 +39,8 @@ export declare class CompanionLife {
     private guardArea;
     private enqueue;
     private current;
+    private isCurrentBinding;
+    private assertCurrentBinding;
     running(): boolean;
     /** Saved clock intent is independent of native planner readiness. This read
      * never waits on Life's queue or initializes a missing control directory. */

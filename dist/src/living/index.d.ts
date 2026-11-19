@@ -1,6 +1,6 @@
 import { Context, type Fiber } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../core/index.js';
-import type { RegistrationLease, TableRegistration } from '../contracts/tables.js';
+import type { RegistrationLease } from '../contracts/tables.js';
 import type { CompanionBehavior } from './body/plugin.js';
 import type { CompanionLife } from './plan/plugin.js';
 import type { CompanionEconomy } from './economy/plugin.js';
@@ -23,9 +23,14 @@ export declare class LivingWorld {
     static find(ctx: Context, host: PetCoreHost): LivingWorld | undefined;
     static retain(ctx: Context, host: PetCoreHost, area: Area): {
         world: LivingWorld;
-        release: () => void;
+        release: (generation?: symbol) => void;
     };
-    register<K extends Area>(area: K, value: Areas[K], fiber: Fiber): TableRegistration;
+    register<K extends Area>(area: K, value: Areas[K], fiber: Fiber): {
+        isLatestGeneration: () => boolean;
+        lease: RegistrationLease;
+        attach(scope: Context, install: (scope: Context, lease: RegistrationLease) => () => void): Promise<void>;
+        revoke(): Promise<void>;
+    };
     lookup<K extends Area>(area: K): (AreaReference<Areas[K]> & {
         lease: RegistrationLease;
     }) | undefined;
@@ -40,7 +45,8 @@ export declare class LivingView {
     private readonly ports;
     readonly isCurrent: () => boolean;
     private readonly world?;
-    constructor(ports?: LivingPorts, isCurrent?: () => boolean, world?: LivingWorld | undefined);
+    readonly isLatestGeneration: () => boolean;
+    constructor(ports?: LivingPorts, isCurrent?: () => boolean, world?: LivingWorld | undefined, isLatestGeneration?: () => boolean);
     lookup<K extends Area>(area: K): AreaReference<Areas[K]> | undefined;
     get<K extends Area>(area: K): Areas[K] | undefined;
     watch<K extends Area>(ctx: Context, area: K, notify: (area: AreaReference<Areas[K]> | undefined, isObserved: () => boolean) => void): () => void;

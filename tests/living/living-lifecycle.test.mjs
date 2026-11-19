@@ -5,8 +5,9 @@ import {join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import test from 'node:test';
 import {Context} from '@deepseek-ai/cordis';
+import {createAssistantMessage} from '@deepseek-ai/dsh-llm';
 import {createLifeStore} from '#dsh-world/life/lifeStore';
-import {cordisFixture, eventually} from '../behavior-list/entries-lifecycle.test.mjs';
+import {cordisFixture, eventually, submitPlan} from '../behavior-list/entries-lifecycle.test.mjs';
 
 const zones = {body: 'body', life: 'plan', economy: 'economy'};
 const services = {body: 'petBehavior', life: 'petLife', economy: 'petEconomy'};
@@ -339,4 +340,147 @@ test('R6 Life 卸载等待原生持久日志的无信号读取关闭 reader', as
   assert.equal(inFlight, 0);
   assert.equal(readFileSync(f.logFile(original), 'utf8'), log);
   assert.ok((await f.body.pendingFacts(f.id)).some(row => row.id === fact.id));
+});
+
+async function runningHold(t) {
+  const f = await cordisFixture(t);
+  f.model = async call => {
+    if (call.messages.some(message => message.source.kind === 'dsh-world-life'))
+      await submitPlan(call, [{id: 'rest', kind: 'hold', activity: 'Resting', durationMinutes: 10}]);
+    return 'Synthetic reply';
+  };
+  await f.enable();
+  const plan = await eventually(async () => {
+    const {plan} = await f.life.readPlan(f.id);
+    return plan?.execution?.status === 'running' && plan;
+  }, '定时活动已取得 Body 运行回执');
+  return {f, plan};
+}
+
+function holdPauseInspection(t, {body, life}) {
+  const gate = Promise.withResolvers();
+  const inspect = body.inspectPlanned.bind(body);
+  let waiting = false;
+  t.mock.method(body, 'inspectPlanned', async (workspaceId, operationId) => {
+    const receipt = await inspect(workspaceId, operationId);
+    if (life.bodyClockState(workspaceId)?.enabled === false) {
+      waiting = true;
+      await gate.promise;
+    }
+    return receipt;
+  });
+  return {waiting: () => waiting, release: gate.resolve};
+}
+
+test('3B 显式暂停等待 Body 时卸载 Life，重挂后保留暂停并按原编号恢复', async t => {
+  const {f, plan} = await runningHold(t);
+  const life = f.life, {operationId} = plan;
+  const inspection = holdPauseInspection(t, f);
+  const pausing = Promise.allSettled([life.control(f.id, false)]);
+  let unloading;
+  try {
+    await eventually(inspection.waiting, '显式暂停正在等待原 Body 回执');
+    unloading = f.unload('life');
+    await eventually(() => !f.life, 'Life 门面已撤下');
+    await assert.rejects(life.control(f.id, false), /生活组件已停止/);
+  } finally {
+    inspection.release();
+    await pausing;
+    await unloading;
+  }
+
+  await f.load('life');
+  const saved = await f.life.readPlan(f.id);
+  const paused = await f.body.inspectPlanned(f.id, operationId);
+  assert.deepEqual({
+    enabled: saved.enabled, plan: saved.plan.status, resumeOnEnable: saved.plan.resumeOnEnable,
+    operationId: saved.plan.operationId, receipt: paused.status,
+  }, {enabled: false, plan: 'paused', resumeOnEnable: true, operationId, receipt: 'paused'});
+  const [result] = await pausing;
+  assert.deepEqual(result, {status: 'fulfilled', value: {enabled: false, running: false}});
+
+  const pauseMs = 60 * 60_000;
+  t.mock.timers.tick(pauseMs);
+  assert.deepEqual(await f.life.control(f.id, true), {enabled: true, running: true});
+  const resumed = (await f.life.readPlan(f.id)).plan;
+  const receipt = await f.body.inspectPlanned(f.id, operationId);
+  assert.deepEqual({status: resumed.status, operationId: resumed.operationId, resumeOnEnable: resumed.resumeOnEnable},
+    {status: 'active', operationId, resumeOnEnable: false});
+  assert.equal(receipt.operationId, operationId);
+  assert.equal(receipt.status, 'running');
+  assert.equal(Date.parse(receipt.until), Date.parse(plan.execution.until) + pauseMs);
+});
+
+function appendUsage(session) {
+  const turn = (session.snapshotEvents().findLast(event => event.type === 'turn/start')?.data.turn ?? 0) + 1;
+  const step = 1, reason = {kind: 'completed'};
+  session.append('turn/start', {turn});
+  session.append('step/start', {turn, step});
+  const event = session.append('assistant/message', {
+    turn, step, stream: [], usage: {inputTokens: 1000, outputTokens: 125},
+    message: createAssistantMessage({source: {provider: 'fixture', model: 'scripted'}, content: [{type: 'text', text: 'Synthetic usage'}]}),
+  }, {surfaceOp: 'append'});
+  session.append('step/end', {turn, step, reason});
+  session.append('turn/end', {turn, reason});
+  return event;
+}
+
+test('3B 暂停等 Body 与运行时收尾期间照常落盘 home 花费，重挂淘汰旧写入', async t => {
+  const {f} = await runningHold(t);
+  const life = f.life, fiber = f.fiber('life'), runtime = life.runtime;
+  const homeId = life.homeSessionId();
+  assert.ok(homeId);
+  const home = await f.agent(homeId);
+  await home.whenIdle();
+  const store = createLifeStore(f.directory, life.timeZone);
+  const spend = () => store.read().spend?.yuan ?? 0;
+  const sessionHooks = () => f.ctx.events._hooks['session/event'].filter(hook => hook.ctx.fiber === fiber);
+  const liveHooks = sessionHooks();
+
+  const inspection = holdPauseInspection(t, f), finish = Promise.withResolvers();
+  const settled = runtime.settled.bind(runtime);
+  let retiredHooks;
+  t.mock.method(runtime, 'settled', async () => {
+    const remaining = new Set(sessionHooks());
+    retiredHooks = liveHooks.filter(hook => !remaining.has(hook));
+    await Promise.all([settled(), finish.promise]);
+  });
+  const pausing = Promise.allSettled([life.control(f.id, false)]);
+  let unloading;
+  try {
+    await eventually(inspection.waiting, '显式暂停正在等待 Body，home 仍能提交在途记账');
+    const before = spend();
+    appendUsage(home.session);
+    const duringPause = spend();
+
+    inspection.release();
+    await eventually(() => retiredHooks, '上游运行时进入 settled');
+    assert.ok(retiredHooks.length > 0);
+    unloading = fiber.dispose();
+    await eventually(() => !f.ctx.get('petLife', false), '旧 Life 门面已撤下');
+    // 模拟原生事件分发已取出该监听器，运行时撤订后才交付回调。
+    const recordLateUsage = () => {
+      const event = appendUsage(home.session);
+      for (const {callback} of retiredHooks) callback(home.session, event);
+    };
+    recordLateUsage();
+    const duringSettlement = spend();
+
+    await f.load('life');
+    assert.notEqual(f.life, life);
+    recordLateUsage();
+    const afterRemount = spend();
+    await f.unload('life');
+    recordLateUsage();
+    assert.deepEqual({pausing: duringPause > before, settling: duringSettlement > duringPause,
+      afterRemount, afterReplacementClosed: spend()},
+    {pausing: true, settling: true, afterRemount: duringSettlement, afterReplacementClosed: duringSettlement});
+  } finally {
+    inspection.release();
+    finish.resolve();
+    await pausing;
+    await unloading;
+  }
+  const [result] = await pausing;
+  assert.deepEqual(result, {status: 'fulfilled', value: {enabled: false, running: false}});
 });

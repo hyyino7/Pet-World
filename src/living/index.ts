@@ -11,7 +11,11 @@ type Area = keyof Areas;
 const bodyService = 'petBehavior', lifeService = 'petLife', economyService = 'petEconomy';
 const services = {body: bodyService, plan: lifeService, economy: economyService};
 type Labels = Record<Area, symbol>;
-type Slots<T> = Map<symbol, RegistrationTable<{value: T; fiber: Fiber}>>;
+interface Slot<T> {
+  table: RegistrationTable<{value: T; fiber: Fiber}>;
+  generation?: symbol;
+}
+type Slots<T> = Map<symbol, Slot<T>>;
 interface Domain {
   worlds: Set<LivingWorld>;
   slots: {[K in Area]: Slots<Areas[K]>};
@@ -60,24 +64,29 @@ export class LivingWorld {
     const world = this.matching(domain, labels) ?? new LivingWorld(domain, labels);
     domain.worlds.add(world);
     world.entries++;
-    return {world, release: () => {
+    return {world, release: (generation?: symbol) => {
       const slots = domain.slots[area], label = labels[area];
-      if (!slots.get(label)?.get(area)) slots.delete(label);
+      const slot = slots.get(label);
+      if (slot && slot.generation === generation && !slot.table.get(area)) slots.delete(label);
       if (--world.entries === 0) domain.worlds.delete(world);
       if (!domain.worlds.size) hosts.delete(host);
     }};
   }
 
-  register<K extends Area>(area: K, value: Areas[K], fiber: Fiber): TableRegistration {
+  register<K extends Area>(area: K, value: Areas[K], fiber: Fiber) {
     const slots: Slots<Areas[K]> = this.domain.slots[area], label = this.labels[area];
-    let table = slots.get(label);
-    if (!table) slots.set(label, table = new RegistrationTable());
-    return table.register(area, {value, fiber});
+    let slot = slots.get(label);
+    if (!slot) slots.set(label, slot = {table: new RegistrationTable()});
+    const registration = slot.table.register(area, {value, fiber});
+    const {generation} = registration.lease;
+    slot.generation = generation;
+    // Revocation hides the area immediately. A replacement also fences its draining writes.
+    return {...registration, isLatestGeneration: () => slot.generation === generation};
   }
 
   lookup<K extends Area>(area: K): (AreaReference<Areas[K]> & {lease: RegistrationLease}) | undefined {
     const slots: Slots<Areas[K]> = this.domain.slots[area];
-    const entry = slots.get(this.labels[area])?.get(area);
+    const entry = slots.get(this.labels[area])?.table.get(area);
     if (!entry) return;
     const {lease, value: {value, fiber}} = entry;
     const isCurrent = () => lease.isCurrent() && fiber.state === FiberState.ACTIVE;
@@ -90,7 +99,7 @@ export type LivingPorts = AreaPorts & {observe?: boolean};
 
 export class LivingView {
   constructor(private readonly ports: LivingPorts = {}, readonly isCurrent = () => true,
-    private readonly world?: LivingWorld) {}
+    private readonly world?: LivingWorld, readonly isLatestGeneration = isCurrent) {}
 
   lookup<K extends Area>(area: K): AreaReference<Areas[K]> | undefined {
     if (this.world) return this.world.lookup(area);
@@ -135,15 +144,17 @@ export function mountLivingArea<K extends Area>(ctx: Context, host: PetCoreHost,
   create: (view: LivingView) => Areas[K], start: (value: Areas[K]) => void,
   close: (value: Areas[K]) => void | Promise<void> = value => value.close()) {
   const {world, release} = LivingWorld.retain(ctx, host, area);
-  let registration: TableRegistration | undefined, value: Areas[K] | undefined, cleanup: Promise<void> | undefined;
+  let registration: (TableRegistration & {isLatestGeneration(): boolean}) | undefined;
+  let value: Areas[K] | undefined, cleanup: Promise<void> | undefined;
   const dispose = () => cleanup ??= settleCleanup(
     () => registration?.revoke(),
     () => {if(value) return close(value);},
-  ).finally(release);
+  ).finally(() => release(registration?.lease.generation));
   try {
     ctx.effect(() => dispose);
     const view = new LivingView({}, () => registration?.lease.isCurrent() === true &&
-      (ctx.fiber.state === FiberState.LOADING || ctx.fiber.state === FiberState.ACTIVE), world);
+      (ctx.fiber.state === FiberState.LOADING || ctx.fiber.state === FiberState.ACTIVE), world,
+      () => registration?.isLatestGeneration() === true);
     value = create(view);
     registration = world.register(area, value, ctx.fiber);
     start(value);

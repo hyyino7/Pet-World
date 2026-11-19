@@ -41,9 +41,10 @@ export class LivingWorld {
         const world = this.matching(domain, labels) ?? new LivingWorld(domain, labels);
         domain.worlds.add(world);
         world.entries++;
-        return { world, release: () => {
+        return { world, release: (generation) => {
                 const slots = domain.slots[area], label = labels[area];
-                if (!slots.get(label)?.get(area))
+                const slot = slots.get(label);
+                if (slot && slot.generation === generation && !slot.table.get(area))
                     slots.delete(label);
                 if (--world.entries === 0)
                     domain.worlds.delete(world);
@@ -53,14 +54,18 @@ export class LivingWorld {
     }
     register(area, value, fiber) {
         const slots = this.domain.slots[area], label = this.labels[area];
-        let table = slots.get(label);
-        if (!table)
-            slots.set(label, table = new RegistrationTable());
-        return table.register(area, { value, fiber });
+        let slot = slots.get(label);
+        if (!slot)
+            slots.set(label, slot = { table: new RegistrationTable() });
+        const registration = slot.table.register(area, { value, fiber });
+        const { generation } = registration.lease;
+        slot.generation = generation;
+        // Revocation hides the area immediately. A replacement also fences its draining writes.
+        return { ...registration, isLatestGeneration: () => slot.generation === generation };
     }
     lookup(area) {
         const slots = this.domain.slots[area];
-        const entry = slots.get(this.labels[area])?.get(area);
+        const entry = slots.get(this.labels[area])?.table.get(area);
         if (!entry)
             return;
         const { lease, value: { value, fiber } } = entry;
@@ -73,10 +78,12 @@ export class LivingView {
     ports;
     isCurrent;
     world;
-    constructor(ports = {}, isCurrent = () => true, world) {
+    isLatestGeneration;
+    constructor(ports = {}, isCurrent = () => true, world, isLatestGeneration = isCurrent) {
         this.ports = ports;
         this.isCurrent = isCurrent;
         this.world = world;
+        this.isLatestGeneration = isLatestGeneration;
     }
     lookup(area) {
         if (this.world)
@@ -127,13 +134,14 @@ export async function settleCleanup(...steps) {
 }
 export function mountLivingArea(ctx, host, area, create, start, close = value => value.close()) {
     const { world, release } = LivingWorld.retain(ctx, host, area);
-    let registration, value, cleanup;
+    let registration;
+    let value, cleanup;
     const dispose = () => cleanup ??= settleCleanup(() => registration?.revoke(), () => { if (value)
-        return close(value); }).finally(release);
+        return close(value); }).finally(() => release(registration?.lease.generation));
     try {
         ctx.effect(() => dispose);
         const view = new LivingView({}, () => registration?.lease.isCurrent() === true &&
-            (ctx.fiber.state === 1 /* FiberState.LOADING */ || ctx.fiber.state === 2 /* FiberState.ACTIVE */), world);
+            (ctx.fiber.state === 1 /* FiberState.LOADING */ || ctx.fiber.state === 2 /* FiberState.ACTIVE */), world, () => registration?.isLatestGeneration() === true);
         value = create(view);
         registration = world.register(area, value, ctx.fiber);
         start(value);
