@@ -372,6 +372,7 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/life/pl
 | Economy 独立证据 `economy-adoption.json` | 第二层·钱包区 | 钱包区唯一写入；登记进 `arch/storage.json` | 保住「缺库拒绝」；场景 3 |
 | 「需要迁移」状态和原因码 `migration-required` | 第一层·身份与绑定 | 4 批的拒绝路径测试 | 未迁移数据不被新代码写坏 |
 | 多段迁移日志、冻结的历史清单 | 迁移工具 | 1B 的落盘边界测试 | 第二轮迁移 |
+| 迁移与恢复共用的互斥文件 `/tmp/her-world-offline-<uid>/<仓库路径 sha256>.sqlite`（1B 新增，主人已同意保留） | 迁移工具与 `companion-backup restore` | 只有本检出的 `run`、`restore` 持有；`tests/migrate/concurrency.test.mjs`、`rollback.test.mjs` | 恢复会替换整个 `.chatpet/`，仓库内的迁移锁守不住「迁移进行中做恢复」 |
 | 基线「搬家改键」 | 架构检查 | 3A 的工具测试 | 搬目录不让基线失效 |
 
 **词表**：2a 的设计约束是不新增封闭集合、不统一词表（统一留给 2b）。用 R8 报告核对过（`node scripts/arch/check.mjs --report`，`2128d01`）：R8 1061 条，其中 653 条带三个生活目录的路径，`src/behavior/room.ts` 167 条、`src/life/plan.ts` 110、`src/life/plugin.ts` 64、`src/life/plan-tools.ts` 59 最多；3C 搬动的 `review-dialogue.ts` 带 6 条，`companion-foundation.ts` 涉及 8 条。3A、3C 只改键，条数不变。kind/action 字符串判断 283 / 104 点，第 6 批复测不应增加。新加的原因码、`companion-home` 等常量各只定义一处。
@@ -434,6 +435,8 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 
 ## 执行结果
 
+### 第 1 批 · 1A 旧行为取证
+
 - 1A 补了 15 项测试。`tests/core/context-contracts.test.ts` 覆盖 5.9 的新增契约证据，`tests/behavior-list/entries-lifecycle.test.mjs` 覆盖 6.2 的入口装卸、暂停和全卸载。
 - `tests/behavior-list/families.test.mjs` 加入 G9，真实 Life 输入调用计划工具，SQLite 拒绝首次库存结算后按原编号跨重启补结算，身体效果和账本各一次，计划自行续行。
 - `tests/behavior-list/index.json` 登记 15 项新测试和 3 项既有确认顺序测试，新增索引的 `l1Stage` 均为「阶段 2」。
@@ -460,6 +463,28 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - 1A 快测 30/30 通过。`pnpm run build && pnpm run test:behavior-list` 首次因 `dist` 短暂缺失退出，重跑后构建、索引 11/11、行为清单 70/70 均通过。
 - `pnpm run verify` 通过环境、类型、架构和构建检查。Node 测试 1431 项通过，1 项在 `tests/memory/memory-process.test.mjs:81` 遇到 `spawnSync /bin/ps EPERM`。本轮未观察到回环失败，Python 测试及发布、打包检查留待 Claude 在沙箱外完整重跑。
 
+### 第 1 批 · 1B 迁移工具
+
+- 问题 5：绑定检查和盘点共用 SQLite 私有复制，保留 WAL，由副本重建 SHM。实测 `plan`、`status`、锁外停写检查及 `manifest-mismatch` 拒绝均保留源目录文件和 mtime，双进程预检通过。
+- 调用方：迁移先查 Core 停写、锁内复核全部写入者，盘点查 Core、Economy、Memory 停写。备份 CLI 和 `backupPlan` 间接使用新绑定读取，创建与恢复照常走停写检查。安装器的绑定读取拒绝外部活跃 Core，应用阶段仍用原停写门禁。合成生成器同进程同步读取，复制前后核对源文件状态。
+- 多轮：冻结 v1，追加带步骤版本、绑定、备份地址及哈希的日志段，识别 0.2.0 单段日志。按实际目标推进清单，续做拒绝不同契约，已完成目标缺失时报不一致。迁移与恢复 CLI 在仓库外共用 SQLite 互斥，回带旧锁可接管，PID 复用拒绝。
+- 四处 SIGKILL 均通过：备份后写日志头前、数据提交后推进清单前、清单推进后写完成记录前、记录完成后目标丢失。合成回退检查了两种包指纹、Core 绑定、工作区登记、原生日志、投影、附件、设备引用，以及送达、额度和 Life 花费。已验同时接管旧锁及迁移与恢复双向拒绝。
+- 问题 7：复现发现首次启用 Memory 后夹具缺 Bank，第二轮补初始化后 P3-01 至 P3-05 通过，原脚本仍因近期播放未显式启用而失败。按两轮止损删除脚本及 npm 入口。基线调用原夹具时读取了本机安装 profile 的组合元数据，后续两轮切到合成 profile，会话和 Bank 使用合成数据。
+- 门禁改验真实 Core 工具和 Memory provider，覆盖同轮纠正与独立保存、旧提取拒绝、后续可见、撤回恢复、长回复精读、归档、失联确认及播放关联。删掉旧 Core 账本的三条断言和已装 DSH 回合级的模型计数、文件工具联跑、进程掉线降级断言。
+- `node --test tests/migrate/*.test.mjs` 134 通过，新增 Memory 门禁 3 通过，构建及行为清单 52 条通过。回环用例实际通过。Python provider 22 项、发布检查及临时包校验另行通过。
+- `pnpm run verify` 的 Node 测试 1429 通过、1 失败。 `tests/memory/memory-process.test.mjs:72` 的 P2 进程用例在第 81 行测 RSS 时报 `spawnSync /bin/ps EPERM`，由 Claude 在沙箱外重跑。真实副本和实机换包未验。`offline-backup.mjs` 的只读 SQL 已使用临时副本，`portable-repo.mjs` 的设备搬迁直读属本批授权之外，留待单独处理。
+- 建议提交 1「将原生 Memory 回归移入门禁」· `package.json`、`scripts/checks/check-native-memory.mjs`、`tests/memory/native-memory-flow.test.mjs`（3 文件，588 行）。
+- 建议提交 2「将 SQLite 绑定检查和盘点移到私有副本」· `scripts/lib/repo-storage.mjs`、`scripts/migrate/inventory-plan.mjs`、`scripts/migrate/inventory.mjs`、`tests/migrate/read-only.test.mjs`（4 文件，160 行）。
+- 建议提交 3「支持多轮离线迁移并与恢复互斥」· `scripts/companion-backup.mjs`、`scripts/migrate/companion-migrate.mjs`、`scripts/migrate/context.mjs`、`scripts/migrate/errors.mjs`、`scripts/migrate/io.mjs`、`scripts/migrate/journal.mjs`、`scripts/migrate/runner.mjs`、`scripts/migrate/steps/0001-storage-manifest.mjs`（8 文件，420 行）。
+- 建议提交 4「验收迁移的崩溃边界、并发与回退」· `tests/migrate/concurrency.test.mjs`、`tests/migrate/crash.test.mjs`、`tests/migrate/lock-gate.mjs`、`tests/migrate/migration-child.mjs`、`tests/migrate/normal.test.mjs`、`tests/migrate/rollback.test.mjs`（6 文件，386 行）。
+- 建议提交 5「更新离线迁移说明和 1B 执行记录」· `docs/development.md`、`docs/plans/stage2a-merge.md`（2 文件，28 行）。所有改动留在当前工作区，由 Claude 代提交。
+
+#### 第一轮返工
+
+- 已收尾段按 `storageId` 核对，未收尾段续做核对原路径和原备份。`status` 新增 `segment`，已收尾目标缺失时显示 `inconsistent`，续做以 `migration-inconsistent` 拒绝。合成用例覆盖搬家、第二轮中断和清单落盘后尚未写完成记录。
+- Memory 门禁通过合成宿主触发 `turn/end`，验证确认丢失时回合仍完成并记录故障，重启后按原观察 ID 补账。
+- 合成验证中迁移 136/136、Memory 门禁 4/4、构建及行为清单 52/52 通过。`verify` 的 Node 测试 1432 通过、1 失败，原因是 `tests/memory/memory-process.test.mjs:81` 遇到 `spawnSync /bin/ps EPERM`，由 Claude 在沙箱外重跑。
+
 ## 审查结论
 
 ### 1A 第一轮验收（Codex 审查 + Claude 核实）
@@ -480,3 +505,28 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 **待主人决定（验收不要求改）**：2A1A-12、2A1A-13 固定的是「暂停区间也长作物」的现状（差异清单第 1、2 行）。它违反「种地时钟」不变量，按故障家族算是第 3 次失守。是否在 3A 之前做 G3 复盘并单独修复，由主人决定；修复之后这两条的断言要随之翻转。
 
 **复查（返工一轮后）**：必须修 1、2 已修好，两条建议修（工具准入返回值、2A1A-05 在模型回调里检查）也已做。快测 30/30 通过，`test:behavior-list` 70 条通过。种地时钟一项仍待主人决定。
+
+### 1B 第一轮验收（Codex 审查 + Claude 核实）
+
+**必须修**
+
+1. `scripts/migrate/journal.mjs:53-57` 对每个第 2 版日志段都要求 `binding` 完全相等，其中包括仓库路径摘要 `repoHash`。迁移日志在 `.chatpet/data/` 里，会随 Repo 一起搬走；而 `docs/portability.md:78-81` 支持把 Repo 复制到新路径、存储身份不变。这样，0.3.0 迁移过一次之后再换设备或换路径，`status`、`plan` 和下一轮 `run` 都会报 `binding-changed`，没有出路。改法：已经全部 `done/skip` 的历史段只核对 `storageId`；只有续做最后一个未收尾的段时，才要求原路径和原备份。日志头照常记录两者。这一条修订了方案 1B「绑定（`storageId` 和仓库路径的摘要）」的校验口径：记录不变，校验分成两种情况。
+2. `scripts/migrate/runner.mjs:47-51` 在续做时，只有最后一段已经收尾才去核对上一轮的目标。如果第二轮中断，而上一轮完成的目标（例如清单）后来丢了，`--resume` 会把上一轮已完成的步骤当作没做过，再跑一遍。第 5 批的步骤会删掉源数据（Core 的 `economy.initialized` 键），重跑这类步骤会出错，甚至写出错误的证据。`status` 在这种情况下也会显示 `pending`，而不是 `inconsistent`。改法：`validateJournal` 同时记下最近一个已收尾段的步骤数；续做和 `status` 都先核对这些步骤的目标，缺了就报 `migration-inconsistent`；崩溃测试补上「第二轮中断加上一轮目标缺失」这一条。
+3. `tests/memory/native-memory-flow.test.mjs:150-155` 只断言 `finishTurn` 抛错。原脚本断言的是「Memory 确认丢失或服务掉线时，原生回合照样完成」（原 `scripts/checks/check-native-memory.mjs:314,339`），这件事靠 `src/core/native/agent.ts:306-311` 的 `.catch` 隔离，现在门禁里没有别的测试覆盖（已用 `git grep` 核对 `tests/`）。按方案「门禁里没有的断言要搬过来」，补一条：用合成宿主驱动 `turn/end`，`finishTurn` 失败时回合仍然完成、Memory 标记为不可用，重启后按原观察 ID 补账。
+
+**建议修（不影响合并，返工时可以一起做）**
+
+- `scripts/migrate/runner.mjs:38-41`：如果最后一步的数据和清单都已落盘、`done` 还没写，`status` 会全部显示 `complete`，但新的 `run` 会报 `journal-exists`。真实副本检查点上，Agent 只看得到这份输出。建议在 `status` 里加一个段级状态（本轮是否已收尾），并在对应的崩溃边界测试里断言它。
+
+**核实结果**：范围在允许修改名单内（`companion-backup.mjs` 拆成了 `main()` 并导出两个函数，见下面的拍板点）；快测 `tests/migrate/*.test.mjs` 加新的 Memory 门禁共 137/137 通过；新测试和新脚本都不读本机 profile 或真实数据（`tests/migrate/offline-helpers.mjs:14` 在临时目录里建合成 profile，Memory 门禁用 `mkdtemp` 根目录，用 `git grep` 核对过家目录、`HOME` 和 profile 路径）。在合成副本上从 CLI 跑了 `status`、`plan`，源目录保持不变；`run` 被 `dsh-running` 拒绝，因为主人的 DSH 正在运行，按规则不能停，所以 `run`、`restore` 没有实机走过，只由测试里的 mockDsh 覆盖。删掉的断言里，旧 Core 账本三条（原 `:177-180`，方案已经认定过期）、模型调用计数、文件工具联跑这几条删得合理；只有上面第 3 条要补回来。
+
+**迁移与恢复共用的互斥文件**（方案外机制）：主人已拍板保留（2026-11-19），返工不用动它。理由：恢复会整个替换 `.chatpet/`，放在 `.chatpet/data/` 里的 `migration.lock` 守不住「迁移进行中做恢复」（方案 1B 锁的窗口 (c)）；用 SQLite 的 `BEGIN IMMEDIATE` 做互斥，进程被杀时会自动释放，不留陈旧锁；互斥函数放在 `scripts/companion-backup.mjs` 里，是因为它随包发布，而在 `scripts/lib/` 新建文件要改 `package.json` 的 `files`（高风险）。合并时由 Claude 补进方案的「概念与扩展检查」和 `docs/development.md`：路径是 `/tmp/her-world-offline-<uid>/<仓库路径 sha256>.sqlite`，目录权限 0700、只属于当前用户，只有本检出的 `run` 和 `restore` 会去拿；0.2.0 包里自带的 `companion-backup.mjs` 不拿这个互斥，所以回退恢复要用本检出的命令（`docs/development.md` 已经这样写）。
+
+**合并时由 Claude 同步的文档和声明**
+
+- `arch/storage.json:58` 的 `protocol` 和 `evidence` 还写着「`scripts/checks/check-native-memory.mjs` 仍按它断言」，这个脚本已经删了。
+- `docs/portability.md:220-234`：`companion-backup plan/verify` 和 `install-dsh` 的预演（不带 `--apply`，`scripts/install-dsh.mjs:88,207`）现在遇到活跃的 Core 会拒绝，以前不会，要把这个前提写进文档。
+- `docs/product.md` 已知问题 5、7 的状态，以及 `:382` 第一批的完成勾选。
+- 两个分支都改了「执行结果」，合并第二个分支时两段都要保留。
+
+**复查（返工一轮后）**：必须修 1–3 已修好，`status` 的段级状态（`segment`）也已加上。快测（迁移测试加 Memory 门禁）140/140 通过，`test:behavior-list` 52 条通过。`--resume` 遇到已收尾的段时改成不写任何日志（`tests/migrate/normal.test.mjs` 相应改断言），这是有意的行为变化，不算放宽断言。上面列的「合并时由 Claude 同步」各项照旧。

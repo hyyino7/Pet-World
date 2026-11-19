@@ -13,7 +13,9 @@ for (const variant of variants) test(`${variant}: migration, actual recall and p
   mockDsh(t); const f = await fixture(t, variant), backup = join(f.out, 'backup');
   await recall(f); const before = memoryLogical(f);
   const manifestBefore = readFileSync(join(f.managed, 'manifest.json'));
-  assert.deepEqual(migrationStatus(f.installation).steps, [{id:'0001-storage-manifest',state:'pending'}]);
+  assert.deepEqual(migrationStatus(f.installation), {
+    steps:[{id:'0001-storage-manifest',state:'pending'}], truncated:false, segment:'none',
+  });
   const cli = ['--import',resolve('tests/migrate/dsh-probe.mjs'),resolve('scripts/migrate/companion-migrate.mjs')];
   const executed = spawnSync(process.execPath,[...cli,'run','--installation',f.installation,'--backup',backup],{encoding:'utf8'});
   assert.equal(executed.status,0,executed.stderr);
@@ -27,15 +29,16 @@ for (const variant of variants) test(`${variant}: migration, actual recall and p
   const originalLease = readFileSync(join(backup,'data/companion/payload/data/migration.lock'));
   const version = read(join(f.data, 'storage-manifest.json'));
   assert.equal(version.schemaVersion, 1); assert.equal(version.companionId, f.config.companionId);
-  const header = JSON.parse(readFileSync(join(f.data, 'migrations.jsonl'),'utf8').split('\n')[0]);
-  assert.equal(header.backup, backup); assert.equal(header.manifestHash, hash(readFileSync(join(backup,'manifest.json'))));
+  const journalFile = join(f.data, 'migrations.jsonl'), journal = readFileSync(journalFile,'utf8');
+  const header = JSON.parse(journal.split('\n')[0]);
+  assert.equal(header.backup, backup); assert.equal(header.backupHash, hash(readFileSync(join(backup,'manifest.json'))));
   verifyOfflineBackup(backup, planFor(f));
   assert.deepEqual(memoryLogical(f), before, 'Migration never changes Bank logical content');
   await coreReady(f); await recall(f);
   assert.deepEqual(readFileSync(join(f.managed,'manifest.json')), manifestBefore, 'Identity fingerprint is untouched');
   assert.equal(migrationStatus(f.installation).steps[0].state, 'complete');
   await runMigration({installation:f.installation,resume:true});
-  assert.equal(readFileSync(join(f.data,'migrations.jsonl'),'utf8').trim().split('\n').map(JSON.parse).at(-1).event, 'skip');
+  assert.equal(readFileSync(journalFile,'utf8'),journal);
   // Actual restore keeps latest delivery/quota receipts and spend, and treats
   // profile configuration as a reference rather than a replacement root.
   const db = new DatabaseSync(join(f.config.dataDir,'core.sqlite'));

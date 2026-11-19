@@ -72,6 +72,11 @@ for (const variant of [...variants,'offline-metadata']) test(`${variant}: refusa
     finally {rmSync(link);}
   });
   await run();
+  // Simulate interruption after the manifest advanced but before the terminal row.
+  const journalFile = join(f.data,'migrations.jsonl');
+  const journal = readFileSync(journalFile,'utf8').trimEnd().split('\n');
+  assert.equal(JSON.parse(journal.pop()).event,'done');
+  writeFileSync(journalFile,journal.join('\n') + '\n');
   const savedManifest = readFileSync(join(backup,'manifest.json'));
   await t.test('backup hash changed',async () => {
     const before = fileHashes(f.managed), file = join(backup,'manifest.json');

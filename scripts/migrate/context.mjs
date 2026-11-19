@@ -5,11 +5,13 @@ import { backupPlan, assertDshStopped } from '../lib/offline-backup.mjs';
 import { inspectRepoBinding, assertStopped } from '../lib/repo-storage.mjs';
 import { inspectTree, json, regular } from './io.mjs';
 import { checked, requireMigration } from './errors.mjs';
+import manifestStep, { storageManifest } from './steps/0001-storage-manifest.mjs';
 
 export const storage = json(new URL('../../arch/storage.json', import.meta.url));
 export function loadInstallation(file) {
   const receipt = readInstallation(file);
   inspectTree(receipt.config.dataDir);
+  checked('writer-running', () => assertStopped(receipt.config.dataDir, 'core'));
   const binding = checked('binding-changed', () => inspectRepoBinding(receipt.config));
   requireMigration(binding.state === 'ready', 'binding-changed');
   const plan = checked('binding-changed', () => backupPlan({repo:binding.root, workspaceId:binding.target.id, storageId:binding.storageId,
@@ -20,14 +22,15 @@ export function loadInstallation(file) {
     journalFile:join(data, 'migrations.jsonl'), lockFile:join(data, 'migration.lock')};
 }
 export function expectedManifest(context) {
-  const owners = [...new Set(storage.entries.map(row => row.owner))].sort();
-  assert.deepEqual(Object.keys(storage.dataVersions).sort(), owners, 'Version owners differ from storage registry');
-  return {schemaVersion:1, companionId:context.plan.companionId, modules:storage.dataVersions};
+  return storageManifest(context, manifestStep.to);
 }
-export function manifestComplete(context) {
-  if (!regular(context.manifestFile)) return false;
-  requireMigration(isDeepStrictEqual(checked('manifest-mismatch', () => json(context.manifestFile)), expectedManifest(context)), 'manifest-mismatch');
-  return true;
+
+export function manifestVersion(context, contract) {
+  if (!regular(context.manifestFile)) return 0;
+  const manifest = checked('manifest-mismatch', () => json(context.manifestFile));
+  const index = contract.findIndex(step => isDeepStrictEqual(manifest, storageManifest(context, step.to)));
+  requireMigration(index >= 0, 'manifest-mismatch');
+  return index + 1;
 }
 export function assertOffline(context) {
   checked('dsh-running', () => assertDshStopped(context.plan));

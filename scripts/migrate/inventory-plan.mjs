@@ -1,12 +1,11 @@
-// The shared binding reader opens SQLite read-only, which can still create SHM.
-// Reuse that reader and backupPlan on a metadata mirror, never the source DB.
+// Reuse backupPlan on a private metadata mirror, without touching source databases.
 import assert from 'node:assert/strict';
-import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { DatabaseSync } from 'node:sqlite';
 import { backupPlan } from '../lib/offline-backup.mjs';
-import { inspectRepoBinding } from '../lib/repo-storage.mjs';
+import { assertStopped, copyDatabase, inspectRepoBinding } from '../lib/repo-storage.mjs';
 import { inspectTree, json, regular } from './io.mjs';
 import { readInstallation } from './context.mjs';
 import { checked } from './errors.mjs';
@@ -15,24 +14,18 @@ const within = (root, path) => path === root || path.startsWith(root + sep);
 // Native project path encoding, identical to offline-backup's path convention.
 const projectKey = path => '--' + (path.replace(/[\\/:]+/g, '-').split('').map(ch => /^[A-Za-z0-9._-]$/.test(ch)
   ? ch : '~' + ch.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')).join('').replace(/^-+/, '') || 'root').slice(0, 251) + '--';
-const copyDatabase = (source, target) => {
-  mkdirSync(dirname(target), {recursive:true});
-  for (const suffix of ['', '-wal', '-shm', '-journal']) if (existsSync(source + suffix)) {
-    regular(source + suffix); cpSync(source + suffix, target + suffix);
-  }
-};
 export function inventoryPlan(installation) {
   const receipt = readInstallation(installation);
   return checked('binding-changed', () => buildInventoryPlan(receipt));
 }
 function buildInventoryPlan(receipt) {
   inspectTree(receipt.config.dataDir);
+  checked('writer-running', () => assertStopped(receipt.config.dataDir, 'core'));
   // Canonicalize before deriving any binding, registry or backup-plan paths.
   const scratch = realpathSync(mkdtempSync(join(tmpdir(), 'inventory-binding-')));
   try {
     const initial = join(scratch, 'initial-core');
-    copyDatabase(join(receipt.config.dataDir, 'core.sqlite'), join(initial, 'core.sqlite'));
-    const discovered = inspectRepoBinding({...receipt.config, dataDir:initial});
+    const discovered = inspectRepoBinding(receipt.config);
     assert.equal(discovered.state, 'ready');
     const repo = discovered.root, home = dirname(dirname(receipt.profileDir));
     const mirrorRepo = join(scratch, 'repo'), mirrorHome = join(scratch, 'dsh');
@@ -44,18 +37,20 @@ function buildInventoryPlan(receipt) {
     };
     // Only declarations and identity/binding metadata need bytes. The remaining
     // declared resources are empty regular placeholders, checked by the same API.
+    const sourceCore = join(receipt.config.dataDir,'core.sqlite');
     const managed = join(repo,'.chatpet'), manifest = json(join(managed,'manifest.json'));
     inspectTree(managed);
     for (const name of new Set(['README.md','manifest.json','SOUL.md','USER.md','core.json',...manifest.files])) {
       assert.ok(typeof name === 'string' && !isAbsolute(name) && !name.split(/[\\/]/).includes('..'));
       const source = join(managed,name), target = map(source), stat = lstatSync(source);
+      if (source === sourceCore) continue; // The binding database is copied below.
       if (stat.isDirectory()) mkdirSync(target,{recursive:true});
       else {mkdirSync(dirname(target),{recursive:true});writeFileSync(target,name === 'manifest.json' ? readFileSync(source) : '');}
     }
     const config = structuredClone(receipt.config);
     const coreInside = within(repo, config.dataDir) || within(home, config.dataDir);
     config.dataDir = coreInside ? map(config.dataDir) : initial;
-    if (coreInside) copyDatabase(join(receipt.config.dataDir,'core.sqlite'),join(config.dataDir,'core.sqlite'));
+    copyDatabase(sourceCore,join(config.dataDir,'core.sqlite'));
     const db = new DatabaseSync(join(config.dataDir,'core.sqlite'));
     try {
       for (const kind of ['preferences','workspace-binding']) {

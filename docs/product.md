@@ -227,9 +227,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 2. 发给 Memory provider 的 `workspaceId` 实际是 `storageId` | TS 侧 M2 后已改名：`MemoryScope` 的第三个字段是 `bankId`（`src/memory/client.ts:11`，取值见 `src/core/native/memory.ts:53`）；发给 Python provider 的兼容形状仍叫 `workspaceId`（`src/memory/client.ts:12,57`） | provider 边界的字段名仍混淆原生工作区和可搬迁 Bank 身份；本项不证明串库 | 已复现：合成工作区设置不同的两种 ID，经公开 `findForOwner` 驱动、仅在 provider 启动边界捕获 scope，收到的是 `storageId` | 待主人决定 |
 | 3. 错误码及设置回复的恢复语义不一致 | `src/contracts/common.ts:21` 有 `EXPIRED_USE`，`src/core/storage.ts:10` 的辅助联合没有；`src/console/settings.ts:17,400,402` 只保留 `code/message/details` | 辅助函数无法按声明类型表达该拒绝；设置调用者丢失 `effect/retry`，不能据此判断核对或重试 | 已复现：丢弃式 TypeScript 调用产生 TS2345；真实设置处理器收到 `partial/reconcile` 后，回复均无这两个字段 | 阶段 3 并入设置 RPC 声明（阶段 1 缩小方案） |
 | 4. 两套呈现分类器对混合情绪结论不同 | `src/behavior/presentation.ts:21`；`src/behavior/playback.ts:95,109` | 空闲且 `feelings=[anger,calm]` 时，语义呈现为 `emotion/anger`，播放槽为 `rest.calm` | 已复现：同一个合成 home 调用两个真实函数得到上述不同结果 | 待主人决定 |
-| 5. 只读绑定检查写源库附属文件，并发存在锁竞争 | `scripts/lib/repo-storage.mjs:20` 的只读 SQLite 连接；`scripts/migrate/context.mjs:14,38`；锁前调用顺序 `scripts/migrate/runner.mjs:35,43,52` | `plan`、`status`、锁外预检和版本不一致等拒绝路径仍在源 Core 目录生成 `core.sqlite-wal/-shm`；迁移锁保护不了此前的 SQLite 读取，并发预检可能提前失败 | 已复现：关闭的合成 Core 清理附属文件后，独立 inspect、两种 CLI 只读命令、锁外 `assertOffline`、`manifest-mismatch` 拒绝均重新生成两文件而未取得迁移锁；双读屏障实测 `ERR_SQLITE_ERROR` / `errcode 261`。盘点使用隔离镜像（`scripts/migrate/inventory-plan.mjs:31,35`） | 已确认，阶段 2a 第一批修（第一次真实数据迁移之前） |
 | 6. 新装环境里桌宠外观编辑器没加载 | 已安装的 0.1.8 桌宠外观编辑器；源码位置在本仓库还没定位 | 新设备上界面固定提示 `EDITOR_NOT_LOADED`，没有添加形象的入口；桌宠服务本身可用 | 已在 Mac mini 新装 DSH + 0.1.8 上观察到（M1 D 批）。当时的 Codex 怀疑是可选命令依赖挡住了编辑器加载，并写了候选补丁，但补丁没有装上，修复效果没验证；默认独立桌宠的 Electron 路径缺失也是同时观察到的环境缺口，是不是原因还没确定 | 已观察到，原因未确认，待主人安排 |
-| 7. `test:native-memory` 检查跑不通 | `package.json:96` → `scripts/checks/check-native-memory.mjs:130` | 原生记忆的整条检查失效；它不在 `verify` 里，平时不会暴露 | 本机实跑失败：第一次原生回合就报 `Native turn ended: error`，原因没查。脚本 `:177` 还在断言当前代码已经不写的 `native-memory-action` | 已复现，原因未查；2a 第一批修好或删掉（2a 要把 Memory 改成被向下调用，需要这条检查） |
 | 8. setup 安装的伙伴改用版本页换包会丢 Core 配置 | `scripts/install-dsh.mjs:169-170` 把 Core 配置写进本地打包的 `cordis.patch.yml`；npm 包里的这份 patch 没有 `config`；profile 层私有覆盖的写法见 `scripts/prepare-store-switch.mjs:35-37`（这个脚本只认旧的 `dsh-Chatpet` 包） | 用 `dafeiyu-setup` 装的伙伴，在版本页换成任何 npm 版本（同版本 0.1.8 也一样）后，`00-Core` 报 `Invalid companionId`，无法启动；profile 配置和数据不变。日常机器已是 npm 包加 profile 层覆盖，不受影响 | 已复现：M3 C 批隔离环境，setup 版 0.1.8 换成 npm 版 0.1.8 即出现 | 已复现。处理办法：退出 DSH，把安装回执 `installation.json` 里的 `config` 写成 `- id: 00-Core` 覆盖追加到 profile 的 `cordis.patch.yml`，再换包。2a 里作为单独的常规批次根治（见 2a 完成标准） |
 | 9. 迁移兼容测试的 legacy 变体在 CI 偶发失败 | `tests/migrate/compatibility.test.mjs` 的 `legacy` 变体；失败的断言在 `scripts/fixtures/synthetic-companion.mjs:104`（刚写入的合成记忆召回不到） | 发布门禁偶发失败，重跑能过；0.2.0 正式版的发布运行一次通过 | 0.2.0-rc.1 的发布运行第 1 次尝试失败、第 3 次通过；本机单跑 15 次、加负载并行 30 次都没复现，召回前加 0–3 秒延迟也通过 | 原因未查，主人判断是 GitHub 侧问题。2a 扩展迁移测试时再出现，按 G3 处理 |
 
@@ -375,11 +373,11 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 开工前（准入，缺一项不开工）：
 
 - [x] 上下文段清单（5.9）、三个旧入口语义表（6.2）、第一批概念表（5.6：动作、行为、活动、阶段、命令、事实）补进 [architecture.md](architecture.md)，主人确认；会话策略表（5.8）的行号同时重核。
-- [ ] 2a 按大改写方案，主人同意；第二层的目录名在方案里定。
+- [x] 2a 按大改写方案，主人同意；第二层的目录名在方案里定。
 
 完成标准（已经主人确认）：
 
-- [ ] 第一批是安全网，单独写方案：5.9 的隐含契约变成契约测试（工具限制早于 schema 解析、`environment` 先于 `interactions`、`chatpet.interactions` 段名和原样 JSON、事实确认晚于日志落盘、替换只在打开的请求里、预设名／会话前缀／渠道目录的路由恢复协议、「home 身份」与「Life 在运行」分开判定），复用 `test:native-context` 和历史维护测试；修已知问题 5；已知问题 7 的 `test:native-memory` 修好或删掉；定迁移的版本过渡（完成日志的归档、旧存储清单的过渡、每轮新备份的边界、恢复带回的旧迁移锁）。
+- [x] 第一批是安全网，单独写方案：5.9 的隐含契约变成契约测试（工具限制早于 schema 解析、`environment` 先于 `interactions`、`chatpet.interactions` 段名和原样 JSON、事实确认晚于日志落盘、替换只在打开的请求里、预设名／会话前缀／渠道目录的路由恢复协议、「home 身份」与「Life 在运行」分开判定），复用 `test:native-context` 和历史维护测试；修已知问题 5；已知问题 7 的 `test:native-memory` 修好或删掉；定迁移的版本过渡（完成日志的归档、旧存储清单的过渡、每轮新备份的边界、恢复带回的旧迁移锁）。
 - [ ] 旧入口语义表的每一行都有测试，且全绿。
 - [ ] 行为清单的执行项全绿（现为 70 条），身体、种地、日记、结算相关条目都在其中，包括「身体效果已生效、库存结算失败后重启」。
 - [ ] 常驻实例和旧服务名门面落地；R6：2a 新写的模块各带一条「关闭后不留尾巴」测试；R7：卸载生活入口、显式暂停生活、卸载身体入口三种情况分别通过。

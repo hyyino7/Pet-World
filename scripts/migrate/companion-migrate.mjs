@@ -16,7 +16,7 @@ try {
   requireMigration(command === 'run' || !options['--backup'] && !options['--resume'], 'usage');
   requireMigration(!options['--resume'] || !options['--backup'], 'usage');
   const result = command === 'run' ? await runMigration({installation:options['--installation'],
-    backup:options['--backup'], resume:options['--resume']}) : migrationStatus(options['--installation']);
+    backup:options['--backup'], resume:options['--resume']}) : migrationStatus(options['--installation'], undefined, { plan:command === 'plan' });
   if (command === 'plan') result.steps = result.steps.filter(step => step.state === 'pending');
   console.log(JSON.stringify(result, null, 2));
 } catch (error) {

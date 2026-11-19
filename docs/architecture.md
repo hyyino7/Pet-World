@@ -616,9 +616,9 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 阶段 1 只做「存储清单加版本号和迁移日志」，数据格式其余不变。第一项真实数据迁移是阶段 2 的共享 home 身份记录，用来**演练备份 → 迁移 → 回退这条流程**。它不能证明跨数据库搬迁、身体与经济的未决结算、新版运行后的回退都正确，所以**不据此宣告迁移链路已通过**。完整验证等到第一次真正的跨数据库搬迁（`desktop-session`、Channels 账本或 `economy.initialized`）时做。
 
-版本号和日志放在 `.chatpet/data/storage-manifest.json` 和 `.chatpet/data/migrations.jsonl`，迁移锁是同目录的 `migration.lock`（`scripts/migrate/context.mjs:19-20`）。它们不放进 `.chatpet/manifest.json`：那个文件算进绑定指纹（`src/core/workspace.ts:155,171`），还会被 Core 改写（`:279-281`）。三个文件都在 `.chatpet/` 里，现有备份自然覆盖。
+版本号和日志放在 `.chatpet/data/storage-manifest.json` 和 `.chatpet/data/migrations.jsonl`，迁移锁是同目录的 `migration.lock`（`scripts/migrate/context.mjs:21-22`）。它们不放进 `.chatpet/manifest.json`：那个文件算进绑定指纹（`src/core/workspace.ts:155,171`），还会被 Core 改写（`:279-281`）。三个文件都在 `.chatpet/` 里，现有备份自然覆盖。
 
-一次迁移完成后，日志一直留着，再跑全新的 `run` 会被拒绝（`scripts/migrate/runner.mjs:26-31`）。阶段 2a 增加第二个迁移步骤之前（2a 第一批），要一起定好：完成日志归档还是另起日志和备份；旧存储清单怎么过渡（清单按完全相等比较，更新 `dataVersions` 后旧清单会在加锁前报 `manifest-mismatch`，`scripts/migrate/context.mjs:22-30`）；每轮新备份的边界；恢复会把旧的 `migration.lock` 一起带回来（`tests/migrate/normal.test.mjs:46-54`）。
+迁移按轮追加日志段：每轮的段头写明本轮步骤集、每步的源版本和目标版本、绑定（`storageId` 和仓库路径摘要）、同包续做备份的地址和校验值（`scripts/migrate/journal.mjs:14,38`）。上一轮全部完成且目标仍在，才能开新一轮；`--resume` 只续最后一轮，并要求步骤集和当前代码一致（`scripts/migrate/runner.mjs:48`）。v1 存储清单冻结在步骤表里（`scripts/migrate/steps/0001-storage-manifest.mjs:4`），之后每一步完成目标后由运行器推进清单（`scripts/migrate/runner.mjs:123`）。迁移和恢复用仓库外的互斥文件串行（`scripts/companion-backup.mjs:17`，`scripts/migrate/runner.mjs:88`），因为恢复会替换整个 `.chatpet/`；恢复带回的旧 `migration.lock` 按陈旧锁接管（`scripts/migrate/io.mjs:48`）。命令、状态值和原因码见 [development.md](development.md)。
 
 ### 7.5 演练覆盖
 
