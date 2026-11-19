@@ -5,12 +5,12 @@ import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, copyFileSync, cpSy
 import { join, resolve, dirname, isAbsolute, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { randomUUID, createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual, parseArgs } from 'node:util';
 import assert from 'node:assert/strict';
 import { assertStopped, prepareRepoStorage, relocateRepoStorage, inspectRepoBinding, boundMemoryDirectory, fileHashes } from './lib/repo-storage.mjs';
 import { loadPortableRepo } from './lib/portable-repo.mjs';
-import { prepareDeviceRuntime, applyDeviceRuntime } from './lib/device-runtime.mjs';
+import { prepareDeviceRuntime as planDeviceRuntime, applyDeviceRuntime } from './lib/device-runtime.mjs';
 import {
   prepareCoreConfiguration, prepareMemoryServiceEntry, SetupError, checkedSetup, requireSetup,
   coreEntry, coreConfiguration, sameCoreBinding, readPatchList, coreDeclaration, profileCoreOverride,
@@ -22,6 +22,7 @@ const migrating = options[0] === 'migrate-core-config';
 const shared = ['dsh-app', 'dsh-home', 'profile', 'output-dir'];
 const versionPattern = /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(-[\da-z-]+(?:\.[\da-z-]+)*)?(?:\+[\da-z-]+(?:\.[\da-z-]+)*)?$/i;
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const prepareDeviceRuntime = options => checkedSetup('device-runtime-invalid', () => planDeviceRuntime(options));
 let app, home, profile, profileDir, configPath, dir, installedRoot, installedBundle, installedReceipt;
 let require, bundleYaml, yamlDocument, entryListSchema, applyEntryPatches, values;
 const arg = (key, fallback) => values[key.slice(2)] ?? fallback;
@@ -145,7 +146,7 @@ function readProfile() {
   });
   const effective = resolveCoreEntry(bundlePatches, profilePatches, homePatches, applyEntryPatches);
   const config = coreConfiguration(effective.config), base = coreConfiguration(declaration.config);
-  requireSetup(!base || config && sameCoreBinding(base, config), 'core-binding-conflict');
+  requireSetup(!base || config && sameCoreBinding(base, config, [packageRoot, installedRoot]), 'core-binding-conflict');
   return {manifest, installed, enabled, patch, profilePatches, homePatch, homePatches, override, bundlePatches, config};
 }
 
@@ -221,7 +222,7 @@ function packageState() {
   return {manifestFiles, packages};
 }
 
-async function applyProfileChange(state, previous, patch, attempt, bindingUnchanged, apply) {
+async function applyProfileChange(state, previous, patch, attempt, bindingUnchanged, apply, completedReceipt) {
   const {stage, file, save, installation} = attempt;
   const previousPatch = state.patch ? join(stage, 'previous-cordis.patch.yml') : null;
   const previousReceipt = previous.file ? join(stage, 'previous-installation.json') : null;
@@ -239,7 +240,7 @@ async function applyProfileChange(state, previous, patch, attempt, bindingUnchan
     await apply();
     installation.status = 'installed';
     save();
-    checkedSetup('receipt-write-failed', () => atomicWrite(installedReceipt, migrating && previous.file || privateJson(installation)));
+    checkedSetup('receipt-write-failed', () => atomicWrite(installedReceipt, completedReceipt ?? privateJson(installation)));
   } catch (error) {
     let restored = false;
     try {
@@ -265,10 +266,10 @@ async function applyProfileChange(state, previous, patch, attempt, bindingUnchan
 }
 
 function runPlugin(args) {
-  const env = {...process.env, DSH_HOME: home, npm_config_ignore_scripts: 'true'};
-  if (values.offline) env.npm_config_offline = 'true';
+  const env = {...process.env, DSH_HOME: home, npm_config_ignore_scripts: 'true', pnpm_config_ignore_scripts: 'true'};
+  if (values.offline) env.npm_config_offline = env.pnpm_config_offline = 'true';
   const result = spawnSync(join(app, 'Contents/Resources/runtime/cli/bin/dsh'),
-    ['plugin', '--profile', profile, ...args, ...(values.offline ? ['--offline'] : [])], {env, stdio: 'ignore'});
+    ['plugin', '--profile', profile, ...args, ...(values.offline && args[0] === 'add' ? ['--offline'] : [])], {env, stdio: 'ignore'});
   requireSetup(!result.error && result.status === 0, 'package-install-failed');
 }
 
@@ -284,9 +285,13 @@ function inspectMigrationBinding(config) {
 async function migrateCoreConfig(state) {
   requireSetup(state.installed && typeof state.installed.version === 'string' && versionPattern.test(state.installed.version), 'bundle-not-installed');
   const previous = readReceipt();
-  const config = state.config ?? previous.config;
-  requireSetup(config, 'core-config-missing');
-  requireSetup(!previous.config || sameCoreBinding(config, previous.config), 'receipt-binding-conflict');
+  const source = state.config ?? previous.config;
+  requireSetup(source, 'core-config-missing');
+  const managedRoots = [packageRoot, installedRoot];
+  requireSetup(!previous.config || sameCoreBinding(source, previous.config, managedRoots), 'receipt-binding-conflict');
+  const config = source.memory
+    ? {...source, memory: prepareMemoryServiceEntry(source.memory, {managedRoots, preserveCustom: true})}
+    : source;
   const binding = inspectMigrationBinding(config);
   if (!state.config) {
     const receipt = previous.receipt;
@@ -300,12 +305,16 @@ async function migrateCoreConfig(state) {
   }
   const patch = preparePatch(state, config);
   const patchNeeded = !isDeepStrictEqual(patch, state.patch);
-  if (!values.apply || !patchNeeded && previous.file) {
+  const receiptNeeded = !previous.file || !isDeepStrictEqual(previous.config.memory, config.memory);
+  if (!values.apply || !patchNeeded && !receiptNeeded) {
     if (!values.apply) requireSetup(!existsSync(join(profileDir, '.her-world-setup.lock')), 'profile-busy');
-    console.log(JSON.stringify({status: patchNeeded || !previous.file ? 'migration-required' : 'checked', profileDir,
+    console.log(JSON.stringify({status: patchNeeded || receiptNeeded ? 'migration-required' : 'checked', profileDir,
       ...(patchNeeded ? {patchPath: configPath} : {}), receiptPath: installedReceipt, enabled: state.enabled}));
     return;
   }
+  const completedReceipt = receiptNeeded && previous.file
+    ? privateJson({...previous.receipt, config: {...previous.receipt.config, memory: config.memory}})
+    : previous.file;
   const attempt = prepareAttempt({status: 'prepared', packageInstalled: true, enabled: state.enabled, profileDir, config,
     packageVersion: state.installed.version, actualPaths: paths(config),
     binding: {state: binding.state, workspace: binding.target ?? null}, storageInRepo: binding.state === 'ready'
@@ -315,7 +324,7 @@ async function migrateCoreConfig(state) {
     const actual = verifyProfile(state, patch, config);
     requireSetup(actual.enabled === state.enabled && actual.installed.version === state.installed.version
       && bindingUnchanged(), 'migration-readback-conflict');
-  });
+  }, completedReceipt);
   console.log(JSON.stringify({status: 'migrated', profileDir, patchPath: configPath, receiptPath: installedReceipt, enabled: state.enabled}));
 }
 
@@ -325,7 +334,7 @@ async function setup(state) {
   const replacedBundle = Boolean(state.manifest.dependencies?.['codex-pet']);
   requireSetup(!replacedBundle || values['replace-codex-pet'], 'replace-codex-pet-required');
   requireSetup(!state.installed || installedConfig, 'migrate-core-config-required');
-  requireSetup(!receipt.config || installedConfig && sameCoreBinding(receipt.config, installedConfig), 'receipt-binding-conflict');
+  requireSetup(!receipt.config || installedConfig && sameCoreBinding(receipt.config, installedConfig, [packageRoot, installedRoot]), 'receipt-binding-conflict');
   if (installedConfig) inspectBinding(installedConfig);
   const defaultDataDir = join(home, 'codex-pet/core');
   const dataDir = arg('--data-dir', installedConfig?.dataDir ?? defaultDataDir);
@@ -343,38 +352,38 @@ async function setup(state) {
   }
   config.dataDir = dataDir;
   const resumeRepo = arg('--resume-repo');
-  const portable = resumeRepo ? loadPortableRepo(resolve(resumeRepo)) : null;
+  const portable = resumeRepo ? checkedSetup('resume-repo-invalid', () => loadPortableRepo(resolve(resumeRepo))) : null;
   if (portable) {
     Object.assign(config,{dataDir:portable.dataDir,companionId:portable.companionId,scopeId:portable.scopeId,ownerActorId:portable.ownerActorId});
     if (portable.memoryDataDir) {
-      assert.ok(arg('--memory-python'),'Rebind Memory with --memory-python for this device; its existing Bank will be preserved');
+      requireSetup(arg('--memory-python'), 'memory-python-required',
+        'Rebind Memory with --memory-python for this device; its existing Bank will be preserved');
       config.memory={python:arg('--memory-python'),dataDir:portable.memoryDataDir};
     } else delete config.memory;
   }
-  assert.ok(isAbsolute(config.dataDir), 'Installed Core data directory must be absolute');
+  requireSetup(isAbsolute(config.dataDir), 'core-config-invalid');
   const memoryPython = arg('--memory-python', config.memory?.python), memoryDataDir = arg('--memory-data-dir', config.memory?.dataDir);
-  assert.equal(Boolean(memoryPython), Boolean(memoryDataDir), 'Specify both Memory python and data directory');
+  requireSetup(Boolean(memoryPython) === Boolean(memoryDataDir), 'memory-binding-incomplete');
   if (memoryPython) {
-    assert.ok(isAbsolute(memoryPython) && isAbsolute(memoryDataDir), 'Memory bindings must be absolute');
+    requireSetup(isAbsolute(memoryPython) && isAbsolute(memoryDataDir), 'memory-binding-invalid');
     config.memory = { ...config.memory, python: memoryPython, dataDir: memoryDataDir };
   }
   const configuredBeforeBinding = structuredClone(config);
-  const binding = inspectRepoBinding(config);
+  const binding = checkedSetup('core-binding-conflict', () => inspectRepoBinding(config));
   const explicitStorageRepo = arg('--storage-repo', resumeRepo);
   const storageRepo = explicitStorageRepo ?? (binding.state === 'ready' ? binding.root : null);
   let memoryTarget;
   if (storageRepo) {
-    const root = realpathSync(resolve(storageRepo));
+    const root = checkedSetup('storage-repo-invalid', () => realpathSync(resolve(storageRepo)));
     if (!resumeRepo) {
-      assert.equal(binding.state, 'ready', 'Initialize the selected companion workspace explicitly before relocating its storage');
-      assert.equal(root, binding.root, 'Storage Repo must match the current initialized workspace');
+      requireSetup(binding.state === 'ready', 'storage-workspace-not-ready');
+      requireSetup(root === binding.root, 'storage-workspace-conflict');
     }
     if (config.memory) {
-      if (process.argv.includes('--memory-data-dir') || resumeRepo) {
+      if (values['memory-data-dir'] !== undefined || resumeRepo) {
         const directory = resolve(config.memory.dataDir);
-        const bank = lstatSync(join(directory, 'data', 'memory.db'), {throwIfNoEntry:false});
-        assert.ok(bank && bank.isFile() && !bank.isSymbolicLink() && bank.nlink === 1 && bank.size > 0,
-          'The explicitly selected existing Memory Bank is absent or invalid; no new Bank was created');
+        const bank = checkedSetup('memory-bank-invalid', () => lstatSync(join(directory, 'data', 'memory.db'), {throwIfNoEntry: false}));
+        requireSetup(bank?.isFile() && bank.nlink === 1 && bank.size > 0, 'memory-bank-invalid');
         const local = relative(root, directory);
         memoryTarget = local && local !== '..' && !local.startsWith('..' + sep) && !isAbsolute(local)
           ? directory : join(root, '.chatpet', 'data', 'memory');
@@ -382,49 +391,22 @@ async function setup(state) {
       } else {
         // Match the Bank the current runtime actually selects, not a deleted
         // sibling-workspace path retained in an older installation receipt.
-        config.memory.dataDir = boundMemoryDirectory(config, binding);
+        config.memory.dataDir = checkedSetup('memory-binding-conflict', () => boundMemoryDirectory(config, binding));
         memoryTarget = config.memory.dataDir;
       }
     }
   }
   const sourceConfig = structuredClone(config);
-  const relocation = storageRepo ? prepareRepoStorage(resolve(storageRepo), sourceConfig, {memoryTarget}) : null;
+  const relocation = storageRepo ? checkedSetup('storage-relocation-invalid', () => prepareRepoStorage(resolve(storageRepo), sourceConfig, {memoryTarget})) : null;
   if (relocation) {
     config.dataDir = join(relocation.data, 'core');
     if (config.memory) config.memory.dataDir = relocation.entries.find(entry => entry.kind === 'memory').target;
   }
   // Plan the device runtime without creating it during setup preparation.
-  const memoryEntryChoice=arg('--memory-service-entry');
-  assert.ok(!process.argv.includes('--memory-service-entry') || typeof memoryEntryChoice==='string' && memoryEntryChoice,
-    'Provide --memory-service-entry bundled or an absolute custom entry');
-  if(config.memory) {
-    const managedEntries=[];
-    for(const root of [packageRoot,dirname(installedBundle)]) {
-      managedEntries.push(join(resolve(root),'src/memory/main.py'));
-      if(existsSync(root))managedEntries.push(join(realpathSync(root),'src/memory/main.py'));
-    }
-    const inherited=config.memory.serviceEntry;
-    if(memoryEntryChoice===undefined && typeof inherited==='string' && isAbsolute(inherited)) {
-      const root=resolve(dirname(inherited),'../..');
-      // Old checkout paths are not proven managed by their spelling or a receipt
-      // containing that same path. Verify program identity and both shim files.
-      try {
-        const regular=file=>{const stat=lstatSync(file,{throwIfNoEntry:false});return stat?.isFile() && !stat.isSymbolicLink() && stat.nlink===1;};
-        const metadata=join(root,'package.json'),files=['src/memory/main.py','src/memory/provider.py'];
-        if(resolve(inherited)===join(root,'src/memory/main.py') && regular(metadata)
-          && JSON.parse(readFileSync(metadata,'utf8')).name==='her-world'
-          && files.every(file=>regular(join(root,file)) && regular(join(packageRoot,file))
-            && createHash('sha256').update(readFileSync(join(root,file))).digest('hex')===createHash('sha256').update(readFileSync(join(packageRoot,file))).digest('hex')))
-          managedEntries.push(resolve(inherited));
-      } catch {/* Insufficient evidence remains an explicit setup choice below. */}
-    }
-    if(memoryEntryChoice!==undefined && memoryEntryChoice!=='bundled') {
-      assert.ok(isAbsolute(memoryEntryChoice),'Memory service entry must be an absolute custom path or bundled');
-      const stat=lstatSync(memoryEntryChoice,{throwIfNoEntry:false});
-      assert.ok(stat?.isFile() && !stat.isSymbolicLink() && stat.nlink===1,'Explicit Memory service entry must be an existing regular local file');
-    }
-    config.memory=prepareMemoryServiceEntry(config.memory,{choice:memoryEntryChoice,managedEntries});
-  } else prepareMemoryServiceEntry(undefined,{choice:memoryEntryChoice});
+  const memory = prepareMemoryServiceEntry(config.memory, {
+    args: process.argv.slice(2), managedRoots: [packageRoot, dirname(installedBundle)],
+  });
+  if (memory) config.memory = memory;
   const deviceRuntimePlan = config.memory ? prepareDeviceRuntime({
     python: config.memory.python,
     deviceRoot: resolve(arg('--device-runtime', join(profileDir, 'chatpet-runtime'))),
@@ -449,11 +431,13 @@ async function setup(state) {
     console.log(JSON.stringify({status: 'prepared', profileDir, attemptReceipt: attempt.file, dataDir: config.dataDir}));
     return;
   }
-  assertStopped(sourceConfig.dataDir, 'core');
-  if (sourceConfig.memory) assertStopped(sourceConfig.memory.dataDir, 'memory');
+  checkedSetup('binding-writer-running', () => {
+    assertStopped(sourceConfig.dataDir, 'core');
+    if (sourceConfig.memory) assertStopped(sourceConfig.memory.dataDir, 'memory');
+  });
   if (deviceRuntimePlan) {
     const preparedRuntime = checkedSetup('device-runtime-failed', () => applyDeviceRuntime(deviceRuntimePlan));
-    assert.equal(preparedRuntime.python, config.memory.python, 'Device runtime differs from the prepared Bundle');
+    requireSetup(preparedRuntime.python === config.memory.python, 'device-runtime-conflict');
     installation.deviceRuntime = {status: 'ready', deviceRoot: preparedRuntime.deviceRoot,
       python: preparedRuntime.python, receipt: preparedRuntime.receipt};
     attempt.save();
@@ -471,7 +455,7 @@ async function setup(state) {
       cpSync(sourceConfig.memory.dataDir, join(backupDir, 'memory-data'), { recursive: true, dereference: false });
   }
   if (relocation) {
-    const copied = relocateRepoStorage(relocation);
+    const copied = checkedSetup('storage-relocation-failed', () => relocateRepoStorage(relocation));
     // This receipt contains file hashes, never credentials or database contents.
     writeFileSync(join(dir, 'storage-migration.json'), JSON.stringify({ at: new Date().toISOString(),
       root: relocation.root, backupDir, copied }, null, 2), { mode: 0o600 });
@@ -559,6 +543,6 @@ async function finishWorkspace(binding, initializing, actualConfig, installation
 try { await main(); }
 catch (error) {
   console.error(JSON.stringify({status: error.applying ? 'applying' : 'failed',
-    reason: error instanceof SetupError ? error.message : 'setup-failed', ...(profileDir ? {profileDir} : {})}));
+    reason: error instanceof SetupError ? error.reason : 'setup-failed', ...(profileDir ? {profileDir} : {})}));
   process.exitCode = 1;
 }

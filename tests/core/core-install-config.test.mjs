@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync} from 'node:fs';
+import {copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {prepareCoreConfiguration} from '../../scripts/lib/core-config.mjs';
 import {createCore} from '../../dist/src/core/index.js';
 import {profileFixture} from '../behavior-list/setup-config.test.mjs';
@@ -56,6 +57,18 @@ function assertRejected(result, reason, config) {
   assert.equal(result.stdout, '');
 }
 
+async function initializeWorkspace(config, workspace) {
+  mkdirSync(workspace.path);
+  const host = createCore(config);
+  try {
+    const {value: prefs} = await host.services.preferences.read(host.operator.request('before'), {});
+    const saved = await host.services.preferences.save(host.operator.request('bind'), {expectedRevision: prefs.revision,
+      workspace, conversation: prefs.conversation});
+    assert.equal(saved.ok, true);
+    assert.equal((await host.services.workspace.initialize(host.operator.request('initialize'), {expectedPreferencesRevision: saved.value.revision})).ok, true);
+  } finally { await host.close(); }
+}
+
 test('migrate-core-config moves legacy Core and preserves other patches, then a repeat leaves both files intact', t => {
   const f = profileFixture(t), config = configFor(f);
   f.installFixture(config);
@@ -99,6 +112,82 @@ test('migrate-core-config backfills a receipt for an existing disabled npm profi
   assert.deepEqual(f.calls().filter(call => call.args), []);
 });
 
+const memoryFor = (f, serviceEntry) => ({python: join(f.home, 'python'), dataDir: join(f.home, 'bank'),
+  ...(serviceEntry === undefined ? {} : {serviceEntry})});
+const packageShim = 'src/memory/main.py';
+
+test('migrate-core-config removes a managed entry from the override and keeps checking the legacy package', t => {
+  const f = profileFixture(t), config = {...configFor(f), memory: memoryFor(f)};
+  const entry = join(f.profileDir, 'node_modules/her-world', packageShim);
+  f.installFixture({...config, memory: {...config.memory, serviceEntry: entry}});
+  const bundle = readFileSync(f.bundlePatch);
+  assert.equal(f.checked(migrate).status, 'migration-required');
+  assert.equal(readFileSync(f.patchPath, 'utf8'), '[]\n');
+  assert.equal(f.checked(apply).status, 'migrated');
+  assert.deepEqual(f.coreConfig(), config);
+  assert.deepEqual(read(f.receiptPath).config, config);
+  assert.deepEqual(readFileSync(f.bundlePatch), bundle);
+  assert.equal(f.checked(migrate).status, 'checked');
+});
+
+test('migrate-core-config removes a verified old pnpm entry and keeps the receipt usable after the package is pruned', t => {
+  const f = profileFixture(t), config = {...configFor(f), memory: memoryFor(f)};
+  const oldRoot = join(f.profileDir, 'node_modules/.pnpm/her-world@0.1.7/node_modules/her-world');
+  mkdirSync(join(oldRoot, 'src/memory'), {recursive: true});
+  writeFileSync(join(oldRoot, 'package.json'), JSON.stringify({name: 'her-world', version: '0.1.7'}));
+  for (const file of [packageShim, 'src/memory/provider.py']) copyFileSync(new URL(`../../${file}`, import.meta.url), join(oldRoot, file));
+  const legacy = {...config, memory: {...config.memory, serviceEntry: join(oldRoot, packageShim)}};
+  f.installFixture(legacy);
+  const previous = {...completed(f, legacy), packageVersion: '0.1.8', backupDir: join(f.home, 'backup')};
+  putReceipt(f, previous);
+
+  assert.equal(f.checked(apply).status, 'migrated');
+  assert.deepEqual(f.coreConfig(), config);
+  assert.deepEqual(read(f.receiptPath), {...previous, config});
+  assert.equal(f.checked(apply).status, 'checked');
+  f.installFixture(undefined, {version: '0.2.0', spec: '0.2.0'});
+  rmSync(oldRoot, {recursive: true});
+  assert.deepEqual(f.coreConfig(), config);
+  assert.equal(f.checked(migrate).status, 'checked');
+});
+
+test('migrate-core-config keeps a custom entry verbatim and still rejects a different Memory binding', t => {
+  const f = profileFixture(t), custom = join(f.home, 'custom.py');
+  writeFileSync(custom, '# deliberate custom entry\n');
+  const config = {...configFor(f), memory: memoryFor(f, f.home + '/./custom.py')};
+  f.installFixture(config);
+  assert.equal(f.checked(apply).status, 'migrated');
+  assert.deepEqual(f.coreConfig(), config);
+  assert.deepEqual(read(f.receiptPath).config, config);
+
+  for (const change of [{python: join(f.home, 'other-python')}, {dataDir: join(f.home, 'other-bank')}, {serviceEntry: null}]) {
+    const patch = f.dump([{id: '00-Core', config: {...config, memory: {...config.memory, ...change}}}]);
+    writeFileSync(f.patchPath, patch);
+    assertRejected(f.command(apply), 'core-binding-conflict', config);
+    assert.equal(readFileSync(f.patchPath, 'utf8'), patch);
+  }
+});
+
+test('migrate-core-config rejects unproven inherited entries without writing or exposing configuration', t => {
+  const f = profileFixture(t);
+  const oldRoot = join(f.profileDir, 'node_modules/.pnpm/her-world@0.1.7/node_modules/her-world');
+  mkdirSync(join(oldRoot, 'src/memory'), {recursive: true});
+  writeFileSync(join(oldRoot, 'package.json'), JSON.stringify({name: 'her-world', version: '0.1.7'}));
+  copyFileSync(new URL(`../../${packageShim}`, import.meta.url), join(oldRoot, packageShim));
+  writeFileSync(join(oldRoot, 'src/memory/provider.py'), '# modified provider\n');
+  for (const entry of [join(oldRoot, packageShim), join(f.home, 'missing-custom.py')]) {
+    const config = {...configFor(f), memory: memoryFor(f, entry)};
+    f.installFixture(config);
+    for (const args of [migrate, apply]) {
+      const result = f.command(args);
+      assertRejected(result, 'memory-service-entry-unverified', config);
+      assert.deepEqual(JSON.parse(result.stderr), {status: 'failed', reason: 'memory-service-entry-unverified', profileDir: f.profileDir});
+      assert.equal(readFileSync(f.patchPath, 'utf8'), '[]\n');
+      assert.equal(existsSync(f.receiptDir), false);
+    }
+  }
+});
+
 test('receipt-only recovery requires the private Core identity and a verified workspace binding', async t => {
   const f = profileFixture(t), repo = join(f.home, 'workspace');
   const workspace = {id: 'synthetic-world', path: repo, title: 'Synthetic workspace'};
@@ -107,15 +196,7 @@ test('receipt-only recovery requires the private Core identity and a verified wo
   const receipt = {...completed(f, config), binding: {state: 'ready', workspace}, storageRepo: repo, storageInRepo: true};
   putReceipt(f, receipt);
   assertRejected(f.command(apply), 'receipt-recovery-unverified', config);
-  mkdirSync(repo);
-  const host = createCore(config);
-  try {
-    const {value: prefs} = await host.services.preferences.read(host.operator.request('before'), {});
-    const saved = await host.services.preferences.save(host.operator.request('bind'), {expectedRevision: prefs.revision,
-      workspace, conversation: prefs.conversation});
-    assert.equal(saved.ok, true);
-    assert.equal((await host.services.workspace.initialize(host.operator.request('initialize'), {expectedPreferencesRevision: saved.value.revision})).ok, true);
-  } finally { await host.close(); }
+  await initializeWorkspace(config, workspace);
 
   putReceipt(f, {...receipt, config: {...config, scopeId: 'wrong-scope'}});
   assertRejected(f.command(apply), 'core-binding-conflict', config);
@@ -166,4 +247,67 @@ test('setup rejects a legacy archive and refuses to invent identity for an uncon
   assertRejected(f.command(['--apply']), 'migrate-core-config-required', identity);
   assert.deepEqual(f.calls().filter(call => call.args), []);
   assert.equal(existsSync(f.receiptDir), false);
+});
+
+test('setup reports an incomplete Memory binding with a fixed reason', t => {
+  const f = profileFixture(t);
+  assertRejected(f.command(['--memory-python', join(f.home, 'python')]), 'memory-binding-incomplete', identity);
+  assert.equal(existsSync(f.receiptDir), false);
+  assert.deepEqual(f.calls(), []);
+});
+
+test('setup reports an invalid resume Repo with a fixed reason', t => {
+  const f = profileFixture(t);
+  assertRejected(f.command(['--resume-repo', join(f.home, 'missing-repo')]), 'resume-repo-invalid', identity);
+  assert.equal(existsSync(f.receiptDir), false);
+  assert.deepEqual(f.calls(), []);
+});
+
+test('setup reports an unverified inherited Memory entry before probing Python', t => {
+  const f = profileFixture(t), config = {...configFor(f), memory: memoryFor(f, join(f.home, 'custom.py'))};
+  writeFileSync(config.memory.serviceEntry, '# inherited custom entry requires an explicit choice\n');
+  f.installFixture(config);
+  const result = f.command([]);
+  assertRejected(result, 'memory-service-entry-unverified', config);
+  assert.deepEqual(JSON.parse(result.stderr), {status: 'failed', reason: 'memory-service-entry-unverified', profileDir: f.profileDir});
+  assert.equal(existsSync(f.receiptDir), false);
+  assert.deepEqual(f.calls(), []);
+});
+
+test('setup selects the same explicit Bank from both memory-data-dir option forms', async t => {
+  const f = profileFixture(t), config = configFor(f);
+  const repo = join(f.home, 'workspace');
+  await initializeWorkspace(config, {id: 'current-workspace', path: repo, title: 'Synthetic workspace'});
+  const core = new DatabaseSync(join(config.dataDir, 'core.sqlite'));
+  try {
+    const previousOwner = {id: 'previous-workspace', path: join(repo, 'previous-workspace')};
+    core.prepare('INSERT INTO meta(key, value) VALUES (?, ?)').run('memory-configured-directory-owner', JSON.stringify(previousOwner));
+  } finally { core.close(); }
+  f.installFixture(config);
+  const memory = {...memoryFor(f), dataDir: join(repo, 'selected-bank')};
+  for (const directory of [memory.dataDir, join(repo, '.chatpet/data/memory')]) {
+    mkdirSync(join(directory, 'data'), {recursive: true});
+    writeFileSync(join(directory, 'data/memory.db'), 'synthetic Bank at ' + directory);
+  }
+
+  for (const option of [['--memory-data-dir', memory.dataDir], [`--memory-data-dir=${memory.dataDir}`]]) {
+    const {attemptReceipt} = f.checked(['--memory-python', memory.python, ...option], {runtime: true});
+    const attempt = read(attemptReceipt);
+    assert.deepEqual(attempt.previousConfig.memory, memory);
+    assert.equal(attempt.config.memory.dataDir, memory.dataDir);
+  }
+});
+
+test('setup accepts an explicit custom service entry and rejects an empty value in either option form', t => {
+  const f = profileFixture(t), custom = join(f.home, 'custom.py');
+  writeFileSync(custom, '# explicit custom path\n');
+  const memory = memoryFor(f);
+  f.installFixture({...configFor(f), memory});
+  for (const option of [['--memory-service-entry', custom], [`--memory-service-entry=${custom}`]]) {
+    const {attemptReceipt} = f.checked(option, {runtime: true});
+    assert.equal(read(attemptReceipt).config.memory.serviceEntry, custom);
+  }
+  for (const option of [['--memory-service-entry', ''], ['--memory-service-entry=']]) {
+    assertRejected(f.command(option, {runtime: true}), 'memory-service-entry-choice-invalid', identity);
+  }
 });

@@ -74,20 +74,37 @@ export function profileFixture(t) {
         return { status: mode.running ? 0 : 1, stdout: mode.running ? '999999999' : '' };
       }
       assert.equal(command, ${JSON.stringify(join(app, 'Contents/Resources/runtime/cli/bin/dsh'))});
-      assert.deepEqual(args.slice(0, 4), ['plugin', '--profile', 'fixture', 'add']);
+      const action = args[3];
+      assert.deepEqual(args.slice(0, 3), ['plugin', '--profile', 'fixture']);
+      assert.ok(action === 'add' || action === 'remove');
       assert.equal(options.env.DSH_HOME, ${JSON.stringify(home)});
       assert.equal(options.env.npm_config_ignore_scripts, 'true');
-      assert.ok(args.includes('--ignore-scripts'));
       const offline = args.includes('--offline');
-      if (offline) assert.equal(options.env.npm_config_offline, 'true');
+      if (action === 'remove') assert.deepEqual(args.slice(4), ['codex-pet']);
+      else {
+        assert.ok(args.includes('--ignore-scripts'));
+        assert.equal(offline, mode.offline);
+      }
+      if (mode.offline) {
+        assert.equal(options.env.npm_config_offline, 'true');
+        assert.equal(options.env.pnpm_config_offline, 'true');
+        assert.equal(options.env.pnpm_config_ignore_scripts, 'true');
+      }
       const status = JSON.parse(readFileSync(receipt)).status;
       record({ args, offline, status });
       if (mode.cliFailure === 'mutated') writeFileSync(${JSON.stringify(join(profileDir, 'pnpm-lock.yaml'))}, 'changed');
       if (mode.cliFailure) return { status: 1 };
-      const installed = ${JSON.stringify(installed)};
-      mkdirSync(installed, { recursive: true });
       const manifest = ${JSON.stringify(manifest)};
       const before = JSON.parse(readFileSync(manifest));
+      if (action === 'remove') {
+        delete before.dependencies['codex-pet'];
+        before.dsh.profile.bundles = before.dsh.profile.bundles.filter(name => name !== 'codex-pet');
+        writeFileSync(manifest, JSON.stringify(before));
+        fs.rmSync(${JSON.stringify(join(profileDir, 'node_modules/codex-pet'))}, { recursive: true });
+        return { status: 0 };
+      }
+      const installed = ${JSON.stringify(installed)};
+      mkdirSync(installed, { recursive: true });
       const spec = args[4];
       assert.match(spec, /^her-world@/);
       const version = spec === 'her-world@latest' ? '0.2.0' : spec.slice('her-world@'.length);
@@ -105,7 +122,8 @@ export function profileFixture(t) {
   `);
   const command = (args, mode = {}) => spawnSync(process.execPath, ['--import', runtime, installer, ...args,
     '--dsh-app', app, '--dsh-home', home, '--profile', 'fixture'], {
-    env: { ...process.env, DSH_HOME: join(home, 'unused-environment-home'), HER_WORLD_SETUP_FIXTURE: JSON.stringify(mode) }, encoding: 'utf8',
+    env: { ...process.env, DSH_HOME: join(home, 'unused-environment-home'),
+      HER_WORLD_SETUP_FIXTURE: JSON.stringify({ ...mode, offline: args.includes('--offline') }) }, encoding: 'utf8',
   });
   return {
     home, profileDir, patchPath, bundlePatch, receiptDir, receiptPath, manifest, command, dump,

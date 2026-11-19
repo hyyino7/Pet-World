@@ -147,6 +147,24 @@ test('R5: a fresh offline cache miss removes the new patch and applying receipt,
   assert.ok(f.coreConfig().companionId);
 });
 
+test('R5: offline replacement removes codex-pet before adding her-world with --offline', t => {
+  const f = fixture(t), codexPet = join(f.profileDir, 'node_modules/codex-pet');
+  fs.mkdirSync(codexPet);
+  fs.writeFileSync(join(codexPet, 'package.json'), JSON.stringify({name: 'codex-pet', dsh: {bundle: {patch: 'cordis.patch.yml'}}}));
+  fs.writeFileSync(join(codexPet, 'cordis.patch.yml'), '[]\n');
+  const manifest = json(f.manifest);
+  manifest.dependencies['codex-pet'] = '0.1.0';
+  manifest.dsh.profile.bundles.push('codex-pet');
+  fs.writeFileSync(f.manifest, JSON.stringify(manifest));
+
+  assert.equal(f.checked([...f.args, '--apply', '--replace-codex-pet', '--offline']).status, 'installed');
+  assert.deepEqual(f.calls().filter(call => call.args), [
+    {args: ['plugin', '--profile', 'fixture', 'remove', 'codex-pet'], offline: false, status: 'applying'},
+    {args: ['plugin', '--profile', 'fixture', 'add', 'her-world@latest', '--ignore-scripts', '--offline'], offline: true, status: 'applying'},
+  ]);
+  assert.equal(fs.existsSync(codexPet), false);
+});
+
 // Invalid receipts must be rejected by the actual backup CLI before Core,
 // process/lock probes or planning. No real CLI/app is launched by this fixture.
 function backupAdmission(receipt,command='plan') {
