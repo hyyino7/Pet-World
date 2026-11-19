@@ -391,6 +391,58 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 
 **验收**：第二层基线 0 条，`living` 模块 R1–R4 全绿。
 
+#### 3D 开工细则
+
+（Codex 只读起草、Claude 核对行号后定稿，主人 2026-11-20 过目同意。）
+
+3C 合并后，从更新后的 `main` 开 `codex/2a-3d-outlets`。以下行号以 3B 合并后的 `13ae820` 为准。起草时只读运行了架构报告和声明差异校验，构建与快测留到执行时。`docs/plans/stage2a-merge.md:45-52,382-392,530`
+
+**现存违规与调用替换**
+
+`pnpm run check:arch -- --report` 按检查器的模块归属核对，`living` 有 **R1 一条、R2 四条、R3/R4 各零条**。R1 来自动画映射生成源 `scripts/build/build-animation-map.mjs:6`，其 WebM 读时长工具未登记归属。四条 R2 如下。`arch/layers.json:62-64`、`arch/baseline/rules.json:4-13,534-581`、`scripts/arch/lib/rules.mjs:7-9`
+
+| 当前读取 | 新调用与时机 |
+| --- | --- |
+| `src/living/plan/plugin.ts:158` → `petDesktop` | `publishRest()` 调 Desktop 出口的 `restore()`，沿用 `features?.restore(false)`。显式暂停落盘、发变更通知后，在 `stopRuntime(bound)` 前恢复。卸载仍在 `close()` 中恢复，此时 Plan 租约已撤。`src/living/plan/plugin.ts:545-564,615-626`、`src/living/index.ts:146-152` |
+| `src/living/plan/plugin.ts:193` → `petDesktop` | `startRuntime()` 调 Desktop 出口的 `pause()`，在启动条件检查之后、恢复图片转录和解析 home 之前。`src/living/plan/plugin.ts:189-199` |
+| `src/living/plan/plugin.ts:317` → `petDesktop` | 通知通过运行中与安静模式检查后，先调 Desktop 出口的 `present(push.text, push.image)`。桌宠不可用时算未呈现，呈现抛错时记原告警并继续送达。`src/living/plan/plugin.ts:314-322` |
+| `src/living/plan/plugin.ts:323` → `petChannels` | 随后查 Channels 出口并等待 `reach(bound.id, push)`，桌宠呈现成功也照常尝试。缺席等同 `[]`。桌宠未呈现且渠道无 `fulfilled` 时，沿用「当前没有送达主动消息的渠道」。`src/living/plan/plugin.ts:323-325` |
+
+**登记与撤销**
+
+- 新建 `src/living/outlets.ts`，由第二层提供 `registerLifeOutlet(ctx, host, slot, callbacks)` 和 `lookupLifeOutlet(ctx, host, slot)`。复用 `RegistrationTable` 的登记、查找、代次和撤销，按 Cordis 根、Core 实例及原 `petDesktop`／`petChannels` 可见标签划分。查找仅返回租约有效且提供方 fiber 为 `ACTIVE` 的出口，每次调用现场取。出口随第三层入口存活，三个生活入口全退出时 `LivingWorld` 仍按原规则释放。`src/core/tables/registry.ts:20-42,66-78`、`src/living/index.ts:25-32,54-94`
+- Desktop 槽提供 `pause(): void`、`restore(): void`、`present(text: string, sticker?: string): boolean`。在 `src/desktop/plugin.ts:40-43` 取得 `desktop` 并 `provide` 后用 `ctx.effect` 登记，退出撤销本次租约。前两项委托 `features?.pause()`、`features?.restore(false)`，呈现先检查 `presentationAvailable()`，可用才调用 `presentLife()` 并返回 `true`。无槽或无 `features` 时，暂停与恢复直接跳过。`src/desktop/features.ts:125-134,308-312`、`src/desktop/index.ts:56-76,295`
+- Channels 槽提供 `reach(workspaceId: string, push: Push): Promise<PromiseSettledResult<string>[]>`。在 `src/channels/plugin.ts:123-125` 的 `provide` 后用 `ctx.effect` 登记，退出撤销本次租约，原 `close()` 继续关闭适配器。直接传原 `push`，保留工具附加的不可枚举 `deliveryId`。`CompanionChannels.reach` 沿用绑定、安静模式和 home 检查，再汇总 Bridge、QQ、微信的送达结果。`src/channels/plugin.ts:85-91,127-131`、`src/channels/bridge.ts:76-90`、`src/channels/messaging.ts:196-219`、`vendor/dsh-world/lib/life/tools.js:27-41`
+
+**Desktop 的持久启用意图**
+
+- `src/desktop/features.ts:80-89` 改调 `outlets.ts` 的 `readLifeEnabled(ctx, host, workspaceId)`。由 `src/living/index.ts` 复用现有 Plan 槽和租约检查，只按 `petLife` 的可见标签找 Plan。现有 `LivingWorld.find()` 匹配三区标签，读口只需要 Plan 的可见性。返回 `plan?.bodyClockState(workspaceId)?.enabled ?? plan?.running() ?? false`。`src/living/index.ts:25-32,44-52,87-94`
+- `bodyClockState()` 已优先取当前绑定的已提交意图，绑定尚未装入时读 `readLifeControl()`。因此原生运行时启动失败时，已保存的 `enabled:true` 仍压住自动碎碎念和梦话。Plan 缺席或租约撤销时返回 `false`，桌宠可恢复，磁盘仍保留原意图。Body、Economy 按各自的菜园语义继续复用同一文件读取器。`src/living/plan/plugin.ts:119-149,532-556,615-626`、`src/living/plan/control-file.ts:25-51`、`src/living/body/plugin.ts:172-182`、`src/living/economy/plugin.ts:118-127`
+- `src/desktop/index.ts:281-287` 创建 `DesktopFeatures`，另用 `isHome()` 抑制普通回复气泡。`PetPlatform` 经 `restore(true)` 和 `refresh()` 进入同一调度读口。启用意图按工作区读取。3C 的五个登记口供第一层使用，其中 `isRunningLifeHome(sessionId)` 判定运行中的会话归属。`src/desktop/index.ts:89-95`、`src/desktop/platform/plugin.ts:166-192,295-320`、`src/desktop/features.ts:55-64,125-134,265,271-275,295-300`、`docs/plans/stage2a-merge.md:324-332`
+
+**层声明、提交与范围**
+
+- `desktop`、`channels` 的 `dependencies` 已包含 `living`，登记与意图查询都是第三层向下调用。Life 通过本层登记表使用上层交来的回调，符合「向上用事件和登记」。现有 home 读取仍使用 `reads` 中的 `petLife`。沿用三项兼容事件及异步通知，`pet/life.review` 的退休归 3C。`arch/layers.json:54-73,103-110`、`docs/architecture.md:21-36,124-131`、`docs/plans/stage2a-merge.md:567,571`
+- 提交 1 补生成源归属。把 `scripts/lib/webm-metadata.mjs` 加入动画映射的 `generated.sources`。内存中按现有扫描器核对，该声明只清这条 R1，R8 无增删。提交 2 切 Desktop 三个调用及启用意图读口。提交 3 切 Channels 送达。每个提交分别构建、跑快测，用 `pnpm run check:arch -- --write-baseline` 同提交收紧，`living` 按模块归属 **5 → 4 → 1 → 0**。`arch/layers.json:62-64`、`scripts/build/build-animation-map.mjs:6,29-34`、`scripts/arch/check.mjs:29-55`、`scripts/arch/lib/ratchet.mjs:22-38`
+- 允许修改 `src/living/outlets.ts`（新）、`src/living/index.ts`、`src/living/plan/plugin.ts`、`src/desktop/plugin.ts`、`src/desktop/features.ts`、`src/channels/plugin.ts`、`arch/layers.json`、工具生成的 `arch/baseline/{rules,vocabulary}.json`、下列测试和本方案执行结果。构建产生的 `dist/src/**` 随提交，按项目规则排除于 15 文件、600 行阈值。`docs/plans/stage2a-merge.md:390,573`、`AGENTS.md:60-64`
+- 本批止于出口、启用意图读口和上面的生成源声明。呈现、渠道送达和持久格式沿用现有实现。四项对外契约及代码清理归 3E，旧门面迁移归阶段 3，home 身份迁移及发布走原批次。`src/desktop/index.ts:56-76`、`src/channels/plugin.ts:85-91`、`docs/plans/stage2a-merge.md:47-50,394-407,567`
+
+**测试**
+
+- `tests/life/life-desktop-integration.test.ts` 改用真实 Cordis 区租约与出口，保留原生启动失败、显式暂停恢复、只排程一次及待办仍可提醒的断言。`tests/desktop/desktop-features.test.ts`、`tests/regressions/audit-r2-desktop-policy.test.ts` 的 Life 替身改接测试租约，保留调度和在途取消断言。`tests/life/life-desktop-integration.test.ts:34-53,58-102`、`tests/desktop/desktop-features.test.ts:36-42,93-113,140-145`、`tests/regressions/audit-r2-desktop-policy.test.ts:20-32,51-58`
+- 在 `tests/behavior-list/entries-lifecycle.test.mjs` 经真实入口新增 Desktop 先装、晚装、单独重载的用例。验收已启用但运行时未就绪时压住自主功能，重载后只调用新出口，同名旧租约及不同隔离标签不可用。再验三生活入口全退后桌宠恢复且 `control.json` 仍为启用，重挂 Life 后重新接管。新增用例登记到 `tests/behavior-list/index.json`。`tests/behavior-list/entries-lifecycle.test.mjs:233-246,751-779`、`tests/living/living-lifecycle.test.mjs:62-126`、`tests/behavior-list/index.json:1135-1142`
+- 同文件经运行中 home 的 `reach_out` 新增送达用例。让桌宠在呈现时变为不可用，断言真实 Channels 路径向假 QQ 网关发送且工具报成功。再验桌宠成功时也尝试渠道，以及两出口缺席或均未送达时工具报明确失败。`tests/behavior-list/entries-lifecycle.test.mjs:126-143`、`tests/behavior-list/qq-transport.mjs:3-17`、`src/desktop/index.ts:56-75`、`vendor/dsh-world/lib/life/tools.js:27-41`
+
+**需主人拍板**
+
+- WebM 生成源归属 — 补清 WebM 生成源的 R1。推荐同批拆成独立声明提交，现有生成逻辑无需改动，才能按检查器口径验收第二层零条。若另排批次，3D 只能验收四条 R2，第二层全绿仍待完成。`docs/plans/stage2a-merge.md:390-392`、`arch/layers.json:62-64`、`scripts/build/build-animation-map.mjs:6` 决定：按推荐（主人 2026-11-20 过目同意）。
+- Desktop 两个文件和呈现异常 — 推荐明确同时允许 `src/desktop/plugin.ts` 登记和 `src/desktop/features.ts` 切换启用意图读口。前者拥有入口生命周期，后者拥有调度判定。呈现异常推荐统一记原告警并继续 Channels，涵盖可用性探测抛错这一条原先会中断送达的路径。`docs/plans/stage2a-merge.md:386-390`、`src/desktop/plugin.ts:38-47`、`src/desktop/features.ts:80-89`、`src/living/plan/plugin.ts:317-324` 决定：按推荐（主人 2026-11-20 过目同意）。
+
+**快测**
+
+- 每提交跑 `pnpm run build && pnpm run check:arch`，再跑 `node --test dist/tests/core/context-contracts.test.js tests/behavior-list/{index,entries-lifecycle}.test.mjs`。`AGENTS.md:49-52`、`package.json:92,125`、`docs/plans/stage2a-merge.md:581-586`
+- 提交 1 加跑 `node --test tests/regressions/webm-metadata.test.mjs`。提交 2 加跑 `node --test dist/tests/life/{life-desktop-integration,life-body}.test.js dist/tests/desktop/desktop-features.test.js dist/tests/regressions/audit-r2-desktop-policy.test.js tests/living/living-lifecycle.test.mjs`。提交 3 加跑 `node --test tests/behavior-list/channels.test.mjs tests/regressions/mapped-channel-path-binding.test.mjs`。批末在允许本机回环的环境跑 `pnpm run test:life-integration`，再用 `pnpm run check:arch -- --report` 复核零条。`tests/regressions/webm-metadata.test.mjs:4`、`tsconfig.build.json:3-4`、`package.json:113-114,125`、`AGENTS.md:52`
+
 ### 3E 第二层对外契约和代码清理
 
 **对外契约**（拍板点 12）：
@@ -411,6 +463,75 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 | 纯转导出 | `src/living/plan/room.ts` | 删，引用方（含 `scripts/checks/check-room-interactions.cjs:21`）改直接引用 |
 
 删旧代码不留兜底。`setMeta/close` 去重放到第 5 批。
+
+#### 3E 开工细则
+
+（Codex 只读起草、Claude 核对行号后定稿，主人 2026-11-20 过目同意。）
+
+3D 合并后，从更新后的 `main` 开 `codex/2a-3e-contract`。源码行号取自 `13ae820`，方案行号已计入当前 3D 细则。开工时把 3C 的 `src/core/tables/companion-ports.ts`、`src/living/prompt-context.ts` 和 3D 的 `src/living/outlets.ts` 纳入引用复查。本批完成场景 2 所需的四项入口契约，快测在实现后执行。`docs/plans/stage2a-merge.md:45-47,322-343,411-421,446-465,581,619,623,639`
+
+**契约与门面**
+
+- 新建 `src/contracts/living.ts`，定义 `WorldSnapshot`、`WalletView`、`WorldCommands`、`WorldChanged`，事实流直接用 `CompanionFactSource`。现有 `index.ts` 汇出 `version/common/core/emotion/behavior/interaction/tables`，加一行类型转导出即可。`./contracts` 继续指向同一个入口，`package.json` 的 `exports` 保持原样。`src/contracts/index.ts:2-9`、`src/contracts/interaction.ts:26-31`、`package.json:6-10,41-42`、`docs/plans/stage2a-merge.md:597`、`AGENTS.md:55-59`
+- `WorldSnapshot` 字段为 `workspaceId`、`storageId`、`body`、`wallet`。`body` 为 `{available:true,snapshot:Readonly<BehaviorSnapshot>}` 或 `{available:false}`。`wallet` 为 `WalletView | null`，Economy 缺席时为 `null`，已挂载但读库失败时沿用现有拒绝。快照返回独立数据副本，包括 Body 投影内的嵌套对象。`src/contracts/behavior.ts:34-46`、`src/living/body/plugin.ts:277-287`、`src/living/economy/plugin.ts:93-111,176-179`、`vendor/feiyu-room-template/home-state.js:1704-1735`
+- `WalletView` 含 `balance`、只读 `inventory[]`（`itemId/quantity/reserved/available`）、只读 `reading[]`（持有读物的 `itemId/version/bookmark`）。`bookmark` 复用 `ReadingBookmark` 的 `itemId/version/offset/updatedAt`，当前版本尚无确认进度时为 `null`。在 `living.ts` 定义原 `InventoryItem`、`ReadingBookmark`，Economy 从该处导入并转导出。由现有库存、目录版本和书签投影，当前片段的三态继续取 `BehaviorSnapshot.behavior.readingState`。正文、确认 token、Store 和写端口留在所属区。`src/living/economy/types.ts:24-35,59-67`、`src/living/economy/catalog.ts:50-53`、`src/living/economy/store.ts:187-192,318-348`、`src/contracts/behavior.ts:23-32`
+- `LivingWorld` 经现有 `LivingView.lookup()` 汇总。`petBehavior.worldSnapshot(workspaceId)` 为主入口，`petEconomy.worldSnapshot(workspaceId)` 委托同一实现，支持仅挂 Economy。Body 复用 `snapshot()` 的队列与时间推进，Economy 复用 `bound()` 和 Store 快照。按门面所属的 Cordis 根、Core 实例和可见标签取区，跨 `await` 与返回前复核 `workspaceId/path/storageId` 和区租约。沿用三个服务名。`src/living/index.ts:19-32,49-94,104-111,143-177`、`src/living/body/plugin.ts:256-259,277-287,392-397`、`src/living/economy/plugin.ts:107-112,176-179,264-274`
+- `WorldCommands` 用五个方法签名，均收 `workspaceId` 和必填 `requestId`，复用 `RequestContext.requestId`、`CallOptions.signal` 与 `Result<T>`。各区门面的 `worldCommands` 只挂本区方法，复用原入口的调用准入、绑定复核及队列。`src/contracts/common.ts:11-34`、`src/living/body/plugin.ts:108-120`、`src/living/plan/plugin.ts:105-117`、`src/living/economy/plugin.ts:193-201`
+
+| 命令与门面 | 其余输入、成功值与执行 |
+| --- | --- |
+| `petBehavior.worldCommands.care` | `action: NonNullable<PlannedActivity['action']> \| 'pet'` → `{changed}`。调用 `act`，传原 `requestId`，由现有入口确定主人归属。`src/contracts/behavior.ts:49-64`、`src/living/body/plugin.ts:20,295-310` |
+| `petLife.worldCommands.executePlanStep` | `expectedRevision/planId/stepId` → `{operationId, execution: PlannedExecution \| null}`。在 Plan 串行队列内核对已保存的当前步骤和启用状态，复用 `PersistentLifePlan.advance()`，沿用 `life:${planId}:${stepId}`。`null` 表示该步尚无执行回执。`src/living/plan/plugin.ts:375-402,463-483`、`src/living/plan/plan.ts:326-385,398-440` |
+| `petLife.worldCommands.confirmReading` | `expectedRevision/operationId/receiptToken` → `PlannedExecution`。复用 `confirmPlannedReading` 的版本、原片段及 token 核验。原步骤已完成时只核对并返回原回执，推进游标只适用于原步骤仍在当前游标的首次确认。`src/living/plan/plugin.ts:492-520`、`src/living/body/room.ts:701-716`、`src/living/economy/store.ts:327-343` |
+| `petEconomy.worldCommands.buy`、`sell` | `itemId/quantity?`（默认 `1`）→ `WalletView`。调用 `ownerAction` 的购买、出售分支，用原 `requestId` 结算并投影当前钱包。`src/living/economy/plugin.ts:193-207,225-226`、`src/living/economy/store.ts:144-150,200-218` |
+
+- Body 和 Economy 沿用请求指纹去重。Plan 两条命令用 `requestId` 关联调用，分别靠原步骤编号、原片段 token 防止重复施效，版本或步骤已换时要求刷新。错误复用 `ContractError`，确定拒绝为 `none/never`，过期为 `none/refresh`，能证明未施效且可用原请求重试时为 `none/same_request`，已知部分施效为 `partial/reconcile`，提交结果无法确认时为 `unknown/reconcile`。仅在错误覆盖整条命令时透传 `Rejection.detail`，避免将后续读取失败误报为未施效。`src/contracts/common.ts:19-31`、`src/core/storage.ts:7-17`、`src/living/body/room.ts:1004-1012`、`src/living/plan/plan.ts:419-455`、`src/living/economy/store.ts:122-150`
+- `petBehavior.worldFacts: CompanionFactSource` 经实例聚合 Body、Economy。`pendingFacts` 读取已挂载区并按 `occurredAt/id` 排序，`readFacts` 按原 ID 的域前缀路由并保留输入顺序，复用 `readFactReferences`。`acknowledgeFacts` 先核全部 ID 的所属区和租约，再按区确认，缺区时保留原编号供重试。仅挂 Economy 时已有三个事实方法可直接用。3C 的原生日志 `flush === true` 后才确认的门控继续由现有调用流程负责。`src/living/body/plugin.ts:311-315`、`src/living/body/room.ts:314-324,1033-1042`、`src/living/economy/plugin.ts:180-186`、`src/living/economy/store.ts:160-185`、`src/living/plan/facts.ts:5-24`、`src/living/plan/plugin.ts:418-427`、`src/core/interaction-context.ts:12-22`、`docs/plans/stage2a-merge.md:342-343`
+
+**变更信号与现有读者**
+
+- `WorldChanged` 只带 `workspaceId/storageId`，表示应重读快照。`src/living/index.ts` 声明 Cordis 事件 `world.changed`，在 `living.publishes` 登记同名。实例按绑定合并同一轮微任务内的通知，发送前复核绑定和租约，区装卸在可用性改变后通知。用 `ctx.emit`，发布异常与业务结果隔离，事件无落盘回执语义。`src/living/index.ts:54-94,143-165`、`arch/layers.json:54-61`、`scripts/arch/lib/rules.mjs:71-80`、`docs/architecture.md:211-216`
+- Body 复用 `publish()` 的可见投影指纹，活动阶段、可见身体状态、自主状态或阅读呈现变化才通知。Plan 在启停、计划修订、游标或执行回执实际变化时通知，包括自动推进。Economy 在 SQLite `COMMIT` 后按余额、库存与预留、持有读物版本或书签的实际变化通知。重复读、同请求重放、纯时钟检查点和回滚不另发通知。`src/living/body/plugin.ts:222-243,277-287`、`src/living/plan/plugin.ts:327-364,375-402,475-565`、`src/living/plan/plan.ts:174-191,404-446`、`src/living/economy/store.ts:122-150,327-368,439-465`
+- `pet/behavior.changed` 继续驱动 Desktop、Room 和 Plan，`pet/life.changed` 继续驱动 Desktop、Channels、Body 和 Plan，`pet/economy.fact` 继续唤醒 Plan 的事实处理。旧事件发出时机、异步通知和重试语义照拍板点 13。`src/desktop/features.ts:55-60`、`src/desktop/platform/plugin.ts:221-241`、`src/room/plugin.ts:54-55`、`src/channels/plugin.ts:127-129`、`src/living/body/plugin.ts:94-106,242`、`src/living/plan/plugin.ts:83-88,399-402`、`src/living/economy/plugin.ts:187-192`、`docs/plans/stage2a-merge.md:623`
+- 第三层直读盘点。Desktop 读 `roomState/restState` 和 Life 启用意图、home，3D 将启用意图移到出口读口。Room 读 `roomState/garden/readFacts`。Console 经旧门面读写 Life 和 Economy，Channels 查 Life 的 home，Voice 走自己的音频路由。切换新契约归阶段 3。`src/desktop/platform/plugin.ts:359-368`、`src/desktop/features.ts:80-89,122-124,166-174`、`src/desktop/index.ts:279-282`、`src/room/plugin.ts:64-69,113-125`、`src/console/settings.ts:79-101,218-232`、`src/channels/plugin.ts:77-90`、`src/channels/messaging.ts:196-197`、`src/voice/plugin.ts:36-82`、`docs/plans/stage2a-merge.md:417-421,619`
+
+**五项清理**
+
+| 项 | `src/`、`scripts/`、`tests/` 引用核对和改法 |
+| --- | --- |
+| `desktopRest()` | 仅定义，直接删。桌宠当前调用 Body 的 `roomAction/act`。用工具收紧 `desktopRest` 对应的 R8 条目，仓库外使用按第 6 批隔离盘点。`src/living/plan/plugin.ts:572-575`、`src/desktop/features.ts:166-174`、`arch/baseline/vocabulary.json:6594,6608`、`docs/plans/stage2a-merge.md:459,558` |
+| `EconomyStore.bookmark()` | 仅定义，直接删。保留 `ReadingSegment.bookmark` 字段、已有书签读取和 `confirmReading` 的写入。`src/living/economy/store.ts:300-310,327-343`、`tests/economy/economy-recovery.test.ts:126`、`tests/life/life-domain-integration.test.ts:160` |
+| `installLifeReviewFileGuard()` | 两处调用均在测试。删包装与专用 imports，保留 `assertLifeReviewFile` 和访问键。两条集成用例移到 `policy-life.test.mjs`，保留原文件里的纯路径规则测试。`src/living/plan/review-files.ts:1-20,62-70`、`tests/life/life-review-files.test.ts:25-95` |
+| `CompanionRoom.garden()` | 删除未读的第三参，把 `now` 前移。实参调整仅四处。脚本保留 `now()`，回退时钟测试保留 `f.start+HOUR`，排队测试两处保留 `f.now`。其他调用继续用原默认时间或旧门面参数。`src/living/body/room.ts:1063-1065`、`src/living/body/plugin.ts:316-325`、`src/living/plan/plugin.ts:593-595`、`scripts/checks/check-room-interactions.cjs:50`、`tests/regressions/audit-r5-garden-clock.test.mjs:124-129`、`tests/life/autonomous-life.test.ts:284-292` |
+| `src/living/plan/room.ts` | 仅转导出。唯一引用 `scripts/checks/check-room-interactions.cjs:21` 改为 `../../dist/src/living/body/room.js`。由构建清走旧产物。`src/living/plan/room.ts:1-2`、`scripts/build/clean-build.mjs:1-6` |
+
+回顾两条用例复用 `fixture(t,{policy:true})`，让运行中的 home 收到 `dsh-world-life` 的 `purpose:'review'` 输入，经 `begin/step`、真实 `createLifeSourceAdapter` 和 Core 通用守卫。夹具提供 cwd/路径解析控制和真实 `checkGuards`，沿用同一执行 token 在准备后替换软链或创建历史日记，再复核。用主人消息接管同一轮，保留普通工具权限、相对 cwd、越权及 guest 拒绝、软链复核和历史覆盖拒绝的原断言。`tests/behavior-list/fixture.mjs:148-157,194-219,242-275`、`tests/behavior-list/policy-life.test.mjs:70-101`、`src/living/plan/tool-policy.ts:88-118`、`src/core/native/agent.ts:116-120,241-253`、`src/core/life-review-files.ts:22-60`、`tests/life/life-review-files.test.ts:63-95`
+
+**提交与允许修改的文件**
+
+1. 快照、事实流、通知及三条入口测试。`src/contracts/{living,index}.ts`、`src/living/index.ts`、`src/living/body/plugin.ts`、`src/living/plan/{plugin,plan}.ts`、`src/living/economy/{plugin,store,types}.ts`、`arch/layers.json`、`tests/living/living-lifecycle.test.mjs`。`docs/plans/stage2a-merge.md:450-452`、`tests/living/living-lifecycle.test.mjs:10-24`
+2. 五命令及入口测试。`src/contracts/living.ts`、`src/living/index.ts`、`src/living/{body,plan,economy}/plugin.ts`、`tests/living/living-lifecycle.test.mjs`。`src/living/body/plugin.ts:295-310`、`src/living/plan/plugin.ts:375-402,492-520`、`src/living/economy/plugin.ts:193-226`
+3. 五项清理。`src/living/plan/{plugin,review-files,room}.ts`、`src/living/body/room.ts`、`src/living/economy/store.ts`、`scripts/checks/check-room-interactions.cjs`、`tests/life/{life-review-files,autonomous-life}.test.ts`、`tests/regressions/audit-r5-garden-clock.test.mjs`、`tests/behavior-list/{fixture,policy-life}.mjs`，其中测试文件名为 `policy-life.test.mjs`。基线由 `--write-baseline` 生成，只收紧条目。`docs/plans/stage2a-merge.md:455-465`、`scripts/arch/check.mjs:29-55`、`AGENTS.md:60-64`
+4. 每提交独立构建和快测，控制在 15 文件、600 行内。`dist/src/**` 和工具生成基线随提交，按规则排除计数。本方案只补 3E 执行记录，架构文档由 Claude 在第 6 批归并。第三层切换归阶段 3，旧门面退场归阶段 3、4，区间事件直调归 2b，`setMeta/close` 归第 5 批。`AGENTS.md:49-51,63-64`、`docs/plans/stage2a-merge.md:453,465,535-543,623-625,639`
+
+**入口验收**
+
+四条放在 `tests/living/living-lifecycle.test.mjs`，复用真实 Cordis `cordisFixture` 的 `order/load/unload`、临时绑定、控时和原生工具调用。`tests/living/living-lifecycle.test.mjs:10-24,62-98`、`tests/behavior-list/entries-lifecycle.test.mjs:33-46,105-151,233-277`
+
+- 快照。`order:['economy']` 下经 `petEconomy.worldSnapshot` 读出真实余额、库存和读物版本进度，断言 `body.available === false`。挂上 Body 后经 `petBehavior` 读到原 `BehaviorSnapshot`，验证修改返回副本影响不到权威状态。`tests/behavior-list/entries-lifecycle.test.mjs:233-269`、`src/living/body/plugin.ts:277-287`、`src/living/economy/store.ts:187-192`
+- 命令。经三区新门面照料、执行已保存的指定步骤、确认实际发放的原片段、买入和卖出。断言真实回执、游标、书签和钱物变化。重放不重复施效或推进下一步，版本过期返回 `none/refresh`。`tests/behavior-list/entries-lifecycle.test.mjs:263-277`、`tests/life/life-domain-integration.test.ts:122-160`、`src/living/plan/plan-tools.ts:126-132`
+- 事实流。实际照料和交易产出两源事实，经 `worldFacts` 列出、按原 ID 读取。在真实原生日志成功 `flush` 后确认，断言待确认项消失且原事实仍能回读。`tests/behavior-list/entries-lifecycle.test.mjs:148-150,268-269,709-711`、`src/core/interaction-context.ts:12-22`、`src/living/economy/store.ts:158-185`
+- 通知。订阅真实 `world.changed`，分别驱动三区变化，收到后重读快照。验同批合并、稳定读取不自激、卸载后旧租约不发迟到通知。保留原事件回归断言。`tests/living/living-lifecycle.test.mjs:135-205`、`src/living/body/plugin.ts:222-243`、`src/living/plan/plugin.ts:545-565`、`src/living/economy/plugin.ts:203-226`
+
+**需主人拍板**
+
+- 仅挂 Economy 的读口 — 推荐在 `petEconomy` 增加同一个 `worldSnapshot()`，因为 `petBehavior` 随 Body 才挂出，复用实例读口即可满足只挂钱包的验收。`docs/plans/stage2a-merge.md:451-452`、`src/living/body/plugin.ts:392-397`、`src/living/economy/plugin.ts:264-274` 决定：按推荐（主人 2026-11-20 过目同意）。
+- Plan 命令的请求身份 — 推荐 `requestId` 关联调用，效应去重沿用原步骤编号和阅读 token，两条命令都锁定原目标。现有持久回执已经覆盖重试所需的事实，避免为 3E 新增请求账本和数据迁移。`src/living/plan/plan.ts:354-385,398-440`、`src/living/body/room.ts:621-625,705-716`、`src/living/economy/store.ts:327-343` 决定：按推荐（主人 2026-11-20 过目同意）。
+
+**快测**
+
+- 每提交 `pnpm run build && pnpm run check:arch && node --test tests/living/living-lifecycle.test.mjs`。验 `living` 的 R1–R4 为零，R8 无新增。提交 2 加 `node --test dist/tests/life/life-domain-integration.test.js dist/tests/economy/economy-recovery.test.js`。`AGENTS.md:49-51`、`package.json:92,113-114,125`、`tsconfig.build.json:3-4`、`docs/plans/stage2a-merge.md:392,619,639`
+- 提交 3 加 `node --test dist/tests/life/{life-review-files,autonomous-life}.test.js dist/tests/economy/economy-recovery.test.js tests/regressions/audit-r5-garden-clock.test.mjs`、`node --test --test-name-pattern='回顾文件守卫|历史补写' tests/behavior-list/policy-life.test.mjs` 和 `node --check scripts/checks/check-room-interactions.cjs`。合并前按原门禁跑 `pnpm run verify` 和 `pnpm run test:behavior-list`。`tests/life/life-review-files.test.ts:63-95`、`tests/life/autonomous-life.test.ts:284-292`、`tests/regressions/audit-r5-garden-clock.test.mjs:124-129`、`scripts/checks/check-room-interactions.cjs:21,50`、`package.json:125-127`
 
 ---
 
