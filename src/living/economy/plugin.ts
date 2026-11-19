@@ -1,3 +1,4 @@
+import {mountLivingArea} from '../index.js';
 import {economyOverview,economyPage} from './tool-context.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
@@ -236,41 +237,48 @@ declare module '@deepseek-ai/cordis' {
   interface Events {'pet/economy.fact'(workspaceId:string):void}
 }
 export function apply(ctx:Context) {
-  const host=ctx.petCore, service=new CompanionEconomy(ctx,host);
-  // Adopt an existing ready workspace before registering required schema paths.
-  // Failed adoption leaves the original JSON and all unrelated records intact.
-  const status=host.workspace.status();
-  if(status.state==='ready'&&status.target)try {service.prepare(status.target);}catch(error){ctx.logger('chatpet-economy').warn('Economy is unavailable; retained files were not replaced',error);}
-  const stopInitializer=host.workspace.registerInitializer('economy',target=>{service.prepare(target,undefined,true);},target=>{
-    const path=join(target.path,'.chatpet','data/economy/storage.json');
-    return localFile(path)||host.workspace.runtime.store.meta(`economy.initialized:${host.workspace.storageId()}`)?inventoryFiles:[];
+  const host=ctx.petCore;
+  let stopInitializer: (()=>void) | undefined, stopAccess: (()=>void) | undefined;
+  const stateParameters={view:{type:'string',enum:['overview','full'],description:'Autonomous turns default to overview. full retains the original snapshot.'},
+    factIds:{type:'array',items:{type:'string'},description:'Read 1–16 original committed economic interaction receipts by exact fact IDs.'},
+    section:{type:'string',enum:['catalog','ledger'],description:'Optional paged catalog or recent ledger (up to 80 original recent entries).'},
+    offset:{type:'integer'},limit:{type:'integer'}} as const;
+  return mountLivingArea(ctx,host,'economy',()=>new CompanionEconomy(ctx,host),service=>{
+    // Adopt an existing ready workspace before registering required schema paths.
+    // Failed adoption leaves the original JSON and all unrelated records intact.
+    const status=host.workspace.status();
+    if(status.state==='ready'&&status.target)try {service.prepare(status.target);}catch(error){ctx.logger('chatpet-economy').warn('Economy is unavailable; retained files were not replaced',error);}
+    stopInitializer=host.workspace.registerInitializer('economy',target=>{service.prepare(target,undefined,true);},target=>{
+      const path=join(target.path,'.chatpet','data/economy/storage.json');
+      return localFile(path)||host.workspace.runtime.store.meta(`economy.initialized:${host.workspace.storageId()}`)?inventoryFiles:[];
+    });
+    ctx.provide('petEconomy',service);
+    stopAccess=installEconomyAccessGuard(ctx,()=>service.protectedDirectory());
+    const scope=(agent?:Agent)=>{
+      if(!agent || agent.session.header.agentPreset==='chatpet-channel-guest' || host.native.isGuest(agent.id) || !host.native.manages(agent.id))return;
+      const bound=ctx.petWorld.sessionStatus(agent.session),current=host.workspace.status();
+      if(bound?.state!=='ready'||current.state!=='ready'||!current.target||bound.target?.id!==current.target.id)return;
+      return current.target.id;
+    };
+    const output={schema:{type:'string' as const},render:(_:unknown,value:string)=>[{type:'text' as const,text:value}]};
+    const stateTool=defineTool({name:economyStateToolDeclaration.name,description:'读取同一伙伴的真实钱包、库存、商店目录、读物与书签、待确认消费及近期流水。基础餐食和饮水免费。种植、收获、出售和消费由你明确选择并写入持久生活计划，不会自动派工、发工资或凭文字增加物品。',parameters:stateParameters,output,
+      execute:async(args,exec)=>{const id=scope(exec.agent);check(id,'Economy requires an admitted owner conversation');
+        const validate=()=>{exec.signal.throwIfAborted();check(scope(exec.agent)===id,'Economy conversation admission changed');host.native.validate(exec.agent!.id);};
+        if(args.factIds){check(args.factIds.length>=1&&args.factIds.length<=16,'Expected 1–16 fact IDs');validate();
+          const facts=await service.readFacts(id,args.factIds);validate();return JSON.stringify({facts});}
+        const state=await service.snapshot(id,validate);
+        return JSON.stringify(args.section?economyPage(state,args.section,args.offset,args.limit):
+          (args.view??(host.native.isAutonomous(exec.agent!.id)?'overview':'full'))==='overview'?economyOverview(state):state);}});
+    ctx.tools.register(stateTool,{when:({agent})=>!!scope(agent)});
+    ctx.effect(() => host.native.toolTable.register(economyStateToolDeclaration).revoke);
+    registerWorldContext(ctx,'chatpet.economy',35,agent=>{
+      const id=scope(agent);if(!id)return '';
+      try {const snapshot=service.gardenPort(id).loadGarden(Date.now());
+        return `生活经济：基础餐食、饮水免费，额外食物、读物与园艺用品使用游戏金币。收菜、出售、补种与消费由你决定，用生活计划明确安排，成熟和动画结束不会自动执行。钱物以程序流水为准；买到读物不等于读过，实际片段返回并确认后才保存书签。用 pet_economy_state 查询目录、库存与价格。当前金币 ${snapshot.coins}。这是持续的同一份钱包，换对话不重置。`;
+      }catch {return '生活经济暂不可用。保留现有计划与未决操作，勿假设交易成功或另建钱包；基础餐食与饮水仍免费。';}
+    });
+  },service=>{
+    try { stopAccess?.(); }
+    finally { try { stopInitializer?.(); } finally { service.close(); } }
   });
-  ctx.provide('petEconomy',service);
-  const stopAccess=installEconomyAccessGuard(ctx,()=>service.protectedDirectory());
-  const scope=(agent?:Agent)=>{
-    if(!agent || agent.session.header.agentPreset==='chatpet-channel-guest' || host.native.isGuest(agent.id) || !host.native.manages(agent.id))return;
-    const bound=ctx.petWorld.sessionStatus(agent.session),current=host.workspace.status();
-    if(bound?.state!=='ready'||current.state!=='ready'||!current.target||bound.target?.id!==current.target.id)return;
-    return current.target.id;
-  };
-  const output={schema:{type:'string' as const},render:(_:unknown,value:string)=>[{type:'text' as const,text:value}]};
-  const stateTool=defineTool({name:economyStateToolDeclaration.name,description:'读取同一伙伴的真实钱包、库存、商店目录、读物与书签、待确认消费及近期流水。基础餐食和饮水免费。种植、收获、出售和消费由你明确选择并写入持久生活计划，不会自动派工、发工资或凭文字增加物品。',parameters:{view:{type:'string',enum:['overview','full'],description:'Autonomous turns default to overview. full retains the original snapshot.'},
-      factIds:{type:'array',items:{type:'string'},description:'Read 1–16 original committed economic interaction receipts by exact fact IDs.'},
-      section:{type:'string',enum:['catalog','ledger'],description:'Optional paged catalog or recent ledger (up to 80 original recent entries).'},offset:{type:'integer'},limit:{type:'integer'}},output,
-    execute:async(args,exec)=>{const id=scope(exec.agent);check(id,'Economy requires an admitted owner conversation');
-      const validate=()=>{exec.signal.throwIfAborted();check(scope(exec.agent)===id,'Economy conversation admission changed');host.native.validate(exec.agent!.id);};
-      if(args.factIds){check(args.factIds.length>=1&&args.factIds.length<=16,'Expected 1–16 fact IDs');validate();
-        const facts=await service.readFacts(id,args.factIds);validate();return JSON.stringify({facts});}
-      const state=await service.snapshot(id,validate);
-      return JSON.stringify(args.section?economyPage(state,args.section,args.offset,args.limit):
-        (args.view??(host.native.isAutonomous(exec.agent!.id)?'overview':'full'))==='overview'?economyOverview(state):state);}});
-  ctx.tools.register(stateTool,{when:({agent})=>!!scope(agent)});
-  ctx.effect(() => host.native.toolTable.register(economyStateToolDeclaration).revoke);
-  registerWorldContext(ctx,'chatpet.economy',35,agent=>{
-    const id=scope(agent);if(!id)return '';
-    try {const snapshot=service.gardenPort(id).loadGarden(Date.now());
-      return `生活经济：基础餐食、饮水免费，额外食物、读物与园艺用品使用游戏金币。收菜、出售、补种与消费由你决定，用生活计划明确安排，成熟和动画结束不会自动执行。钱物以程序流水为准；买到读物不等于读过，实际片段返回并确认后才保存书签。用 pet_economy_state 查询目录、库存与价格。当前金币 ${snapshot.coins}。这是持续的同一份钱包，换对话不重置。`;
-    }catch {return '生活经济暂不可用。保留现有计划与未决操作，勿假设交易成功或另建钱包；基础餐食与饮水仍免费。';}
-  });
-  ctx.effect(()=>()=>{stopAccess();stopInitializer();service.close();});
 }

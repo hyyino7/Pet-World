@@ -1,3 +1,4 @@
+import {mountLivingArea} from '../index.js';
 import type { Context } from '@deepseek-ai/cordis';
 import { existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -351,6 +352,8 @@ declare module '@deepseek-ai/cordis' {
   interface Events {'pet/behavior.changed'(value: BehaviorChange): void}
 }
 export function apply(ctx: Context) {
-  const behavior = new CompanionBehavior(ctx,ctx.petCore); ctx.provide('petBehavior',behavior);
-  ctx.effect(() => () => behavior.close());
+  const host=ctx.petCore;
+  return mountLivingArea(ctx,host,'body',()=>new CompanionBehavior(ctx,host),behavior=>{
+    ctx.provide('petBehavior',behavior);
+  });
 }

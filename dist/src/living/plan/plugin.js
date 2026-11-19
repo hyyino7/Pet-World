@@ -1,3 +1,4 @@
+import { mountLivingArea } from '../index.js';
 import { reviewDiaryStatus } from './review-completion.js';
 import { existsSync, lstatSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -642,21 +643,21 @@ export const name = '40-Life';
 export const inject = ['petCore', 'petWorld', 'agents', 'sessions', 'tools', 'systemPrompt'];
 export function apply(ctx, config = {}) {
     const host = ctx.petCore;
-    const life = new CompanionLife(ctx, host, config.agentPreset ?? 'standard');
-    ctx.provide('petLife', life);
-    ctx.effect(() => () => life.close());
-    life.registerSource();
-    ctx.effect(() => host.workspace.runtime.capabilityTable.register({
-        id: 'life.pursuits', owner: 'life', contractVersion: CONTRACT_VERSION, order: 3,
-        status: () => {
-            const bound = host.workspace.status().state === 'ready';
-            const running = bound && life.running();
-            return {
-                state: bound ? running ? 'ready' : 'disabled' : 'unavailable',
-                reason: bound ? running ? null : 'Life is paused' : 'Bind a workspace to start Life',
-                supportedOperations: ['start', 'stop', 'inspect', 'interact'],
-            };
-        },
-    }).revoke);
+    return mountLivingArea(ctx, host, 'plan', () => new CompanionLife(ctx, host, config.agentPreset ?? 'standard'), life => {
+        ctx.provide('petLife', life);
+        life.registerSource();
+        ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+            id: 'life.pursuits', owner: 'life', contractVersion: CONTRACT_VERSION, order: 3,
+            status: () => {
+                const bound = host.workspace.status().state === 'ready';
+                const running = bound && life.running();
+                return {
+                    state: bound ? running ? 'ready' : 'disabled' : 'unavailable',
+                    reason: bound ? running ? null : 'Life is paused' : 'Bind a workspace to start Life',
+                    supportedOperations: ['start', 'stop', 'inspect', 'interact'],
+                };
+            },
+        }).revoke);
+    });
 }
 //# sourceMappingURL=plugin.js.map

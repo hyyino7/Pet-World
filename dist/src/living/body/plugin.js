@@ -1,3 +1,4 @@
+import { mountLivingArea } from '../index.js';
 import { existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -478,8 +479,9 @@ export class CompanionBehavior {
 export const name = '25-Behavior';
 export const inject = ['petCore'];
 export function apply(ctx) {
-    const behavior = new CompanionBehavior(ctx, ctx.petCore);
-    ctx.provide('petBehavior', behavior);
-    ctx.effect(() => () => behavior.close());
+    const host = ctx.petCore;
+    return mountLivingArea(ctx, host, 'body', () => new CompanionBehavior(ctx, host), behavior => {
+        ctx.provide('petBehavior', behavior);
+    });
 }
 //# sourceMappingURL=plugin.js.map
