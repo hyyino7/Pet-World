@@ -3,6 +3,7 @@ import type { PetCoreHost } from '../core/index.js';
 import { type LifePreferences } from './library.js';
 import type { RecordOperation } from '../core/records.js';
 import type { CompanionFact } from '../contracts/interaction.js';
+import { type GardenClock } from '../economy/garden-clock.js';
 /** The upstream fact layer is the only state writer. World owns scheduling,
  * journal and native home recovery; Core owns every model step and Memory. */
 export declare class CompanionLife {
@@ -13,6 +14,7 @@ export declare class CompanionLife {
     private runtime?;
     private enabled;
     private restoredClock;
+    private pauses?;
     private preferences;
     private closed;
     private fault?;
@@ -31,10 +33,9 @@ export declare class CompanionLife {
     running(): boolean;
     /** Saved clock intent is independent of native planner readiness. This read
      * never waits on Life's queue or initializes a missing control directory. */
-    bodyClockState(workspaceId: string): {
-        enabled: boolean;
+    bodyClockState(workspaceId: string): (GardenClock & {
         restoreElapsed: boolean;
-    } | undefined;
+    }) | undefined;
     isHome(id: string): boolean;
     homeSessionId(): string | undefined;
     /** Presentation reads the original body's two distinct states: walking to bed
@@ -44,7 +45,6 @@ export declare class CompanionLife {
         pending: boolean;
     } | undefined;
     private publishRest;
-    private safe;
     private directory;
     private synchronize;
     private startRuntime;
@@ -127,6 +127,7 @@ export declare class CompanionLife {
         revision: number;
         plan: import("./plan.js").CurrentLifePlan | null;
     }>;
+    private writeControl;
     control(workspaceId: string, enabled: boolean): Promise<{
         enabled: boolean;
         running: boolean;

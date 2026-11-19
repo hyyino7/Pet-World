@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {pathToFileURL} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
 import {agentCarrier, agentEvents} from '@deepseek-ai/dsh-agent';
@@ -31,7 +32,7 @@ export async function eventually(check, label) {
 
 // Cordis owns every plugin and subscription. The host supplies a scripted loop,
 // workspace registry, and disk-backed session persistence in a disposable directory.
-export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,22,59)} = {}) {
+export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,22,59), legacyGarden = false} = {}) {
   t.mock.timers.enable({apis:['Date'], now:Number(now)});
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'her-world-entries-')));
   const repo = join(root, 'workspace'), id = 'world';
@@ -214,7 +215,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       const initialized = await core.services.workspace.initialize(request('initialize'),{expectedPreferencesRevision:result.value.revision});
       assert.ok(initialized.ok,JSON.stringify(initialized));
     }
-    for (const key of Object.keys(entries)) await load(key);
+    for (const key of Object.keys(entries)) if (key!=='economy' || !legacyGarden) await load(key);
   }
   async function stop() {
     if (!ctx) return;
@@ -267,6 +268,35 @@ export async function submitPlan(call, steps, nextConsiderAt = null) {
 
 const lifeInput = call=>call.messages.some(message=>message.source.kind==='dsh-world-life');
 const readControl = f=>readFileSync(join(f.directory,'control.json'),'utf8');
+const hour = 3_600_000;
+const pauses = f=>JSON.parse(readControl(f)).pauses;
+const committedGarden = f=>{
+  const database = join(f.repo,'.chatpet/data/economy/economy.sqlite');
+  if (!existsSync(database)) return JSON.parse(readFileSync(join(f.directory,'garden.json'),'utf8'));
+  using db = new DatabaseSync(database,{readOnly:true});
+  return JSON.parse(db.prepare("SELECT value FROM meta WHERE key='garden'").get().value);
+};
+function assertCrop(garden, hours, updatedAt) {
+  assert.ok(Math.abs(garden.plots[0].progress-hours/12)<1e-10,`作物进度为 ${garden.plots[0].progress}，应计 ${hours} 小时`);
+  assert.ok(Math.abs(garden.plots[0].moisture-(.8-hours/15))<1e-10);
+  assert.equal(garden.updatedAt,updatedAt);
+}
+async function clockFixture(t, options) {
+  const f = await cordisFixture(t,{crop:true,...options});
+  await f.enable();
+  await f.progress();
+  return f;
+}
+function till(f, plotId=1) {
+  return f.body.garden(f.id,'act',{type:'till',plotId,requestId:'till-'+plotId});
+}
+async function settleCrop(f, hours, at=Date.now(), plotId=1) {
+  const view = await f.body.garden(f.id,'state');
+  assert.equal(view.ok,true);
+  assertCrop(view.garden,hours,at);
+  assert.equal((await till(f,plotId)).ok,true);
+  assertCrop(committedGarden(f),hours,at);
+}
 const hold = (id, durationMinutes)=>({id,kind:'hold',activity:'Resting',durationMinutes});
 const reviewTime = new Date(2026,10,15,22,59,59,500);
 
@@ -360,9 +390,292 @@ if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1]))
     f.states(states);
     await f.load(key);
     f.states([true,true,true]);
-    // Both unavailable paths retain the originally admitted clock across the pause.
-    const actual = await f.progress();
-    assert.ok(Math.abs(actual-6/12)<1e-10,`恢复时作物进度为 ${actual}，实际计 6 小时`);
+    await settleCrop(f,2);
+  });
+
+  for (const key of ['economy','body']) test(`暂停时卸载 ${key}，暂停中重新加载`,async t=>{
+    const f = await clockFixture(t);
+    t.mock.timers.tick(2*hour);
+    await f.unload(key);
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(2*hour);
+    await f.load(key);
+    await settleCrop(f,2);
+    t.mock.timers.tick(2*hour);
+    await f.life.control(f.id,true);
+    await settleCrop(f,2,Date.now(),2);
+  });
+
+  test('两组件都缺席时暂停，恢复后继续生长',async t=>{
+    const f = await clockFixture(t);
+    await f.unload('body');
+    await f.unload('economy');
+    t.mock.timers.tick(2*hour);
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(4*hour);
+    await f.life.control(f.id,true);
+    t.mock.timers.tick(hour);
+    await f.load('economy');
+    assertCrop(f.economy.gardenPort(f.id).loadGarden(Date.now()),3,Date.now());
+    const {configurationVersion} = await f.economy.snapshot(f.id);
+    await f.economy.settings(f.id,configurationVersion,{},'settings-after-pause',signal());
+    assertCrop(committedGarden(f),3,Date.now());
+    await f.load('body');
+    await settleCrop(f,3);
+  });
+
+  test('同一次卸载期间跨过两次暂停',async t=>{
+    const f = await clockFixture(t);
+    await f.unload('economy');
+    for (const duration of [hour,2*hour]) {
+      t.mock.timers.tick(hour);
+      await f.life.control(f.id,false);
+      t.mock.timers.tick(duration);
+      await f.life.control(f.id,true);
+    }
+    t.mock.timers.tick(hour);
+    await f.load('economy');
+    await settleCrop(f,3);
+  });
+
+  test('暂停中整体重启后恢复作物时钟',async t=>{
+    const f = await clockFixture(t);
+    t.mock.timers.tick(2*hour);
+    await f.unload('economy');
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(2*hour);
+    await f.restart();
+    t.mock.timers.tick(2*hour);
+    await f.life.control(f.id,true);
+    await settleCrop(f,2);
+  });
+
+  test('暂停已落盘时 Body 队首动作按新区间提交',async t=>{
+    const f = await clockFixture(t);
+    t.mock.timers.tick(2*hour);
+    let published = false;
+    const dispose = f.ctx.on('pet/life.changed',()=>{
+      if (!published && JSON.parse(readControl(f)).enabled===false) {
+        published = true;
+        t.mock.timers.tick(hour);
+      }
+    });
+    try {
+      const stop = f.life.control(f.id,false);
+      const write = till(f);
+      assert.equal((await write).ok,true);
+      assert.equal(published,true);
+      assertCrop(committedGarden(f),2,Date.now());
+      await stop;
+    } finally { dispose(); }
+  });
+
+  test('暂停中的手工动作提交菜园时钟',async t=>{
+    const f = await clockFixture(t);
+    t.mock.timers.tick(2*hour);
+    await f.unload('body');
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(4*hour);
+    await f.load('body');
+    await settleCrop(f,2);
+  });
+
+  test('未采用 Economy 的菜园读写和首次接管扣除暂停',async t=>{
+    const f = await clockFixture(t,{legacyGarden:true});
+    t.mock.timers.tick(2*hour);
+    await f.unload('body');
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(4*hour);
+    await f.load('body');
+    await settleCrop(f,2);
+    await f.life.control(f.id,true);
+    t.mock.timers.tick(hour);
+    await f.load('economy');
+    await settleCrop(f,3,Date.now(),2);
+  });
+
+  test('Life 卸载后重载 Economy 从 control.json 恢复暂停',async t=>{
+    const f = await clockFixture(t);
+    t.mock.timers.tick(2*hour);
+    await f.unload('economy');
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(4*hour);
+    await f.life.control(f.id,true);
+    await f.unload('life');
+    await f.unload('body');
+    t.mock.timers.tick(hour);
+    await f.load('economy');
+    assertCrop(f.economy.gardenPort(f.id).loadGarden(Date.now()),3,Date.now());
+    await f.load('body');
+    await settleCrop(f,3);
+  });
+
+  test('Body 错过整段暂停且 Life 已卸载时手工动作扣除暂停',async t=>{
+    const f = await clockFixture(t);
+    t.mock.timers.tick(2*hour);
+    await f.unload('body');
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(4*hour);
+    await f.life.control(f.id,true);
+    await f.unload('life');
+    await f.load('body');
+    f.states([true,false,true]);
+    const result = await till(f);
+    assert.equal(result.ok,true);
+    assertCrop(result.garden,2,Date.now());
+    assertCrop(committedGarden(f),2,Date.now());
+  });
+
+  test('Life 卸载后损坏的暂停区间只阻挡菜园，身体照常',async t=>{
+    const f = await clockFixture(t);
+    await f.unload('life');
+    f.states([true,false,true]);
+    const file = join(f.directory,'control.json');
+    const committed = committedGarden(f);
+    const invalidPauses = '{"version":1,"enabled":true,"pauses":[{"from":10,"to":null}]}\n';
+    writeFileSync(file,invalidPauses);
+    t.mock.timers.tick(3*hour);
+    const meal = await f.body.roomAction(f.id,{action:'feed'},'主人');
+    assert.equal(meal.ok,true);
+    assert.equal(meal.changed,true);
+    assert.equal(meal.fact.result.status,'completed');
+    assert.ok(meal.fact.result.after.hunger < meal.fact.result.before.hunger);
+    for (const result of [await f.body.garden(f.id,'state'),await till(f),
+      await f.body.garden(f.id,'control',{type:'auto',enabled:true})]) {
+      assert.equal(result.ok,false);
+      assert.equal(result.garden.unavailable,true);
+      assert.match(result.garden.message,/生活开关文件无效/);
+    }
+    assert.throws(()=>f.economy.gardenPort(f.id).loadGarden(Date.now()),/生活开关文件无效/);
+    assert.deepEqual(committedGarden(f),committed);
+    assert.equal(readControl(f),invalidPauses);
+  });
+
+  test('缺少 Life 和 Body 时 Economy 改配置仍按区间结算',async t=>{
+    const f = await clockFixture(t);
+    await f.unload('body');
+    t.mock.timers.tick(2*hour);
+    const from = Date.now();
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(4*hour);
+    await f.life.control(f.id,true);
+    await f.unload('life');
+    f.states([false,false,true]);
+    assertCrop(committedGarden(f),0,from-2*hour);
+    assertCrop(f.economy.gardenPort(f.id).loadGarden(Date.now()),2,Date.now());
+    assertCrop(committedGarden(f),0,from-2*hour);
+    const {configuration,configurationVersion} = await f.economy.snapshot(f.id);
+    const articlePrice=configuration.articlePrice+1;
+    const result=await f.economy.settings(f.id,configurationVersion,{articlePrice},'settings-no-life',signal());
+    const revision=configuration.revision+1;
+    assert.deepEqual(result.configuration,{...configuration,articlePrice,revision});
+    assert.deepEqual((await f.economy.snapshot(f.id)).configuration,result.configuration);
+    assertCrop(committedGarden(f),2,Date.now());
+  });
+
+  test('缺少 control.json 和 Life 时沿用原菜园开关',async t=>{
+    const f = await clockFixture(t);
+    await f.unload('life');
+    // 旧版清单允许工作区在没有 control.json 时仍然就绪。
+    const manifest=join(f.repo,'.chatpet','manifest.json');
+    const saved=JSON.parse(readFileSync(manifest,'utf8'));
+    writeFileSync(manifest,JSON.stringify({...saved,schemaVersion:2,files:['README.md','manifest.json','SOUL.md','USER.md','core.json']}));
+    const control=join(f.directory,'control.json');
+    rmSync(control);
+    assert.equal(f.core.workspace.status().state,'ready');
+    t.mock.timers.tick(2*hour);
+    await settleCrop(f,2);
+    await f.body.setAutonomy(f.id,false);
+    t.mock.timers.tick(hour);
+    await settleCrop(f,2,Date.now(),2);
+    await f.unload('body');
+    t.mock.timers.tick(hour);
+    const {configurationVersion} = await f.economy.snapshot(f.id);
+    await f.economy.settings(f.id,configurationVersion,{},'settings-no-control',signal());
+    assertCrop(committedGarden(f),3,Date.now());
+    assert.equal(existsSync(control),false);
+  });
+
+  test('重试开关和修改偏好保留原有暂停区间',async t=>{
+    const f = await clockFixture(t);
+    await f.unload('economy');
+    t.mock.timers.tick(2*hour);
+    const from=Date.now();
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(hour);
+    await f.life.control(f.id,false);
+    const {preferences} = await f.life.snapshot(f.id);
+    await f.life.settings(f.id,preferences,{...preferences,review:'09:00'});
+    assert.deepEqual(pauses(f),[{from,to:null}]);
+    t.mock.timers.tick(hour);
+    const to=Date.now();
+    await f.life.control(f.id,true);
+    t.mock.timers.tick(hour);
+    await f.life.control(f.id,true);
+    assert.deepEqual(pauses(f),[{from,to}]);
+    await f.load('economy');
+    await settleCrop(f,3);
+  });
+
+  test('旧暂停存档先按旧规则恢复，再记录下一次暂停',async t=>{
+    const f = await clockFixture(t);
+    await f.unload('life');
+    writeFileSync(join(f.directory,'control.json'),JSON.stringify({version:1,enabled:false}));
+    await f.load('life');
+    await f.progress();
+    t.mock.timers.tick(4*hour);
+    await f.life.control(f.id,true);
+    assert.equal(pauses(f),undefined);
+    t.mock.timers.tick(2*hour);
+    await settleCrop(f,2);
+    await f.unload('economy');
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(2*hour);
+    await f.life.control(f.id,true);
+    await f.load('economy');
+    await settleCrop(f,2,Date.now(),2);
+  });
+
+  test('时间倒退时暂停区间不重叠且已提交菜园时钟不倒退',async t=>{
+    const f = await clockFixture(t);
+    await f.unload('economy');
+    t.mock.timers.tick(2*hour);
+    const from = Date.now();
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(2*hour);
+    const to = Date.now();
+    await f.life.control(f.id,true);
+    t.mock.timers.setTime(from+hour);
+    await f.life.control(f.id,false);
+    assert.deepEqual(pauses(f),[{from,to},{from:to,to:null}]);
+    await f.life.control(f.id,true);
+    assert.deepEqual(pauses(f),[{from,to}]);
+    t.mock.timers.setTime(to);
+    await f.load('economy');
+    await settleCrop(f,2);
+    t.mock.timers.setTime(from);
+    await settleCrop(f,2,to,2);
+  });
+
+  test('只按 Economy 已提交的菜园时钟清理暂停区间',async t=>{
+    const f = await clockFixture(t);
+    await f.unload('body');
+    t.mock.timers.tick(2*hour);
+    const from=Date.now();
+    await f.life.control(f.id,false);
+    t.mock.timers.tick(2*hour);
+    const to=Date.now();
+    await f.life.control(f.id,true);
+    f.economy.gardenPort(f.id).loadGarden(Date.now());
+    const {preferences} = await f.life.snapshot(f.id);
+    await f.life.settings(f.id,preferences,{...preferences,review:'09:00'});
+    assert.deepEqual(pauses(f),[{from,to}]);
+    await f.load('body');
+    await settleCrop(f,2);
+    t.mock.timers.tick(hour);
+    await f.life.control(f.id,false);
+    assert.deepEqual(pauses(f),[{from:Date.now(),to:null}]);
+    assertCrop(committedGarden(f),3,Date.now());
   });
 
   for (const [key,states] of [['body',[false,true,true]],['economy',[true,true,false]]]) {

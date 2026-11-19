@@ -875,6 +875,227 @@
       ]
     },
     {
+      "id": "G3-GARDEN-01",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "暂停时卸载 economy，暂停中重新加载",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-02",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "暂停时卸载 body，暂停中重新加载",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-03",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "两组件都缺席时暂停，恢复后继续生长",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-04",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "同一次卸载期间跨过两次暂停",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-05",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "暂停中整体重启后恢复作物时钟",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-06",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "暂停已落盘时 Body 队首动作按新区间提交",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-07",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "暂停中的手工动作提交菜园时钟",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-08",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "未采用 Economy 的菜园读写和首次接管扣除暂停",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-09",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "Life 卸载后重载 Economy 从 control.json 恢复暂停",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-10",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "缺少 Life 和 Body 时 Economy 改配置仍按区间结算",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-11",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "重试开关和修改偏好保留原有暂停区间",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-12",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "旧暂停存档先按旧规则恢复，再记录下一次暂停",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-13",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "时间倒退时暂停区间不重叠且已提交菜园时钟不倒退",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-14",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "只按 Economy 已提交的菜园时钟清理暂停区间",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-15",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "Body 错过整段暂停且 Life 已卸载时手工动作扣除暂停",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-16",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "缺少 control.json 和 Life 时沿用原菜园开关",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
+      "id": "G3-GARDEN-17",
+      "categories": [
+        "种地时钟不倒退"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "Life 卸载后损坏的暂停区间只阻挡菜园，身体照常",
+      "l1Stage": "阶段 2",
+      "families": [
+        "种地时钟"
+      ]
+    },
+    {
       "id": "2A1A-14",
       "categories": [
         "日记按原日期恢复"

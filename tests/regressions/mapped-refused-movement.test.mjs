@@ -49,7 +49,7 @@ async function fixture(t,{mode='awake',tilled=false,money=0}={}) {
   const start=()=>{economy=new CompanionEconomy(ctx,host);services.set('petEconomy',economy);body=new CompanionBehavior(ctx,host);services.set('petBehavior',body);room=new Room(ctx);};start();
   const signal=new AbortController().signal;
   const request=(endpoint,input,id)=>room.request('workspace',endpoint,input,id,signal);
-  const garden=()=>economy.gardenPort('workspace').loadGarden(Date.now(),true);
+  const garden=()=>economy.gardenPort('workspace').loadGarden(Date.now(),{enabled:true});
   const store=()=>economy.prepare(host.workspace.status().target);
   if(money)await economy.ownerAction('workspace',{kind:'grant',amount:money},'fixture-money',signal);
   if(tilled)assert.equal(store().applyGarden({type:'till',plotId:0},'fixture-till',Date.now()).ok,true);

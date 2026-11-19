@@ -1,5 +1,6 @@
 import type { BodyUseProof, CatalogItem, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, ItemUse, LedgerEntry, ReadingBookmark, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
 import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
+import { type GardenClock } from './garden-clock.js';
 /** One bound SQLite aggregate owns money, every item, garden jobs and their receipts.
  * No CoreStore or assistant is constructed here. The existing Core binding guard
  * and Core JSON/error helpers are reused at this synchronous persistence boundary. */
@@ -59,7 +60,7 @@ export declare class EconomyStore {
     sell(requestId: string, itemId: string, quantity?: number, actor?: CompanionFactActor): EconomySnapshot;
     grantMoney(requestId: string, amount: number, note?: string, actor?: CompanionFactActor): EconomySnapshot;
     giftItem(requestId: string, itemId: string, quantity?: number, note?: string, actor?: CompanionFactActor): EconomySnapshot;
-    configure(requestId: string, patch: EconomyConfigurationPatch, expectedVersion?: number, passive?: boolean): EconomySnapshot;
+    configure(requestId: string, patch: EconomyConfigurationPatch, expectedVersion?: number, clock?: GardenClock): EconomySnapshot;
     importBook(requestId: string, input: {
         itemId: string;
         title: string;
@@ -112,16 +113,17 @@ export declare class EconomyStore {
     private archiveReceipts;
     private saveGardenRow;
     private projectGarden;
+    committedGardenAt(): number;
     /** Natural growth is projected without spending or committing another wallet.
      * The returned revision is the CAS token for the caretaker's next checkpoint. */
-    readGarden(now?: number, passive?: boolean): any;
+    readGarden(now?: number, clock?: GardenClock): any;
     private commitGarden;
     writeGarden(state: any, expectedRevision?: any): any;
-    applyGarden(action: unknown, requestId: string, now?: number, passive?: boolean): {
+    applyGarden(action: unknown, requestId: string, now?: number, clock?: GardenClock): {
         ok: boolean;
         message: string;
         garden: any;
     };
-    gardenView(now?: number, passive?: boolean): any;
+    gardenView(now?: number, clock?: GardenClock): any;
     close(): void;
 }

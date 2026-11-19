@@ -243,8 +243,8 @@ function economicBody(t:any) {
     legacyGarden:{state:JSON.parse(readFileSync(join(f.root,'garden.json'),'utf8')),sourcePath:join(f.root,'garden.json'),sourceHash:bytesDigest(readFileSync(join(f.root,'garden.json')))}});
   t.after(()=>store.close());let settlement=true;
   const reservation=(value:any)=>({...value,label:'Fixture meal'});
-  const port:RoomEconomyPort={loadGarden:(now,passive)=>store.readGarden(now,passive),saveGarden:state=>store.writeGarden(state,state.economyRevision),
-    actGarden:(input,now,passive)=>store.applyGarden(input,String(input.requestId),now,passive) as any,gardenRules:()=>store.readGarden().economyConfig,
+  const port:RoomEconomyPort={loadGarden:(now,clock)=>store.readGarden(now,clock),saveGarden:state=>store.writeGarden(state,state.economyRevision),
+    actGarden:(input,now,clock)=>store.applyGarden(input,String(input.requestId),now,clock) as any,gardenRules:()=>store.readGarden().economyConfig,
     transaction:(id,input)=>{if(input.type==='buy')store.purchase(id,input.itemId,input.quantity);else store.sell(id,input.itemId,input.quantity);return {status:'completed'};},
     preflightFood:id=>{assert.ok(store.snapshot().inventory.find(row=>row.itemId===id)!.available>0);},
     reserveFood:(id,item)=>reservation(store.beginUse(id,item)),inspectUse:id=>{const row=store.itemUse(id);return row&&reservation(row);},

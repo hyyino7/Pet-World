@@ -49,10 +49,11 @@ function fixture(t,{service=false}={}) {
   };
 }
 const closeTo=(a,b)=>assert.ok(Math.abs(a-b)<1e-10,`${a} should equal ${b}`);
+const pausedClock={enabled:false};
 
 test('R5: paused Store projection skips elapsed growth before pure advance and keeps its CAS revision',t=>{
   const f=fixture(t),before=f.store.readGarden(f.start);f.move(6*HOUR);
-  const paused=f.store.readGarden(Date.now(),false);
+  const paused=f.store.readGarden(Date.now(),pausedClock);
   assert.equal(paused.plots[0].progress,0);assert.equal(paused.plots[0].moisture,.8);
   assert.equal(paused.updatedAt,Date.now());assert.equal(paused.economyRevision,before.economyRevision);
   assert.equal(f.saved().updatedAt,f.start,'A read projects clock admission without committing data');
@@ -60,8 +61,8 @@ test('R5: paused Store projection skips elapsed growth before pure advance and k
 
 test('R5: actual Economy garden port forwards paused admission for reading and manual actions',t=>{
   const f=fixture(t);f.move(6*HOUR);const port=f.economy.gardenPort(f.target.id,join(f.directory,'garden.json'));
-  assert.equal(port.loadGarden(Date.now(),false).plots[0].progress,0);
-  const result=port.actGarden({type:'water',plotId:0,requestId:'direct-water'},Date.now(),false);
+  assert.equal(port.loadGarden(Date.now(),pausedClock).plots[0].progress,0);
+  const result=port.actGarden({type:'water',plotId:0,requestId:'direct-water'},Date.now(),pausedClock);
   assert.equal(result.ok,true);assert.equal(result.garden.plots[0].progress,0);
   assert.equal(f.saved().plots[0].progress,0);
 });
@@ -113,7 +114,7 @@ test('R5: explicit enabled restart restoreElapsed still restores deterministic c
 });
 
 test('R5: paused garden checkpoints retain the original stale-revision guard and wallet',t=>{
-  const f=fixture(t),stale=f.store.readGarden(f.start,false);f.move(6*HOUR);
+  const f=fixture(t),stale=f.store.readGarden(f.start,pausedClock);f.move(6*HOUR);
   f.room.garden('state',{});const before=f.store.snapshot();
   assert.throws(()=>f.store.writeGarden(stale,stale.economyRevision),/stale/i);
   assert.equal(f.saved().plots[0].progress,0);assert.equal(f.store.snapshot().balance,before.balance);
@@ -124,7 +125,7 @@ test('R5: a backwards clock cannot rewind the paused garden checkpoint',t=>{
   const f=fixture(t);f.move(6*HOUR);f.room.tick();const before=f.saved();
   f.room.garden('state',{},false,f.start+HOUR);
   assert.equal(f.saved().updatedAt,before.updatedAt);assert.equal(f.saved().plots[0].progress,0);
-  assert.equal(f.store.readGarden(f.start+HOUR,false).updatedAt,before.updatedAt);
+  assert.equal(f.store.readGarden(f.start+HOUR,pausedClock).updatedAt,before.updatedAt);
 });
 
 test('R5: Economy settings synchronize the real paused Body before committing old growth',async t=>{

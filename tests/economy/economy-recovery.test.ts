@@ -233,9 +233,9 @@ test('legacy income overrides cannot affect current quotes or new crop rules and
     assert.equal(f.store.snapshot().balance,17+2*price,'Existing holdings sell at the common game quote');
     f.store.giftItem('seed-for-new-cohort','seed:'+crop,1);
     const now=Date.now();
-    assert.ok(f.store.applyGarden({type:'till',plotId:1},'till-new-cohort',now,false).ok);
-    assert.ok(f.store.applyGarden({type:'plant',plotId:1,cropId:crop},'plant-new-cohort',now,false).ok);
-    const planted=f.store.readGarden(now,false);
+    assert.ok(f.store.applyGarden({type:'till',plotId:1},'till-new-cohort',now,{enabled:false}).ok);
+    assert.ok(f.store.applyGarden({type:'plant',plotId:1,cropId:crop},'plant-new-cohort',now,{enabled:false}).ok);
+    const planted=f.store.readGarden(now,{enabled:false});
     assert.equal(planted.plots[1].cropProfile.yield,before.configuration.crops[crop].yield);
     assert.equal(planted.plots[1].cropProfile.fertilizerYield,before.configuration.fertilizerYield);
     assert.equal(planted.plots[0].cropProfile.yield,11,'A new planting does not rewrite an old cohort');

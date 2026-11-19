@@ -23,6 +23,8 @@ import { CONTRACT_VERSION } from '../contracts/version.js';
 import {readFactReferences} from './facts.js';
 import {createLifeSourceAdapter} from './tool-policy.js';
 import type {TableRegistration} from '../contracts/tables.js';
+import {recordGardenPause, type GardenClock, type GardenPause} from '../economy/garden-clock.js';
+import {lifeDirectories, readLifeControl, readLifeSettings, safeLifeFile} from './control-file.js';
 
 type Runtime = ReturnType<typeof createLifeRuntime>;
 interface Workspace { id: string; path: string; sessionIds: readonly string[]; attachSession(id: string): Promise<void> }
@@ -45,6 +47,7 @@ export class CompanionLife {
   private runtime?: Runtime;
   private enabled = false;
   private restoredClock = false;
+  private pauses?: readonly GardenPause[];
   private preferences: LifePreferences = {...defaultLifePreferences};
   private closed = false;
   private fault?: string;
@@ -102,24 +105,15 @@ export class CompanionLife {
   }
   /** Saved clock intent is independent of native planner readiness. This read
    * never waits on Life's queue or initializes a missing control directory. */
-  bodyClockState(workspaceId:string):{enabled:boolean;restoreElapsed:boolean}|undefined {
+  bodyClockState(workspaceId:string):(GardenClock & {restoreElapsed:boolean})|undefined {
     if(this.closed)return;
     const current=this.current();if(!current||current.id!==workspaceId)return;
     if(this.binding?.id===current.id&&this.binding.path===current.path
       &&this.binding.plan.storageId===this.host.workspace.storageId())
-      return {enabled:this.enabled,restoreElapsed:this.enabled&&this.restoredClock};
-    let directory=current.path;
-    for(const part of ['.chatpet','data','life']) {
-      directory=join(directory,part);const stat=lstatSync(directory,{throwIfNoEntry:false});
-      if(!stat)return {enabled:false,restoreElapsed:false};
-      if(!stat.isDirectory()||stat.isSymbolicLink())throw Error('生活时钟控制目录无效，原数据已保留');
-    }
-    const file=join(directory,'control.json');this.safe(file);
-    if(!existsSync(file))return {enabled:false,restoreElapsed:false};
-    const settings=JSON.parse(readFileSync(file,'utf8'));
-    if(settings.version!==1||typeof settings.enabled!=='boolean')throw Error('生活开关文件无效，已保留原文件');
-    if(settings.preferences!==undefined)parseLifePreferences(settings.preferences);
-    return {enabled:settings.enabled,restoreElapsed:settings.enabled};
+      return {enabled:this.enabled,restoreElapsed:this.enabled&&this.restoredClock,...(this.pauses && {pauses:this.pauses})};
+    const saved=readLifeControl(current.path);
+    const enabled=saved?.enabled ?? false;
+    return {enabled,restoreElapsed:enabled,...(saved?.pauses && {pauses:saved.pauses})};
   }
   isHome(id: string) { return this.running() && this.runtime?.isHome(id) === true; }
   homeSessionId() { return this.running() ? this.runtime?.snapshot().homeSessionId : undefined; }
@@ -129,37 +123,30 @@ export class CompanionLife {
     return this.ctx.get('petBehavior')?.restState(workspaceId);
   }
   private publishRest() { this.ctx.get('petDesktop')?.features?.restore(false); }
-  private safe(file: string) {
-    if (existsSync(file)) {
-      const stat = lstatSync(file);
-      if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1) throw Error('生活数据文件无效，已保留原文件');
-    }
-  }
   private directory(root: string) {
-    let dir = root;
-    for (const part of ['.chatpet', 'data', 'life']) {
-      dir = join(dir, part);
+    const directories = lifeDirectories(root);
+    for (const dir of directories) {
       if (!existsSync(dir)) mkdirSync(dir, {mode: 0o700});
       const stat = lstatSync(dir);
       if (!stat.isDirectory() || stat.isSymbolicLink()) throw Error('生活数据目录无效');
     }
-    return dir;
+    return directories[2];
   }
   private async synchronize() {
     const selected = this.current();
-    if (selected?.id === this.binding?.id && selected?.path === this.binding?.path) return;
+    if (selected?.id === this.binding?.id && selected?.path === this.binding?.path
+      && (!this.binding || this.binding.plan.storageId===this.host.workspace.storageId())) return;
     await this.stopRuntime();
-    this.binding = undefined; this.enabled = false; this.restoredClock=false;this.fault = undefined;
+    this.binding = undefined; this.enabled = false; this.restoredClock=false;this.pauses=undefined;this.fault = undefined;
     const current = this.current();
     if (!current || this.closed) return;
     const directory = this.directory(current.path);
-    for (const name of ['home.json', 'control.json', 'life.json']) this.safe(join(directory, name));
-    const control = join(directory, 'control.json');
-    const settings = existsSync(control) ? JSON.parse(readFileSync(control, 'utf8')) : {version: 1, enabled: false};
-    if (settings.version !== 1 || typeof settings.enabled !== 'boolean') throw Error('生活开关文件无效，已保留原文件');
-    this.enabled = settings.enabled;
-    this.restoredClock=settings.enabled;
-    this.preferences = settings.preferences === undefined ? {...defaultLifePreferences} : parseLifePreferences(settings.preferences);
+    for (const name of ['home.json', 'life.json']) safeLifeFile(join(directory, name));
+    const settings=readLifeSettings(current.path);
+    this.enabled=settings?.enabled ?? false;
+    this.restoredClock=this.enabled;
+    this.pauses=settings?.pauses;
+    this.preferences=settings?.preferences ?? {...defaultLifePreferences};
     const storageId=this.host.workspace.storageId();
     this.binding = {id: current.id, path: current.path, directory, library: this.host.records.getLibrary(current.id),
       plan:new PersistentLifePlan(directory,this.host.workspace.runtime.identity().companionId,storageId,this.timeZone,()=>{
@@ -398,7 +385,7 @@ export class CompanionLife {
     else {
       // Prompt assembly may occur inside native Life startup. Do not enqueue
       // behind startup or create files: read the already persisted record only.
-      const file=join(current.path,'.chatpet','data','life','life.json');this.safe(file);
+      const file=join(current.path,'.chatpet','data','life','life.json');safeLifeFile(file);
       if(!existsSync(file))summary=JSON.stringify({revision:0,plan:null});
       else {
         if(lstatSync(file).size>64*1024)throw Error('生活状态超出可读取范围，原文件已保留');
@@ -472,12 +459,24 @@ export class CompanionLife {
       this.runtime?.reschedulePlan();this.ctx.emit('pet/life.changed');return result;
     });
   }
+  private writeControl(bound: Bound, enabled: boolean, preferences: LifePreferences, pauses: readonly GardenPause[] | undefined) {
+    const file = join(bound.directory, 'control.json'); safeLifeFile(file);
+    if (pauses?.some(pause=>pause.to!==null)) {
+      let committedAt: number | undefined;
+      try { committedAt=this.ctx.get('petEconomy')?.committedGardenAt(bound.id); }
+      catch { /* An unavailable Economy leaves the interval history intact. */ }
+      const at=committedAt;
+      if (at!==undefined) pauses=pauses.filter(({to})=>to===null || to>at);
+    }
+    durableWrite(file, JSON.stringify({version:1, enabled, preferences, pauses}, null, 2));
+    this.pauses=pauses;
+  }
   control(workspaceId: string, enabled: boolean) {
     return this.enqueue(async () => {
       await this.synchronize();
       if (this.binding?.id !== workspaceId) throw Error('生活工作区已切换');
-      const file = join(this.binding.directory, 'control.json'); this.safe(file);
-      durableWrite(file, JSON.stringify({version: 1, enabled, preferences: this.preferences}, null, 2));
+      const pauses=enabled===this.enabled ? this.pauses : recordGardenPause(this.pauses,enabled,Date.now());
+      this.writeControl(this.binding,enabled,this.preferences,pauses);
       this.enabled = enabled;this.restoredClock=false;this.fault = undefined;
       // Body observes committed intent now, before native home/model startup.
       this.ctx.emit('pet/life.changed');
@@ -517,9 +516,7 @@ export class CompanionLife {
       const preferences = parseLifePreferences(next);
       if (JSON.stringify(parseLifePreferences(expected)) !== JSON.stringify(this.preferences)) throw {code: 'STALE_REVISION'};
       const before = this.preferences;
-      const file = join(bound.directory, 'control.json');
-      this.safe(file);
-      durableWrite(file, JSON.stringify({version: 1, enabled: this.enabled, preferences}, null, 2));
+      this.writeControl(bound,this.enabled,preferences,this.pauses);
       this.preferences = preferences;
       if (before.wake !== preferences.wake || before.review !== preferences.review) this.runtime?.reschedule();
       return {preferences};
@@ -540,7 +537,6 @@ export class CompanionLife {
     });
   }
 }
-
 export const name = '40-Life';
 export const inject = ['petCore', 'petWorld', 'agents', 'sessions', 'tools', 'systemPrompt'];
 export interface Config { agentPreset?: string }
