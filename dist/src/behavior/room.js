@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import { HOME_ACTIONS, HOME_LAYOUT, HOME_TOUCH_REACTION_MS, advanceHomeState, nextHomeBoundary, applyCatalogFood, applyHomeAction, beginPlannedHomeActivity, pausePlannedHomeActivity, resumePlannedHomeActivity, homeView, normalizeHomeState, saveHomeState } from '#feiyu-home';
 import { createGardenCaretaker, nextGardenCareBoundary } from '#feiyu-room/garden-autonomy';
 import { actGarden, loadGarden, saveGarden } from '#feiyu-room/garden-store';
-import { advanceGarden } from '#feiyu-garden';
+import { advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
+import { advanceGardenClock } from '../economy/garden-clock.js';
 import { applyRoomAction, normalizeRoomState, roomView } from '#feiyu-room/room-state';
 import { randomUUID } from 'node:crypto';
 import { initialBodyState } from './initial-state.js';
@@ -31,6 +32,7 @@ export class CompanionRoom {
     emotion;
     economy;
     offlinePolicy;
+    lifeClock;
     state;
     dirty = false;
     homeFile;
@@ -42,10 +44,11 @@ export class CompanionRoom {
     lastUnavailableCheckpoint = 0;
     returningFromInteraction = false;
     acceptingFoodInteraction;
-    constructor(directory, emotion, economy = () => undefined, offlinePolicy = () => ({ hours: 4, needCeiling: .7, energyFloor: .35 })) {
+    constructor(directory, emotion, economy = () => undefined, offlinePolicy = () => ({ hours: 4, needCeiling: .7, energyFloor: .35 }), lifeClock = () => undefined) {
         this.emotion = emotion;
         this.economy = economy;
         this.offlinePolicy = offlinePolicy;
+        this.lifeClock = lifeClock;
         this.homeFile = join(directory, 'home.json');
         this.gardenFile = join(directory, 'garden.json');
         if (safeFile(this.homeFile)) {
@@ -113,13 +116,15 @@ export class CompanionRoom {
         return port;
     }
     loadGardenState(now = Date.now()) {
+        const clock = this.gardenClock();
         const port = this.economyPort();
         if (!port && this.gardenAuthorityUnavailable())
             throw Error('经济组件暂不可用，菜园保留并等待恢复');
-        let garden;
-        const passive = this.gardenClockState() !== false;
         try {
-            garden = port ? port.loadGarden(now, passive) : (safeFile(this.gardenFile), loadGarden(this.gardenFile, now));
+            if (port)
+                return port.loadGarden(now, clock);
+            safeFile(this.gardenFile);
+            return advanceGardenClock(loadGarden(this.gardenFile, now), now, clock, advanceGarden);
         }
         catch (error) {
             if (port) {
@@ -128,13 +133,14 @@ export class CompanionRoom {
             }
             throw error;
         }
-        if (!passive)
-            garden.updatedAt = Math.max(garden.updatedAt, now);
-        return garden;
     }
     /** Undefined means clock intent has not been restored, never an owner pause.
      * Keep elapsed crop time until an explicit admission establishes otherwise. */
     gardenClockState() { return this.state.gardenClockEnabled; }
+    gardenClock() {
+        const clock = this.lifeClock();
+        return clock?.pauses !== undefined ? clock : { enabled: this.gardenClockState() !== false };
+    }
     saveGardenState(state, now = Date.now()) {
         const port = this.economyPort();
         if (port) {
@@ -1344,7 +1350,8 @@ export class CompanionRoom {
         if (!port)
             safeFile(this.gardenFile);
         const revision = port ? this.loadGardenState(now).economyRevision : undefined;
-        const result = port ? port.actGarden(action, now, this.gardenClockState() !== false) : actGarden(this.gardenFile, action, now);
+        const clock = this.gardenClock();
+        const result = port ? port.actGarden(action, now, clock) : this.actLegacyGarden(action, now, clock);
         // The authoritative action is committed once. A refusal must not retire
         // accepted Body work. An old Economy receipt has no new revision; a new
         // commit interrupts against the latest checkpoint.
@@ -1352,6 +1359,15 @@ export class CompanionRoom {
         if (committed && action.type !== 'state')
             this.interruptPlanned(now, '新的菜园安排打断了当前计划');
         return { ...result, garden: committed ? this.tick(now) : result.garden };
+    }
+    actLegacyGarden(action, now, clock) {
+        if (clock.pauses === undefined)
+            return actGarden(this.gardenFile, action, now);
+        const state = advanceGardenClock(loadGarden(this.gardenFile, now), now, clock, advanceGarden);
+        const result = applyGardenAction(state, action, now);
+        if (result.ok)
+            saveGarden(this.gardenFile, result.state);
+        return { ok: result.ok, message: result.message, garden: gardenView(result.state, now) };
     }
 }
 //# sourceMappingURL=room.js.map

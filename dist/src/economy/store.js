@@ -5,7 +5,9 @@ import { isAbsolute, join } from 'node:path';
 import { CROPS, GARDEN_RULES, createGarden, normalizeGarden, advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
 import { canonical, check, digest, integer, reject, text, unavailable } from '../core/storage.js';
 import { effectiveEconomyConfiguration, defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
+import { advanceGardenClock } from './garden-clock.js';
 const cropRows = CROPS;
+const runningClock = { enabled: true };
 const terminal = new Set(['completed', 'failed', 'cancelled']);
 const json = (value) => JSON.parse(value);
 const clone = (value) => JSON.parse(canonical(value));
@@ -347,7 +349,7 @@ export class EconomyStore {
             return this.snapshotRow();
         });
     }
-    configure(requestId, patch, expectedVersion, passive = true) {
+    configure(requestId, patch, expectedVersion, clock = runningClock) {
         canonical(patch);
         if (expectedVersion !== undefined)
             integer(expectedVersion, 'expected configuration revision', 1);
@@ -430,7 +432,7 @@ export class EconomyStore {
                 }
             }
             // Settle old growth using old rules before changing the rates.
-            this.saveGardenRow(this.readGarden(Date.now(), passive));
+            this.saveGardenRow(this.readGarden(Date.now(), clock));
             config.revision = safeSum(config.revision, 1);
             this.setMeta('configuration', config);
             this.bump();
@@ -681,20 +683,20 @@ export class EconomyStore {
         state.economyConfig = this.gardenOptions();
         return state;
     }
+    committedGardenAt() {
+        this.ensure();
+        return atTime(this.projectGarden().updatedAt);
+    }
     /** Natural growth is projected without spending or committing another wallet.
      * The returned revision is the CAS token for the caretaker's next checkpoint. */
-    readGarden(now = Date.now(), passive = true) {
+    readGarden(now = Date.now(), clock = runningClock) {
         this.ensure();
         atTime(now);
-        check(typeof passive === 'boolean', 'Invalid passive garden admission');
+        check(typeof clock.enabled === 'boolean', 'Invalid garden clock admission');
         const raw = this.projectGarden();
-        // Body supplies admission before the shared pure advance, not after growth
-        // has already been projected. This read retains the original CAS token.
-        if (!passive)
-            raw.updatedAt = Math.max(raw.updatedAt, now);
-        const state = this.advance(raw, now);
-        state.economyRevision = this.revision();
-        state.economyConfig = this.gardenOptions();
+        const state = advanceGardenClock(raw, now, clock, (garden, at) => this.advance(garden, at));
+        state.economyRevision = raw.economyRevision;
+        state.economyConfig = raw.economyConfig;
         state.care.receipts = raw.care.receipts;
         return state;
     }
@@ -731,18 +733,18 @@ export class EconomyStore {
         const now = atTime(state?.updatedAt ?? Date.now());
         return this.transaction(() => this.commitGarden(state, expectedRevision, `garden-checkpoint:${randomUUID()}`, 'garden', now));
     }
-    applyGarden(action, requestId, now = Date.now(), passive = true) {
+    applyGarden(action, requestId, now = Date.now(), clock = runningClock) {
         atTime(now);
         const result = this.mutate(requestId, 'garden-action', action, () => {
-            const current = this.readGarden(now, passive), result = applyGardenAction(current, action, now, this.gardenOptions());
+            const current = this.readGarden(now, clock), result = applyGardenAction(current, action, now, this.gardenOptions());
             if (!result.ok)
                 return { ok: false, message: result.message };
             this.commitGarden(result.state, current.economyRevision, requestId, 'garden-action', now);
             return { ok: true, message: result.message };
         });
-        return { ...result, garden: this.gardenView(now, passive) };
+        return { ...result, garden: this.gardenView(now, clock) };
     }
-    gardenView(now = Date.now(), passive = true) { return gardenView(this.readGarden(now, passive), now, this.gardenOptions()); }
+    gardenView(now = Date.now(), clock = runningClock) { return gardenView(this.readGarden(now, clock), now, this.gardenOptions()); }
     close() { if (this.closed)
         return; this.closed = true; this.db.close(); if (existsSync(this.lockPath) && readFileSync(this.lockPath, 'utf8') === this.lockToken)
         unlinkSync(this.lockPath); }

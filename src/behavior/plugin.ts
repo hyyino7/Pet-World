@@ -12,6 +12,7 @@ import { resolveActivityPlayback } from './playback.js';
 import type { CompanionFactActor } from '../contracts/interaction.js';
 import type { RoomInteractionContext } from './room.js';
 import {gardenHomeProjection} from './garden-receipt.js';
+import { readLifeControl } from '../life/plugin.js';
 export type { PlannedActivity, PlannedExecution } from '../contracts/behavior.js';
 
 interface Binding {id: string; path: string; storageId: string; room: CompanionRoom; fingerprint?: string; presentationFingerprint?: string}
@@ -145,7 +146,8 @@ export class CompanionBehavior {
         return economy?.gardenPort(id,legacyFile);
       },()=>{const settings=this.host.workspace.companionSettings?.();return {
         hours:settings?.offlineBodyHours ?? 4,needCeiling:(settings?.offlineNeedCeilingPercent ?? 70)/100,
-        energyFloor:(settings?.offlineEnergyFloorPercent ?? 35)/100};})};
+        energyFloor:(settings?.offlineEnergyFloorPercent ?? 35)/100};},
+      ()=>this.ctx.get('petLife')?.bodyClockState?.(id) ?? readLifeControl(target.path))};
     const admission=this.ctx.get('petLife')?.bodyClockState?.(id);
     if(admission) {
       this.autonomous=admission.enabled;this.binding.room.setAutonomy(admission.enabled,Date.now(),admission.restoreElapsed);

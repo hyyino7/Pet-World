@@ -1,3 +1,4 @@
+import { type GardenClock } from '../economy/garden-clock.js';
 import type { CompanionEmotion } from '../emotion/plugin.js';
 import type { PlannedActivity, PlannedExecution, BehaviorAnimationContext } from '../contracts/behavior.js';
 import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
@@ -45,9 +46,9 @@ export interface RoomReadingSegment extends RoomReadingInput {
 }
 export interface RoomEconomyPort {
     /** Complete legacy aggregate, with authoritative wallet and inventory projection. */
-    loadGarden(now: number, passive?: boolean): any;
+    loadGarden(now: number, clock?: GardenClock): any;
     saveGarden(state: any, now: number): any;
-    actGarden(input: Record<string, unknown>, now: number, passive?: boolean): {
+    actGarden(input: Record<string, unknown>, now: number, clock?: GardenClock): {
         ok: boolean;
         message: string;
         garden: any;
@@ -95,6 +96,7 @@ export declare class CompanionRoom {
     private emotion;
     private economy;
     private offlinePolicy;
+    private lifeClock;
     state: any;
     private dirty;
     private readonly homeFile;
@@ -106,7 +108,7 @@ export declare class CompanionRoom {
     private lastUnavailableCheckpoint;
     private returningFromInteraction;
     private acceptingFoodInteraction?;
-    constructor(directory: string, emotion: () => ReturnType<CompanionEmotion['roomSnapshot']>, economy?: (legacyGardenFile: string) => RoomEconomyPort | undefined, offlinePolicy?: () => OfflineBodyPolicy);
+    constructor(directory: string, emotion: () => ReturnType<CompanionEmotion['roomSnapshot']>, economy?: (legacyGardenFile: string) => RoomEconomyPort | undefined, offlinePolicy?: () => OfflineBodyPolicy, lifeClock?: () => GardenClock | undefined);
     private economyPort;
     private gardenAuthorityUnavailable;
     private requireEconomy;
@@ -114,6 +116,7 @@ export declare class CompanionRoom {
     /** Undefined means clock intent has not been restored, never an owner pause.
      * Keep elapsed crop time until an explicit admission establishes otherwise. */
     gardenClockState(): boolean | undefined;
+    private gardenClock;
     private saveGardenState;
     private gardenUnavailable;
     private requestedActive;
@@ -215,4 +218,5 @@ export declare class CompanionRoom {
         accepted?: boolean;
         status?: string;
     };
+    private actLegacyGarden;
 }

@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
-import {CompanionLife} from '../../src/life/plugin.js';
+import {CompanionLife,readLifeControl} from '../../src/life/plugin.js';
 import {CompanionRecordLibrary} from '../../src/core/records.js';
 
 function fixture(t:TestContext,enabled?:boolean) {
@@ -49,10 +49,14 @@ test('persisted enabled intent restores elapsed time before the native planner i
 
 test('explicit owner disable and re-enable do not catch up the paused interval',async t=>{
   const f=fixture(t,true);await f.life.control('world',false);
-  assert.deepEqual(f.life.bodyClockState('world'),{enabled:false,restoreElapsed:false});
+  const intent=()=>{
+    const {enabled,restoreElapsed}=f.life.bodyClockState('world')!;
+    return {enabled,restoreElapsed};
+  };
+  assert.deepEqual(intent(),{enabled:false,restoreElapsed:false});
   t.mock.timers.tick(60*60_000);
   await assert.rejects(f.life.control('world',true),/native home unavailable/);
-  assert.deepEqual(f.life.bodyClockState('world'),{enabled:true,restoreElapsed:false});
+  assert.deepEqual(intent(),{enabled:true,restoreElapsed:false});
   assert.equal(JSON.parse(readFileSync(join(f.directory,'control.json'),'utf8')).enabled,true);
   assert.deepEqual(f.clockChanges,[false]);
 });
@@ -70,4 +74,37 @@ test('previously accepted work resumes on its original receipt before native sta
 test('invalid saved clock controls are reported without silently rewriting them',t=>{
   const f=fixture(t,true),file=join(f.directory,'control.json'),invalid='{"version":1,"enabled":"yes"}';writeFileSync(file,invalid);
   assert.throws(()=>f.life.bodyClockState('world'),/开关文件无效/);assert.equal(readFileSync(file,'utf8'),invalid);
+});
+
+test('the standalone control reader distinguishes missing data, legacy intent and recorded pauses',t=>{
+  const f=fixture(t),file=join(f.directory,'control.json');
+  assert.equal(readLifeControl(f.root),undefined);
+  assert.equal(existsSync(join(f.root,'.chatpet')),false);
+  mkdirSync(f.directory,{recursive:true});
+  assert.equal(readLifeControl(f.root),undefined);
+  assert.equal(existsSync(file),false);
+  writeFileSync(file,JSON.stringify({version:1,enabled:false}));
+  assert.equal(readLifeControl(f.root)?.enabled,false);
+  assert.equal(readLifeControl(f.root)?.pauses,undefined);
+  for (const [enabled,pauses] of [
+    [false,[{from:10,to:null}]],
+    [true,[{from:10,to:20}]],
+  ] as const) {
+    const raw=JSON.stringify({version:1,enabled,pauses});
+    writeFileSync(file,raw);
+    const saved=readLifeControl(f.root);
+    assert.equal(saved?.enabled,enabled);
+    assert.deepEqual(saved?.pauses,pauses);
+    assert.equal(readFileSync(file,'utf8'),raw);
+  }
+});
+
+test('the standalone control reader reports malformed files and invalid pause history',t=>{
+  const f=fixture(t,true),file=join(f.directory,'control.json');
+  for (const raw of ['{','null','{"version":2,"enabled":true}',
+    '{"version":1,"enabled":true,"pauses":[{"from":10,"to":null}]}']) {
+    writeFileSync(file,raw);
+    assert.throws(()=>readLifeControl(f.root),/生活开关文件无效/);
+    assert.equal(readFileSync(file,'utf8'),raw);
+  }
 });

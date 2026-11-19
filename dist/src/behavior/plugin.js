@@ -7,6 +7,7 @@ import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
 import { gardenHomeProjection } from './garden-receipt.js';
+import { readLifeControl } from '../life/plugin.js';
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
 const owners = new WeakMap();
 /** The only home/garden runtime writer. It does not create agents or model turns. */
@@ -222,7 +223,7 @@ export class CompanionBehavior {
                     hours: settings?.offlineBodyHours ?? 4, needCeiling: (settings?.offlineNeedCeilingPercent ?? 70) / 100,
                     energyFloor: (settings?.offlineEnergyFloorPercent ?? 35) / 100
                 };
-            }) };
+            }, () => this.ctx.get('petLife')?.bodyClockState?.(id) ?? readLifeControl(target.path)) };
         const admission = this.ctx.get('petLife')?.bodyClockState?.(id);
         if (admission) {
             this.autonomous = admission.enabled;

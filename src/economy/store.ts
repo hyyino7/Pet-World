@@ -7,8 +7,10 @@ import { canonical, check, digest, integer, reject, text, unavailable } from '..
 import { effectiveEconomyConfiguration,defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
 import type { BodyUseProof, CatalogItem, EconomyConfiguration, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, InventoryItem, ItemUse, LedgerEntry, ReadingBookmark, ReadingContent, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
 import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
+import { advanceGardenClock, type GardenClock } from './garden-clock.js';
 
 const cropRows = CROPS as any[];
+const runningClock: GardenClock = {enabled:true};
 const terminal = new Set(['completed','failed','cancelled']);
 const json = <T>(value: unknown): T => JSON.parse(value as string) as T;
 const clone = <T>(value: T): T => JSON.parse(canonical(value)) as T;
@@ -230,7 +232,7 @@ export class EconomyStore {
       this.recordFact(requestId,'item-gift',actor,`主人刚送给你${quantity}份${item.name}，物品已到账。`,before,{[`inventory:${itemId}`]:this.quantity(itemId)});return this.snapshotRow();
     });
   }
-  configure(requestId:string,patch:EconomyConfigurationPatch,expectedVersion?:number,passive=true):EconomySnapshot {
+  configure(requestId:string,patch:EconomyConfigurationPatch,expectedVersion?:number,clock=runningClock):EconomySnapshot {
     canonical(patch);if(expectedVersion!==undefined)integer(expectedVersion,'expected configuration revision',1);
     return this.mutate(requestId,'configure',{patch,...(expectedVersion===undefined?{}:{expectedVersion})},()=>{
       check(patch&&typeof patch==='object'&&!Array.isArray(patch),'Invalid economy configuration');const config=this.configuration();
@@ -273,7 +275,7 @@ export class EconomyStore {
         }
       }
       // Settle old growth using old rules before changing the rates.
-      this.saveGardenRow(this.readGarden(Date.now(),passive));config.revision=safeSum(config.revision,1);this.setMeta('configuration',config);this.bump();
+      this.saveGardenRow(this.readGarden(Date.now(),clock));config.revision=safeSum(config.revision,1);this.setMeta('configuration',config);this.bump();
       this.recordLedger(requestId,'owner-configure',0,{},'Owner updated economy configuration');return this.snapshotRow();
     });
   }
@@ -422,15 +424,17 @@ export class EconomyStore {
     state.care.receipts=this.db.prepare('SELECT value FROM garden_receipts ORDER BY rowid').all().map(row=>json<any>(row.value));
     state.economyRevision=this.revision();state.economyConfig=this.gardenOptions();return state;
   }
+  committedGardenAt():number {
+    this.ensure();
+    return atTime(this.projectGarden().updatedAt);
+  }
   /** Natural growth is projected without spending or committing another wallet.
    * The returned revision is the CAS token for the caretaker's next checkpoint. */
-  readGarden(now=Date.now(),passive=true):any {
-    this.ensure();atTime(now);check(typeof passive==='boolean','Invalid passive garden admission');
+  readGarden(now=Date.now(),clock=runningClock):any {
+    this.ensure();atTime(now);check(typeof clock.enabled==='boolean','Invalid garden clock admission');
     const raw=this.projectGarden();
-    // Body supplies admission before the shared pure advance, not after growth
-    // has already been projected. This read retains the original CAS token.
-    if(!passive)raw.updatedAt=Math.max(raw.updatedAt,now);
-    const state=this.advance(raw,now);state.economyRevision=this.revision();state.economyConfig=this.gardenOptions();state.care.receipts=raw.care.receipts;return state;
+    const state=advanceGardenClock(raw,now,clock,(garden,at)=>this.advance(garden,at));
+    state.economyRevision=raw.economyRevision;state.economyConfig=raw.economyConfig;state.care.receipts=raw.care.receipts;return state;
   }
   private commitGarden(state:any,expectedRevision:number,requestId:string,kind:string,now:number) {
     integer(expectedRevision,'garden expected revision',1);if(expectedRevision!==this.revision())reject('STALE_REVISION','Garden snapshot is stale; reload it before committing');
@@ -454,14 +458,14 @@ export class EconomyStore {
     const now=atTime(state?.updatedAt??Date.now());
     return this.transaction(()=>this.commitGarden(state,expectedRevision,`garden-checkpoint:${randomUUID()}`,'garden',now));
   }
-  applyGarden(action:unknown,requestId:string,now=Date.now(),passive=true):{ok:boolean;message:string;garden:any} {
+  applyGarden(action:unknown,requestId:string,now=Date.now(),clock=runningClock):{ok:boolean;message:string;garden:any} {
     atTime(now);const result=this.mutate(requestId,'garden-action',action,()=>{
-      const current=this.readGarden(now,passive),result=(applyGardenAction as (...args:any[])=>any)(current,action,now,this.gardenOptions());
+      const current=this.readGarden(now,clock),result=(applyGardenAction as (...args:any[])=>any)(current,action,now,this.gardenOptions());
       if(!result.ok)return{ok:false,message:result.message};
       this.commitGarden(result.state,current.economyRevision,requestId,'garden-action',now);return{ok:true,message:result.message};
     });
-    return {...result,garden:this.gardenView(now,passive)};
+    return {...result,garden:this.gardenView(now,clock)};
   }
-  gardenView(now=Date.now(),passive=true):any {return (gardenView as (...args:any[])=>any)(this.readGarden(now,passive),now,this.gardenOptions());}
+  gardenView(now=Date.now(),clock=runningClock):any {return (gardenView as (...args:any[])=>any)(this.readGarden(now,clock),now,this.gardenOptions());}
   close() {if(this.closed)return;this.closed=true;this.db.close();if(existsSync(this.lockPath)&&readFileSync(this.lockPath,'utf8')===this.lockToken)unlinkSync(this.lockPath);}
 }

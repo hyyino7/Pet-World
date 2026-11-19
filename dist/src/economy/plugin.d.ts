@@ -36,6 +36,8 @@ export declare class CompanionEconomy {
     prepare(target: WorkspaceTarget, legacyFile?: string, initializing?: boolean): EconomyStore;
     private bound;
     private use;
+    private gardenClock;
+    committedGardenAt(workspaceId: string): number | undefined;
     gardenPort(workspaceId: string, legacyFile?: string): RoomEconomyPort;
     snapshot(workspaceId: string, validate?: () => void): Promise<{
         workspaceId: string;

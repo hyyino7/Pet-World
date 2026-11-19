@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {pathToFileURL} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
 import {agentCarrier, agentEvents} from '@deepseek-ai/dsh-agent';
@@ -31,7 +32,7 @@ export async function eventually(check, label) {
 
 // Cordis owns every plugin and subscription. The host supplies a scripted loop,
 // workspace registry, and disk-backed session persistence in a disposable directory.
-export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,22,59)} = {}) {
+export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,22,59), legacyGarden = false} = {}) {
   t.mock.timers.enable({apis:['Date'], now:Number(now)});
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'her-world-entries-')));
   const repo = join(root, 'workspace'), id = 'world';
@@ -214,7 +215,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       const initialized = await core.services.workspace.initialize(request('initialize'),{expectedPreferencesRevision:result.value.revision});
       assert.ok(initialized.ok,JSON.stringify(initialized));
     }
-    for (const key of Object.keys(entries)) await load(key);
+    for (const key of Object.keys(entries)) if (key!=='economy' || !legacyGarden) await load(key);
   }
   async function stop() {
     if (!ctx) return;
@@ -267,6 +268,35 @@ export async function submitPlan(call, steps, nextConsiderAt = null) {
 
 const lifeInput = call=>call.messages.some(message=>message.source.kind==='dsh-world-life');
 const readControl = f=>readFileSync(join(f.directory,'control.json'),'utf8');
+const hour = 3_600_000;
+const pauses = f=>JSON.parse(readControl(f)).pauses;
+const committedGarden = f=>{
+  const database = join(f.repo,'.chatpet/data/economy/economy.sqlite');
+  if (!existsSync(database)) return JSON.parse(readFileSync(join(f.directory,'garden.json'),'utf8'));
+  using db = new DatabaseSync(database,{readOnly:true});
+  return JSON.parse(db.prepare("SELECT value FROM meta WHERE key='garden'").get().value);
+};
+function assertCrop(garden, hours, updatedAt) {
+  assert.ok(Math.abs(garden.plots[0].progress-hours/12)<1e-10,`作物进度为 ${garden.plots[0].progress}，应计 ${hours} 小时`);
+  assert.ok(Math.abs(garden.plots[0].moisture-(.8-hours/15))<1e-10);
+  assert.equal(garden.updatedAt,updatedAt);
+}
+async function clockFixture(t, options) {
+  const f = await cordisFixture(t,{crop:true,...options});
+  await f.enable();
+  await f.progress();
+  return f;
+}
+function till(f, plotId=1) {
+  return f.body.garden(f.id,'act',{type:'till',plotId,requestId:'till-'+plotId});
+}
+async function settleCrop(f, hours, at=Date.now(), plotId=1) {
+  const view = await f.body.garden(f.id,'state');
+  assert.equal(view.ok,true);
+  assertCrop(view.garden,hours,at);
+  assert.equal((await till(f,plotId)).ok,true);
+  assertCrop(committedGarden(f),hours,at);
+}
 const hold = (id, durationMinutes)=>({id,kind:'hold',activity:'Resting',durationMinutes});
 const reviewTime = new Date(2026,10,15,22,59,59,500);
 
@@ -360,9 +390,7 @@ if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1]))
     f.states(states);
     await f.load(key);
     f.states([true,true,true]);
-    // Both unavailable paths retain the originally admitted clock across the pause.
-    const actual = await f.progress();
-    assert.ok(Math.abs(actual-6/12)<1e-10,`恢复时作物进度为 ${actual}，实际计 6 小时`);
+    await settleCrop(f,2);
   });
 
   for (const [key,states] of [['body',[false,true,true]],['economy',[true,true,false]]]) {

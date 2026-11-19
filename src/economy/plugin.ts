@@ -16,6 +16,8 @@ import { EconomyStore } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
 import { installEconomyAccessGuard } from './access.js';
 import type { CompanionFact, CompanionFactActor } from '../contracts/interaction.js';
+import type { GardenClock } from './garden-clock.js';
+import { readLifeControl } from '../life/plugin.js';
 
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];
 const access = {mode:'bounded',detail:'余额与物品由程序结算。原生文件工具防误改；同一系统账户的命令和其他插件仍可访问文件。'} as const;
@@ -107,6 +109,23 @@ export class CompanionEconomy {
     const saved=row as ItemUse & {effects?:RoomFoodReservation['effects'];label?:string};
     return {...row,effects:saved.effects ?? item?.effects ?? {},label:saved.label ?? item?.name ?? row.itemId,...(item?.presentationSlot?{presentationSlot:item.presentationSlot}:{})};
   }
+  private gardenClock(workspaceId:string):GardenClock|undefined {
+    const live=this.ctx.get('petLife')?.bodyClockState?.(workspaceId);
+    if (live) return live;
+    const status=this.host.workspace.status();
+    if (status.state==='ready' && status.target?.id===workspaceId) {
+      const saved=readLifeControl(status.target.path);
+      if (saved?.pauses!==undefined) return saved;
+    }
+    const enabled=this.ctx.get('petBehavior')?.gardenClockState?.(workspaceId);
+    return enabled===undefined ? undefined : {enabled};
+  }
+  committedGardenAt(workspaceId:string):number|undefined {
+    const status=this.host.workspace.status(),current=this.current;
+    if (status.state==='ready' && status.target?.id===workspaceId
+      && current?.target.id===workspaceId && current.target.path===status.target.path)
+      return current.store.committedGardenAt();
+  }
   gardenPort(workspaceId:string, legacyFile?:string):RoomEconomyPort {
     const store=this.bound(workspaceId);
     if(legacyFile) {
@@ -115,9 +134,9 @@ export class CompanionEconomy {
     }
     const checked=()=>{check(this.bound(workspaceId)===store,'Economy binding changed');return store;};
     return {
-      loadGarden:(now,passive)=>checked().readGarden(now,passive),
+      loadGarden:(now,clock)=>checked().readGarden(now,clock ?? this.gardenClock(workspaceId)),
       saveGarden:(state,_now)=>checked().writeGarden(state,state.economyRevision),
-      actGarden:(input,now,passive)=>checked().applyGarden(input,typeof input.requestId==='string'?input.requestId:`owner-garden:${randomUUID()}`,now,passive),
+      actGarden:(input,now,clock)=>checked().applyGarden(input,typeof input.requestId==='string'?input.requestId:`owner-garden:${randomUUID()}`,now,clock ?? this.gardenClock(workspaceId)),
       gardenRules:()=>checked().readGarden().economyConfig,
       transaction:(operationId,input)=>{
         const s=checked();
@@ -203,10 +222,9 @@ export class CompanionEconomy {
     // executor is not evidence that the owner paused natural crop time.
     const behavior=this.ctx.get('petBehavior');
     await behavior?.snapshot(workspaceId);
-    const passive=this.ctx.get('petLife')?.bodyClockState?.(workspaceId)?.enabled
-      ?? behavior?.gardenClockState?.(workspaceId) ?? true;
     signal.throwIfAborted();validate();check(this.bound(workspaceId)===store,'Economy binding changed');
-    store.configure(requestId,patch,version,passive);signal.throwIfAborted();validate();return this.snapshot(workspaceId,validate);
+    store.configure(requestId,patch,version,this.gardenClock(workspaceId));
+    signal.throwIfAborted();validate();return this.snapshot(workspaceId,validate);
   }
   close(){this.closed=true;this.current?.store.close();this.current=undefined;}
 }
