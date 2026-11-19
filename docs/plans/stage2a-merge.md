@@ -434,4 +434,20 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 
 ## 执行结果
 
+### 第 1 批 · 1B 迁移工具
+
+- 问题 5：绑定检查和盘点共用 SQLite 私有复制，保留 WAL，由副本重建 SHM。实测 `plan`、`status`、锁外停写检查及 `manifest-mismatch` 拒绝均保留源目录文件和 mtime，双进程预检通过。
+- 调用方：迁移先查 Core 停写、锁内复核全部写入者，盘点查 Core、Economy、Memory 停写。备份 CLI 和 `backupPlan` 间接使用新绑定读取，创建与恢复照常走停写检查。安装器的绑定读取拒绝外部活跃 Core，应用阶段仍用原停写门禁。合成生成器同进程同步读取，复制前后核对源文件状态。
+- 多轮：冻结 v1，追加带步骤版本、绑定、备份地址及哈希的日志段，识别 0.2.0 单段日志。按实际目标推进清单，续做拒绝不同契约，已完成目标缺失时报不一致。迁移与恢复 CLI 在仓库外共用 SQLite 互斥，回带旧锁可接管，PID 复用拒绝。
+- 四处 SIGKILL 均通过：备份后写日志头前、数据提交后推进清单前、清单推进后写完成记录前、记录完成后目标丢失。合成回退检查了两种包指纹、Core 绑定、工作区登记、原生日志、投影、附件、设备引用，以及送达、额度和 Life 花费。已验同时接管旧锁及迁移与恢复双向拒绝。
+- 问题 7：复现发现首次启用 Memory 后夹具缺 Bank，第二轮补初始化后 P3-01 至 P3-05 通过，原脚本仍因近期播放未显式启用而失败。按两轮止损删除脚本及 npm 入口。基线调用原夹具时读取了本机安装 profile 的组合元数据，后续两轮切到合成 profile，会话和 Bank 使用合成数据。
+- 门禁改验真实 Core 工具和 Memory provider，覆盖同轮纠正与独立保存、旧提取拒绝、后续可见、撤回恢复、长回复精读、归档、失联确认及播放关联。删掉旧 Core 账本的三条断言和已装 DSH 回合级的模型计数、文件工具联跑、进程掉线降级断言。
+- `node --test tests/migrate/*.test.mjs` 134 通过，新增 Memory 门禁 3 通过，构建及行为清单 52 条通过。回环用例实际通过。Python provider 22 项、发布检查及临时包校验另行通过。
+- `pnpm run verify` 的 Node 测试 1429 通过、1 失败。 `tests/memory/memory-process.test.mjs:72` 的 P2 进程用例在第 81 行测 RSS 时报 `spawnSync /bin/ps EPERM`，由 Claude 在沙箱外重跑。真实副本和实机换包未验。`offline-backup.mjs` 的只读 SQL 已使用临时副本，`portable-repo.mjs` 的设备搬迁直读属本批授权之外，留待单独处理。
+- 建议提交 1「将原生 Memory 回归移入门禁」· `package.json`、`scripts/checks/check-native-memory.mjs`、`tests/memory/native-memory-flow.test.mjs`（3 文件，588 行）。
+- 建议提交 2「将 SQLite 绑定检查和盘点移到私有副本」· `scripts/lib/repo-storage.mjs`、`scripts/migrate/inventory-plan.mjs`、`scripts/migrate/inventory.mjs`、`tests/migrate/read-only.test.mjs`（4 文件，160 行）。
+- 建议提交 3「支持多轮离线迁移并与恢复互斥」· `scripts/companion-backup.mjs`、`scripts/migrate/companion-migrate.mjs`、`scripts/migrate/context.mjs`、`scripts/migrate/errors.mjs`、`scripts/migrate/io.mjs`、`scripts/migrate/journal.mjs`、`scripts/migrate/runner.mjs`、`scripts/migrate/steps/0001-storage-manifest.mjs`（8 文件，420 行）。
+- 建议提交 4「验收迁移的崩溃边界、并发与回退」· `tests/migrate/concurrency.test.mjs`、`tests/migrate/crash.test.mjs`、`tests/migrate/lock-gate.mjs`、`tests/migrate/migration-child.mjs`、`tests/migrate/normal.test.mjs`、`tests/migrate/rollback.test.mjs`（6 文件，386 行）。
+- 建议提交 5「更新离线迁移说明和 1B 执行记录」· `docs/development.md`、`docs/plans/stage2a-merge.md`（2 文件，28 行）。所有改动留在当前工作区，由 Claude 代提交。
+
 ## 审查结论

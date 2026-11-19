@@ -75,7 +75,7 @@ L1 是插件入口的完整流程，L2 是公开面行为，L3 是保留在全�
 node scripts/fixtures/synthetic-companion.mjs --out /tmp/her-world-synthetic --variant current
 ```
 
-盘点只输出路径、大小、表名、行数、已知记录数量和登记差异；浏览器存储显示为待主人检查，不读取正文或打印绑定值。它在隔离镜像中检查绑定和数据库，完成后清理镜像：
+盘点只输出路径、大小、表名、行数、已知记录数量和登记差异。浏览器存储显示为待主人检查。盘点和迁移预检在关闭写入者后读取 SQLite 私有副本，复制数据库和 WAL，由 SQLite 在副本上重建 SHM：
 
 ```sh
 node scripts/migrate/inventory.mjs --installation /tmp/her-world-synthetic/installation.json
@@ -94,18 +94,20 @@ node scripts/migrate/companion-migrate.mjs status --installation /tmp/her-world-
 node scripts/migrate/companion-migrate.mjs run --installation /tmp/her-world-synthetic/installation.json --backup /tmp/her-world-migration-backup
 ```
 
-进程中断后，续做会核对并沿用原备份，不另建备份；先检查状态，再续做：
+每轮先建并校验一份同包续做备份，再把本轮步骤、源和目标版本、绑定和备份校验值追加到同一日志。上一轮全部完成且目标仍在时，增加已登记的新步骤后可用新备份目录开下一轮。旧版 0.2.0 单段日志按当时唯一的步骤解释。
+
+中断后先看 `status`。备份已经建好而本轮日志头还未写入时，保留原目录，改用新的备份目录重新开始。日志头已写入时，用步骤和版本契约一致的源码续做最后一轮，会继续使用该轮备份：
 
 ```sh
 node scripts/migrate/companion-migrate.mjs run --installation /tmp/her-world-synthetic/installation.json --resume
 ```
 
-失败只输出固定原因代码和说明，退出码非 0。完成日志会拒绝再次全新执行；`lock-held` 要求先确认没有迁移进程，再按提示处理遗留锁。当前 plan/status、锁外预检和部分拒绝路径仍可能生成源 Core 的 WAL/SHM，并发预检也可能遇到 SQLite 锁竞争；已登记为源码检出中 `docs/product.md`「已知问题」第 5 条，迁移锁尚未消除此影响。
+失败只输出固定原因代码和说明，退出码非 0。已经提交的步骤通过目标检查后只补齐清单和日志。已完成段的目标后来缺失时，`status` 显示 `inconsistent`，应核对该轮备份。迁移与本检出的备份 CLI 恢复命令按仓库路径互斥。恢复带回的已退出进程旧锁会被下一轮接管并记入日志。若 PID 被复用而报 `lock-held`，先确认迁移和恢复都已结束，再按提示处理旧锁。
 
-回退使用原有恢复器；它会先备份当前状态、保留送达/额度等不可回退记录，并要求安装包指纹一致。迁移期间备份的锁会随恢复回来：
+要回退安装版本，在旧包下退出 DSH，用 `companion-backup.mjs create` 预先做回退备份，再启动 DSH 从版本页换包。回退时先从版本页换回旧包，再退出 DSH，用本检出的命令恢复旧包对应的回退备份。同包续做备份也可在安装指纹相同的情况下恢复。恢复器先备份当前状态，并保留已送达、已消耗额度及 Life 花费：
 
 ```sh
-node scripts/companion-backup.mjs restore --installation /tmp/her-world-synthetic/installation.json --backup /tmp/her-world-migration-backup --before /tmp/her-world-before-restore
+node scripts/companion-backup.mjs restore --installation /tmp/her-world-synthetic/installation.json --backup /tmp/her-world-rollback-backup --before /tmp/her-world-before-restore
 ```
 
 原有恢复 CLI 的输出不属于迁移/盘点的固定原因与隐私输出契约；真实数据检查点不能把其原始输出交给 Agent。开发演练只用合成副本。
