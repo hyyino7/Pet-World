@@ -20,7 +20,7 @@ function fixture(t) {
   function run(entry,choice,settings={}) {
     const config=preparation.prepareCoreConfiguration({dataDir:join(root,'core'),companionId:'fixture-fish',scopeId:'fixture-scope',ownerActorId:'owner',memory:{...memory,...(entry===undefined?{}:{serviceEntry:entry})}});
     const before=structuredClone(config),plans=[];
-    const source=readFileSync('scripts/install-dsh.mjs','utf8'),from=source.indexOf('// A prepared Bundle names the device runtime'),to=source.indexOf('const bundlePath =',from);
+    const source=readFileSync('scripts/install-dsh.mjs','utf8'),from=source.indexOf('// Plan the device runtime without creating it'),to=source.indexOf('const patch = preparePatch(',from);
     assert.ok(from>0&&to>from,'The fixture executes the actual program/runtime binding block');
     const context={assert,config,structuredClone,packageRoot:current,installedBundle:join(installed,'cordis.patch.yml'),profileDir:join(root,'profile'),
       prepareMemoryServiceEntry:preparation.prepareMemoryServiceEntry,

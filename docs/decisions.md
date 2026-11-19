@@ -170,3 +170,17 @@
 - 决定：持久数据新增一个可选字段，缺省时的行为和改之前一样、旧版本读到会忽略、没有要搬或改写的已有数据的，不加 `scripts/migrate/steps/` 迁移步骤，也不升 `version`；仍要登记进 `arch/storage.json`，并在 [architecture.md 第 4 节](architecture.md#4-状态拥有者表)写清拥有者。第一个用例是 `control.json` 的 `pauses`。AGENTS.md「改了已有数据的格式就加迁移步骤」指的是要改写或搬迁已有数据的格式变化。
 - 为什么：这种字段没有需要迁移的东西，加一个只校验、不改写的空步骤只会让迁移链多一步，回退也不需要它（旧版本忽略字段，下一次写入时丢掉，等于回到旧行为）。
 - 放弃的选项：照字面规则加一个只校验、不改写的迁移步骤。
+
+## 2026-11-19 setup 经 DSH 装 npm 包，Core 配置只放 profile 层覆盖
+
+- 决定（已知问题 8）：
+  - `dafeiyu-setup --apply` 用 DSH 自带的插件命令安装 npm 上的 `her-world`：默认装稳定版，`--version <版本>` 可以指定；不再接受 `--archive`。完整的 `00-Core` 配置写进 profile 的 `cordis.patch.yml` 覆盖，读回核对一致后才发布 `installation.json` 回执。
+  - 已装机器用 `dafeiyu-setup migrate-core-config`：默认只核对，加 `--apply` 才搬配置或补回执；输出只给状态、路径和固定原因码。
+  - 包里的配置已经丢了、只剩一份已完成回执时，只有当前包、profile、Core 库和存储绑定全部交叉核对通过，才允许据此恢复。
+  - 半途失败时，脚本只自动回滚能证明安全的 profile 补丁和回执；包或数据状态不明，就保留 `applying` 和快照，交给主人走 DSH 和离线恢复。即使用 `--no-backup` 也保留这两份快照。
+  - 测试用和本机 DSH 同版本的 `@deepseek-ai/cordis-plugin-include` 作为开发依赖，跑上游真实的补丁算法；运行时仍用 DSH 应用自带的。
+- 为什么：
+  - npm 包里的 patch 不带 `config`。配置写在包里，换包就丢；写在 profile 层，不随包变。日常机器本来就是这种形状。
+  - 配置、包、数据库各有自己的完成证据，脚本不去猜它们的状态。
+  - CI 上没有 DSH 应用，自己模拟补丁算法证明不了换包后真的能解析。
+- 放弃的选项：继续从归档重打包、只在文档里写手动覆盖；新增一个单独发布的迁移命令（要改 `package.json` 的 `files`）；在测试里手写补丁算法。

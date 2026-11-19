@@ -207,13 +207,14 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 种地时钟 | 3 批。第 3 批修的是「暂停或恢复那一刻 Body、Economy 不在场，暂停时间被算成生长」（2A1A-12、2A1A-13，断言 2/12；`G3-GARDEN-01`–`17`），验收返工 1 轮（区间文件无效时不能挡住身体操作）。G3 复盘结论：三批的共同根因是「哪段时间算启用」没有被记录，只靠当前开关加菜园 `updatedAt` 在边界那一刻折算，换一种装卸组合或处理顺序就会多算或少算；现在暂停区间记在 Life 的 `control.json`，每次推进菜园都按区间扣，不依赖谁在场、谁先处理（[architecture.md 第 4 节](architecture.md#4-状态拥有者表)、6.2）。再失守即第 4 批，修之前先复盘 |
 | 计划推进与完成契约 | 2 轮 |
 | 关闭后晚到的录音与取消 | 多个入口 |
-| 换包后 Core 配置仍在 | 失守 2 次（M3 C 批隔离机、E 批 Mac mini），修复 0 批，只有临时覆盖办法（已知问题 8） |
+| 换包后 Core 配置仍在 | 失守 2 次（M3 C 批隔离机、E 批 Mac mini），修复 1 批。第 1 批即 2a 第 2 批：setup 改为经 DSH 安装 npm 包，Core 配置写进 profile 层覆盖，并新增 `dafeiyu-setup migrate-core-config` 给已装机器搬配置；L1 行为测试 `2A2-01`。验收返工 2 轮：第 1 轮修 setup 失败只报 `setup-failed`、`--offline` 误传给 `pnpm remove`；第 2 轮修第 1 轮带出的 `audit-r3` 夹具缺函数。代码已修，待主人隔离实机验收后结束这一轮（已知问题 8） |
 
 **「换包后 Core 配置仍在」的提前复盘**（第二次失守触发）：
 
-- 共同根因：`dafeiyu-setup` 把 Core 配置写进本地打包的安装包自己的 `cordis.patch.yml`（`scripts/install-dsh.mjs:169-170`），npm 包里的 patch 没有 `config`，换包后配置随旧包消失。
-- 受影响的其他入口：所有用 setup 装过的机器；[portability.md](portability.md) 的新设备步骤也走 setup。
-- 怎样算结束这一轮：有一条行为测试证明换包后 Core 配置仍在，并在隔离环境实机走一次「setup 安装 → 版本页换成 npm 包」。根治方向记在 `ideas/inbox.md`。
+- 共同根因：旧版 `dafeiyu-setup` 把 Core 配置写进本地重打的安装包自己的 `cordis.patch.yml`；npm 包里的 patch 没有 `config`，所以一换包，配置就随旧包消失。
+- 受影响的其他入口：所有用旧 setup 装过的机器；[portability.md](portability.md) 的新设备步骤也走 setup。
+- 修法：setup 不再重打包，让 DSH 自己装 npm 包；Core 配置只放在 profile 层覆盖里，换包不影响（决定见 [decisions.md](decisions.md)「setup 经 DSH 装 npm 包，Core 配置只放 profile 层覆盖」）。
+- 怎样算结束这一轮：行为测试 `2A2-01` 已证明换包后 Core 配置仍在；还差主人在隔离环境实机走一次「setup 安装 → 版本页换包 → `migrate-core-config` 核对」。
 
 ---
 
@@ -228,8 +229,9 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 3. 错误码及设置回复的恢复语义不一致 | `src/contracts/common.ts:21` 有 `EXPIRED_USE`，`src/core/storage.ts:10` 的辅助联合没有；`src/console/settings.ts:17,400,402` 只保留 `code/message/details` | 辅助函数无法按声明类型表达该拒绝；设置调用者丢失 `effect/retry`，不能据此判断核对或重试 | 已复现：丢弃式 TypeScript 调用产生 TS2345；真实设置处理器收到 `partial/reconcile` 后，回复均无这两个字段 | 阶段 3 并入设置 RPC 声明（阶段 1 缩小方案） |
 | 4. 两套呈现分类器对混合情绪结论不同 | `src/behavior/presentation.ts:21`；`src/behavior/playback.ts:95,109` | 空闲且 `feelings=[anger,calm]` 时，语义呈现为 `emotion/anger`，播放槽为 `rest.calm` | 已复现：同一个合成 home 调用两个真实函数得到上述不同结果 | 待主人决定 |
 | 6. 新装环境里桌宠外观编辑器没加载 | 已安装的 0.1.8 桌宠外观编辑器；源码位置在本仓库还没定位 | 新设备上界面固定提示 `EDITOR_NOT_LOADED`，没有添加形象的入口；桌宠服务本身可用 | 已在 Mac mini 新装 DSH + 0.1.8 上观察到（M1 D 批）。当时的 Codex 怀疑是可选命令依赖挡住了编辑器加载，并写了候选补丁，但补丁没有装上，修复效果没验证；默认独立桌宠的 Electron 路径缺失也是同时观察到的环境缺口，是不是原因还没确定 | 已观察到，原因未确认，待主人安排 |
-| 8. setup 安装的伙伴改用版本页换包会丢 Core 配置 | `scripts/install-dsh.mjs:169-170` 把 Core 配置写进本地打包的 `cordis.patch.yml`；npm 包里的这份 patch 没有 `config`；profile 层私有覆盖的写法见 `scripts/prepare-store-switch.mjs:35-37`（这个脚本只认旧的 `dsh-Chatpet` 包） | 用 `dafeiyu-setup` 装的伙伴，在版本页换成任何 npm 版本（同版本 0.1.8 也一样）后，`00-Core` 报 `Invalid companionId`，无法启动；profile 配置和数据不变。日常机器已是 npm 包加 profile 层覆盖，不受影响 | 已复现：M3 C 批隔离环境，setup 版 0.1.8 换成 npm 版 0.1.8 即出现 | 已复现。处理办法：退出 DSH，把安装回执 `installation.json` 里的 `config` 写成 `- id: 00-Core` 覆盖追加到 profile 的 `cordis.patch.yml`，再换包。2a 里作为单独的常规批次根治（见 2a 完成标准） |
+| 8. setup 安装的伙伴改用版本页换包会丢 Core 配置 | 旧版 setup 把 Core 配置写进本地重打的安装包里的 `cordis.patch.yml`，npm 包里的这份 patch 没有 `config`。现在 `scripts/install-dsh.mjs` 改为经 DSH 安装 npm 包，并把配置写进 profile 的 `cordis.patch.yml` 覆盖；已装机器用 `dafeiyu-setup migrate-core-config` 搬配置（见 [portability.md](portability.md)） | 旧 setup 装的伙伴，在版本页换成任何 npm 版本（同版本 0.1.8 也一样）后，`00-Core` 报 `Invalid companionId`，无法启动；profile 配置和数据不变。日常机器已是 npm 包加 profile 层覆盖，不受影响 | 已复现：M3 C 批隔离环境，setup 版 0.1.8 换成 npm 版 0.1.8 即出现。修后由行为测试 `2A2-01` 覆盖（合成 profile） | **代码已修，待主人隔离实机验收**（「setup 安装 → 版本页换包 → `migrate-core-config` 核对」）。还没验收的旧 setup 机器先退出 DSH，运行 `dafeiyu-setup migrate-core-config --apply` 后再换包 |
 | 9. 迁移兼容测试的 legacy 变体在 CI 偶发失败 | `tests/migrate/compatibility.test.mjs` 的 `legacy` 变体；失败的断言在 `scripts/fixtures/synthetic-companion.mjs:104`（刚写入的合成记忆召回不到） | 发布门禁偶发失败，重跑能过；0.2.0 正式版的发布运行一次通过 | 0.2.0-rc.1 的发布运行第 1 次尝试失败、第 3 次通过；本机单跑 15 次、加负载并行 30 次都没复现，召回前加 0–3 秒延迟也通过 | 原因未查，主人判断是 GitHub 侧问题。2a 扩展迁移测试时再出现，按 G3 处理 |
+| 10. 付费 Memory 实测脚本还依赖旧回执的 `archive` 字段 | `scripts/checks/check-native-memory-live.mjs:176` 读 `installedReceipt.archive` 并对它算哈希 | 改为经 DSH 安装 npm 包之后，新回执里没有 `archive`，这个检查会在算哈希时失败；日常运行不受影响，只影响这条手动付费检查 | 读代码确认，没有运行（会调用付费模型） | 待定。以后还要用这个检查，需要另定按 npm 包核对的方式（例如回执里的 `packageVersion`） |
 
 ## 阶段
 
@@ -379,7 +381,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 
 - [x] 第一批是安全网，单独写方案：5.9 的隐含契约变成契约测试（工具限制早于 schema 解析、`environment` 先于 `interactions`、`chatpet.interactions` 段名和原样 JSON、事实确认晚于日志落盘、替换只在打开的请求里、预设名／会话前缀／渠道目录的路由恢复协议、「home 身份」与「Life 在运行」分开判定），复用 `test:native-context` 和历史维护测试；修已知问题 5；已知问题 7 的 `test:native-memory` 修好或删掉；定迁移的版本过渡（完成日志的归档、旧存储清单的过渡、每轮新备份的边界、恢复带回的旧迁移锁）。
 - [ ] 旧入口语义表的每一行都有测试，且全绿。
-- [ ] 行为清单的执行项全绿（现为 70 条），身体、种地、日记、结算相关条目都在其中，包括「身体效果已生效、库存结算失败后重启」。
+- [ ] 行为清单的执行项全绿（现为 88 条），身体、种地、日记、结算相关条目都在其中，包括「身体效果已生效、库存结算失败后重启」。
 - [ ] 常驻实例和旧服务名门面落地；R6：2a 新写的模块各带一条「关闭后不留尾巴」测试；R7：卸载生活入口、显式暂停生活、卸载身体入口三种情况分别通过。
 - [ ] Core 不再写 `life.json` 里的生活状态；事实的准备、验证、确认搬入第二层，「原生日志落盘后才确认事实」的顺序不变。
 - [ ] 「第一层剩余违规的去向」表里归 2a 的 18 条清零，第一层只剩 5 条；`check:arch` 基线只减不增；记录库对 Life 活动记录的读取（日期、日记里的活动内容、Life 关闭后的历史查询）改为第二层提供的只读接口。

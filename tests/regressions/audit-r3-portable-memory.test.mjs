@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {DatabaseSync} from 'node:sqlite';
 import {runInNewContext} from 'node:vm';
 import {createCore} from '../../dist/src/core/index.js';
+import {checkedSetup,requireSetup} from '../../scripts/lib/core-config.mjs';
 import {loadPortableRepo} from '../../scripts/lib/portable-repo.mjs';
 
 const value=result=>{assert.equal(result.ok,true,result.error?.message);return result.value;};
@@ -36,7 +37,8 @@ test('R3-1: actual no-Memory initialization resumes without an interpreter despi
   const from=source.indexOf('const resumeRepo ='),to=source.indexOf('const configuredBeforeBinding =',from);assert.ok(from>0&&to>from);
   const config={memory:{python:'/old-device/python',dataDir:'/old-device/bank'}};
   runInNewContext(source.slice(from,to)+'\nglobalThis.result=config;',{
-    assert,loadPortableRepo,resolve,isAbsolute,config,arg:(name,fallback)=>name==='--resume-repo'?f.repo:fallback,
+    assert,loadPortableRepo,checkedSetup,requireSetup,resolve,isAbsolute,config,
+    arg:(name,fallback)=>name==='--resume-repo'?f.repo:fallback,
   });
   assert.equal(config.memory,undefined,'The actual resume decision drops stale device bindings without inventing a Bank');
 });
@@ -50,7 +52,10 @@ test('R3-1: declared retained Banks stay required and do not need Python merely 
   const f=await fixture(t),bank=f.bank();f.declaration('data/memory/data/memory.db');await f.close();
   const before=readFileSync(bank.file);assert.equal(loadPortableRepo(f.repo).memoryDataDir,bank.directory);assert.deepEqual(readFileSync(bank.file),before);
   const source=readFileSync('scripts/install-dsh.mjs','utf8'),from=source.indexOf('const resumeRepo ='),to=source.indexOf('const configuredBeforeBinding =',from);
-  assert.throws(()=>runInNewContext(source.slice(from,to),{assert,loadPortableRepo,resolve,isAbsolute,config:{},arg:(name,fallback)=>name==='--resume-repo'?f.repo:fallback}),/--memory-python/);
+  assert.throws(()=>runInNewContext(source.slice(from,to),{
+    assert,loadPortableRepo,checkedSetup,requireSetup,resolve,isAbsolute,config:{},
+    arg:(name,fallback)=>name==='--resume-repo'?f.repo:fallback,
+  }),/--memory-python/);
 });
 
 for(const state of ['missing','empty','corrupt'])test(`R3-1: a declared ${state} Bank fails closed without replacing retained files`,async t=>{
