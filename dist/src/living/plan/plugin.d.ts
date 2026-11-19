@@ -237,7 +237,7 @@ export declare class CompanionLife {
     } | {
         diary: string | null;
         day: string;
-        activity: import("../../../vendor/dsh-world/lib/life/types.js").ActivityRecord[];
+        activity: readonly import("../../../vendor/dsh-world/lib/life/types.js").ActivityRecord[];
         dialogue?: undefined;
         diaries?: undefined;
         removed?: undefined;
@@ -245,7 +245,7 @@ export declare class CompanionLife {
         data?: undefined;
     } | {
         dialogue: {
-            items: import("./review-dialogue.js").DialogueLine[];
+            items: import("../../core/review-dialogue.js").DialogueLine[];
             nextOffset: number | undefined;
             coverage: "partial" | "eligible";
         } | undefined;
@@ -281,7 +281,6 @@ declare module '@deepseek-ai/cordis' {
         petLife: CompanionLife;
     }
     interface Events {
-        'pet/life.review'(sessionId: string): void;
         'pet/life.changed'(): void;
     }
 }

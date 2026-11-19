@@ -173,7 +173,15 @@ export function apply(ctx:Context) {
   });
   ctx.effect(() => {
     const source = host.native.sourceTable.register(room.chat.sourceAdapter());
-    return async () => {await source.revoke(); await room.close();};
+    const ports = host.native.companionPorts;
+    const television = ports.scopeFor(ctx, 'petRoom') && ports.register('watchingTelevision', id => room.watching(id));
+    return async () => {
+      try { await source.revoke(); }
+      finally {
+        try { await room.close(); }
+        finally { await television?.revoke(); }
+      }
+    };
   });
   ctx.effect(() => host.workspace.runtime.capabilityTable.register({
     id: 'desktop.room', owner: 'desktop', contractVersion: CONTRACT_VERSION, order: 6,

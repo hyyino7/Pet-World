@@ -1,10 +1,10 @@
 import { localDayStart } from '#dsh-world/memoryStore';
 import { normalizeFind, normalizeRead } from '#dsh-world/memory';
 import { formatLocalTime } from '#dsh-world/timeContext';
-import type { EvidenceSource } from '../../contracts/common.js';
-import type { CoreRuntime } from '../../core/runtime.js';
-import { check } from '../../core/storage.js';
-import type { Decision } from '../../memory/client.js';
+import type { EvidenceSource } from '../contracts/common.js';
+import type { CoreRuntime } from './runtime.js';
+import { check } from './storage.js';
+import type { Decision } from '../memory/client.js';
 
 export interface DialogueQuery { day?: string; timeZone: string; query?: string; offset?: number }
 export interface DialogueLine {

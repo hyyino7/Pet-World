@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import {mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import type {Context} from '@deepseek-ai/cordis';
+import {Context} from '@deepseek-ai/cordis';
 import type {Agent} from '@deepseek-ai/dsh-agent';
 import {createCore} from '../../src/core/index.js';
 import {createWorldService} from '../../src/world/service.js';
 import {installCompanionFoundation} from '../../src/core/companion-foundation.js';
 import {CompanionBehavior} from '../../src/living/body/plugin.js';
 import {CompanionLife} from '../../src/living/plan/plugin.js';
+import {mountLivingArea} from '../../src/living/index.js';
 import {PersistentLifePlan} from '../../src/living/plan/plan.js';
 import type {Result} from '../../src/contracts/common.js';
 
@@ -40,12 +41,15 @@ async function fixture(t:TestContext) {
     const next=async():Promise<any>=>{const listener=rows[index++];return listener?listener(...args,next):end();};return next();
   }
   async function emit(name:string,...args:any[]) {for(const listener of [...(listeners.get(name)??[])])await listener(...args);}
-  const ctx={on,get:(name:string)=>services.get(name),emit:(name:string,...args:any[])=>{void emit(name,...args);},effect:()=>()=>{},
+  const lifetime = new Context();
+  const ctx={[Context.isolate]:lifetime[Context.isolate],fiber:lifetime.fiber,effect:lifetime.effect.bind(lifetime),
+    on,get:(name:string)=>services.get(name),emit:(name:string,...args:any[])=>{void emit(name,...args);},
     logger:()=>({warn:(...args:unknown[])=>warnings.push(args)}),agents:{get:(id:string)=>agents.get(id)},tools:{register:()=>()=>{}},
     sessions:{flush:async(session:any)=>{flushes.push(session.id);return persist;}},
     systemPrompt:{context:(section:any)=>{contexts.add(section);return()=>contexts.delete(section);},section:(section:any)=>{sections.add(section);return()=>sections.delete(section);},
       assemble:async(context:any)=>middleware('system-prompt/assemble',[{},context],()=>[...sections.values(),...contexts.values()].map(row=>row.text(context)).filter(Boolean).join('\n\n'))},
   } as unknown as Context;
+  Object.assign(ctx,{root:ctx});
   services.set('workspaceRegistry',registry);services.set('agents',ctx.agents);
   const world=createWorldService(host,()=>registry);
   const behavior=new CompanionBehavior(ctx,host,{plan:()=>services.get('petLife')});
@@ -55,6 +59,14 @@ async function fixture(t:TestContext) {
   const plan=new PersistentLifePlan(directory,'fish',host.workspace.storageId(),'UTC');
   await plan.commit(0,{goal:'Continue resting',reason:'An accepted quiet intention',steps:[{id:'rest',kind:'hold',activity:'Resting quietly'}],nextConsiderAt:null});
   const dispose=installCompanionFoundation(ctx,host,world);
+  const mount = (start:(scope:Context)=>void) => {
+    let stop!:()=>Promise<void>;
+    start({...ctx,effect:(install:()=>()=>Promise<void>)=>{stop=install();}} as Context);
+    return stop;
+  };
+  const mountBody=()=>mount(scope=>mountLivingArea(scope,host,'body',()=>behavior,()=>{},()=>{}));
+  let unmountBody=mountBody();
+  const unmountLife=mount(scope=>mountLivingArea(scope,host,'plan',()=>life,()=>{},()=>{}));
   function agent(id:string,preset='standard') {
     const events:any[]=[],session={id,header:{cwd:repo,agentPreset:preset},surface:{nodes:[] as number[]},eventAt:(seq:number)=>events[seq]};
     const result={id,session,ctx,events} as unknown as Agent & {events:any[]};agents.set(id,result);return result;
@@ -73,8 +85,9 @@ async function fixture(t:TestContext) {
     return text;
   }
   function fixtureAgent(id:string,preset?:string){return agent(id,preset);}
-  t.after(async()=>{dispose();await life.close();await behavior.close();await host.close();rmSync(root,{recursive:true,force:true});});
-  return {host,behavior,life,plan,repo,registry,services,warnings,flushes,agent:fixtureAgent,prompt,complete,emit,
+  t.after(async()=>{await unmountLife();await unmountBody();dispose();await life.close();await behavior.close();await lifetime.fiber.dispose();await host.close();rmSync(root,{recursive:true,force:true});});
+  return {host,behavior,life,plan,repo,registry,warnings,flushes,agent:fixtureAgent,prompt,complete,emit,
+    unmountBody:()=>unmountBody(), remountBody:()=>{unmountBody=mountBody();},
     staticPrompt:(agent:Agent)=>[...sections].map(row=>row.text({agent})).filter(Boolean).join('\n\n'),
     contextSections:(agent:Agent)=>[...contexts].map(row=>({name:row.name,text:row.text({agent}),required:row.required})),
     get persist(){return persist;},set persist(next:boolean){persist=next;}};
@@ -117,8 +130,8 @@ test('unloading a domain while a prepared turn finishes cannot acknowledge its s
   const f=await fixture(t),a=f.agent('owner-a');await f.behavior.act('world','water','reload-water');
   const original=f.behavior.acknowledgeFacts.bind(f.behavior);let acks=0;
   f.behavior.acknowledgeFacts=async(...args)=>{acks++;return original(...args);};
-  await f.complete(a,5,'completed',true,()=>{f.services.delete('petBehavior');});assert.equal(acks,0);
-  f.services.set('petBehavior',f.behavior);assert.equal((await f.behavior.pendingFacts('world')).length,1);
+  await f.complete(a,5,'completed',true,()=>{void f.unmountBody();});assert.equal(acks,0);
+  f.remountBody();assert.equal((await f.behavior.pendingFacts('world')).length,1);
 });
 
 test('body/interaction updates change required tail context without changing the system prefix or accepted plan',async t=>{

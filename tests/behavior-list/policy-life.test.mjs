@@ -4,6 +4,7 @@ import {join} from 'node:path';
 import {createUserMessage} from '@deepseek-ai/dsh-llm';
 import {fixture,until,value} from './fixture.mjs';
 import {assertEmotion,footer,nextReview,prepareMemory} from './policy-evidence.mjs';
+import {cordisFixture,eventually} from './entries-lifecycle.test.mjs';
 
 const beforeReview=new Date(2026,10,15,22,59).toISOString();
 const input=kind=>createUserMessage({source:{kind},content:[{type:'text',text:'Synthetic input'}]});
@@ -83,6 +84,50 @@ test('主人原生 steering 在 Life 后续步解除工具和自主限额',async
   await f.end(active);
 });
 
+test('3C 主人接管运行中的 Life 后仍使用 Life 相册，暂停后恢复 Core 相册',async t=>{
+  const {f,home,active}=await autonomous(t,{});
+  for(const takenOver of [false,true]) {
+    if(takenOver) {
+      const owner=input('user');
+      home.steer(owner);
+      await f.step(active,[owner]);
+    }
+    assert.ok(f.schemas(active).includes('list_photos'));
+    assert.ok(!f.schemas(active).includes('pet_list_photos'));
+    assert.equal((await f.tool(active,'list_photos',{})).total,0);
+    await assert.rejects(f.tool(active,'pet_list_photos',{}),takenOver?/工具在当前入口不可用/:/自主生活仅使用当前生活能力/);
+  }
+  await f.end(active);
+  await f.life.control('world',false);
+  const paused=await f.begin(home.id);
+  assert.ok(f.schemas(paused).includes('pet_list_photos'));
+  assert.ok(!f.schemas(paused).includes('list_photos'));
+  assert.equal((await f.tool(paused,'pet_list_photos',{})).total,0);
+  await f.end(paused);
+});
+
+test('3C Life 卸载后 Core 用同一个受限句柄读取相册',async t=>{
+  const f=await cordisFixture(t);
+  const library=f.core.records.getLibrary(f.id);
+  const album=library.photoTools;
+  assert.ok(album,'记录库提供受限相册句柄');
+  assert.strictEqual(album,f.core.records.getLibrary(f.id).photoTools);
+  assert.deepEqual(Object.keys(album).sort(),['forget','keep','list']);
+  album.keep({ref:{attachmentId:'fixture-image',mediaType:'image/png',bytes:3,width:1,height:1},
+    data:Uint8Array.of(1,2,3)},'Synthetic album');
+  await f.enable();
+  const home=await eventually(()=>f.life.homeSessionId(),'Life 打开 home');
+  await (await f.agent(home)).whenIdle();
+  await f.unload('life');
+  f.model=async call=>{
+    assert.ok(call.schemas.includes('pet_list_photos'));
+    assert.ok(!call.schemas.includes('list_photos'));
+    assert.deepEqual(JSON.parse(await call.tool('pet_list_photos',{})).photos.map(photo=>photo.description),['Synthetic album']);
+    return 'Album is still available';
+  };
+  await f.input('Open the same album.',home);
+});
+
 async function review(t,options={}){
   const calls=[];
   const f=await fixture(t,{policy:true,emotion:true,intervals:true,now:beforeReview,economy:false,configure(services){
@@ -122,7 +167,7 @@ test('回顾 footer 生效且符合条件的回顾提前压缩恰好一次',asyn
   assert.deepEqual(calls,[home.id]);
   // 新的回顾通知不能绕过上次压缩后的最小间隔。
   await f.end(await f.begin(home.id));
-  await f.emit('pet/life.review',home.id);
+  f.host.native.requestReviewCompaction(home.id);
   t.mock.timers.tick(1000);
   assert.deepEqual(calls,[home.id]);
   assert.equal(batch().turns,1);
@@ -152,7 +197,7 @@ test('回顾压缩设置关闭、Memory 关闭、非 home 或无待处理轮次�
     assert.equal(batch(home.id).lastAttempt,0);
     const other=await f.begin('owner-b');
     await f.end(other);
-    await f.emit('pet/life.review',other.agent.id);
+    f.host.native.requestReviewCompaction(other.agent.id);
     sub.mock.timers.tick(1000);
     assert.equal(batch(other.agent.id).lastAttempt,0,'非 home 不提前压缩');
     assert.deepEqual(calls,[]);
@@ -172,7 +217,7 @@ test('回顾压缩设置关闭、Memory 关闭、非 home 或无待处理轮次�
     const home=await f.home();
     await prepareMemory(f,home.id);
     await f.end(await f.begin(home.id),'aborted');
-    await f.emit('pet/life.review',home.id);
+    f.host.native.requestReviewCompaction(home.id);
     sub.mock.timers.tick(1000);
     assert.equal(f.host.workspace.runtime.store.get('memory-batch',home.id),undefined);
     assert.deepEqual(calls,[]);

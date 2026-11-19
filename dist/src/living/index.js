@@ -1,5 +1,7 @@
 import { Context } from '@deepseek-ai/cordis';
 import { RegistrationTable } from '../core/tables/registry.js';
+import { activityReader } from './plan/activity-reader.js';
+import { installLivingPrompt } from './prompt-context.js';
 const bodyService = 'petBehavior', lifeService = 'petLife', economyService = 'petEconomy';
 const services = { body: bodyService, plan: lifeService, economy: economyService };
 const domains = new WeakMap();
@@ -51,6 +53,42 @@ export class LivingWorld {
                 if (!domain.worlds.size)
                     hosts.delete(host);
             } };
+    }
+    retainCore(ctx, host, area) {
+        const ports = host.native?.companionPorts;
+        if (!ports)
+            return;
+        const scope = ports.scopeFor(ctx, services[area]);
+        if (!scope)
+            return;
+        if (!this.domain.core) {
+            const labels = labelsOf(scope.ctx);
+            const world = LivingWorld.matching(this.domain, labels) ?? new LivingWorld(this.domain, labels);
+            const visible = () => world.lookup('body') || world.lookup('plan') || world.lookup('economy');
+            const dispose = scope.ctx.effect(() => {
+                const activity = ports.register('activities', {
+                    activityDays: binding => visible() ? activityReader.activityDays(binding) : [],
+                    activity: (binding, day) => visible() ? activityReader.activity(binding, day) : [],
+                });
+                try {
+                    const stopPrompt = installLivingPrompt(scope.ctx, host, world, scope.ownerScope);
+                    return () => settleCleanup(activity.revoke, stopPrompt);
+                }
+                catch (error) {
+                    void activity.revoke();
+                    throw error;
+                }
+            });
+            this.domain.core = { areas: 0, dispose };
+        }
+        const core = this.domain.core;
+        core.areas++;
+        return () => {
+            if (--core.areas)
+                return;
+            this.domain.core = undefined;
+            return core.dispose();
+        };
     }
     register(area, value, fiber) {
         const slots = this.domain.slots[area], label = this.labels[area];
@@ -135,8 +173,9 @@ export async function settleCleanup(...steps) {
 export function mountLivingArea(ctx, host, area, create, start, close = value => value.close()) {
     const { world, release } = LivingWorld.retain(ctx, host, area);
     let registration;
+    let stopPort, stopCore;
     let value, cleanup;
-    const dispose = () => cleanup ??= settleCleanup(() => registration?.revoke(), () => { if (value)
+    const dispose = () => cleanup ??= settleCleanup(() => registration?.revoke(), () => stopPort?.(), () => stopCore?.(), () => { if (value)
         return close(value); }).finally(() => release(registration?.lease.generation));
     try {
         ctx.effect(() => dispose);
@@ -144,7 +183,8 @@ export function mountLivingArea(ctx, host, area, create, start, close = value =>
             (ctx.fiber.state === 1 /* FiberState.LOADING */ || ctx.fiber.state === 2 /* FiberState.ACTIVE */), world, () => registration?.isLatestGeneration() === true);
         value = create(view);
         registration = world.register(area, value, ctx.fiber);
-        start(value);
+        stopPort = start(value, view);
+        stopCore = world.retainCore(ctx, host, area);
     }
     catch (error) {
         // Cordis joins this cleanup through the effect when synchronous apply fails.

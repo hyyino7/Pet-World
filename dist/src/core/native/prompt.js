@@ -1,6 +1,7 @@
 import { createSystemMessage, createUserMessage } from '@deepseek-ai/dsh-llm';
 import { joinContextSections } from '@deepseek-ai/dsh-system-prompt';
 import { reassembleOnChange } from '#dsh-world/worldScope';
+import { INTERACTION_CONTEXT } from '../interaction-presentation.js';
 const previousSections = new Set(['chatpet.identity', 'chatpet.user', 'chatpet.memory-policy', 'chatpet.expression',
     'chatpet.expression-guide', 'chatpet.memory']);
 // Any remaining section must pick up a removed sibling's pending change when
@@ -8,20 +9,26 @@ const previousSections = new Set(['chatpet.identity', 'chatpet.user', 'chatpet.m
 const restart = new WeakMap();
 const admitted = new WeakMap();
 const dynamicValues = new WeakMap();
+export const ENVIRONMENT_CONTEXT = 'chatpet.environment';
 /** Retire only this adapter's superseded operational views, retaining every
  * original native event and all other producers' context sections. Keeping the
  * latest equal snapshot avoids needless prefix edits between unchanged steps.
  * This is positional native projection, not a summary or a memory deletion. */
 export function retireDynamicContext(agent, turn, step) {
-    const values = dynamicValues.get(agent);
-    if (!values)
-        return;
+    // A reopened session can retain Living snapshots even without a provider for this Agent.
+    const values = new Map([
+        [ENVIRONMENT_CONTEXT, ''],
+        [INTERACTION_CONTEXT, ''],
+        ...(dynamicValues.get(agent) ?? []),
+    ]);
     const session = agent.session;
     const nodes = [...session.surface.nodes].flatMap(seq => {
         const event = session.eventAt(seq);
         return event?.type === 'user/message' && event.data.source.kind === 'runtime-context' && event.data.source.form === 'snapshot'
             && event.data.source.sections.some(section => values.has(section.name)) ? [event] : [];
     });
+    if (!nodes.length)
+        return;
     const latest = nodes.at(-1);
     const current = [...values].filter(([, text]) => text);
     const retainedOtherSections = new Set([...session.surface.nodes].flatMap(seq => {

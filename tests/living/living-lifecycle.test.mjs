@@ -6,6 +6,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import test from 'node:test';
 import {Context} from '@deepseek-ai/cordis';
 import {createAssistantMessage} from '@deepseek-ai/dsh-llm';
+import {renderContextSections} from '@deepseek-ai/dsh-system-prompt';
 import {createLifeStore} from '#dsh-world/life/lifeStore';
 import {cordisFixture, eventually, submitPlan} from '../behavior-list/entries-lifecycle.test.mjs';
 
@@ -22,6 +23,76 @@ const readArea = {
   life: (life, id) => life.readPlan(id),
   economy: (economy, id) => economy.snapshot(id),
 };
+
+test('3C 事实准备期间 Economy 重挂会作废两段，下一轮仍能读到并确认', async t => {
+  const f = await cordisFixture(t);
+  const agent = await f.agent();
+  await f.body.act(f.id, 'water', 'prepare-body');
+  await f.ownerAction({kind:'grant',amount:10}, 'prepare-economy');
+  const old = f.economy, pending = old.pendingFacts.bind(old);
+  const native = f.core.native, observe = native.observeFacts.bind(native);
+  const observations = [];
+  t.mock.method(native,'observeFacts',(id, facts, ...args) => {
+    if (id === agent.id) observations.push(facts.map(fact=>fact.requestId));
+    return observe(id, facts, ...args);
+  });
+  const entered = Promise.withResolvers(), release = Promise.withResolvers();
+  t.mock.method(old, 'pendingFacts', async id => {
+    const facts = await pending(id);
+    entered.resolve();
+    await release.promise;
+    return facts;
+  });
+  const assembling = f.ctx.systemPrompt.assemble({agent,scope:agent});
+  let fresh;
+  try {
+    await entered.promise;
+    await f.unload('economy');
+    await f.load('economy');
+    await f.ownerAction({kind:'grant',amount:1}, 'prepare-new-economy');
+    fresh = (await f.economy.pendingFacts(f.id)).find(fact=>fact.requestId==='prepare-new-economy');
+  } finally { release.resolve(); }
+  assert.ok(fresh);
+  const sections = renderContextSections(await assembling);
+  assert.ok(observations.every(ids=>!ids.includes('prepare-economy') || ids.includes(fresh.requestId)),
+    'Native evidence must never observe the retired Economy preparation');
+  const interactions = sections.find(row=>row.name==='chatpet.interactions');
+  // Prompt reassembly must render both sections using the new lease.
+  assert.ok(sections.some(row=>row.name==='chatpet.environment'));
+  assert.ok(interactions);
+  assert.ok(JSON.parse(interactions.text).facts.some(fact=>fact.id===fresh.id));
+  assert.equal((await f.body.pendingFacts(f.id)).length, 1);
+  assert.equal((await f.economy.pendingFacts(f.id)).length, 2);
+  const next = await f.input('Inspect them again.');
+  const facts = JSON.parse(next.sections.find(row=>row.name==='chatpet.interactions').text).facts;
+  assert.deepEqual(facts.map(fact=>fact.domain), ['body','economy','economy']);
+  await eventually(async()=>!(await f.body.pendingFacts(f.id)).length && !(await f.economy.pendingFacts(f.id)).length,'新轮次确认两区事实');
+});
+
+test('3C 原生日志落盘期间 Plan 重挂会保留事实，下一轮可确认', async t => {
+  const f = await cordisFixture(t);
+  const agent = await f.agent();
+  await f.body.act(f.id, 'water', 'flush-body');
+  const [fact] = await f.body.pendingFacts(f.id);
+  const entered = Promise.withResolvers(), release = Promise.withResolvers();
+  const sessions = f.ctx.sessions, flush = sessions.flush.bind(sessions);
+  const probe = t.mock.method(sessions, 'flush', async session => {
+    if (session === agent.session) { entered.resolve(); await release.promise; }
+    return flush(session);
+  });
+  const input = f.input('Inspect this result.');
+  try {
+    await entered.promise;
+    await f.unload('life');
+    await f.load('life');
+  } finally { release.resolve(); }
+  await input;
+  probe.mock.restore();
+  assert.deepEqual(await f.body.pendingFacts(f.id), [fact]);
+  const next = await f.input('Inspect it again.');
+  assert.ok(next.sections.find(row=>row.name==='chatpet.interactions')?.text.includes(fact.id));
+  await eventually(async()=>!(await f.body.pendingFacts(f.id)).length,'新轮次确认身体事实');
+});
 
 function ownedHooks(ctx, fiber) {
   return Object.values(ctx.events._hooks).flat().filter(hook => {

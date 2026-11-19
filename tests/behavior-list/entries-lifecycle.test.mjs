@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'node:fs';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmdirSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -140,7 +140,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
               return result;
             } finally { ctx.emit(carrier,'tools/result',exec); }
           };
-          const call = {agent,messages,schemas,sections,system:renderPrompt(prompt),tool,signal};
+          const call = {agent,messages,history:session.deriveMessages(),schemas,sections,system:renderPrompt(prompt),tool,signal};
           calls.push(call);
           const text = await model(call);
           if (!signal.aborted) session.append('assistant/message',{turn,step,stream:[],message:createAssistantMessage({source:{provider:'fixture',model:'scripted'},content:[{type:'text',text}]})},{surfaceOp:'append'});
@@ -155,7 +155,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
     return agent;
   };
 
-  async function start() {
+  async function start(entriesToLoad = order) {
     openRegistry();
     const host = await policyHost(repo,effects);
     ctx = host.ctx.root;
@@ -220,7 +220,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       const initialized = await core.services.workspace.initialize(request('initialize'),{expectedPreferencesRevision:result.value.revision});
       assert.ok(initialized.ok,JSON.stringify(initialized));
     }
-    for (const key of order) if (key!=='economy' || !legacyGarden) await load(key);
+    for (const key of entriesToLoad) if (key!=='economy' || !legacyGarden) await load(key);
   }
   async function stop() {
     if (!ctx) return;
@@ -246,7 +246,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
     get body() { return ctx.petBehavior; }, get life() { return ctx.petLife; }, get economy() { return ctx.petEconomy; },
     set model(value) { model=value; },
     set snapshot(value) { snapshot=value; },
-    async restart(between = ()=>{}) { await stop(); await between(); await start(); },
+    async restart(between = ()=>{}, {order: entriesToLoad} = {}) { await stop(); await between(); await start(entriesToLoad); },
     async agent(sessionId='home') {
       const result = await ctx.sessionController.resolveAgent(sessionId);
       if (result.agent) return result.agent;
@@ -748,17 +748,41 @@ if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1]))
     await call.agent.whenIdle();
   });
 
-  test('三入口全卸载后普通聊天、无身体环境段、相册和历史活动仍可用',async t=>{
-    const f = await cordisFixture(t);
+  test('活动记录随可见生活入口提供，三入口全卸载后普通聊天、相册和日记仍可用',async t=>{
+    const f = await cordisFixture(t,{order:['body','economy']});
+    const records = f.core.records;
+    const diaryDay = '2026-11-13', activityDay = '2026-11-12';
+    // An older ready workspace may not have the activity directory from the current inventory.
+    const manifest = join(f.repo,'.chatpet','manifest.json'), current = readFileSync(manifest,'utf8');
+    writeFileSync(manifest,JSON.stringify({...JSON.parse(current),schemaVersion:2,
+      files:['README.md','manifest.json','SOUL.md','USER.md','core.json']}));
+    rmdirSync(join(f.directory,'activity'));
+    assert.deepEqual(await records.library(f.id,'dates'),[]);
+    assert.deepEqual((await records.library(f.id,'journal',diaryDay)).activity,[]);
+    assert.equal(existsSync(join(f.directory,'activity')),false,'查询缺失的活动目录不会创建目录');
     const store = createLifeStore(f.directory,Intl.DateTimeFormat().resolvedOptions().timeZone);
+    writeFileSync(manifest,current);
+    await f.load('life');
     f.core.records.getLibrary(f.id).album().keep({ref:{attachmentId:'fixture-image',mediaType:'image/png',bytes:3,width:1,height:1},
       data:Uint8Array.of(1,2,3)},'Synthetic drawing');
-    for (const day of ['2026-11-12','2026-11-13']) {
+    for (const day of [activityDay,diaryDay]) {
       const at = new Date(Number(day.slice(0,4)),10,Number(day.slice(-2)),12).toISOString();
       assert.ok(store.appendActivity({time:at,sessionId:'home',callId:day,tool:'read',summary:'Saved activity '+day,outside:false}));
     }
-    writeFileSync(join(f.repo,'.chatpet','diary','2026-11-13.md'),'Saved diary.');
-    for (const key of ['life','body','economy']) await f.unload(key);
+    writeFileSync(join(f.repo,'.chatpet','diary',diaryDay+'.md'),'Saved diary.');
+    const checkActivity = async () => {
+      assert.deepEqual(await records.library(f.id,'dates'),[diaryDay,activityDay]);
+      const journal = await records.library(f.id,'journal',diaryDay);
+      assert.equal(journal.diary,'Saved diary.');
+      assert.deepEqual(journal.activity.map(row=>row.summary),['Saved activity '+diaryDay]);
+    };
+    await f.unload('life');
+    f.states([true,false,true]);
+    await checkActivity();
+    await f.unload('body');
+    f.states([false,false,true]);
+    await checkActivity();
+    await f.unload('economy');
     f.states([false,false,false]);
     f.model = async call=>{
       assert.ok(call.schemas.includes('pet_list_photos'));
@@ -768,13 +792,56 @@ if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1]))
       return 'Ordinary reply after unload';
     };
     const call = await f.input('Are you there?');
-    assert.match(call.sections.find(row=>row.name==='chatpet.environment').text,/没有共享身体执行服务/);
+    assert.ok(!call.sections.some(row=>row.name==='chatpet.environment'));
     assert.ok(!call.sections.some(row=>row.name==='chatpet.interactions'));
     const events = f.saved(call.agent.id).events;
     assert.equal(events.find(event=>event.type==='assistant/message').data.message.content[0].text,'Ordinary reply after unload');
-    assert.deepEqual(await f.core.records.library(f.id,'dates'),['2026-11-13','2026-11-12']);
-    const journal = await f.core.records.library(f.id,'journal','2026-11-13');
+    assert.deepEqual(await records.library(f.id,'dates'),[diaryDay]);
+    const journal = await records.library(f.id,'journal',diaryDay);
     assert.equal(journal.diary,'Saved diary.');
-    assert.deepEqual(journal.activity.map(row=>row.summary),['Saved activity 2026-11-13']);
+    assert.deepEqual(journal.activity,[]);
+    await f.load('body');
+    await checkActivity();
+  });
+
+  test('三入口全卸载后重开原会话会退休旧环境和互动快照', async t=>{
+    const f = await cordisFixture(t);
+    f.states([true,true,true]);
+    const before = await f.agent();
+    before.ctx.systemPrompt.context({name:'fixture.other-producer',order:40,text:'Independent context from the previous turn',required:true});
+    await f.body.act(f.id,'water','snapshot-before-unload','desktop');
+    await f.input('Inspect the living world.',before.id);
+    const original = f.saved(before.id).events.find(event=>event.type==='user/message' &&
+      event.data.source.kind==='runtime-context' && event.data.source.form==='snapshot');
+    assert.ok(original,'第一轮已把原生快照写入磁盘');
+    const names = ['chatpet.environment','chatpet.interactions'];
+    const originalSections = original.data.source.sections;
+    const living = originalSections.filter(row=>names.includes(row.name));
+    assert.deepEqual(living.map(row=>row.name),names);
+    const other = originalSections.filter(row=>!names.includes(row.name));
+    assert.ok(other.some(row=>row.name==='fixture.other-producer'));
+
+    for (const key of ['life','body','economy']) await f.unload(key);
+    f.states([false,false,false]);
+    await f.restart(undefined,{order:[]});
+    f.states([false,false,false]);
+    f.model = async ()=>'Ordinary reply after reopening';
+    const call = await f.input('Are you still there?',before.id);
+    assert.equal(call.agent.id,before.id);
+    assert.notEqual(call.agent,before);
+    const saved = f.saved(before.id).events;
+    assert.deepEqual(saved.find(event=>event.seq===original.seq),original,'原生日志保留快照原文');
+    assert.equal(saved.findLast(event=>event.type==='assistant/message').data.message.content[0].text,'Ordinary reply after reopening');
+
+    const historySections = call.history.flatMap(message=>message.source?.kind==='runtime-context' &&
+      message.source.form==='snapshot' ? message.source.sections : []);
+    const historyText = call.history.flatMap(message=>message.content.filter(block=>block.type==='text').map(block=>block.text));
+    for (const row of other) {
+      assert.deepEqual(historySections.find(section=>section.name===row.name),row);
+      assert.ok(historyText.some(text=>text.includes(row.text)),row.name);
+    }
+    assert.deepEqual(living.filter(row=>historyText.some(text=>text.includes(row.text))).map(row=>row.name),[],
+      '重开会话后，脚本模型收到的历史不含旧生活快照文本');
+    assert.deepEqual(historySections.filter(row=>names.includes(row.name)),[]);
   });
 }

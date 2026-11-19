@@ -2,10 +2,10 @@ import { constants, closeSync, fstatSync, lstatSync, openSync, readFileSync } fr
 import { join } from 'node:path';
 import { createDiaryReader } from '#dsh-world/life/diary';
 import { createPhotoStore, type PhotoStore } from '#dsh-world/life/photos';
-import { createLifeStore } from '#dsh-world/life/lifeStore';
 import { durableWrite } from '#dsh-world/life/lifeStore';
 import type { CoreWorkspace } from './workspace.js';
 import type { CoreNative } from './native/conversation.js';
+import type { ActivityReader, CompanionBinding } from './tables/companion-ports.js';
 import { companionRecordPaths, prepareRecordDirectory } from './record-paths.js';
 import { readCompanionWriting, companionWritingFile, type CompanionWritingScope } from './companion-writing.js';
 import { bytesDigest, check } from './storage.js';
@@ -20,7 +20,7 @@ function checked(path: string, directory = false) {
 export class CompanionRecordLibrary {
   private photos?: PhotoStore;
   readonly paths: ReturnType<typeof companionRecordPaths>;
-  constructor(readonly root: string, private timeZone: string) { this.paths = companionRecordPaths(root); }
+  constructor(readonly root: string, readonly timeZone: string) { this.paths = companionRecordPaths(root); }
   album() {
     if (this.photos) return this.photos;
     const dir = join(this.paths.photoDirectory, 'photos');
@@ -28,18 +28,19 @@ export class CompanionRecordLibrary {
     for (const name of ['album.sqlite', 'album.sqlite-wal', 'album.sqlite-shm', 'album.sqlite-journal', 'index.json']) checked(join(dir, name));
     return this.photos = createPhotoStore(this.paths.photoDirectory);
   }
-  dates() {
+  readonly photoTools = Object.freeze({
+    keep: (...args: Parameters<PhotoStore['keep']>) => this.album().keep(...args),
+    list: (...args: Parameters<PhotoStore['list']>) => this.album().list(...args),
+    forget: (...args: Parameters<PhotoStore['forget']>) => this.album().forget(...args),
+  });
+  dates(activityDays: () => readonly string[] = () => []) {
     checked(this.paths.diaryDir, true);
-    for (const dir of ['activity', 'life']) checked(join(this.paths.lifeDirectory, dir), true);
-    return [...new Set([...createDiaryReader(this.paths.diaryDir).dates(),
-      ...createLifeStore(this.paths.lifeDirectory, this.timeZone).activityDays()])].sort().reverse();
+    return [...new Set([...createDiaryReader(this.paths.diaryDir).dates(), ...activityDays()])].sort().reverse();
   }
-  journal(day: string) {
+  journal(day: string, readActivity: (day: string) => ReturnType<ActivityReader['activity']> = () => []) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw Error('日期无效');
     checked(this.paths.diaryDir, true); checked(join(this.paths.diaryDir, day + '.md'));
-    checked(join(this.paths.lifeDirectory, 'activity'), true);
-    checked(join(this.paths.lifeDirectory, 'activity', day + '.jsonl'));
-    return {day, activity:createLifeStore(this.paths.lifeDirectory, this.timeZone).activity(day)};
+    return {day, activity:readActivity(day)};
   }
   close() { this.photos?.close(); this.photos = undefined; }
 }
@@ -102,15 +103,20 @@ export class CoreRecords {
   async library(workspaceId:string, operation:RecordOperation, input?:unknown) {
     const library = this.getLibrary(workspaceId), current = this.lookup(workspaceId);
     if (!current || current.path !== library.root) throw {code:'STALE_BINDING'};
+    const binding: CompanionBinding = {workspaceId, path:library.root, storageId:this.workspace.storageId()};
     const scope:CompanionWritingScope = {id:workspaceId, directory:library.paths.directory,
-      timeZone:this.timeZone, sessionIds:current.sessionIds, isHome:()=>false};
+      timeZone:library.timeZone, sessionIds:current.sessionIds, isHome:()=>false};
     const read = (name:string) => readCompanionWriting({workspace:this.workspace}, scope, name);
     const verify = () => {
-      if (this.getLibrary(workspaceId) !== library || this.lookup(workspaceId)?.path !== current.path) throw {code:'STALE_BINDING'};
+      if (this.getLibrary(workspaceId) !== library || this.lookup(workspaceId)?.path !== binding.path ||
+          this.workspace.storageId() !== binding.storageId) throw {code:'STALE_BINDING'};
     };
-    if (operation === 'dates') return library.dates();
+    const activities = () => this.native.companionPorts.get('activities');
+    const dates = () => { verify(); return library.dates(() => activities()?.activityDays(binding) ?? []); };
+    if (operation === 'dates') return dates();
     if (operation === 'journal' && typeof input === 'string') {
-      const entry = library.journal(input), diary = await read('diary/' + input + '.md'); verify();
+      const entry = library.journal(input, day => activities()?.activity(binding, day) ?? []);
+      const diary = await read('diary/' + entry.day + '.md'); verify();
       return {...entry, diary:diary ?? null};
     }
     if (operation === 'search') {
@@ -118,7 +124,7 @@ export class CoreRecords {
       if (typeof query !== 'string' || !query.trim() || query.length > 256 || !Number.isSafeInteger(offset) || offset < 0) throw {code:'INVALID_ARGUMENT'};
       const dialogue = await this.native.memory?.dialogueForDay(workspaceId, current.sessionIds, {query,offset,timeZone:this.timeZone});
       const diaries = [];
-      if (offset === 0) for (const date of library.dates()) {
+      if (offset === 0) for (const date of dates()) {
         const content = await read('diary/' + date + '.md');
         const at = content?.toLocaleLowerCase().indexOf(query.trim().toLocaleLowerCase()) ?? -1;
         if (content && at >= 0) diaries.push({date, excerpt:content.slice(Math.max(0, at - 50), at + 150)});

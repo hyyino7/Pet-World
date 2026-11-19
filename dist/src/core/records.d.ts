@@ -1,10 +1,11 @@
 import type { CoreWorkspace } from './workspace.js';
 import type { CoreNative } from './native/conversation.js';
+import type { ActivityReader } from './tables/companion-ports.js';
 import { companionRecordPaths } from './record-paths.js';
 /** The original diary reader and album store, owned by Core rather than a scheduler. */
 export declare class CompanionRecordLibrary {
     readonly root: string;
-    private timeZone;
+    readonly timeZone: string;
     private photos?;
     readonly paths: ReturnType<typeof companionRecordPaths>;
     constructor(root: string, timeZone: string);
@@ -21,10 +22,21 @@ export declare class CompanionRecordLibrary {
         forget(id: string): void;
         close(): void;
     };
-    dates(): string[];
-    journal(day: string): {
+    readonly photoTools: Readonly<{
+        keep: (image: StoredImageAttachment, description?: string | undefined, tags?: readonly string[] | undefined) => import("#dsh-world/life/photos").PhotoSummary;
+        list: (limit?: number | undefined, offset?: number | undefined) => {
+            photos: import("#dsh-world/life/photos").PhotoSummary[];
+            total: number;
+            hasMore: boolean;
+            limit: number;
+            offset: number;
+        };
+        forget: (id: string) => void;
+    }>;
+    dates(activityDays?: () => readonly string[]): string[];
+    journal(day: string, readActivity?: (day: string) => ReturnType<ActivityReader['activity']>): {
         day: string;
-        activity: import("../../vendor/dsh-world/lib/life/types.js").ActivityRecord[];
+        activity: readonly import("../../vendor/dsh-world/lib/life/types.js").ActivityRecord[];
     };
     close(): void;
 }
@@ -62,7 +74,7 @@ export declare class CoreRecords {
     } | {
         diary: string | null;
         day: string;
-        activity: import("../../vendor/dsh-world/lib/life/types.js").ActivityRecord[];
+        activity: readonly import("../../vendor/dsh-world/lib/life/types.js").ActivityRecord[];
         dialogue?: undefined;
         diaries?: undefined;
         removed?: undefined;
@@ -70,7 +82,7 @@ export declare class CoreRecords {
         data?: undefined;
     } | {
         dialogue: {
-            items: import("../living/plan/review-dialogue.js").DialogueLine[];
+            items: import("./review-dialogue.js").DialogueLine[];
             nextOffset: number | undefined;
             coverage: "partial" | "eligible";
         } | undefined;

@@ -5,6 +5,8 @@ import type {RegistrationLease, TableRegistration} from '../contracts/tables.js'
 import type {CompanionBehavior} from './body/plugin.js';
 import type {CompanionLife} from './plan/plugin.js';
 import type {CompanionEconomy} from './economy/plugin.js';
+import {activityReader} from './plan/activity-reader.js';
+import {installLivingPrompt} from './prompt-context.js';
 
 interface Areas {body: CompanionBehavior; plan: CompanionLife; economy: CompanionEconomy}
 type Area = keyof Areas;
@@ -19,6 +21,7 @@ type Slots<T> = Map<symbol, Slot<T>>;
 interface Domain {
   worlds: Set<LivingWorld>;
   slots: {[K in Area]: Slots<Areas[K]>};
+  core?: {areas: number; dispose(): void | Promise<void>};
 }
 const domains = new WeakMap<Context, WeakMap<PetCoreHost, Domain>>();
 
@@ -71,6 +74,39 @@ export class LivingWorld {
       if (--world.entries === 0) domain.worlds.delete(world);
       if (!domain.worlds.size) hosts.delete(host);
     }};
+  }
+
+  retainCore(ctx: Context, host: PetCoreHost, area: Area) {
+    const ports = host.native?.companionPorts;
+    if (!ports) return;
+    const scope = ports.scopeFor(ctx, services[area]);
+    if (!scope) return;
+    if (!this.domain.core) {
+      const labels = labelsOf(scope.ctx);
+      const world = LivingWorld.matching(this.domain, labels) ?? new LivingWorld(this.domain, labels);
+      const visible = () => world.lookup('body') || world.lookup('plan') || world.lookup('economy');
+      const dispose = scope.ctx.effect(() => {
+        const activity = ports.register('activities', {
+          activityDays:binding => visible() ? activityReader.activityDays(binding) : [],
+          activity:(binding, day) => visible() ? activityReader.activity(binding, day) : [],
+        });
+        try {
+          const stopPrompt = installLivingPrompt(scope.ctx, host, world, scope.ownerScope);
+          return () => settleCleanup(activity.revoke, stopPrompt);
+        } catch (error) {
+          void activity.revoke();
+          throw error;
+        }
+      });
+      this.domain.core = {areas:0, dispose};
+    }
+    const core = this.domain.core;
+    core.areas++;
+    return () => {
+      if (--core.areas) return;
+      this.domain.core = undefined;
+      return core.dispose();
+    };
   }
 
   register<K extends Area>(area: K, value: Areas[K], fiber: Fiber) {
@@ -141,13 +177,16 @@ export async function settleCleanup(...steps: (() => void | Promise<void>)[]) {
 }
 
 export function mountLivingArea<K extends Area>(ctx: Context, host: PetCoreHost, area: K,
-  create: (view: LivingView) => Areas[K], start: (value: Areas[K]) => void,
+  create: (view: LivingView) => Areas[K], start: (value: Areas[K], view: LivingView) => void | (() => void | Promise<void>),
   close: (value: Areas[K]) => void | Promise<void> = value => value.close()) {
   const {world, release} = LivingWorld.retain(ctx, host, area);
   let registration: (TableRegistration & {isLatestGeneration(): boolean}) | undefined;
+  let stopPort: void | (() => void | Promise<void>), stopCore: (() => void | Promise<void>) | undefined;
   let value: Areas[K] | undefined, cleanup: Promise<void> | undefined;
   const dispose = () => cleanup ??= settleCleanup(
     () => registration?.revoke(),
+    () => stopPort?.(),
+    () => stopCore?.(),
     () => {if(value) return close(value);},
   ).finally(() => release(registration?.lease.generation));
   try {
@@ -157,7 +196,8 @@ export function mountLivingArea<K extends Area>(ctx: Context, host: PetCoreHost,
       () => registration?.isLatestGeneration() === true);
     value = create(view);
     registration = world.register(area, value, ctx.fiber);
-    start(value);
+    stopPort = start(value, view);
+    stopCore = world.retainCore(ctx, host, area);
   } catch (error) {
     // Cordis joins this cleanup through the effect when synchronous apply fails.
     void dispose().catch(() => {});

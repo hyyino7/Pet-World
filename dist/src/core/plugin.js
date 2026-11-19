@@ -2,7 +2,7 @@ import { installNativeTranscripts } from './native/transcripts.js';
 import { createWorldService } from '../world/service.js';
 import { createCore } from './index.js';
 import { apply as installNativeAdapter } from './native/agent.js';
-import { registerAlbumTools } from '../living/plan/album-tools.js';
+import { registerAlbumTools } from './album-tools.js';
 export const name = '00-Core';
 export const inject = ['agents', 'agentLoop', 'sessions', 'sessionPersistence', 'systemPrompt', 'tools'];
 export async function apply(ctx, config) {
@@ -26,13 +26,14 @@ export async function apply(ctx, config) {
         const world = createWorldService(host, () => registry.get('workspaceRegistry'));
         ctx.provide('petWorld', world);
         host.records.connect(id => registry.get('workspaceRegistry')?.get(id));
+        const ports = host.native.companionPorts;
         registerAlbumTools(ctx, host, agent => {
             const status = host.workspace.status();
             if (status.state !== 'ready' || !status.target ||
-                agent.session.header.agentPreset === 'chatpet-channel-guest' || ctx.get('petRoom')?.watching(agent.id) ||
-                world.sessionStatus(agent.session)?.state !== 'ready' || ctx.get('petLife')?.isHome(agent.id))
+                agent.session.header.agentPreset === 'chatpet-channel-guest' || ports.get('watchingTelevision')?.(agent.id) ||
+                world.sessionStatus(agent.session)?.state !== 'ready' || ports.get('lifeOwnsAlbum')?.(agent.id))
                 return;
-            return host.records.getLibrary(status.target.id);
+            return host.records.getLibrary(status.target.id).photoTools;
         });
         const transcripts = installNativeTranscripts(ctx, host);
         const stopAdapter = installNativeAdapter(ctx, host, world);

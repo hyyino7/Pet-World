@@ -4,6 +4,7 @@ import { COMPANION_TOOL_SOURCES } from '../../contracts/tables.js';
 import { SourceAdapterTable } from '../tables/sources.js';
 import { RegistrationTable } from '../tables/registry.js';
 import { CompanionToolTable } from '../tables/tools.js';
+import { CompanionPorts } from '../tables/companion-ports.js';
 export const OWNER_LIFE_TOOL_SOURCES = Object.freeze(COMPANION_TOOL_SOURCES.filter(source => source === 'owner' || source === 'life' || source === 'review'));
 export function matchesNativeScope(current, expected) {
     return !!current && current.workspaceId === expected.workspaceId && current.path === expected.path
@@ -42,7 +43,9 @@ export class CoreNative {
     memoryEnabled = true;
     toolTable = new CompanionToolTable();
     sourceTable = new SourceAdapterTable(this.toolTable);
+    companionPorts = new CompanionPorts();
     playbackProviders = new RegistrationTable();
+    reviewCompaction = new RegistrationTable();
     resolveNativeScope;
     attachGuest;
     turns = new Map();
@@ -86,6 +89,12 @@ export class CoreNative {
     memoryFor(_sessionId) {
         // The current component switch applies at the next turn, including retained chats.
         return this.memoryEnabled ? this.memory : undefined;
+    }
+    registerReviewCompaction(request) {
+        return this.reviewCompaction.register('review', request);
+    }
+    requestReviewCompaction(sessionId) {
+        this.reviewCompaction.get('review')?.value(sessionId);
     }
     /** Native DSH owns the turn. Core retains only input references and selected policy metadata. */
     observeInputs(sessionId, turn, messages, scope = this.current(sessionId)) {

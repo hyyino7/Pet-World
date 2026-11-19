@@ -1,5 +1,5 @@
-import type { CoreRuntime } from '../../core/runtime.js';
-import type { Decision } from '../../memory/client.js';
+import type { CoreRuntime } from './runtime.js';
+import type { Decision } from '../memory/client.js';
 export interface DialogueQuery {
     day?: string;
     timeZone: string;

@@ -3,9 +3,51 @@ import assert from 'node:assert/strict';
 import {cpSync,readFileSync,mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {setTimeout as pause} from 'node:timers/promises';
-import {fixture,until} from './fixture.mjs';
+import {fixture,until,value} from './fixture.mjs';
+import {prepareMemory} from './policy-evidence.mjs';
 
 import {qqTransport} from './qq-transport.mjs';
+
+test('3C Bridge 整理保留路由拒绝和忙时排队，空闲后处理已完成轮次',async t=>{
+  const calls=[];
+  const f=await fixture(t,{channels:true,memory:true,economy:false,intervals:true,configure(services){
+    services.set('compaction',{async compactNow(agent){calls.push(agent.id);return null;}});
+  }});
+  const old=f.host.workspace.companionConfiguration();
+  value(await f.host.services.workspace.saveCompanion(f.host.operator.request('bridge-compaction'),{
+    workspaceId:'world',expectedSettings:old,settings:{...old,memorySummaryTurns:200,memorySummaryIdleMinutes:60},
+  }));
+  const channel=f.service('petChannels');
+  const route=f.route('/chatpet-connect/bridge/compact');
+  const compact=async token=>{
+    let status,body;
+    await route.handler({method:'POST',headers:{host:'127.0.0.1','x-dsh-world-token':token}},
+      {writeHead(code){status=code;},end(json){body=JSON.parse(json);}});
+    return {status,body};
+  };
+  assert.equal((await compact()).status,503);
+  const settings=(await channel.request('world','channelStatus',{})).bridge.preferences;
+  await channel.request('world','bridgeSettings',{expected:settings,next:{enabled:true,outlets:[]}});
+  const {discovery}=(await channel.request('world','channelStatus',{})).bridge;
+  const {token}=JSON.parse(readFileSync(discovery,'utf8'));
+  assert.equal((await compact()).status,403);
+  assert.deepEqual(await compact(token),{status:409,body:{error:'生活会话或记忆整理未启用'}});
+  await f.enable();
+  const home=await f.home();
+  await prepareMemory(f,home.id);
+  assert.deepEqual(await compact(token),{status:409,body:{error:'当前没有待整理的已完成对话'}});
+  await f.end(await f.begin(home.id));
+  const busy=await f.begin(home.id);
+  assert.deepEqual(await compact(token),{status:202,body:{accepted:true}});
+  t.mock.timers.tick(1000);
+  const batch=()=>f.host.workspace.runtime.store.get('memory-batch',home.id);
+  assert.equal(batch().lastAttempt,0);
+  assert.deepEqual(calls,[]);
+  await f.end(busy);
+  t.mock.timers.tick(1000);
+  await until(()=>batch().turns===0,'Bridge 整理完成');
+  assert.deepEqual(calls,[home.id]);
+});
 
 test('QQ 渠道入口收件后重启不丢失且不重复送达',async t=>{
   const transport=qqTransport(t),{sent}=transport;

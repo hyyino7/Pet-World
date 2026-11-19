@@ -5,7 +5,7 @@ import type {SessionId} from '@deepseek-ai/dsh-session';
 import { existsSync, lstatSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {createHash} from 'node:crypto';
-import { createLifeRuntime } from '#dsh-world/life/runtime';
+import { createLifeRuntime, type LifeDeps } from '#dsh-world/life/runtime';
 import { createLifeStore, durableWrite } from '#dsh-world/life/lifeStore';
 import { registerWorldPrompt } from '../../core/native/prompt.js';
 import type { PetCoreHost } from '../../core/index.js';
@@ -215,16 +215,17 @@ export class CompanionLife {
       options: {worldDir: bound.directory, roomDir: bound.path, diaryDir: bound.library.paths.diaryDir, selfFile: bound.library.paths.selfFile, timeZone: this.timeZone,
         schedule: () => this.preferences, alarmFile: REVIEW_ALARM_FILE},
       dailyBudget: () => this.preferences.dailyBudget ?? undefined,
-      photos: () => bound.library.album(),
+      // The upstream runtime only forwards this store to photoTools.
+      photos: () => bound.library.photoTools as ReturnType<NonNullable<LifeDeps['photos']>>,
       reviewDiaryStatus: (day,session,messageId) => {
         if(!active() || !member(session.id))throw Error('Review workspace or home changed');
         return reviewDiaryStatus(host,{id:bound.id,directory:bound.library.paths.directory,timeZone:this.timeZone,
           sessionIds:this.current()!.sessionIds,isHome:id=>this.isHome(id)},day,session,messageId);
       },
       afterReview: () => {
-        if(!active() || !this.preferences.compactAfterReview)return;
+        if(!active() || !this.preferences.compactAfterReview || !this.running())return;
         const id = store.read().homeSessionId;
-        if (id) this.ctx.emit('pet/life.review', id);
+        if (id) host.native.requestReviewCompaction(id);
       },
       inWorkspace: id => canWrite()
         && this.current()?.sessionIds.includes(id) === true && !host.native.isGuest(id),
@@ -631,11 +632,11 @@ export const inject = ['petCore', 'petWorld', 'agents', 'sessions', 'tools', 'sy
 export interface Config { agentPreset?: string }
 declare module '@deepseek-ai/cordis' {
   interface Context { petLife: CompanionLife }
-  interface Events { 'pet/life.review'(sessionId: string): void; 'pet/life.changed'(): void }
+  interface Events { 'pet/life.changed'(): void }
 }
 export function apply(ctx: Context, config: Config = {}) {
   const host = ctx.petCore;
-  return mountLivingArea(ctx,host,'plan',view=>new CompanionLife(ctx,host,config.agentPreset ?? 'standard',view),life=>{
+  return mountLivingArea(ctx,host,'plan',view=>new CompanionLife(ctx,host,config.agentPreset ?? 'standard',view),(life,view)=>{
     life.activate();
     ctx.provide('petLife', life);
     life.registerSource();
@@ -651,5 +652,11 @@ export function apply(ctx: Context, config: Config = {}) {
         };
       },
     }).revoke);
+    const ports = host.native.companionPorts;
+    if (!ports.scopeFor(ctx, 'petLife')) return;
+    const isHome = (id: string) => view.lookup('plan')?.value === life && life.isHome(id);
+    const album = ports.register('lifeOwnsAlbum', isHome);
+    const review = ports.register('isRunningLifeHome', isHome);
+    return () => settleCleanup(album.revoke, review.revoke);
   });
 }

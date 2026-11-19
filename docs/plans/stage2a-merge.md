@@ -835,6 +835,34 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - 返工共 8 个文件。`src/living/plan/plugin.ts` 约 114 行，`src/living/index.ts` 约 35 行，`tests/living/living-lifecycle.test.mjs` 约 146 行，本方案约 15 行。构建同步 `dist/src/living/{index,plan/plugin}.{js,d.ts}` 4 个文件约 173 行。1A 入口测试文件与返工前逐字一致，验证均使用合成目录中的真实 Cordis 入口。
 - 建议一个提交，说明「修复计划区显式暂停和卸载收尾时丢失的暂停回执与 home 花费」。改动留在 `codex/2a-3b-instance` 工作树。
 
+### 第 3 批 · 3C
+
+- 01 回顾对话搬入 Core，更新 Memory 和测试引用。3 个文件，12 行（+6 / −6）。`review-dialogue` 快测 1/1。
+- 02 相册工具搬入 Core，更新 Core、Life 引用和相册证据路径。4 个文件，10 行（+5 / −5）。工具声明、相册和入口快测 34/34。
+- 03 生活三区登记环境、互动事实和活动只读接口，在原生落盘后复核绑定、三区租约和准备结果再确认。14 个文件，571 行（+441 / −130）。契约、入口和 R6 快测 81/81，另跑菜园时钟 8/8。
+- 04 Core 与 Life 共用受限相册句柄，经登记保住 home 和电视门控。Life 与 Bridge 直调回顾整理。15 个文件，243 行（+203 / −40）。整理、相册门控和工具声明快测 33/33，重跑第 3 组 81/81。
+- 行数为增删之和，排除 `dist/src/**` 及基线。逐组临时副本的 `pnpm run build`、`pnpm run check:arch` 和细则快测全部通过。
+- 旧实现红测确认查询创建缺失活动目录、Economy 旧准备进入证据、Plan 重挂后旧轮次确认事实，以及受限相册和直调入口缺席。各用例在对应组通过。
+- `pnpm run check:types`、`pnpm run test:life-integration`（171/171、940/940）、`pnpm run build && pnpm run test:behavior-list`（索引 11/11、行为 88/88）通过。
+- `pnpm run check:arch -- --report` 核对第一层 23 → 22 → 21 → 9 → 5，最终仅剩细则指定五条；全仓 R1–R4 为 60 → 42，R8 为 1053，零新增。
+- 无范围偏离。按拍板更新 2A1A-17，`policy-life` 原断言沿用。缺目录用支持的旧版合成清单验证，共享登记仅在 Core 原生作用域可用时接线。验证只用合成数据。
+- 四组补丁在 `/tmp/her-world-3c-patches/`，从 `13ae820` 顺序应用后纳入补丁的文件与工作树逐字节一致。Claude 在沙箱外执行 `pnpm run verify`。
+
+#### 返工一轮
+
+- 先加 `2A1A-19`，用合成 Cordis 会话自然写入原生快照，卸载三区后重启夹具，再打开磁盘上的同一会话。修复前按名称单跑，0 通过、1 失败，脚本模型收到的历史仍含 `chatpet.environment` 和 `chatpet.interactions` 的旧文本。原事件、其他生产方的段和普通回复断言已通过（`tests/behavior-list/entries-lifecycle.test.mjs:143,807,843`）。
+- 根因是退休逻辑只认当前 Agent 登记过的动态段名。同进程卸载会把旧 Agent 的值置空。三区缺席时，新 Agent 从磁盘恢复了旧快照，却没有这两个登记键（`src/core/native/prompt.ts:27,175`、`src/living/index.ts:94`）。
+- 使用范围例外修改 `src/core/native/prompt.ts:27`。在现有 `agent/request` 路径中让这两个段名以空值参与退休，活跃登记覆盖默认空值，沿用位置替换来保留原生日志与其他生产方的段。Living 和 Core 共用环境段名，互动段复用已有常量（`src/core/native/agent.ts:181`、`src/living/prompt-context.ts:43`）。
+- Economy 重挂用例临时观测三次，三次都触发重组并读到新租约的事实。现固定断言环境和互动段均出现、互动 JSON 含新事实 ID，并保留下一轮确认的断言（`tests/living/living-lifecycle.test.mjs:56`）。
+- 3C 有意加入两处行为变化。Plan 的 `afterReview` 在 main 已有的 `active()` 和 `compactAfterReview` 门控上加了 `!this.running()`，Life 暂停时回顾完成会直接返回（`src/living/plan/plugin.ts:226`）。Memory 的 `run` 因换绑或取消未实际消费批次时保留回顾标记，待成功消费后清除（`src/memory/batch.ts:104`）。
+- 手写改动 6 个文件，94 行（+84 / −10）。`src/core/native/prompt.ts`（+9 / −1）、`src/living/prompt-context.ts`（+2 / −2）、`tests/behavior-list/entries-lifecycle.test.mjs`（+45 / −4）、`tests/behavior-list/index.json`（+9）、`tests/living/living-lifecycle.test.mjs`（+4 / −3）、本方案（+15）。
+- 随行构建产物 3 个文件，18 行（+13 / −5）。`dist/src/core/native/prompt.d.ts`（+1）、`dist/src/core/native/prompt.js`（+10 / −3）、`dist/src/living/prompt-context.js`（+2 / −2）。
+- `pnpm run build && pnpm run check:arch` 通过。规则 42、词表 1053，新增和消失各 0。
+- 指定的 12 文件 `node --test` 快测通过 115 项，失败 0 项。本机回环上的 Memory 用例通过。
+- `pnpm run test:behavior-list` 索引通过 11 项、行为通过 89 项，失败均为 0。
+- `pnpm run check:types` 通过。另跑 `node --test dist/tests/core/dynamic-context.test.js`，通过 1 项、失败 0 项。
+- 建议一个提交。标题草稿 `2a-3c: 退休重开会话中的旧生活快照`。正文草稿「三区全卸载后，新 Agent 会从历史恢复过期的环境与互动快照。在请求投影中退休这两段并保留原生日志，补上重开会话回归与 Economy 重挂的确定断言。」
+
 ## 审查结论
 
 ### 1A 第一轮验收（Codex 审查 + Claude 核实）
@@ -948,3 +976,36 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 **复查（返工一轮后）**：必须修 1、2 已修好，建议修第 1 条（如实写明 `room-refresh.test.mjs` 超出名单）也已做。修法是把计划区的判断拆成两个：准入照旧看 `isOpen()` 和 `enabled`；已进入队列的显式暂停（`src/living/plan/plugin.ts:114-116,545-566`）和上游写入（`:202`，当前或收尾中的运行代、同一绑定、未被同名重挂取代）按绑定和运行代放行，同名重挂由 `src/living/index.ts:76-84` 的槽代次挡住旧代。新增 2 项放到返工前的代码上跑都失败（计划停在 `active`、回执 `running`、无 `resumeOnEnable`；两个窗口的花费都没增加），返工后通过；其中花费用例还断言了重挂后、替代实例再卸载后旧回调都写不进去。1A 入口测试文件与返工前一致，没有删、skip 或放宽测试。快测第一组 70/70、`check:arch` 60 / 1053 无增减，第二组 190/190，`test:behavior-list` 索引 11/11、行为 88 条；沙箱外 `pnpm run verify` 1523/1523。
 
 另记一处范围外的小变化：`synchronize()` 改用 `isCurrentBinding()` 后，绑定未变但伙伴 `companionId` 变了也会重新绑定（`:126-131,170`）。main 上这种情况运行时本来就因 `companionId` 不符而不启动，现在改为换绑后按新身份启动，不算放宽，记在这里。
+
+### 3C 第一轮验收（Codex 审查 + Claude 核实）
+
+**必须修**
+
+1. **三区全卸载后，已有会话里的旧环境段和互动段快照仍作为有效历史送给模型**。main 上 `chatpet.environment`、`chatpet.interactions` 由 Core 无条件登记（main `src/core/companion-foundation.ts:200-248`），三区都缺席时环境段换成「没有共享身体」，旧快照会被 `retireDynamicContext` 按段名替换。3C 把两段搬到 `src/living/prompt-context.ts:43,86`，只在至少一个区对 Core 可见时登记（`src/living/index.ts:79-110,200`）。而 `retireDynamicContext`（`src/core/native/prompt.ts:25-35`）只认这个 Agent 当前登记过的段名（`dynamicValues`）。在进程内卸载时，`dispose` 会把已有 Agent 的值置空（`prompt.ts:160-168`），所以能退休；但三区都卸载后再出现的 Agent（重启 DSH、会话 Agent 销毁后重开）里没有这两个名字，旧快照原样留在 surface 上，模型会读到过时的身体、计划和互动事实。这违反拍板点 8「两段一起消失」，也是相对 main 的行为回退。2A1A-17 没测到：它在同一进程里卸载，走的是 `dispose` 置空那条路。
+   - 要求：三区都缺席时，这两段在旧会话里的快照照样在 `agent/request` 里退休，只改投影，不动原始日志；其他生产方的段保持原样。做法由 Codex 定（例如 Core 记下这两个已知动态段名，缺席时按空值退休），不要为此在第一层重新读三个生活服务。
+   - 验收：先写一条会失败的测试——一个已存有这两段快照的主人会话，三区全卸载，然后换一个新 Agent 或重启夹具，再走一轮；断言模型实际收到的历史里没有这两段，原生日志里原快照事件还在。放进 `tests/behavior-list/entries-lifecycle.test.mjs` 或 `tests/living/living-lifecycle.test.mjs`，用 `cordisFixture`。
+   - 同类的既有缺口不在本条范围内：Economy 自己的 `chatpet.economy`（`src/living/economy/plugin.ts:292`）和 Emotion 的 `chatpet.expression-state`（`src/emotion/plugin.ts:234`）卸载后重开也会留旧快照，main 上就这样，不是 3C 引入的，另记。
+
+**建议修（不影响合并，返工时可以一起做）**
+
+- **隔离配置热更新不会让登记口跟着变**（Codex P2）。`src/core/tables/companion-ports.ts:42-46` 的 `scopeFor` 只在生产方挂载时比对一次隔离标签，读取时（`:50-53`）只核对租约。Cordis Loader 可以原地换掉某个入口的 `isolate` 映射、不重挂（loader `isolate()` 的 `swap`），之后 Core 对 Plan 的可见性变了，登记口却不变：home 可能同时出现两套相册，或回顾标记不触发提前整理。main 上 Core 每次都现取 `ctx.get('petLife')`，没有这个问题。不列为必须修，原因有两个：细则（「五个登记口」一节）写的就是「挂载时按隔离标签判可见、读取时核租约」，实现和定稿一致；3B 的 `LivingWorld` 也是挂载时定标签（3B 验收「核实结果」第 2 条），同属一类已接受的限制。建议在 architecture.md 5.10 或第 8 节写一句「改入口的隔离配置要重挂该入口」；要彻底解决，留到 2b 和 3B 的标签一起处理。
+- `tests/living/living-lifecycle.test.mjs` 新增的「事实准备期间 Economy 重挂」用例里有一句条件断言（`if (sections.some(row=>row.name==='chatpet.environment')) ... else ...`），哪条分支都算过。建议固定成确定的一条：要么断言这一轮两段都缺席，要么断言重组后用的是新租约。
+- `src/living/plan/plugin.ts:226` 的 `afterReview` 加了 `!this.running()`。main 上没有这个条件（细则写的是「保留」，不准确）：main 上 Life 刚好暂停时，回顾完成仍会发事件，Memory 留下一个标记，恢复后可能提前整理；现在不留标记。`src/memory/batch.ts:104-105` 也改成「run 没真正执行（换绑、取消）时保留标记」，这条细则写明了。两处都很小，请在「执行结果」里如实写明是有意的变化。
+- `src/core/plugin.ts:39-45` 的相册门控现在返回稳定的 `photoTools`，不再在 `when` 里调用 `album()`，路径检查推迟到真正执行 `keep/list/forget` 时。坏路径下的表现从「工具不出现」变成「工具出现、执行报错」。可以接受，记在这里。
+
+**核实结果**
+
+1. **5.9 事务顺序**：两段仍经 `registerWorldContext` 在 Core 的原生作用域登记（`src/living/index.ts:94` 用 `companionPorts.bind` 给的 Core `ctx`），准备挂在 `system-prompt/assemble` 的前置 middleware 上，读取是同步的，准入、请求内替换由同一个 helper 负责；段名、顺序号 14/15 不变，互动段名仍用 `INTERACTION_CONTEXT`，确认仍走 `acknowledgePromptFacts`。事实轮次的 `agent/pre-step` 加了 `{prepend:true}`：main 上 Core 的这个 hook 在 `src/core/native/agent.ts:171` 先于 `onStep`（`:291`）登记，加 prepend 后仍排在原生准入外层，顺序和 main 一致。`registerWorldContext` 自己的 pre-step hook 现在排在 `onStep` 内层，但动态段不传 `admit`、也不设 `restart`，这个 hook 只是透传，顺序变化没有影响。`tests/core/context-contracts.test.ts` 没改，通过。
+2. **1A 入口测试**：`entries-lifecycle.test.mjs` 只有 2A1A-17 一个用例有改动（`index.json` 同步了名字），普通回复、相册和日记原文的断言保留；按拍板点 8 改成两段缺席，活动只在全卸载时消失。G9（`families.test.mjs`）通过。
+3. **两个纯搬家提交**：源码只改了 import 路径（`review-dialogue.ts` 4 行、`album-tools.ts` 2 行，外加 3 个引用方和 `arch/storage.json` 的证据路径）。按基线身份逐条比对：rules 60 → 59 → 58，各少一条对应的 R1，没有新增；vocabulary 1053 → 1053，改键后集合一致。第 1 提交的 rules diff 里另有 `living/plan/plugin.ts` 几条行号刷新，是 3B 后行号移动的结果，身份不变。
+4. **第 3、4 提交**：rules 58 → 46（`companion-foundation.ts` 的 12 条 R2）→ 42（相册 2 条 R2、`batch.ts` 的 R3 和 R2），vocabulary 不变。五个登记口都用 `RegistrationTable`（`src/core/tables/companion-ports.ts:28-34`），读取时核对 `lease.isCurrent()`。缺省都和 main「服务不在」一致：身体 `false`；相册、电视、运行中 home 取 `undefined`，按假处理；活动返回 `[]`，属于拍板点 8 的变化。受限句柄冻结，只有 `keep/list/forget`，同一记录库里引用稳定（`src/core/records.ts:31-35`），有测试断言。Life 的上游运行时只把 `photos` 转给 `photoTools`（`vendor/dsh-world/lib/life/runtime.js:1011`），`photoTools` 只用这三个方法。电视期间 schema 隐藏、主人接管时仍隐藏，旧工具执行被拒，电视结束后恢复，都有测试覆盖。
+5. **回顾整理**：`requestReviewCompaction` 仍只在 `memoryFor(id)` 有值时加标记；tick 里的「有待处理轮次、绑定匹配、无在途、空闲、`retryAt`、最短间隔」原样保留，只把 `ctx.get('petLife')?.isHome` 换成登记口。`policy-life` 的三处事件注入改成直调，断言逐字不变。`/bridge/compact` 的 503、403、两条 409 文案和忙时 202 后空闲整理，用真实路由处理器测过。
+6. **活动只读接口**：`src/living/plan/activity-reader.ts` 缺目录时返回空，不建目录，不实例化 `createLifeStore`；读取用 `O_RDONLY|O_NOFOLLOW`，前后都核对 inode。2A1A-17 经记录库入口覆盖了「Life 卸载但 Body 在」「只挂 Economy」「三个都卸载」「重挂 Body」四种情况，也覆盖了查询缺失目录不建目录。
+7. **第一层剩余**：`check:arch -- --report` 第一层 R1–R4 只剩 `core/companion-settings.ts:2`、`core/initialization.ts:5,12`、`memory/client.ts:55,56` 五条。`src/core/storage.ts`、`src/core/workspace.ts`、vendor、`package.json`、发布流程都没有改动。
+8. **加载时序**：真实 DSH 里各插件一起加载。Cordis 先等一个微任务再执行依赖方的 `apply`（`_reload` 里的 `await Promise.resolve()`），Core 在同一个同步 effect 里先 `provide('petCore')` 再 `installNativeAdapter`，也就是先 `companionPorts.bind`，所以生活入口挂载时 `scopeFor` 已经可用。
+9. **运行**：`pnpm run build` 后工作区干净；`check:arch` 42 / 1053 无增减；3C 细则快测（四组合并）118/118；`test:life-integration` 171/171、940/940；`test:behavior-list` 索引 11/11、行为 88/88。`pnpm run verify` 本轮没有重跑，沿用驱动会话的 1529/1529，返工后合并前重跑。
+10. **未手动验证**：没有在主人的 DSH 里实际装载和卸载三个入口、看电视、走 Bridge 整理；真实入口链路由 `cordisFixture` 的真实 Cordis 装载覆盖。
+
+**合并时由 Claude 同步的文档**：分支已经改了 `docs/architecture.md` 第 4 节、5.8.3、5.9 里受影响的说法，合并时再核对一遍，同时把必须修 1 的结论写进去（三区缺席时两段在旧快照里也退休）。`docs/product.md` 2a 完成标准里「第一层只剩 5 条」一项在合并时勾选。
+
+**复查（返工一轮后）**：必须修 1 已修好。`retireDynamicContext`（`src/core/native/prompt.ts:27-41`）默认把 `chatpet.environment`、`chatpet.interactions` 按空值算进退休范围，当前登记的值覆盖默认值，仍走原来的按位置替换：原生日志不动，其他生产方的段保留。环境段名改成 Core 导出的常量 `ENVIRONMENT_CONTEXT`，Living 引用它（`src/living/prompt-context.ts:8,43`）。这次改了 `src/core/native/prompt.ts`，不在 3C 原允许清单里，只动了动态段退休这一处，「执行结果 · 返工一轮」写明了。新用例 2A1A-19 走的是重启夹具后从磁盘重开原会话。我把修复前编译出的 `prompt.js` 临时放回去单跑，0/1 失败（模型历史里仍有旧生活快照）；恢复后 1/1 通过。夹具只新增了 `history` 字段和 `restart` 的 `order` 选项，没有改已有断言。建议修第 2 条（条件断言改成确定断言）、第 3 条（执行结果写明两处有意变化）已做。1A 契约测试没改，2A1A-17 和返工前一致。`pnpm run build` 后产物与源码一致；`check:arch` 42 / 1053 无增减；`check:types` 通过；沙箱外 `pnpm run verify` 1530/1530；`test:behavior-list` 行为 89 条全部通过。
