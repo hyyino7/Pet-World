@@ -6,7 +6,7 @@ import {companionWritingScope} from '../../core/companion-foundation.js';
 import {assertLifeReviewFile,lifeReviewFileAccessKey,type LifeReviewFileAccess} from './review-files.js';
 import {matchesNativeScope,type NativeScope,type NativeSourceContext} from '../../core/native/conversation.js';
 import type {CompanionToolTable} from '../../core/tables/tools.js';
-import {upstreamAlbumToolNames} from './album-tools.js';
+import {upstreamAlbumToolNames} from '../../core/album-tools.js';
 
 const reviewFileTools = new Set(['read','write']);
 const upstreamLifeTools = ['plan_next','check_alarm','cancel_alarm','reach_out',...upstreamAlbumToolNames];

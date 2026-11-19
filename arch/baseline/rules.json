@@ -356,18 +356,6 @@
       "reason": "无法静态判定本地依赖"
     },
     {
-      "rule": "R1",
-      "file": "src/core/plugin.ts",
-      "line": 6,
-      "column": 1,
-      "scope": "<module>",
-      "target": "src/living/plan/album-tools.js",
-      "expression": "import { registerAlbumTools } from \"../living/plan/album-tools.js\" ;",
-      "from": "core",
-      "to": "living",
-      "reason": "依赖方向违规"
-    },
-    {
       "rule": "R2",
       "file": "src/core/plugin.ts",
       "line": 42,

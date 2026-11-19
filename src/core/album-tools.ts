@@ -2,8 +2,8 @@ import type {Context} from '@deepseek-ai/cordis';
 import type {Agent} from '@deepseek-ai/dsh-agent';
 import type {ToolDefinition} from '@deepseek-ai/dsh-tools';
 import {createRequire} from 'node:module';
-import type {PetCoreHost} from '../../core/index.js';
-import type {CompanionRecordLibrary} from '../../core/records.js';
+import type {PetCoreHost} from './index.js';
+import type {CompanionRecordLibrary} from './records.js';
 
 const {photoTools} = createRequire(import.meta.url)('#dsh-world/life/photoTools') as {
   photoTools(deps:{agent?:Agent;store?:()=>ReturnType<CompanionRecordLibrary['album']>;attachments?:()=>unknown;inside?:()=>boolean}):ToolDefinition[];

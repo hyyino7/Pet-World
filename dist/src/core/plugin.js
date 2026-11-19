@@ -2,7 +2,7 @@ import { installNativeTranscripts } from './native/transcripts.js';
 import { createWorldService } from '../world/service.js';
 import { createCore } from './index.js';
 import { apply as installNativeAdapter } from './native/agent.js';
-import { registerAlbumTools } from '../living/plan/album-tools.js';
+import { registerAlbumTools } from './album-tools.js';
 export const name = '00-Core';
 export const inject = ['agents', 'agentLoop', 'sessions', 'sessionPersistence', 'systemPrompt', 'tools'];
 export async function apply(ctx, config) {
