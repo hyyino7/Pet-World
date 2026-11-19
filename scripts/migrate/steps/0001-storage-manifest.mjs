@@ -1,11 +1,23 @@
-import { expectedManifest, manifestComplete } from '../context.mjs';
-import { atomicWrite } from '../io.mjs';
+import { atomicWrite, regular } from '../io.mjs';
 
+// Historical contract shipped with 0.2.0. Future steps declare their own maps.
+const modules = Object.freeze({
+  behavior:1, channels:1, core:1, desktop:1, economy:1, emotion:1, life:1, memory:1, room:1, voice:1,
+});
 export default {
   id:'0001-storage-manifest',
-  complete:manifestComplete,
+  from:null,
+  to:modules,
+  complete:context => Boolean(regular(context.manifestFile)),
   apply(context) {
-    // A mismatching existing file is a reconciliation failure, never overwritten.
-    if (!manifestComplete(context)) atomicWrite(context.manifestFile, JSON.stringify(expectedManifest(context), null, 2) + '\n');
+    if (!regular(context.manifestFile)) writeManifest(context, modules);
   },
 };
+
+export function storageManifest(context, modules) {
+  return {schemaVersion:1, companionId:context.plan.companionId, modules};
+}
+
+export function writeManifest(context, modules) {
+  atomicWrite(context.manifestFile, JSON.stringify(storageManifest(context, modules), null, 2) + '\n');
+}

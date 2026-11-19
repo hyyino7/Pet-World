@@ -1,3 +1,4 @@
+import { staleMigrationLock } from '../companion-backup.mjs';
 import { MigrationError, requireMigration, checked } from './errors.mjs';
 import { randomUUID, createHash } from 'node:crypto';
 import { closeSync, fsyncSync, lstatSync, openSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -40,23 +41,13 @@ export function appendJournal(file, row) {
   atomicWrite(file, [...rows, row].map(value => JSON.stringify(value) + '\n').join(''));
 }
 
-/** Match Core's pid/token ownership; an invalid or live lease is never replaced. */
+/** Called with the Repo's offline mutex held. Backups retain this lease. */
 export function acquireLock(file) {
   const token = `${process.pid}:${randomUUID()}`;
-  let stale = false;
-  const previous = regular(file);
-  if (previous) {
-    const saved = readFileSync(file, 'utf8'), pid = Number(saved.split(':')[0]);
-    requireMigration(Number.isSafeInteger(pid) && pid > 0 && /^[1-9][0-9]*:[^:\s]+$/.test(saved), 'lock-invalid');
-    try { process.kill(pid, 0); throw new MigrationError('lock-held'); }
-    catch (error) {
-      if (error.code === 'EPERM') throw new MigrationError('lock-held');
-      if (error.code !== 'ESRCH') throw error;
-    }
-    const current = regular(file);
-    requireMigration(current?.ino === previous.ino && current.dev === previous.dev && readFileSync(file, 'utf8') === saved, 'lock-invalid');
-    unlinkSync(file); stale = true;
-  }
+  let stale;
+  try { stale = staleMigrationLock(file); }
+  catch (error) { if (['lock-invalid','lock-held'].includes(error.code)) throw new MigrationError(error.code); throw error; }
+  if (stale) unlinkSync(file);
   let fd;
   try { fd = openSync(file, 'wx', 0o600); }
   catch (error) { if (error.code === 'EEXIST') throw new MigrationError('lock-held'); throw error; }
