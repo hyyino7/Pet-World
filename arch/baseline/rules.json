@@ -3,16 +3,6 @@
   "entries": [
     {
       "rule": "R1",
-      "file": "scripts/build/build-animation-map.mjs",
-      "line": 6,
-      "column": 1,
-      "scope": "<module>",
-      "target": "scripts/lib/webm-metadata.mjs",
-      "expression": "import { webmDurationMs } from \"../lib/webm-metadata.mjs\" ;",
-      "reason": "本地依赖未声明模块归属"
-    },
-    {
-      "rule": "R1",
       "file": "scripts/build/build-desktop-animation.mjs",
       "line": 8,
       "column": 1,
