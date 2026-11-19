@@ -224,7 +224,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 问题 | 位置 | 影响 | 能否复现 | 状态 |
 | --- | --- | --- | --- | --- |
 | 1. guest 和电视回复 footer 会改共享情绪 | `src/core/native/agent.ts:46` 给 guest 作用域；`src/room/chat.ts:130` 产生 `chatpet-room-tv` 来源；`src/room/plugin.ts:149` 阻止电视工具；`src/emotion/plugin.ts:166` 的作用域解析、`:273-278` 的流处理和 `:269` 的完成处理未排除两者 | 没有主人工具权限也能经回复 footer 更新同一个情绪文件 | 已复现：在合成绑定上向真实 Emotion 流及完成处理分别送 guest 与 TV 来源原生事件，两者均落盘；guest 的原有断言另见 `scripts/checks/check-native-services.mjs:104`。未验证已安装 DSH 的电视完整入口 | **现有行为，是否改变待主人决定** |
-| 2. Memory 的 `workspaceId` 实际接收 `storageId` | `src/core/native/memory.ts:53` → `src/memory/client.ts:11` | 字段名混淆原生工作区和可搬迁 Bank 身份；本项不证明串库 | 已复现：合成工作区设置不同的两种 ID，经公开 `findForOwner` 驱动、仅在 provider 启动边界捕获 scope，收到的是 `storageId` | 待主人决定 |
+| 2. 发给 Memory provider 的 `workspaceId` 实际是 `storageId` | TS 侧 M2 后已改名：`MemoryScope` 的第三个字段是 `bankId`（`src/memory/client.ts:11`，取值见 `src/core/native/memory.ts:53`）；发给 Python provider 的兼容形状仍叫 `workspaceId`（`src/memory/client.ts:12,57`） | provider 边界的字段名仍混淆原生工作区和可搬迁 Bank 身份；本项不证明串库 | 已复现：合成工作区设置不同的两种 ID，经公开 `findForOwner` 驱动、仅在 provider 启动边界捕获 scope，收到的是 `storageId` | 待主人决定 |
 | 3. 错误码及设置回复的恢复语义不一致 | `src/contracts/common.ts:21` 有 `EXPIRED_USE`，`src/core/storage.ts:10` 的辅助联合没有；`src/console/settings.ts:17,400,402` 只保留 `code/message/details` | 辅助函数无法按声明类型表达该拒绝；设置调用者丢失 `effect/retry`，不能据此判断核对或重试 | 已复现：丢弃式 TypeScript 调用产生 TS2345；真实设置处理器收到 `partial/reconcile` 后，回复均无这两个字段 | 阶段 3 并入设置 RPC 声明（阶段 1 缩小方案） |
 | 4. 两套呈现分类器对混合情绪结论不同 | `src/behavior/presentation.ts:21`；`src/behavior/playback.ts:95,109` | 空闲且 `feelings=[anger,calm]` 时，语义呈现为 `emotion/anger`，播放槽为 `rest.calm` | 已复现：同一个合成 home 调用两个真实函数得到上述不同结果 | 待主人决定 |
 | 5. 只读绑定检查写源库附属文件，并发存在锁竞争 | `scripts/lib/repo-storage.mjs:20` 的只读 SQLite 连接；`scripts/migrate/context.mjs:14,38`；锁前调用顺序 `scripts/migrate/runner.mjs:35,43,52` | `plan`、`status`、锁外预检和版本不一致等拒绝路径仍在源 Core 目录生成 `core.sqlite-wal/-shm`；迁移锁保护不了此前的 SQLite 读取，并发预检可能提前失败 | 已复现：关闭的合成 Core 清理附属文件后，独立 inspect、两种 CLI 只读命令、锁外 `assertOffline`、`manifest-mismatch` 拒绝均重新生成两文件而未取得迁移锁；双读屏障实测 `ERR_SQLITE_ERROR` / `errcode 261`。盘点使用隔离镜像（`scripts/migrate/inventory-plan.mjs:31,35`） | 已确认，阶段 2a 第一批修（第一次真实数据迁移之前） |
@@ -374,7 +374,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 
 开工前（准入，缺一项不开工）：
 
-- [ ] 上下文段清单（5.9）、三个旧入口语义表（6.2）、第一批概念表（5.6：动作、行为、活动、阶段、命令、事实）补进 [architecture.md](architecture.md)，主人确认；会话策略表（5.8）的行号同时重核。
+- [x] 上下文段清单（5.9）、三个旧入口语义表（6.2）、第一批概念表（5.6：动作、行为、活动、阶段、命令、事实）补进 [architecture.md](architecture.md)，主人确认；会话策略表（5.8）的行号同时重核。
 - [ ] 2a 按大改写方案，主人同意；第二层的目录名在方案里定。
 
 完成标准（已经主人确认）：
