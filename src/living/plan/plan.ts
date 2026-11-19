@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import {withLivingCaller} from '../index.js';
 import { createLifeStore, LIFE_STATE_MAX_BYTES, type LifeStore } from '#dsh-world/life/lifeStore';
 import type { CompanionBehavior } from '../body/plugin.js';
 import { PlannedAdmissionWaitError, type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
@@ -207,7 +208,7 @@ export class PersistentLifePlan {
     check(Buffer.byteLength(JSON.stringify(candidate,null,2))+8*1024<=LIFE_STATE_MAX_BYTES,
       'Life plan leaves insufficient room for durable execution metadata; previous plan retained');
     if(behavior && workspaceId && plan.reconsiderWhen.length) {
-      const snapshot=await behavior.snapshot(workspaceId);
+      const snapshot=await withLivingCaller(validate,()=>behavior.snapshot(workspaceId));
       plan.triggeredConditions=plan.reconsiderWhen.flatMap((condition,index)=>{
         const value=snapshot.needs?.[condition.metric] ?? snapshot.home.body?.[condition.metric];
         return typeof value==='number' && (condition.comparison==='gte' ? value>=condition.value : value<=condition.value)?[index]:[];
@@ -216,8 +217,9 @@ export class PersistentLifePlan {
     validate();
     if (old.plan?.operationId) {
       check(behavior && workspaceId,'The body must be available before replacing an executing plan');
-      const accepted=await behavior.inspectPlanned(workspaceId,old.plan.operationId);validate();
-      if(accepted)await behavior.cancelPlanned(workspaceId,old.plan.operationId);
+      const operationId=old.plan.operationId;
+      const accepted=await withLivingCaller(validate,()=>behavior.inspectPlanned(workspaceId,operationId));validate();
+      if(accepted)await withLivingCaller(validate,()=>behavior.cancelPlanned(workspaceId,operationId));
     }
     validate();this.change(expectedRevision,()=>plan,true,true,{decision:true});
     return this.read();
@@ -287,9 +289,10 @@ export class PersistentLifePlan {
     let execution:unknown;
     if (plan.operationId) {
       check(behavior && workspaceId,'The body must be available to control an executing activity');
-      const accepted=await behavior.inspectPlanned(workspaceId,plan.operationId);validate();
-      if(accepted)execution=await (action==='pause' ? behavior.pausePlanned(workspaceId,plan.operationId)
-        : action==='cancel' ? behavior.cancelPlanned(workspaceId,plan.operationId) : behavior.resumePlanned(workspaceId,plan.operationId));
+      const operationId=plan.operationId;
+      const accepted=await withLivingCaller(validate,()=>behavior.inspectPlanned(workspaceId,operationId));validate();
+      if(accepted)execution=await withLivingCaller(validate,()=>action==='pause' ? behavior.pausePlanned(workspaceId,operationId)
+        : action==='cancel' ? behavior.cancelPlanned(workspaceId,operationId) : behavior.resumePlanned(workspaceId,operationId));
     }
     validate();this.change(expectedRevision,current=>{
       check(current,'No current plan'); current.status=action==='resume'?'active':action==='pause'?'paused':'cancelled';
@@ -321,7 +324,8 @@ export class PersistentLifePlan {
     return true;
   }
   /** Serialized by CompanionLife; no model is called here. */
-  async advance(workspaceId:string,behavior:CompanionBehavior) {
+  async advance(workspaceId:string,behavior:CompanionBehavior,validate:()=>void=()=>{}) {
+    validate();
     let current=this.read();let plan=current.plan;
     if (!plan || !['active','waiting'].includes(plan.status)) return false;
     // A body operation can commit before its caller receives the result.
@@ -330,7 +334,7 @@ export class PersistentLifePlan {
     const awaitingReceipt=plan.status==='waiting' && !!plan.operationId &&
       (!object(plan.execution) || plan.execution.status==='running');
     if (!plan.replanReason && plan.reconsiderWhen.length) {
-      const snapshot=await behavior.snapshot(workspaceId);
+      const snapshot=await withLivingCaller(validate,()=>behavior.snapshot(workspaceId));validate();
       for(const [index,condition] of plan.reconsiderWhen.entries()) {
         const value=snapshot.needs?.[condition.metric] ?? snapshot.home.body?.[condition.metric];
         if(typeof value!=='number')continue;
@@ -359,7 +363,7 @@ export class PersistentLifePlan {
     const operationId=plan.operationId!;
     let recordingReceipt=false;
     try {
-      let execution=await behavior.inspectPlanned(workspaceId,operationId);
+      let execution=await withLivingCaller(validate,()=>behavior.inspectPlanned(workspaceId,operationId));validate();
       if (!execution) {
         // Absence is not proof that an acknowledged effect may be repeated.
         // Keep the original waiting plan available for explicit reconciliation.
@@ -375,11 +379,12 @@ export class PersistentLifePlan {
         }
         const until=plan.dispatchUntil;
         try {
-          execution=await behavior.startPlanned(workspaceId,{operationId,kind:step.kind,activity:step.activity,
+          execution=await withLivingCaller(validate,()=>behavior.startPlanned(workspaceId,{operationId,kind:step.kind,activity:step.activity,
             ...(step.room?{room:step.room,spot:step.spot}:{}),...(step.garden?{garden:step.garden}:{}),...(step.action?{action:step.action}:{}),...(step.economy?{economy:step.economy}:{}),...(step.reading?{reading:step.reading}:{}),
             ...(step.presentationSlot?{presentationSlot:step.presentationSlot}:{}),
-            ...(until?{until,freezeOnPause:step.durationMinutes!==undefined}:{})});
+            ...(until?{until,freezeOnPause:step.durationMinutes!==undefined}:{})}));
         } catch(error) {
+          validate();
           if(!(error instanceof PlannedAdmissionWaitError) || error.wait.operationId!==operationId)throw error;
           const latest=this.read();
           if(latest.plan?.id!==plan.id || latest.plan.operationId!==operationId)return false;
@@ -389,6 +394,7 @@ export class PersistentLifePlan {
           return false;
         }
       }
+      validate();
       current=this.read();
       // The await may outlive a binding or an intent: never apply its result to a replacement plan.
       if(current.plan?.id!==plan.id || current.plan.operationId!==operationId)return false;
@@ -439,6 +445,7 @@ export class PersistentLifePlan {
       }
       if(awaitingReceipt)return true;
     } catch(error) {
+      validate();
       // Read/reconcile and Life-save failures must stay visible. An old wait
       // reason is not evidence that a newly failed persistence step succeeded.
       if(awaitingReceipt || recordingReceipt)throw error;

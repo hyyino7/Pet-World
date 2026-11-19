@@ -99,7 +99,7 @@ export declare class PersistentLifePlan {
     /** Only explicit events create a wake. Repeated ticks cannot create a polling loop. */
     reconsider(reason: string, condition?: number): boolean;
     /** Serialized by CompanionLife; no model is called here. */
-    advance(workspaceId: string, behavior: CompanionBehavior): Promise<boolean>;
+    advance(workspaceId: string, behavior: CompanionBehavior, validate?: () => void): Promise<boolean>;
     summary(): string;
     static describe({ revision, plan }: {
         revision: number;

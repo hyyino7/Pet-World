@@ -578,13 +578,13 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 | 入口 | 装载依赖 |
 | --- | --- |
-| `22-Economy` | 硬 `inject` 为 `petCore / petWorld / tools / systemPrompt / agents`。现场按需 `get('petBehavior')` 做库存投喂、同步检查点，按需读 `petLife` 时钟（`living/economy/plugin.ts:185-188,202-215`）。 |
-| `25-Behavior` | 硬 `inject` 只有 `petCore`。另有随 `petEconomy`、`petLife` 出现和消失运行的可选 `ctx.inject`，用于刷新绑定和同步自治准入（`living/body/plugin.ts:37-47,64-85,340-348`）。 |
-| `40-Life` | 硬 `inject` 为 `petCore / petWorld / agents / sessions / tools / systemPrompt`。计划推进与事实读取按需 `get` Body、Economy（`living/plan/plugin.ts:332-368,544-556`）。 |
+| `22-Economy` | 硬 `inject` 为 `petCore / petWorld / tools / systemPrompt / agents`。库存投喂、同步检查点时经常驻实例 `LivingWorld` 按需读 Body，读时钟时按需读 Plan，不再按服务名查找（`living/economy/plugin.ts:118-127,215,236`）。 |
+| `25-Behavior` | 硬 `inject` 只有 `petCore`。经 `LivingWorld` 按租约观察 Economy、Plan 的出现和消失（`internal/status` 刷新），用于刷新绑定和同步自治准入（`living/body/plugin.ts:58-60,79-106`、`living/index.ts:113-134`）。 |
+| `40-Life` | 硬 `inject` 为 `petCore / petWorld / agents / sessions / tools / systemPrompt`。计划推进与事实读取经 `LivingWorld` 按需读 Body、Economy（`living/plan/plugin.ts:380,404,416,536,578`）。 |
 
 `cordis.patch.yml:8-17` 中配置顺序为 Economy、Behavior、Life，三者的硬 `inject` 均未声明另外两个旧服务。
 
-**常驻实例由谁创建**：推荐由 `25-Behavior` 入口创建（因为卸载 Life 后身体仍要能用），`22-Economy` 和 `40-Life` 入口只负责「撤销门面」和对应区的启停。合并后「卸载哪个入口会关闭哪个内部区」以上面的现状矩阵为基准，在 2a 方案里定新表并配测试。
+**常驻实例**：`living/index.ts` 的 `LivingWorld` 是三个区的登记处，三个入口共用，谁先加载谁建、最后一个卸载时释放；键按 Cordis 根、Core 对象和三个服务的隔离标签区分，登记复用 `core/tables/registry.ts` 的租约。每个入口用 `mountLivingArea` 登记自己的区，卸载时先撤登记、再停接单、再 `close()`，卸载哪个入口只停哪个区，上面的矩阵逐格不变（`living/index.ts:39-95,143-166`）。三个旧服务名仍由各入口 `provide` 原对象，作为门面保留。
 
 ---
 

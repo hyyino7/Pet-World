@@ -1,3 +1,4 @@
+import { LivingView, type LivingPorts } from '../index.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost, WorkspaceTarget } from '../../core/index.js';
 import type { RoomEconomyPort } from '../body/room.js';
@@ -28,7 +29,10 @@ export declare class CompanionEconomy {
     readonly host: PetCoreHost;
     private current?;
     private closed;
-    constructor(ctx: Context, host: PetCoreHost);
+    private readonly living;
+    private readonly inFlight;
+    constructor(ctx: Context, host: PetCoreHost, ports?: LivingPorts | LivingView);
+    private assertOpen;
     protectedDirectory(): string | undefined;
     private retainedGarden;
     private bodyRequiresDatabase;
@@ -116,6 +120,8 @@ export declare class CompanionEconomy {
             importedAt: number;
         };
     }>;
+    stopAdmission(): void;
+    settled(): Promise<void>;
     close(): void;
 }
 export declare const name = "22-Economy";

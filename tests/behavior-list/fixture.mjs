@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
 import {setTimeout as pause} from 'node:timers/promises';
+import {Context} from '@deepseek-ai/cordis';
 import {corePlugin,behaviorPlugin,economyPlugin,lifePlugin,voicePlugin,channelsPlugin,memoryPlugin,roomPlugin,desktopPlugin,emotionPlugin,guestPreset,resolveCompanionHome} from '../../dist/tests/behavior-list/entries.js';
 import {policyHost} from './policy-host.mjs';
 import {say} from '../../scripts/checks/lib/native-conversation-scenarios.mjs';
@@ -81,7 +82,9 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
     services=new Map();handlers=new Map();effects=[];agents=new Map();sections=new Set();contexts=new Set();tools=new Map();guards=new Set();
     dsh=policy?await policyHost(repo,effects):undefined;
     const logger=Object.assign(()=>logger,{warn:(...args)=>warnings.push(args),error:(...args)=>warnings.push(args),info(){}});
-    ctx={get:name=>services.get(name),provide(name,service){services.set(name,service);ctx[name]=service;},
+    const lifecycle = new Context();
+    ctx={[Context.isolate]:lifecycle[Context.isolate],fiber:lifecycle.fiber,
+      get:name=>services.get(name),provide(name,service){services.set(name,service);ctx[name]=service;ctx.emit('internal/status');},
       on(name,fn,options){const rows=handlers.get(name)??[];options?.prepend?rows.unshift(fn):rows.push(fn);handlers.set(name,rows);return()=>{const i=rows.indexOf(fn);if(i>=0)rows.splice(i,1);};},
       emit(name,...args){void emit(name,...args).catch(error=>warnings.push(error));},logger,
       effect(factory){const stop=factory();if(typeof stop==='function')effects.push(stop);return()=>{};},
@@ -94,6 +97,7 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
         definitions:()=>[...tools.values()].map(row=>row.tool),guard(fn){guards.add(fn);return()=>guards.delete(fn);}},
       systemPrompt:{section(row){sections.add(row);return()=>sections.delete(row);},context(row){contexts.add(row);return()=>contexts.delete(row);}},
     };
+    ctx.root=ctx;
     ctx.systemPrompt.assemble=context=>middleware('system-prompt/assemble',[{},context],async()=>[...sections,...contexts].map(row=>row.text(context)).filter(Boolean).join('\n'));
     if(dsh){
       ctx.tools=dsh.ctx.tools;ctx.systemPrompt=dsh.ctx.systemPrompt;

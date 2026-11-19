@@ -56,9 +56,9 @@
       "root": "src/living/",
       "services": ["petBehavior","petLife","petEconomy"],
       "dependencies": ["core","memory","emotion","contracts","world","living"],
-      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion","petBehavior","petLife","petEconomy"],
+      "reads": ["petCore","petWorld","petTranscripts","petMemory","petEmotion"],
       "publishes": ["pet/behavior.changed","pet/economy.fact","pet/life.changed","pet/life.review"],
-      "subscribes": ["pet/behavior.changed","pet/core.changed","pet/economy.fact","pet/emotion.changed","pet/emotion.expression","pet/life.changed","tools/pre-execute","tools/result"],
+      "subscribes": ["internal/status","pet/behavior.changed","pet/core.changed","pet/economy.fact","pet/emotion.changed","pet/emotion.expression","pet/life.changed","tools/pre-execute","tools/result"],
       "generated": [
         {"file":"src/living/body/animation-map.ts","sources":["scripts/build/build-animation-map.mjs"]}
       ]

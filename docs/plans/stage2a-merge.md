@@ -686,6 +686,34 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - `node --test dist/tests/economy/*.test.js tests/economy/*.test.mjs tests/regressions/*.test.mjs` 548/548 通过。验证使用合成夹具，改动留在工作树，完整门禁和提交由 Claude 处理。
 - 建议提交说明「搬迁钱包区到 `src/living/economy/` 并同步引用和架构基线」。
 
+### 第 3 批 · 3B
+
+- `src/living/index.ts` 复用 `RegistrationTable`，按 Cordis 根、Core 对象和隔离标签登记三区。`body/plugin.ts` 将可选服务观察改为按租约观察，卸载时停计时和订阅，再保存检查点。
+- `plan/{plugin,plan,review}.ts` 核对跨区租约，卸载时取消原生 home 轮次并等待队列和回顾 I/O。`economy/{plugin,access}.ts` 撤初始化器和文件守卫，取消解析并等跨区请求收尾，再关库释锁。入口同步抛出挂载错误，由 Cordis 等同一清理函数。
+- `arch/layers.json` 登记 `internal/status` 并移除 `living` 的三个旧服务读取声明。已同步 `dist/src/living/`，三个门面仍提供原对象和原有方法。
+- `tests/living/living-lifecycle.test.mjs` 新增 25 项 R6，覆盖六种实际装载顺序、三种先卸载、隔离、同名重挂、挂载回滚、晚到任务和清理。`tests/behavior-list/{entries-lifecycle.test,fixture}.mjs` 只接夹具，1A 测试主体及全部断言逐字核对一致。
+- `tests/behavior/{behavior-scheduling,garden-clock-continuity}.test.ts`、`tests/life/{life-body,life-clock-intent,life-core-integration,life-desktop-integration,life-domain-integration,life-sleep-continuity}.test.ts` 接入显式端口或登记替身。
+- `tests/regressions/{audit-r5-garden-clock,mapped-refresh-convergence,mapped-refused-movement,mapped-sleeping-inventory}.test.mjs`、`mapped-playback-context.test.ts` 及 `scripts/fixtures/synthetic-companion.mjs` 只改端口接线。
+- 实现前单跑 R6 的 4 个场景，2 过、2 失败，确认旧 Plan 回调晚到写盘和 Economy 解析未取消。实现后细则第一组快测 68/68（含 R6、1A 和 G9），第二组 182/182，`node --test tests/migrate/settlement.test.mjs` 2/2。
+- `pnpm run build`、`pnpm run check:types`、`pnpm run check:arch` 通过，规则 60、词表 1053 均无增减。`pnpm run build && pnpm run test:behavior-list` 通过，索引 11/11、行为 88/88。
+- 验证仅使用合成数据。改动留在工作树，`pnpm run verify` 与提交由 Claude 处理。以下四组已在临时源码副本逐组通过构建、两组快测、架构和迁移结算测试，各组的 `dist/src/**` 随源码提交且不计阈值。
+- 第 1 组「登记三入口」。加入 `index.ts`，三个 `apply` 接登记但保留原读法，`arch/layers.json` 先登记 `internal/status`。附共享夹具的装载接线与 R6 排列、隔离用例。8 个文件，约 428 行。
+- 第 2 组「切换身体区读取与观察」。附 Body 端口夹具、旧 Plan 观察和实际计时器用例。15 个文件，328 行。
+- 第 3 组「切换计划区读取与退场」。附 Plan 端口夹具、原生 reader 探针及用例。11 个文件，约 347 行。
+- 第 4 组「切换钱包区读取与退场」。附 Economy 端口夹具、文件解析和挂载失败用例，移除旧 `reads`。11 个文件，约 395 行。本小节可单独提交。
+- 第 2 组的 `tests/regressions/room-refresh.test.mjs` 超出开工细则允许修改的名单。该文件只给 Body 原型夹具接上 `LivingView`。Room 回归 6/6、两组快测 68/68 和 182/182、行为清单 88/88 通过。
+
+#### 返工一轮
+
+- 必须修 1 已修。`close()` 立即关闭准入并等待队列，已入队的 `control(false)` 按原绑定、挂载代和 Body 租约完成暂停。重挂后读到 `paused` 和 `resumeOnEnable: true`，重新启用按原 `operationId` 恢复 Body 及剩余时长。继续使用 `control.json` 现有字段。`src/living/plan/plugin.ts:114,125,184,336,545,615`、`src/living/plan/plan.ts:176,283`、`tests/living/living-lifecycle.test.mjs:375`
+- 必须修 2 已修。原生 home 的 `store.write` 和 `appendWake` 按绑定及运行代放行，退场代的写入权限到 `runtime.settled()` 完成为止。重新绑定或同名重挂会挡住旧代写入，同一标签上的新登记代次保留到清理结束。新用例验证等 Body 和运行时收尾两个窗口的 `life.json` 花费都增加，重挂以及替代实例再卸载后旧回调的花费都没有写入。`src/living/index.ts:67,76,154`、`src/living/plan/plugin.ts:192,202,229,357`、`tests/living/living-lifecycle.test.mjs:428`
+- 修前 `node --test --test-name-pattern '^3B ' tests/living/living-lifecycle.test.mjs` 为 0 通过、2 失败。暂停用例的 `ERR_ASSERTION` 报 `plan: 'active'`、`receipt: 'running'`、`resumeOnEnable: undefined`。花费用例报 `pausing: false`、`settling: false`，两个窗口都未增加花费。收尾探针核对运行时撤掉的原生监听器后，用返工前的两个编译模块复核，仍为 0 通过、2 失败。
+- `pnpm run build && node --test tests/behavior-list/{entries-lifecycle,families,domains}.test.mjs tests/living/living-lifecycle.test.mjs dist/tests/core/tables-registry.test.js && pnpm run check:arch` 通过。测试 70 通过、0 失败，含原 25 项 R6 和新增 2 项。架构规则 60、词表 1053，均无增减。
+- `node --test dist/tests/behavior/{behavior-scheduling,garden-clock-continuity}.test.js dist/tests/life/{life-body,life-clock-intent,life-core-integration,life-desktop-integration,life-domain-integration,life-sleep-continuity}.test.js dist/tests/regressions/mapped-playback-context.test.js tests/regressions/{audit-r5-garden-clock,mapped-refresh-convergence,mapped-refused-movement,mapped-sleeping-inventory,room-refresh}.test.mjs tests/migrate/settlement.test.mjs` 为 190 通过、0 失败。
+- `pnpm run build && pnpm run test:behavior-list` 通过。索引 11 通过、0 失败，行为 88 通过、0 失败，含需要本机回环的 Memory 用例。
+- 返工共 8 个文件。`src/living/plan/plugin.ts` 约 114 行，`src/living/index.ts` 约 35 行，`tests/living/living-lifecycle.test.mjs` 约 146 行，本方案约 15 行。构建同步 `dist/src/living/{index,plan/plugin}.{js,d.ts}` 4 个文件约 173 行。1A 入口测试文件与返工前逐字一致，验证均使用合成目录中的真实 Cordis 入口。
+- 建议一个提交，说明「修复计划区显式暂停和卸载收尾时丢失的暂停回执与 home 花费」。改动留在 `codex/2a-3b-instance` 工作树。
+
 ## 审查结论
 
 ### 1A 第一轮验收（Codex 审查 + Claude 核实）
@@ -761,3 +789,41 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - `AGENTS.md:13` 一页入口还写着「behavior · life · economy」，改成 `living`（body · plan · economy）。
 - `docs/decisions.md` 里「目录合并」那条被搬家提交按路径替换成了「`living/body/`、`living/plan/`、`living/economy/` 合并成第二层一个实例」，意思变了。改回描述原来的三个目录并进 `src/living/`。
 - `docs/product.md:102,105,106` 的度量表还写着第二层 `economy`、`behavior`、`life` 模块和 `src/behavior/plugin.ts`、`src/life/*` 路径。数字是当时测的，保留；模块名和路径加上现在的位置。
+
+### 3B 第一轮验收（Codex 审查 + Claude 核实）
+
+**必须修**
+
+两条同一个根因：计划区把「还收不收新工作」（`isOpen()`、`enabled`）和「已开始的工作、当前运行代的记账还能不能落盘」用同一个检查拦了。main 上这两种情况都能落盘，3B 后会丢，违反本批「外部行为不变」和 [architecture.md 第 8 节](../architecture.md#8-生命周期规则)第 2 条「等已提交的写完成」。返工先各写一条会失败的测试（放进 `tests/living/living-lifecycle.test.mjs`，用 `cordisFixture`），再修。
+
+1. **显式暂停被 Life 卸载打断，只留下半截**。`src/living/plan/plugin.ts:530-543` 的 `control(false)` 先把 `enabled:false` 写进 `control.json`，再进 `stopRuntime(true)`；`:335` 的 `guardArea(body)` 和 `:178` 的 `PersistentLifePlan` 当前性检查都带 `isOpen()`。如果 Life 在 `plan.control()` 等 Body 的 `inspectPlanned/pausePlanned` 时卸载，`validate()` 抛错：计划仍是 `active/waiting`，Body 回执仍是 `running`，不写 `resumeOnEnable`。main 上 `close()` 排在队列后面（旧 `close()` 是 `await this.enqueue(stopRuntime)`），这次暂停会走完。后果：重挂后开关是关的，但计划和身体活动没暂停；按相对时长冻结的活动（`freezeOnPause`）在关闭期间照样走时间，恢复时也不走「原编号恢复」的路径（architecture.md 6.2「显式暂停生活」一行）。验收：同一场景下重挂、重新启用后，计划是 `paused` 加 `resumeOnEnable`、Body 回执按原 `operationId` 暂停再恢复，和 main 一致。做法由 Codex 定：让已进入队列的暂停在卸载时照样走完（`close()` 本来就等 `this.serial`），或者把待完成的暂停记下来、重挂时补做；后者如果要给 `control.json` 加字段，就是改数据格式，先停下来对齐。
+2. **暂停收尾期间，原生 home 的花费不落盘**。`src/living/plan/plugin.ts:201-205` 给上游运行时包的 `store.write` 要求 `active()`，而 `:184-188` 的 `active()` 包含 `this.enabled` 和 `isOpen()`。显式暂停在 `:536` 先把 `enabled` 置 false，再在 `stopRuntime(true)` 里等 Body 收尾，期间 home 在途的模型步骤落地，上游 `spent()`（`vendor/dsh-world/lib/life/runtime.js:955-964,1050-1051`）调 `store.write` 被拒，`record()` 只记一个故障，当天花费没进 `life.json`，之后的每日预算判断偏低。同理，`:347-356` 先把 `this.runtime` 置空再 `runtime.settled()`，收尾期间同一运行代的写入也会被拒。main 上 `store` 不包装，这些都落盘。要求：上游写入按「同一绑定、同一运行代、收尾完成前」放行，不按 `enabled` 和 `isOpen()`；同时保住 R6 已有的「旧运行代不写新绑定、同名重挂后旧代不写」。验收：在暂停等 Body 的窗口里投递一条带 `usage` 的 `assistant/message`，`life.json` 的 `spend` 增加。
+
+**建议修（不影响合并，返工时可以一起做）**
+
+- `tests/regressions/room-refresh.test.mjs` 不在细则的允许修改名单里（只补了一行 `living:new LivingView()`，确实只是接线），但「执行结果」写的是「无偏离细则」。改成如实写明这一处。
+- `src/living/index.ts:157-167` 的 `withLivingCaller` 用模块级变量把调用方检查交给被调的区，只覆盖同步那一段：`readFactReferences` 这类异步函数在第一个 `await` 之后再调区，就不带调用方检查了（它们靠自己的 `validate` 参数兜着，现在没有漏洞）。2b 把区之间改成直接调用时，换成显式参数。
+- `src/living/economy/access.ts:75,100`：Economy 卸载时正在核对路径的文件工具（包括和账本无关的文件）会收到 `cancel`。main 上是核对完就放行、守卫随后撤掉。细则要求「取消文件守卫」，R6 也测了，窗口只在卸载那一刻，接受，记在这里。
+
+**没有采纳的审查意见**
+
+- Codex 报「Body 卸载时，Life 首轮 `tick()` 等 Body 期间被租约检查打断，`startRuntime()` 不执行，闹钟和回顾要等下一个事件」（`src/living/plan/plugin.ts:381-384`）。main 上同样如此：旧 `tick()` 拿到 Body 后，Body 关闭时 `resumeAcceptedPlan` 或 `setReconsiderConditions`（main `src/living/body/plugin.ts:119-121,161-164`）照样抛错，同样跳过 `startRuntime()`。不是 3B 引入的。要不要单独修，由主人决定是否记进已知问题。
+
+**核实结果**
+
+1. **1A 入口测试**：`tests/behavior-list/entries-lifecycle.test.mjs` 的 diff 只在 `cordisFixture` 内（加 `order`、`io` 选项和 `fiber()` 读取），测试主体和断言与 main 逐字一致；`tests/behavior-list/fixture.mjs` 只给替身补 `Context.isolate`、`fiber`、`root` 和 `provide` 后发 `internal/status`。G9（`families.test.mjs`）通过。
+2. **键和登记**：`src/living/index.ts:19-28,40-68` 外层按 `ctx.root`、再按 Core 对象取 `WeakMap`，内层按三个隔离标签逐项比较；槽按目标区自己的标签索引，读时要求租约有效且提供者 `ACTIVE`（`:78-85`）。复用 `RegistrationTable`，没有另写登记机制；同名重挂生成新 `Symbol`，旧 `revoke()` 先查 `isCurrent()` 不删新槽（`src/core/tables/registry.ts:29-30,66-68`）。R6 的隔离用例覆盖了只隔离 `petLife`、同标签重新可见、别的 Cordis 根和别的 Core 对象拿不到。
+3. **服务名查找**：`src/living/` 里已没有 `get('petBehavior'|'petLife'|'petEconomy')` 和对应的动态 `inject`；第一层、第三层文件没有改动。三个 `provide` 交付原对象；事件名、载荷没改，`pet/life.changed` 只在旧运行代失效时不再发（`src/living/plan/plugin.ts:327,347`），属于本批要拦的晚到回调。
+4. **卸载顺序**：每个入口只有一个卸载 effect，`settleCleanup` 同步依次调用 `revoke()` 和 `close()`，二者在第一个 `await` 前分别删槽、置 `closed`；另外区一离开 `ACTIVE`，别的区就读不到它（Cordis 先进 `UNLOADING` 再并行清 effect，`node_modules/@deepseek-ai/cordis/src/fiber.ts:700-722`），所以不依赖同级 effect 的先后。挂载失败走同一个幂等清理，R6 有 Economy 挂载失败用例。
+5. **R6**：25 项 = 6 种顺序 × 3 种先卸载 + 7 项专项。断言的是 Cordis 事件钩子按 fiber 归零、身体计时、计划 tick 和上游闹钟句柄归零、卸载后投递事件不新建计时器、在途解析和 reader 计数归零、`economy.lock` 消失、已提交写入保留，不只是正常路径。把 R6 原样放到 main 的代码上跑：「旧 Plan 观察」「Economy 解析取消」「Economy 等设置请求」3 项失败（旧观察读了新 Plan 的时钟 6 次、解析信号没取消、设置请求没等就卸载），分支上通过，确认修在源头；「Life 等 reader」main 上本来就过，是防退化的用例。
+6. **其余测试和合成夹具**：逐行看过 diff，都是把 `ctx.get` 替身换成显式端口或在对应域登记，没有改断言、没有删测试、没有 skip。
+7. **运行**：`pnpm run build` 后工作区干净（`dist` 与源码一致）；细则快测第一组 68/68、`check:arch` 60 / 1053 无增减；第二组加 Room 回归和迁移结算 190/190。`pnpm run verify` 和行为清单本轮没有重跑，沿用驱动会话的 1521/1521、88 条，返工后合并前重跑。
+8. **未手动验证**：没有在主人的 DSH 里实际装载和卸载三个入口；真实入口链路由 `cordisFixture` 的真实 Cordis 装载覆盖。
+
+**合并时由 Claude 同步的文档**
+
+- `docs/architecture.md:581-582` 的「现场按需 `get('petBehavior')`」「随 `petEconomy`、`petLife` 出现和消失运行的可选 `ctx.inject`」改成经 `LivingWorld` 读取和按租约观察；`:587`「常驻实例推荐由 `25-Behavior` 入口创建」已被拍板点 2 取代。
+
+**复查（返工一轮后）**：必须修 1、2 已修好，建议修第 1 条（如实写明 `room-refresh.test.mjs` 超出名单）也已做。修法是把计划区的判断拆成两个：准入照旧看 `isOpen()` 和 `enabled`；已进入队列的显式暂停（`src/living/plan/plugin.ts:114-116,545-566`）和上游写入（`:202`，当前或收尾中的运行代、同一绑定、未被同名重挂取代）按绑定和运行代放行，同名重挂由 `src/living/index.ts:76-84` 的槽代次挡住旧代。新增 2 项放到返工前的代码上跑都失败（计划停在 `active`、回执 `running`、无 `resumeOnEnable`；两个窗口的花费都没增加），返工后通过；其中花费用例还断言了重挂后、替代实例再卸载后旧回调都写不进去。1A 入口测试文件与返工前一致，没有删、skip 或放宽测试。快测第一组 70/70、`check:arch` 60 / 1053 无增减，第二组 190/190，`test:behavior-list` 索引 11/11、行为 88 条；沙箱外 `pnpm run verify` 1523/1523。
+
+另记一处范围外的小变化：`synchronize()` 改用 `isCurrentBinding()` 后，绑定未变但伙伴 `companionId` 变了也会重新绑定（`:126-131,170`）。main 上这种情况运行时本来就因 `companionId` 不符而不启动，现在改为换绑后按新身份启动，不算放宽，记在这里。

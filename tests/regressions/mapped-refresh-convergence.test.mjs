@@ -63,7 +63,7 @@ async function fixture(t,{real=false,direct=false,lifecycle=false}={}) {
     if(names.length===1&&names[0]==='petBehavior'){fibers.push(fiber);if(services.petBehavior)fiber.mount();}
     return fiber;
   };
-  if(real){body=new CompanionBehavior(ctx,host);await body.snapshot(target.id);await body.setAutonomy(target.id,true);}
+  if(real){body=new CompanionBehavior(ctx,host,{plan:()=>services.petLife});await body.snapshot(target.id);await body.setAutonomy(target.id,true);}
   const actualRoomState=body?.roomState.bind(body);
   const service={async roomState(id){
     reads++;

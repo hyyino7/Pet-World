@@ -4,6 +4,7 @@ import {mkdtempSync,mkdirSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import type {Context} from '@deepseek-ai/cordis';
+import type {CompanionBehavior} from '../../src/living/body/plugin.js';
 import type {PetCoreHost} from '../../src/core/index.js';
 import {DEFAULT_COMPANION_SETTINGS} from '../../src/core/companion-settings.js';
 import {CompanionRecordLibrary} from '../../src/core/records.js';
@@ -44,7 +45,7 @@ async function fixture(t:TestContext,enabled:boolean,sleeping=false) {
       yield {type:'finish',reason:{kind:'stop'}};}};
   },on(name:string,fn:(...args:any[])=>unknown){const list=events.get(name)??new Set();list.add(fn);events.set(name,list);return()=>{list.delete(fn);};},
     emit,logger,tools:{register:()=>()=>{}},effect:()=>()=>{}} as unknown as Context;
-  life=new CompanionLife(ctx,host,'standard');
+  life=new CompanionLife(ctx,host,'standard',{body:()=>body as unknown as CompanionBehavior});
   features=new DesktopFeatures(ctx,host,(type,value)=>frames.push({type,value}),()=>true,()=>false);
   const settled=async()=>{for(let pass=0;pass<8;pass++){await (life as any).serial;await features!['maintenance'];await features!['scheduling'];await Promise.resolve();}};
   t.after(async()=>{await features!.close();await life.close();t.mock.timers.reset();rmSync(root,{recursive:true,force:true});});

@@ -11,6 +11,8 @@ import {CompanionRoom} from '../../src/living/body/room.js';
 import * as behaviorPlugin from '../../src/living/body/plugin.js';
 import {CompanionEconomy} from '../../src/living/economy/plugin.js';
 import type {PetCoreHost} from '../../src/core/index.js';
+import {mountLivingArea} from '../../src/living/index.js';
+import type {CompanionLife} from '../../src/living/plan/plugin.js';
 
 const HOUR=3_600_000, start=Date.parse('2026-11-14T09:00:37.866Z');
 function fixture(t:TestContext) {
@@ -32,7 +34,7 @@ function fixture(t:TestContext) {
   let economy:CompanionEconomy;
   const services=new Map<string,unknown>();
   const context={get:(name:string)=>services.get(name)} as unknown as Context;
-  const openEconomy=()=>{economy=new CompanionEconomy(context,host);economy.prepare(target);};openEconomy();
+  const openEconomy=()=>{economy=new CompanionEconomy(context,host,{plan:()=>services.get('petLife') as CompanionLife|undefined});economy.prepare(target);};openEconomy();
   const openRoom=()=>new CompanionRoom(directory,()=>undefined,file=>economy.gardenPort(target.id,file));
   let room=openRoom();
   t.after(()=>{room.flush();economy.close();rmSync(root,{recursive:true,force:true});});
@@ -112,9 +114,13 @@ test('settings honor explicit disabled Life even with Body unloaded',async t=>{
 test('real Cordis Life unload and Body/Economy replacement preserve the enabled crop clock',async t=>{
   const f=fixture(t),ctx=new Context();
   await ctx.plugin({apply(scope){scope.provide('petCore',f.host);}});
-  let economyComponent=await ctx.plugin({apply(scope){scope.provide('petEconomy',f.economy);}});
-  const savedLife={bodyClockState:()=>({enabled:true,restoreElapsed:true}),running:()=>false};
-  const lifeComponent=await ctx.plugin({apply(scope){scope.provide('petLife',savedLife as any);}});
+  const loadEconomy=()=>ctx.plugin({apply(scope){return mountLivingArea(scope,f.host,'economy',()=>f.economy,
+    economy=>{scope.provide('petEconomy',economy);},()=>{});}});
+  let economyComponent=await loadEconomy();
+  const savedLife={bodyClockState:()=>({enabled:true,restoreElapsed:true}),running:()=>false} as unknown as CompanionLife;
+  const loadLife=()=>ctx.plugin({apply(scope){return mountLivingArea(scope,f.host,'plan',()=>savedLife,
+    life=>{scope.provide('petLife',life);},()=>{});}});
+  const lifeComponent=await loadLife();
   let bodyComponent=await ctx.plugin(behaviorPlugin);
   t.after(()=>ctx.fiber.dispose());
   const settle=async()=>{for(let pass=0;pass<8;pass++){await (ctx.petBehavior as any).serial;await new Promise<void>(setImmediate);}};
@@ -126,10 +132,10 @@ test('real Cordis Life unload and Body/Economy replacement preserve the enabled 
   await bodyComponent.dispose();
   // Simulate update replacement while retaining the entire domain storage.
   await economyComponent.dispose();f.closeEconomy();f.openEconomy();
-  economyComponent=await ctx.plugin({apply(scope){scope.provide('petEconomy',f.economy);}});
+  economyComponent=await loadEconomy();
   f.move(8);bodyComponent=await ctx.plugin(behaviorPlugin);await settle();
   assert.equal((await ctx.petBehavior.garden(f.target.id,'state')).garden.plots[0].mature,true);
-  await ctx.plugin({apply(scope){scope.provide('petLife',savedLife as any);}});await settle();
+  await loadLife();await settle();
   assert.equal((await ctx.petBehavior.garden(f.target.id,'state')).garden.plots[0].mature,true);
   assert.equal(JSON.parse(readFileSync(f.control,'utf8')).enabled,true);
   assert.equal(f.saved().stats.harvests,0);

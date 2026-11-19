@@ -51,7 +51,10 @@ async function fixture(t) {
   const ctx={get:name=>services.get(name),on(name,receive){const set=listeners.get(name)??new Set();listeners.set(name,set);set.add(receive);return()=>set.delete(receive);},
     emit(name,...args){for(const receive of listeners.get(name)??[])receive(...args);},logger};
   services.set('petLife',{running:()=>true,bodyClockState:()=>({enabled:true,restoreElapsed:false})});
-  const start=()=>{economy=new CompanionEconomy(ctx,host);services.set('petEconomy',economy);body=new CompanionBehavior(ctx,host);services.set('petBehavior',body);};
+  const start=()=>{
+    economy=new CompanionEconomy(ctx,host,{body:()=>body,plan:()=>services.get('petLife')});services.set('petEconomy',economy);
+    body=new CompanionBehavior(ctx,host,{economy:()=>economy,plan:()=>services.get('petLife')});services.set('petBehavior',body);
+  };
   start();
   const signal=new AbortController().signal,peer={signal,principal:{kind:'owner'}};
   const handler=settingsHandler(()=>host,()=>registry,undefined,undefined,undefined,undefined,undefined,undefined,undefined,()=>economy);

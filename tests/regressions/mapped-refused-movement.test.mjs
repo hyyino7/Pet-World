@@ -46,7 +46,10 @@ async function fixture(t,{mode='awake',tilled=false,money=0}={}) {
     on(name,receive){const rows=listeners.get(name)??new Set();listeners.set(name,rows);rows.add(receive);return()=>rows.delete(receive);},
     emit(name,...args){for(const receive of listeners.get(name)??[])receive(...args);},logger};
   services.set('petLife',{running:()=>true,bodyClockState:()=>({enabled:true,restoreElapsed:false})});
-  const start=()=>{economy=new CompanionEconomy(ctx,host);services.set('petEconomy',economy);body=new CompanionBehavior(ctx,host);services.set('petBehavior',body);room=new Room(ctx);};start();
+  const start=()=>{
+    economy=new CompanionEconomy(ctx,host,{body:()=>body,plan:()=>services.get('petLife')});services.set('petEconomy',economy);
+    body=new CompanionBehavior(ctx,host,{economy:()=>economy,plan:()=>services.get('petLife')});services.set('petBehavior',body);room=new Room(ctx);
+  };start();
   const signal=new AbortController().signal;
   const request=(endpoint,input,id)=>room.request('workspace',endpoint,input,id,signal);
   const garden=()=>economy.gardenPort('workspace').loadGarden(Date.now(),{enabled:true});

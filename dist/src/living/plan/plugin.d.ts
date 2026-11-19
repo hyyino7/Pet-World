@@ -4,6 +4,7 @@ import { type LifePreferences } from './library.js';
 import type { RecordOperation } from '../../core/records.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
 import { type GardenClock } from '../economy/garden-clock.js';
+import { LivingView, type LivingPorts } from '../index.js';
 /** The upstream fact layer is the only state writer. World owns scheduling,
  * journal and native home recovery; Core owns every model step and Memory. */
 export declare class CompanionLife {
@@ -12,24 +13,34 @@ export declare class CompanionLife {
     private preset;
     private binding?;
     private runtime?;
+    private drainingRuntime?;
     private enabled;
     private restoredClock;
     private pauses?;
     private preferences;
     private closed;
+    private closing?;
+    private readonly living;
+    private readonly inFlight;
     private fault?;
     private serial;
     private timer?;
     private subscriptions;
     private sourceRegistration?;
     readonly timeZone: string;
-    constructor(ctx: Context, host: PetCoreHost, preset: string);
+    constructor(ctx: Context, host: PetCoreHost, preset: string, ports?: LivingPorts | LivingView);
+    activate(): void;
     registerSource(): void;
     /** Domain changes and native alarms wake Life; an idle world needs no pump. */
     private scheduleTick;
     private native;
+    private isOpen;
+    private assertOpen;
+    private guardArea;
     private enqueue;
     private current;
+    private isCurrentBinding;
+    private assertCurrentBinding;
     running(): boolean;
     /** Saved clock intent is independent of native planner readiness. This read
      * never waits on Life's queue or initializes a missing control directory. */
@@ -54,17 +65,6 @@ export declare class CompanionLife {
     private factSource;
     private pendingFacts;
     snapshot(workspaceId: string): Promise<{
-        workspaceId: string;
-        enabled: boolean;
-        running: boolean;
-        timeZone: string;
-        preferences: {
-            wake: string;
-            review: string;
-            dailyBudget: number | null;
-            compactAfterReview: boolean | null;
-            planningRepairAttempts: number | null;
-        };
         home: any;
         life: import("../../../vendor/dsh-world/lib/life/types.js").LifeState | {
             homeSessionId: string | undefined;
@@ -79,6 +79,17 @@ export declare class CompanionLife {
         };
         activity: import("../../../vendor/dsh-world/lib/life/types.js").ActivityRecord[];
         fault: string | null;
+        workspaceId: string;
+        enabled: boolean;
+        running: boolean;
+        timeZone: string;
+        preferences: {
+            wake: string;
+            review: string;
+            dailyBudget: number | null;
+            compactAfterReview: boolean | null;
+            planningRepairAttempts: number | null;
+        };
     }>;
     /** Synchronous, read-only prompt projection; no implicit scheduling or model calls. */
     currentPlanSummary(workspaceId: string): string;
@@ -172,6 +183,7 @@ export declare class CompanionLife {
         fact?: CompanionFact;
     }>;
     private behavior;
+    private forwardToBody;
     roomAction(workspaceId: string, input: unknown, by?: string): Promise<{
         home: any;
         behavior: {

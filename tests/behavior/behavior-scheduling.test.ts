@@ -49,8 +49,8 @@ async function fixture(t:TestContext,needs:Record<string,number>={}) {
       if(name==='sessionController')return{cancel(){}};
     },
   } as unknown as Context;
-  behavior=new CompanionBehavior(ctx,host);
-  life=new CompanionLife(ctx,host,'standard');
+  behavior=new CompanionBehavior(ctx,host,{plan:()=>life});
+  life=new CompanionLife(ctx,host,'standard',{body:()=>behavior});
   t.after(async()=>{await life.close();await behavior.close();rmSync(root,{recursive:true,force:true});});
   const internal=life as any;
   await internal.synchronize();
@@ -89,10 +89,7 @@ async function fixture(t:TestContext,needs:Record<string,number>={}) {
     // Cordis delivers the already existing optional Life service when Body is
     // mounted again. Run the production lifecycle callback, including its
     // transition publication, rather than manually waking the planner.
-    const mounted={...ctx,inject(names:string[],apply:(scope:Context)=>unknown){
-      if(names.length===1&&names[0]==='petLife')apply({...ctx,petLife:life} as Context);
-    }} as Context;
-    behavior=new CompanionBehavior(mounted,host);
+    behavior=new CompanionBehavior(ctx,host,{plan:()=>life,observe:true});
     return{saved,snapshot:await behavior.snapshot(workspace.id)};
   };
   await behavior.setAutonomy(workspace.id,true);await settle();

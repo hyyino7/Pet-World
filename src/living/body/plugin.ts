@@ -13,6 +13,7 @@ import type { CompanionFactActor } from '../../contracts/interaction.js';
 import type { RoomInteractionContext } from './room.js';
 import {gardenHomeProjection} from './garden-receipt.js';
 import { LifeControlFileError, readLifeControl } from '../plan/control-file.js';
+import { LivingView, livingCaller, mountLivingArea, settleCleanup, type LivingPorts } from '../index.js';
 export type { PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 
 interface Binding {id: string; path: string; storageId: string; room: CompanionRoom; fingerprint?: string; presentationFingerprint?: string}
@@ -24,6 +25,8 @@ export class CompanionBehavior {
   private binding?: Binding;
   private serial: Promise<unknown> = Promise.resolve();
   private closed = false;
+  private closing?: Promise<void>;
+  private readonly living: LivingView;
   private autonomous = false;
   private fault?: string;
   private publicationFault?: string;
@@ -35,26 +38,35 @@ export class CompanionBehavior {
   private deadlineAt?:number;
   private awaitingRecovery=false;
   private conditions:readonly {metric:string;comparison:string;value:number}[]=[];
-  constructor(private ctx: Context, private host: PetCoreHost) {
+  constructor(private ctx: Context, private host: PetCoreHost, ports: LivingPorts | LivingView = {}) {
+    this.living = ports instanceof LivingView ? ports : new LivingView(ports);
+    if (!(ports instanceof LivingView)) this.activate();
+  }
+  activate() {
+    const {ctx, host, living} = this;
     if (owners.has(host)) throw Error('共享身体已由另一个组件实例管理');
     owners.set(host,this);
-    const refreshBinding=()=>{void this.enqueue(async()=>{
+    const refreshBinding=(isObserved=()=>true)=>{void this.enqueue(async validate=>{
+      if(!isObserved())return;
       this.synchronize();const bound=this.binding;if(!bound)return;
-      await this.refreshEmotion(bound.id);if(this.currentBound(bound.id)!==bound)return;
-      if(!this.ctx.get('petLife') && !this.autonomous) {this.publish('observation');return;}
+      await this.refreshEmotion(bound.id);validate();
+      if(!isObserved()||this.currentBound(bound.id)!==bound)return;
+      if(!living.get('plan') && !this.autonomous) {this.publish('observation');return;}
       this.advanceRoom(bound);this.publish();
-    }).catch(error=>{this.fault=String(error);});};
-    this.subscriptions.push(ctx.on('pet/core.changed',refreshBinding));
-    if(typeof ctx.inject==='function')ctx.inject(['petEconomy'],scope=>{refreshBinding();scope.effect(()=>refreshBinding);});
-    const refresh = (workspaceId: string) => {void this.enqueue(async () => {
+    },isObserved).catch(error=>{this.fault=String(error);});};
+    this.subscriptions.push(ctx.on('pet/core.changed',()=>refreshBinding()));
+    this.subscriptions.push(living.watch(ctx,'economy',(economy,observed)=>{
+      refreshBinding(()=>observed() && (!economy || economy.isCurrent()));
+    }));
+    const refresh = (workspaceId: string) => {void this.enqueue(async validate => {
       if (!this.binding) return;
       this.synchronize(); const bound=this.currentBound(workspaceId); if(!bound)return;
-      await this.refreshEmotion(workspaceId);
+      await this.refreshEmotion(workspaceId);validate();
       if(this.currentBound(workspaceId)===bound)this.publish();
     }).catch(error=>{this.fault=String(error);});};
     this.subscriptions.push(ctx.on('pet/emotion.changed',workspaceId=>refresh(workspaceId)));
     this.subscriptions.push(ctx.on('pet/emotion.expression',event=>{
-      if (!this.binding) return;
+      if (this.closed || !living.isCurrent() || !this.binding) return;
       this.synchronize(); if(!this.currentBound(event.workspaceId))return;
       this.expression={sessionId:event.sessionId,turn:event.turn,
         ...(event.action ? {action:event.action} : {}),...('actionLabel' in event && typeof event.actionLabel==='string' ? {actionLabel:event.actionLabel} : {}),
@@ -62,36 +74,54 @@ export class CompanionBehavior {
         ...(event.feelings ? {feelings:[...event.feelings]} : {})};
       refresh(event.workspaceId);
     }));
-    // Native optional-service lifecycle: reloading Behavior while Life already
-    // runs must recover its current admission instead of staying paused.
-    if(typeof ctx.inject==='function')ctx.inject(['petLife'],scope=>{
-      const life=scope.petLife;
-      const synchronize=()=>{void this.enqueue(async()=>{
-        if(this.closed||this.ctx.get('petLife')!==life)return;
-        const status=this.host.workspace.status(),admission=status.target?life.bodyClockState?.(status.target.id):undefined;
-        if(!this.binding && !life.running() && !admission?.enabled)return;
-        this.synchronize();const bound=this.binding;if(!bound)return;
-        await this.refreshEmotion(bound.id);
-        if(this.currentBound(bound.id)!==bound)return;
-        this.autonomous=admission?.enabled ?? life.running();
-        if(admission || this.autonomous)bound.room.setAutonomy(this.autonomous,Date.now(),admission?.restoreElapsed);
-        else bound.room.suspendAutonomy();
-        this.publish();
-      }).catch(error=>{this.fault=String(error);});};
-      scope.on('pet/life.changed',synchronize);synchronize();
-      scope.effect(()=>()=>{void this.enqueue(()=>{
-        if(this.closed||this.ctx.get('petLife')?.running())return;
-        this.binding?.room.suspendAutonomy();this.autonomous=false;this.publish();
-      }).catch(error=>{this.fault=String(error);});});
-    });
+    let stopLife: (()=>void) | undefined;
+    this.subscriptions.push(()=>stopLife?.());
+    this.subscriptions.push(living.watch(ctx,'plan',(plan,observed)=>{
+      if(!plan) {
+        stopLife?.();stopLife=undefined;
+        void this.enqueue(()=>{
+          if(!observed()||living.get('plan'))return;
+          this.binding?.room.suspendAutonomy();this.autonomous=false;this.publish();
+        },observed).catch(error=>{this.fault=String(error);});
+        return;
+      }
+      const {value:life}=plan;
+      const current=()=>observed() && plan.isCurrent();
+      const synchronize=()=>{
+        if(!current())return;
+        void this.enqueue(async validate=>{
+          if(!current())return;
+          const status=this.host.workspace.status(),admission=status.target?life.bodyClockState?.(status.target.id):undefined;
+          if(!this.binding && !life.running() && !admission?.enabled)return;
+          this.synchronize();const bound=this.binding;if(!bound)return;
+          await this.refreshEmotion(bound.id);validate();
+          if(!current()||this.currentBound(bound.id)!==bound)return;
+          this.autonomous=admission?.enabled ?? life.running();
+          if(admission || this.autonomous)bound.room.setAutonomy(this.autonomous,Date.now(),admission?.restoreElapsed);
+          else bound.room.suspendAutonomy();
+          this.publish();
+        },current).catch(error=>{this.fault=String(error);});
+      };
+      stopLife=ctx.on('pet/life.changed',synchronize);synchronize();
+    }));
   }
-  private enqueue<T>(work: () => T | Promise<T>): Promise<T> {
-    const next = this.serial.then(work);
-    this.serial = next.then(()=>this.arm(),()=>this.arm()).catch(error=>{this.fault=String(error);});return next;
+  private enqueue<T>(work: (validate:()=>void) => T | Promise<T>, observed=()=>true): Promise<T> {
+    const caller=livingCaller();
+    let admitted=true;
+    const validate=()=>{
+      try {
+        if(this.closed || !this.living.isCurrent())throw Error('身体工作区已切换或组件已停止');
+        caller?.();
+      } catch(error) {admitted=false;throw error;}
+    };
+    try {validate();} catch(error) {return Promise.reject(error);}
+    const next = this.serial.then(()=>{validate();return work(validate);});
+    const arm=()=>{if(admitted && observed())this.arm();};
+    this.serial = next.then(arm,arm).catch(error=>{this.fault=String(error);});return next;
   }
   private arm() {
     clearTimeout(this.timer);this.timer=undefined;
-    if(this.closed || !this.binding) {this.deadlineAt=undefined;return;}
+    if(this.closed || !this.living.isCurrent() || !this.binding) {this.deadlineAt=undefined;return;}
     if(this.awaitingRecovery)return;
     const bound=this.binding,now=Date.now();
     // A queue operation that did not advance physics cannot consume an overdue
@@ -101,9 +131,9 @@ export class CompanionBehavior {
     this.deadlineAt=at;
     // Bound physical deadlines, never an activity-planning interval. Long waits
     // recheck the wall clock using the same segment as the native alarm timer.
-    this.timer=setTimeout(()=>{this.timer=undefined;void this.enqueue(async()=>{
+    this.timer=setTimeout(()=>{this.timer=undefined;void this.enqueue(async validate=>{
       this.synchronize();if(this.binding!==bound)return;
-      await this.refreshEmotion(bound.id);if(this.binding!==bound)return;
+      await this.refreshEmotion(bound.id);validate();if(this.binding!==bound)return;
       this.advanceRoom(bound);this.deadlineAt=undefined;this.publish();
     }).catch(error=>{this.fault=String(error);});},Math.min(5*60_000,Math.max(1,at-Date.now())));
     this.timer.unref();
@@ -140,16 +170,16 @@ export class CompanionBehavior {
     const id = target.id;
     this.binding = {id, path:target.path, storageId,
       room:new CompanionRoom(directory, () => this.ctx.get('petEmotion')?.roomSnapshot(id),legacyFile=>{
-        const economy=this.ctx.get('petEconomy');
+        const economy=this.living.get('economy');
         if(!economy && (this.host.workspace.runtime.store.meta(`economy.initialized:${storageId}`) || existsSync(join(target.path,'.chatpet','data','economy','economy.sqlite'))))
           throw Error('权威经济组件暂不可用；原钱包、库存与菜园已保留，等待恢复');
         return economy?.gardenPort(id,legacyFile);
       },()=>{const settings=this.host.workspace.companionSettings?.();return {
         hours:settings?.offlineBodyHours ?? 4,needCeiling:(settings?.offlineNeedCeilingPercent ?? 70)/100,
         energyFloor:(settings?.offlineEnergyFloorPercent ?? 35)/100};},
-      ()=>this.ctx.get('petLife')?.bodyClockState?.(id) ?? readLifeControl(target.path))};
+      ()=>this.living.get('plan')?.bodyClockState?.(id) ?? readLifeControl(target.path))};
     let admission;
-    try { admission=this.ctx.get('petLife')?.bodyClockState?.(id); }
+    try { admission=this.living.get('plan')?.bodyClockState?.(id); }
     catch (error) {
       if (!(error instanceof LifeControlFileError)) throw error;
       // Room reports an invalid clock at the garden boundary.
@@ -190,7 +220,7 @@ export class CompanionBehavior {
     return {...projected,playback:resolveActivityPlayback(projected)};
   }
   private publish(reason:'observation'|'transition'='transition') {
-    const bound = this.binding; if (!bound) return;
+    const bound = this.binding; if (!bound || this.closed || !this.living.isCurrent()) return;
     if(reason==='observation' && this.deadlineAt!==undefined && Date.now()>=this.deadlineAt) {reason='transition';this.deadlineAt=undefined;}
     try {
       const {updatedAt:_updated,lastTickAt:_tick,...semantic} = bound.room.state;
@@ -225,7 +255,7 @@ export class CompanionBehavior {
   }
   private currentBound(workspaceId: string) {
     const status = this.host.workspace.status(), bound = this.binding;
-    return !this.closed && bound?.id === workspaceId && status.state === 'ready' && status.target?.id === workspaceId &&
+    return !this.closed && this.living.isCurrent() && bound?.id === workspaceId && status.state === 'ready' && status.target?.id === workspaceId &&
       status.target.path === bound.path && this.host.workspace.storageId() === bound.storageId ? bound : undefined;
   }
   private async refreshEmotion(workspaceId:string) {
@@ -245,8 +275,8 @@ export class CompanionBehavior {
     return {sleeping:bound.room.state.asleep === true,pending:bound.room.state.sleepPending === true};
   }
   snapshot(workspaceId: string): Promise<BehaviorSnapshot> {
-    return this.enqueue(async () => {
-      const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);
+    return this.enqueue(async validate => {
+      const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);validate();
       const bound=this.checked(workspaceId);if(bound!==before)throw Error('身体工作区已切换');
       const execution=JSON.stringify(bound.room.plannedState());this.advanceRoom(bound);
       this.publish(execution===JSON.stringify(bound.room.plannedState())?'observation':'transition');
@@ -263,8 +293,8 @@ export class CompanionBehavior {
       behavior:{...value.behavior,revision:value.revision,bootId:value.bootId}}));
   }
   roomAction(workspaceId: string, input: unknown, by = '伙伴', interaction?: RoomInteractionContext) {
-    return this.enqueue(async () => {
-      const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);
+    return this.enqueue(async validate => {
+      const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);validate();
       const bound=this.checked(workspaceId);if(bound!==before)throw Error('身体工作区已切换');this.expression=undefined;this.advanceRoom(bound);
       const config=this.host.workspace.runtime?.config;
       const source=interaction ?? {requestId:randomUUID(),actor:{kind:by==='大肥鱼'?'companion':'owner',
@@ -284,8 +314,8 @@ export class CompanionBehavior {
     return this.enqueue(()=>{this.checked(workspaceId).room.acknowledgeFacts(ids);});
   }
   garden(workspaceId: string, operation: 'state'|'act'|'control', input?: unknown): Promise<ReturnType<CompanionRoom['garden']> & {home?: any}> {
-    return this.enqueue(async () => {
-      const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);
+    return this.enqueue(async validate => {
+      const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);validate();
       const bound=this.checked(workspaceId);if(bound!==before)throw Error('身体工作区已切换');
       const execution=JSON.stringify(bound.room.plannedState());
       const result = bound.room.garden(operation,input);
@@ -295,10 +325,10 @@ export class CompanionBehavior {
     });
   }
   setAutonomy(workspaceId: string, enabled: boolean) {
-    return this.enqueue(async () => {
-      const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);
+    return this.enqueue(async validate => {
+      const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);validate();
       const bound=this.checked(workspaceId);if(bound!==before)throw Error('身体工作区已切换');
-      const admission=enabled?this.ctx.get('petLife')?.bodyClockState?.(workspaceId):undefined;
+      const admission=enabled?this.living.get('plan')?.bodyClockState?.(workspaceId):undefined;
       bound.room.setAutonomy(enabled,Date.now(),admission?.restoreElapsed); this.autonomous = enabled; this.publish();
     });
   }
@@ -306,8 +336,8 @@ export class CompanionBehavior {
     return this.currentBound(workspaceId)?.room.gardenClockState();
   }
   private plannedCall<T>(workspaceId: string, work: (room: CompanionRoom) => T, validate:()=>void=()=>{},observation=false): Promise<T> {
-    return this.enqueue(async () => {
-      const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);
+    return this.enqueue(async admit => {
+      const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);admit();
       const bound=this.checked(workspaceId);if(bound!==before)throw Error('身体工作区已切换');
       validate();const execution=JSON.stringify(bound.room.plannedState()),result=work(bound.room);this.awaitingRecovery=false;
       this.publish(observation && execution===JSON.stringify(bound.room.plannedState())?'observation':'transition');return result;
@@ -337,11 +367,20 @@ export class CompanionBehavior {
   cancelPlanned(workspaceId: string, operationId: string): Promise<PlannedExecution> {
     return this.plannedCall(workspaceId,room=>room.cancelPlanned(operationId));
   }
-  async close() {
-    this.closed = true; clearTimeout(this.timer);
-    for(const stop of this.subscriptions.splice(0))stop();
-    try {await this.enqueue(() => {this.binding?.room.suspendAutonomy(); this.binding?.room.flush(); this.binding = undefined;});}
-    finally {if (owners.get(this.host) === this) owners.delete(this.host);}
+  close(): Promise<void> {
+    if(this.closing)return this.closing;
+    this.closed = true; clearTimeout(this.timer);this.timer=undefined;this.deadlineAt=undefined;
+    return this.closing=settleCleanup(...this.subscriptions.splice(0),async()=>{
+      await this.serial;
+      try {this.binding?.room.suspendAutonomy();}
+      finally {
+        try {this.binding?.room.flush();}
+        finally {
+          this.binding=undefined;
+          if (owners.get(this.host) === this) owners.delete(this.host);
+        }
+      }
+    });
   }
 }
 export const name = '25-Behavior';
@@ -351,6 +390,9 @@ declare module '@deepseek-ai/cordis' {
   interface Events {'pet/behavior.changed'(value: BehaviorChange): void}
 }
 export function apply(ctx: Context) {
-  const behavior = new CompanionBehavior(ctx,ctx.petCore); ctx.provide('petBehavior',behavior);
-  ctx.effect(() => () => behavior.close());
+  const host=ctx.petCore;
+  return mountLivingArea(ctx,host,'body',view=>new CompanionBehavior(ctx,host,view),behavior=>{
+    behavior.activate();
+    ctx.provide('petBehavior',behavior);
+  });
 }

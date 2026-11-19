@@ -32,7 +32,8 @@ export async function eventually(check, label) {
 
 // Cordis owns every plugin and subscription. The host supplies a scripted loop,
 // workspace registry, and disk-backed session persistence in a disposable directory.
-export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,22,59), legacyGarden = false} = {}) {
+export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,22,59), legacyGarden = false,
+  order = Object.keys(entries), io = {}} = {}) {
   t.mock.timers.enable({apis:['Date'], now:Number(now)});
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'her-world-entries-')));
   const repo = join(root, 'workspace'), id = 'world';
@@ -177,12 +178,15 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       cancel({sessionId}) { agents.get(sessionId)?.cancel({kind:'user'}); },
     };
     const persisted = header => ({header,inheritedEventCount:0,
-      async read() { return {events:existsSync(logFile(header.id))?saved(header.id).events:[]}; },
+      async read() {
+        const read = () => ({events:existsSync(logFile(header.id))?saved(header.id).events:[]});
+        return io.read ? io.read(header.id,read) : read();
+      },
       async append(events) {
         const before = existsSync(logFile(header.id)) ? saved(header.id).events : [];
         writeFileSync(logFile(header.id),JSON.stringify({header,events:[...before,...events]}));
       },
-      async flush() {}, async close() {}});
+      async flush() {}, async close() {io.close?.(header.id);}});
     await ctx.plugin(Sessions);
     native = {...host,sessions:ctx.sessions};
     await ctx.plugin({apply(scope) {
@@ -192,10 +196,11 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       scope.provide('sessionController',controller);
       scope.provide('agentPresets',{composedPreset:carrier=>[...agents.values()].find(agent=>agent.ctx===carrier)?.session.header.agentPreset});
       scope.provide('workingDirectory',{ensure:async agent=>agent.session.header.cwd});
-      scope.provide('fs',{resolve:async (path,{cwd})=>resolve(cwd,path),processPath:path=>path});
+      scope.provide('fs',{resolve:async (path,options)=>io.resolve ? io.resolve(path,options) : resolve(options.cwd,path),processPath:path=>path});
       scope.provide('sessionPersistence',{
         async open(sessionId) {
           if (!existsSync(logFile(sessionId))) throw Object.assign(Error('Missing synthetic session'),{name:'SessionNotFound'});
+          io.open?.(sessionId);
           return persisted(saved(sessionId).header);
         },
         async create(header) { return persisted(header); },
@@ -215,7 +220,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       const initialized = await core.services.workspace.initialize(request('initialize'),{expectedPreferencesRevision:result.value.revision});
       assert.ok(initialized.ok,JSON.stringify(initialized));
     }
-    for (const key of Object.keys(entries)) if (key!=='economy' || !legacyGarden) await load(key);
+    for (const key of order) if (key!=='economy' || !legacyGarden) await load(key);
   }
   async function stop() {
     if (!ctx) return;
@@ -225,12 +230,17 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
     await ctx.fiber.dispose();
     ctx = undefined;
   }
-  async function load(key) { components.set(key,await ctx.plugin(entries[key])); }
+  async function load(key, scope = ctx) {
+    const fiber = await scope.plugin(entries[key]);
+    components.set(key,fiber);
+    return fiber;
+  }
   async function unload(key) { await components.get(key).dispose();components.delete(key); }
   t.after(async()=>{try { await stop(); } finally { rmSync(root,{recursive:true,force:true}); }});
   await start();
   return {
     id, repo, directory, calls, cancellations, sessionCreateCalls, saved, logFile, load, unload,
+    fiber: key => components.get(key),
     get registry() { return registry; }, get bound() { return registry.get(id); },
     get ctx() { return ctx; }, get core() { return ctx.petCore; },
     get body() { return ctx.petBehavior; }, get life() { return ctx.petLife; }, get economy() { return ctx.petEconomy; },

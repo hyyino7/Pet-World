@@ -47,7 +47,9 @@ async function fixture(t:TestContext) {
       assemble:async(context:any)=>middleware('system-prompt/assemble',[{},context],()=>[...sections.values(),...contexts.values()].map(row=>row.text(context)).filter(Boolean).join('\n\n'))},
   } as unknown as Context;
   services.set('workspaceRegistry',registry);services.set('agents',ctx.agents);
-  const world=createWorldService(host,()=>registry),behavior=new CompanionBehavior(ctx,host),life=new CompanionLife(ctx,host,'standard');
+  const world=createWorldService(host,()=>registry);
+  const behavior=new CompanionBehavior(ctx,host,{plan:()=>services.get('petLife')});
+  const life=new CompanionLife(ctx,host,'standard',{body:()=>services.get('petBehavior')});
   services.set('petBehavior',behavior);services.set('petLife',life);
   const directory=join(repo,'.chatpet/data/life');mkdirSync(directory,{recursive:true});
   const plan=new PersistentLifePlan(directory,'fish',host.workspace.storageId(),'UTC');
