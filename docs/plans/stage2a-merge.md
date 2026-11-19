@@ -434,4 +434,24 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 
 ## 执行结果
 
+- 1A 补了 15 项测试。`tests/core/context-contracts.test.ts` 覆盖 5.9 的新增契约证据，`tests/behavior-list/entries-lifecycle.test.mjs` 覆盖 6.2 的入口装卸、暂停和全卸载。
+- `tests/behavior-list/families.test.mjs` 加入 G9，真实 Life 输入调用计划工具，SQLite 拒绝首次库存结算后按原编号跨重启补结算，身体效果和账本各一次，计划自行续行。
+- `tests/behavior-list/index.json` 登记 15 项新测试和 3 项既有确认顺序测试，新增索引的 `l1Stage` 均为「阶段 2」。
+- 入口测试复用 `policy-host.mjs`，通过真实 Cordis 安装和卸载入口，使用 DSH 工具、提示词与会话服务。模型循环、工作区注册和会话文件持久化由合成宿主驱动。
+- 1A 快测按验收表执行，构建通过，30 项通过、0 项失败。
+- `pnpm run build && pnpm run test:behavior-list` 通过，索引检查 11 项、行为清单 70 项，失败 0 项。
+- `pnpm run verify` 的环境、类型、架构检查及构建通过。Node 测试 1431 项通过、1 项失败。Memory 的 `P2 owned service/client: ready, scoped replay, actual exit and restart` 在等到服务就绪后读取 RSS 时遇到 `spawnSync /bin/ps EPERM`（`tests/memory/memory-process.test.mjs:81`），本轮未观察到回环监听失败。
+- `verify` 到 Node 测试阶段停止，Python 测试、发布检查和打包校验由 Claude 在沙箱外完整重跑。实机验收留待后续批次。
+- 建议 Claude 代提交第 1 组（1 个文件、439 行），`tests/behavior-list/entries-lifecycle.test.mjs`。提交说明「固定三个生活入口的旧装卸行为，为合并保留生命周期证据」。
+- 建议 Claude 代提交第 2 组（4 个文件、475 行），`tests/core/context-contracts.test.ts`、`tests/behavior-list/families.test.mjs`、`tests/behavior-list/index.json`、`docs/plans/stage2a-merge.md`。提交说明「将上下文契约和 G9 恢复证据纳入阶段 2 行为门禁」。
+
+### 1A 差异清单
+
+| 说法或待核项 | 真实行为 | 证据 |
+| --- | --- | --- |
+| 6.2 说暂停区间不长作物，Body 缺席整个暂停周期待核（`docs/architecture.md:562`）。 | 12 小时成熟的作物在卸载 Body 时已长 2 小时。Body 缺席期间暂停 4 小时再启用，重载后进度是 6/12，暂停时间也计入。Life 持久化的是当前开关，Body 重载时读到已启用的意图。 | `tests/behavior-list/entries-lifecycle.test.mjs:321`、`src/life/plugin.ts:105`、`src/life/plugin.ts:479`、`src/behavior/plugin.ts:66`、`src/behavior/room.ts:228`、`src/behavior/room.ts:264` |
+| 6.2 说先结算启用区间再暂停，Economy 缺席时的结算待核（`docs/architecture.md:562`、`docs/architecture.md:564`）。 | 卸载 Economy 后权威菜园返回不可用，Body 暂停时跳过菜园写入。启用 2 小时、暂停 4 小时后恢复 Economy，首次查询进度同为 6/12。 | `tests/behavior-list/entries-lifecycle.test.mjs:324`、`src/behavior/room.ts:157`、`src/behavior/room.ts:228`、`src/economy/store.ts:427` |
+| 6.2 说暂停停止回顾，在途回顾是否撤权待核（`docs/architecture.md:575`）。 | 暂停拒绝新的回顾准入，并取消已准入的原生轮次，原信号上的读写中止。在轮次收尾前独立复核文件权限时，已准入的租约仍有效，原日期日记可读写。 | `tests/behavior-list/entries-lifecycle.test.mjs:384`、`src/life/plugin.ts:307`、`src/life/plugin.ts:475`、`src/life/plugin.ts:531`、`src/life/tool-policy.ts:104`、`src/core/life-review-files.ts:25` |
+| 5.9 的「原样 JSON」需要明确匹配粒度（`docs/architecture.md:493`）。 | 确认要求固定段名、正文包含该段文本、逐条事实投影结构相等。JSON 重排键或增加空白仍能确认，投影值不同则保留待确认回执。 | `tests/core/context-contracts.test.ts:72`、`src/core/interaction-presentation.ts:21` |
+
 ## 审查结论

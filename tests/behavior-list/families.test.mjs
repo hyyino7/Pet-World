@@ -2,9 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import vm from 'node:vm';
 import {setTimeout as pause} from 'node:timers/promises';
 import {fixture,ownerPlan,until} from './fixture.mjs';
+import {cordisFixture,eventually,meal,submitPlan} from './entries-lifecycle.test.mjs';
 import {readHearControlSource} from '../../dist/tests/behavior-list/entries.js';
 
 async function cursor(f,expected){await until(async()=>{await f.body.snapshot('world');return (await f.life.readPlan('world')).plan?.cursor===expected;},'计划自动推进到 '+expected);}
@@ -118,4 +120,73 @@ test('语音插件关闭取消识别并拒绝晚到音频和结果',async t=>{
   assert.equal(events.filter(event=>event.type==='user/message'&&event.data.id==='spoken').length,1);
   assert.ok(!JSON.stringify(events).includes('Late control result must not be used'));
   assert.ok(!JSON.stringify(events).includes('Late plugin result must not be used'));
+});
+
+test('Life 原生计划在身体效果落盘后跨重启只结算一次并自动续行',async t=>{
+  const f=await cordisFixture(t);
+  await f.ownerAction({kind:'gift',itemId:meal},'plan-meal');
+  const hungerBefore=(await f.body.snapshot(f.id)).needs.hunger;
+  const databasePath=join(f.repo,'.chatpet/data/economy/economy.sqlite');
+  const sql=statement=>{
+    const db=new DatabaseSync(databasePath);
+    try {db.exec(statement);} finally {db.close();}
+  };
+  sql("CREATE TRIGGER reject_consumption BEFORE UPDATE ON uses WHEN json_extract(NEW.value,'$.status')='consumed' BEGIN SELECT RAISE(ABORT,'injected settlement write failure'); END");
+  let submitted;
+  f.model=async call=>{
+    if (call.messages.some(message=>message.source.kind==='dsh-world-life')) {
+      assert.equal(submitted,undefined,'自动续行不要求第二次模型规划');
+      submitted=await submitPlan(call,[
+        {id:'meal',kind:'economy',activity:'Eat the gifted meal',economy:{type:'consume',itemId:meal,quantity:1}},
+        {id:'rest',kind:'hold',activity:'Rest after the meal'},
+      ]);
+    }
+    return 'Plan accepted';
+  };
+  await f.enable();
+  const home=await f.agent(f.life.homeSessionId());
+  const plan=await eventually(async()=>{
+    const {plan}=await f.life.readPlan(f.id);
+    return plan?.operationId && (await f.economy.snapshot(f.id)).pendingUses.some(row=>row.opId===plan.operationId) && plan;
+  },'餐食已预留并保留原执行编号');
+  await home.whenIdle();
+  assert.equal(plan.cursor,0);
+  const checkpoint=()=>JSON.parse(readFileSync(join(f.directory,'home.json'),'utf8'));
+  const applied=checkpoint().plannedExecutions[plan.operationId], hunger=checkpoint().needs.hunger;
+  assert.ok(applied.effectAppliedAt);
+  assert.ok(hunger<hungerBefore);
+  const countUsed=snapshot=>snapshot.ledger.filter(row=>row.kind==='use-consume').length;
+  const quantity=snapshot=>snapshot.inventory.find(row=>row.itemId===meal).quantity;
+  const before=await f.economy.snapshot(f.id);
+  assert.equal(before.pendingUses[0].status,'reserved');
+  assert.equal(countUsed(before),0);
+  assert.equal(quantity(before),1);
+  const blocked=await f.body.inspectPlanned(f.id,plan.operationId);
+  assert.equal(blocked.status,'running');
+  assert.equal(blocked.phase,'waiting');
+  assert.match(blocked.reason,/injected settlement write failure/);
+  const native=f.saved(home.id).events;
+  assert.ok(native.some(event=>event.type==='user/message'&&event.data.source.kind==='dsh-world-life'));
+  assert.ok(native.some(event=>event.type==='tool/call'&&event.data.name==='life_plan_update'));
+
+  await f.restart(()=>{
+    assert.equal(checkpoint().plannedExecutions[plan.operationId].effectAppliedAt,applied.effectAppliedAt);
+    sql('DROP TRIGGER reject_consumption');
+  });
+  const next=await eventually(async()=>{
+    const {plan}=await f.life.readPlan(f.id);
+    return plan?.cursor===1 && plan.operationId && (await f.body.inspectPlanned(f.id,plan.operationId))?.status==='running' && plan;
+  },'无需新模型调用即续行下一步骤');
+  assert.equal(next.id,plan.id);
+  assert.notEqual(next.operationId,plan.operationId);
+  assert.equal((await f.body.inspectPlanned(f.id,plan.operationId)).status,'completed');
+  const after=await f.economy.snapshot(f.id);
+  assert.deepEqual(after.pendingUses,[]);
+  assert.equal(quantity(after),0);
+  assert.equal(countUsed(after),1);
+  assert.equal(after.ledger.find(row=>row.kind==='use-consume').requestId,plan.operationId);
+  assert.equal(await eventually(()=>f.life.homeSessionId(),'生活恢复原 home'),home.id);
+  assert.equal((await f.body.snapshot(f.id)).needs.hunger,hunger);
+  assert.equal(checkpoint().plannedExecutions[plan.operationId].effectAppliedAt,applied.effectAppliedAt);
+  assert.equal(f.calls.filter(call=>call.messages.some(message=>message.source.kind==='dsh-world-life')).length,1);
 });
