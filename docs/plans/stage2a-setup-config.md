@@ -24,7 +24,9 @@
   - `scripts/install-dsh.mjs` — 改成经 DSH 安装 npm 包、写 profile 覆盖；新增 `migrate-core-config` 子命令；去掉包内注入和重打包
   - `scripts/lib/core-config.mjs` — 读写 profile 覆盖的辅助函数
   - `tests/core/core-install-config.test.mjs`、`tests/regressions/audit-r5-install-receipt.test.mjs` — 跟着改，不放宽断言
+  - `tests/infrastructure/first-install.test.mjs`、`tests/regressions/audit-r4-memory-entry.test.mjs` — 执行中补充（2026-11-19，Claude 定）：两者分别断言准备阶段调用 `/usr/bin/tar`（`:37-38`）、用 `const bundlePath =` 截取源码（`:23`），都绑在要删掉的归档安装上。只改夹具，让它走新的 setup 路径；首次安装生成配置和 Memory 入口重新绑定的行为断言保留
   - `tests/behavior-list/setup-config.test.mjs`（新）、`tests/behavior-list/index.json` — L1「换包后 Core 配置仍在」
+  - `tests/behavior-list/index.test.mjs` — 执行中补充（2026-11-19，Claude 定）：索引自测把 L1 家族名单固定成 4 个（`:9`），只补上「换包后 Core 配置仍在」和更新测试标题，原有断言保留
   - `package.json` 的 `devDependencies`、`pnpm-lock.yaml` — 只加测试用的 `@deepseek-ai/cordis-plugin-include@1.1.0`（拍板点 5）
   - `docs/portability.md` 的「搬到另一台设备」一节 — 改成新命令
 - 必须复用：
@@ -71,6 +73,20 @@
 - 门禁：`pnpm run verify`；`pnpm run build && pnpm run test:behavior-list`。
 - 主人手动（结束故障家族「换包后 Core 配置仍在」这一轮）：在隔离的 DSH 环境用合成伙伴，从检查过的包运行新 setup，指定一个可装的 npm 版本；启动后确认插件已激活、工作区可读。到 **Her World → 版本**换成另一个兼容的已发布版本，按提示重启，确认 `00-Core` 已启动、伙伴和绑定都在。然后退出 DSH，用 `migrate-core-config` 核对模式确认 profile 覆盖和回执一致。没通过之前，日常机器不升级。
 
+**提交阈值声明**（执行中补充，2026-11-19，主人同意）：`scripts/install-dsh.mjs` 整个安装流程换掉，这一个文件就改了约 840 行，拆不成每步都能通过测试的小提交。实现和测试放在同一个提交里（`1364425`，10 个文件、1585 行），超过 15 个文件 / 600 行的阈值；测试依赖和执行记录各自单独提交。
+
 ## 执行结果
+
+- `scripts/install-dsh.mjs` 经 DSH 安装稳定版或指定 npm 版本，原子写入 profile 覆盖并验证后发布回执。`migrate-core-config` 默认离线核对，加 `--apply` 才搬配置或补回执。
+- `scripts/lib/core-config.mjs` 用 DSH 的补丁算法核对分层配置，保留 profile 中的其他声明和 YAML 注释。失败时，包和绑定可核对则恢复原补丁和回执，否则保留 `applying` 和快照。
+- `setup-config.test.mjs` 的换包红测已转绿，`index.json` 和 `index.test.mjs` 已登记第 5 个 L1 故障家族。测试依赖沿用上一轮锁定的版本。
+- `core-install-config.test.mjs`、`audit-r5-install-receipt.test.mjs` 覆盖旧 setup 搬配置、npm 已有覆盖、缺失及冲突回执、重复运行、离线缺包、写入失败和装包后回读。`first-install.test.mjs` 和 `audit-r4-memory-entry.test.mjs` 的夹具已接到新路径。
+- `docs/portability.md` 已更新新设备命令和旧设备搬配置说明。历史付费检查 `scripts/checks/check-native-memory-live.mjs` 仍读取旧回执的 `archive` 字段，若继续使用该检查，需要另定 npm 包的核对方式。
+- 方案快测构建通过，27 通过、0 失败。补跑首次安装、Memory 入口和便携 Memory 回归，36 通过、0 失败。
+- `pnpm run build && pnpm run test:behavior-list` 通过，索引校验 11 项、行为清单 71 项，均为 0 失败。`pnpm run check:types` 通过。
+- 临时打包通过 `check:package`，从解包目录执行两个命令的 `--help` 均成功。自动检查只用了合成数据。全量门禁和隔离 DSH 的版本页验收待执行。
+- 建议 Claude 按文件和代码块提交。计数文件数/差异行依次为测试依赖 1/1、抽出原安装准备和工作区收尾 2/298、Core 覆盖辅助函数 1/111、npm setup 与搬设备说明 2/543、换包和 setup 回归 7/496、离线搬配置及其测试和说明 3/199、执行记录 1 文件。锁文件和构建产物按约定不计。
+
+- 范围外的兼容问题：`scripts/checks/check-native-memory-live.mjs:176`（付费模型的 Memory 实测）依赖旧回执的 `archive` 字段，改装 npm 包后回执里没有这个字段。以后还要用这个检查，需要另定按 npm 包核对的方式；合并时登记进 `docs/product.md` 已知问题。
 
 ## 审查结论
