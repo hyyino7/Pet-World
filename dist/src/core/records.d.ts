@@ -70,7 +70,7 @@ export declare class CoreRecords {
         data?: undefined;
     } | {
         dialogue: {
-            items: import("../living/plan/review-dialogue.js").DialogueLine[];
+            items: import("./review-dialogue.js").DialogueLine[];
             nextOffset: number | undefined;
             coverage: "partial" | "eligible";
         } | undefined;

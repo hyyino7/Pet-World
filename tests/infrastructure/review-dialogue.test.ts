@@ -4,7 +4,7 @@ import {mkdtempSync, realpathSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createCore} from '../../src/core/index.js';
-import {readReviewDialogue} from '../../src/living/plan/review-dialogue.js';
+import {readReviewDialogue} from '../../src/core/review-dialogue.js';
 
 test('daily review selects observed turns after re-enabling an old Memory-off session, without backfilling originals', async () => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), 'pet-review-enrollment-')));

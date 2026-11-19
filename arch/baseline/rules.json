@@ -357,18 +357,6 @@
     },
     {
       "rule": "R1",
-      "file": "src/core/native/memory.ts",
-      "line": 7,
-      "column": 1,
-      "scope": "<module>",
-      "target": "src/living/plan/review-dialogue.js",
-      "expression": "import { readReviewDialogue , type DialogueQuery } from \"../../living/plan/review-dialogue.js\" ;",
-      "from": "core",
-      "to": "living",
-      "reason": "依赖方向违规"
-    },
-    {
-      "rule": "R1",
       "file": "src/core/plugin.ts",
       "line": 6,
       "column": 1,
@@ -534,7 +522,7 @@
     {
       "rule": "R2",
       "file": "src/living/plan/plugin.ts",
-      "line": 125,
+      "line": 158,
       "column": 27,
       "scope": "CompanionLife/publishRest",
       "target": "petDesktop",
@@ -546,7 +534,7 @@
     {
       "rule": "R2",
       "file": "src/living/plan/plugin.ts",
-      "line": 167,
+      "line": 193,
       "column": 5,
       "scope": "CompanionLife/startRuntime",
       "target": "petDesktop",
@@ -558,7 +546,7 @@
     {
       "rule": "R2",
       "file": "src/living/plan/plugin.ts",
-      "line": 275,
+      "line": 317,
       "column": 25,
       "scope": "CompanionLife/startRuntime/send",
       "target": "petDesktop",
@@ -570,7 +558,7 @@
     {
       "rule": "R2",
       "file": "src/living/plan/plugin.ts",
-      "line": 281,
+      "line": 323,
       "column": 31,
       "scope": "CompanionLife/startRuntime/send",
       "target": "petChannels",

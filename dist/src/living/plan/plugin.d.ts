@@ -245,7 +245,7 @@ export declare class CompanionLife {
         data?: undefined;
     } | {
         dialogue: {
-            items: import("./review-dialogue.js").DialogueLine[];
+            items: import("../../core/review-dialogue.js").DialogueLine[];
             nextOffset: number | undefined;
             coverage: "partial" | "eligible";
         } | undefined;

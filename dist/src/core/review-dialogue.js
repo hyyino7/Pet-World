@@ -1,7 +1,7 @@
 import { localDayStart } from '#dsh-world/memoryStore';
 import { normalizeFind, normalizeRead } from '#dsh-world/memory';
 import { formatLocalTime } from '#dsh-world/timeContext';
-import { check } from '../../core/storage.js';
+import { check } from './storage.js';
 /** Per-observation enrollment and original message identity come from Core. The
  * Bank decides what is still readable on each page, including excerpt withdrawals.
  * No second daily text archive is created. */
