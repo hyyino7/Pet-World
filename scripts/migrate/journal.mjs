@@ -38,7 +38,7 @@ export const settled = segment => segment.header.steps.every(step => ['done','sk
 export function validateJournal(context) {
   return checked('journal-invalid', () => {
     const journal = readJournal(context.journalFile), ids = new Set();
-    let last;
+    let last, settledStepCount = 0;
     for (const row of journal.rows) {
       assert.ok(row && typeof row === 'object');
       if (row.event === 'migration') {
@@ -50,11 +50,15 @@ export function validateJournal(context) {
           assert.ok(!last && digest(row.manifestHash));
           header = { ...row, steps:contractFor([manifestStep]), backupHash:row.manifestHash };
         } else {
-          assert.ok(row.schema === 2 && digest(row.backupHash));
+          assert.ok(row.schema === 2 && digest(row.backupHash) && digest(row.binding?.repoHash));
           validateContract(row.steps);
-          requireMigration(isDeepStrictEqual(row.binding, journalBinding(context)), 'binding-changed');
-          if (last) assert.ok(settled(last) && row.steps.length > last.header.steps.length
-            && isDeepStrictEqual(row.steps.slice(0, last.header.steps.length), last.header.steps));
+          requireMigration(row.binding.storageId === context.plan.storageId, 'binding-changed');
+          if (last) {
+            const prior = last.header.steps;
+            assert.ok(settled(last) && row.steps.length > prior.length
+              && isDeepStrictEqual(row.steps.slice(0, prior.length), prior));
+            settledStepCount = prior.length;
+          }
           header = row;
         }
         last = { header, states:new Map() };
@@ -67,6 +71,7 @@ export function validateJournal(context) {
         last.states.set(row.step, row.event);
       } else assert.ok(otherEvents.includes(row.event));
     }
-    return { last, truncated:journal.truncated };
+    if (last && settled(last)) settledStepCount = last.header.steps.length;
+    return { last, settledStepCount, truncated:journal.truncated };
   });
 }

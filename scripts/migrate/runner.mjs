@@ -32,13 +32,17 @@ export function migrationStatus(installation, selected = steps, { plan = false }
   const contract = contractFor(selected), previous = journal.last;
   const reported = !plan && previous ? previous.header.steps : contract;
   const version = manifestVersion(context, reported);
-  return {steps:reported.map((step, index) => {
+  const result = {steps:reported.map((step, index) => {
     const event = previous?.states.get(step.id);
     if (!isDeepStrictEqual(step, contract[index])) return { id:step.id, state:'unverified' };
     const complete = version > index && targetComplete(selected[index], context);
-    const state = complete ? 'complete' : ['done','skip'].includes(event) ? 'inconsistent' : event ?? 'pending';
+    const recordedComplete = index < journal.settledStepCount || ['done','skip'].includes(event);
+    const state = complete ? 'complete' : recordedComplete ? 'inconsistent' : event ?? 'pending';
     return { id:step.id, state };
   }), truncated:journal.truncated};
+  if (plan) return result;
+  const segment = previous ? settled(previous) ? 'settled' : 'unfinished' : 'none';
+  return {...result, segment};
 }
 
 function checkAdmission(context, journal, selected, contract, { resume, backup }) {
@@ -47,8 +51,12 @@ function checkAdmission(context, journal, selected, contract, { resume, backup }
     requireMigration(previous, 'resume-journal-missing');
     requireMigration(isDeepStrictEqual(previous.header.steps, contract), 'journal-step-mismatch');
     const version = manifestVersion(context, contract);
-    if (settled(previous)) assertPreviousTargets(context, selected, selected.length, version);
-    verifySaved(context, previous.header);
+    assertPreviousTargets(context, selected, journal.settledStepCount, version);
+    if (!settled(previous)) {
+      const binding = previous.header.binding;
+      if (binding) requireMigration(binding.repoHash === journalBinding(context).repoHash, 'binding-changed');
+      verifySaved(context, previous.header);
+    }
   } else {
     requireMigration(!journal.truncated, 'journal-invalid');
     const version = manifestVersion(context, contract);
@@ -100,9 +108,10 @@ export async function runMigration(options, selected = steps) {
       const record = row => appendJournal(context.journalFile, {migrationId:header.id, ...row});
       if (journal.truncated) record({event:'journal-repaired'});
       if (lease.stale) record({event:'lock-takeover'});
-      for (const [index, step] of selected.entries()) {
+      const alreadySettled = resume && journal.settledStepCount === selected.length;
+      for (const [index, step] of (alreadySettled ? [] : selected).entries()) {
         try {
-          const complete = targetComplete(step, context);
+          const complete = index < journal.settledStepCount || targetComplete(step, context);
           if (!complete) {
             record({event:'start', step:step.id});
             await step.apply(context);

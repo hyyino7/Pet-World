@@ -2,11 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { createCore } from '../../dist/src/core/index.js';
+import { value } from '../../scripts/fixtures/synthetic-companion.mjs';
+import { fileHashes } from '../../scripts/lib/repo-storage.mjs';
 import { hash } from '../../scripts/migrate/io.mjs';
 import { runMigration } from '../../scripts/migrate/runner.mjs';
-import { variants, fixture, mockDsh, read } from './helpers.mjs';
+import { variants, fixture, mockDsh, read, cli, refusedCli } from './helpers.mjs';
 import { offlineFixture } from './offline-helpers.mjs';
 
 const child = async (f, backup, point, mode = '') => {
@@ -57,6 +60,11 @@ for (const point of ['backup','after','manifest','complete']) {
     if (point === 'backup') {
       assert.equal(readFileSync(log,'utf8'),oldLog);
       assert.equal(readFileSync(manifest,'utf8'),oldManifest);
+      const status = await child(f,backup,'','status');
+      assert.equal(status.code,0,status.stderr);
+      const output = JSON.parse(status.stdout);
+      assert.deepEqual(output.steps,[{id:'0001-storage-manifest',state:'complete'}]);
+      assert.equal(output.segment,'settled');
       const retry = await child(f,join(f.out,'retry'),'');
       assert.equal(retry.code,0,retry.stderr);
       assert.equal(header(log).backup,join(f.out,'retry'));
@@ -71,6 +79,7 @@ for (const point of ['backup','after','manifest','complete']) {
         rmSync(target);
         const status = await child(f,backup,'','status');
         assert.equal(status.code,0,status.stderr);
+        assert.equal(JSON.parse(status.stdout).segment,'settled');
         assert.equal(JSON.parse(status.stdout).steps[1].state,'inconsistent');
         const refused = await child(f,join(f.out,'refused'),'');
         assert.equal(JSON.parse(refused.stderr).code,'migration-inconsistent');
@@ -78,6 +87,15 @@ for (const point of ['backup','after','manifest','complete']) {
         return;
       }
       assert.equal(rows(log).at(-1).event,'start');
+      if (point === 'manifest') {
+        const status = await child(f,backup,'','status');
+        assert.equal(status.code,0,status.stderr);
+        const output = JSON.parse(status.stdout);
+        assert.deepEqual(output.steps.map(step => step.state),['complete','complete']);
+        assert.equal(output.segment,'unfinished');
+        const refused = await child(f,join(f.out,'refused'),'');
+        assert.equal(JSON.parse(refused.stderr).code,'journal-exists');
+      }
       const mismatch = await child(f,backup,'','mismatch');
       assert.equal(JSON.parse(mismatch.stderr).code,'journal-step-mismatch');
       const resumed = await child(f,backup,'','resume');
@@ -91,5 +109,89 @@ for (const point of ['backup','after','manifest','complete']) {
     assert.ok(rows(log).some(row => row.event === 'lock-takeover'));
     assert.deepEqual(readFileSync(join(backup,'manifest.json')),backupManifest);
     assert.equal(existsSync(join(f.data,'migration.lock')),false);
+    const status = await child(f,backup,'','status');
+    assert.equal(status.code,0,status.stderr);
+    assert.equal(JSON.parse(status.stdout).segment,'settled');
   });
 }
+
+test('second migration cannot resume when a settled segment has lost its target', {timeout:60000}, async t => {
+  mockDsh(t);
+  const f = await offlineFixture(t, false), backup = join(f.out,'new');
+  await runMigration({installation:f.installation,backup:join(f.out,'old')});
+  const interrupted = await child(f,backup,'header');
+  assert.equal(interrupted.signal,'SIGKILL',interrupted.stderr);
+  assert.equal(rows(join(f.data,'migrations.jsonl')).at(-1).event,'migration');
+  const manifest = join(f.data,'storage-manifest.json');
+  rmSync(manifest);
+  const before = fileHashes(f.managed);
+
+  const status = await child(f,backup,'','status');
+  assert.equal(status.code,0,status.stderr);
+  const resumed = await child(f,backup,'','resume');
+  assert.equal(resumed.code,1,resumed.stderr);
+  assert.equal(JSON.parse(resumed.stderr).code,'migration-inconsistent');
+  const output = JSON.parse(status.stdout);
+  assert.equal(output.segment,'unfinished');
+  assert.equal(output.steps[0].state,'inconsistent');
+  assert.deepEqual(fileHashes(f.managed),before);
+});
+
+async function copyAndBind(f, name) {
+  const repo = join(f.out,name), data = join(repo,'.chatpet/data');
+  const config = {...f.config,dataDir:join(data,'core')};
+  const target = {...f.target,id:name,path:repo};
+  cpSync(f.repo,repo,{recursive:true});
+  const host = createCore(config);
+  try {
+    const request = () => host.operator.request(name);
+    const prefs = value(await host.services.preferences.read(request(),{}));
+    const saved = value(await host.services.preferences.save(request(),{expectedRevision:prefs.revision,workspace:target,conversation:prefs.conversation}));
+    assert.equal(value(await host.services.workspace.initialize(request(),{expectedPreferencesRevision:saved.revision})).state,'ready');
+    assert.equal(host.workspace.storageId(),f.storageId);
+  } finally { await host.close(); }
+  const registryFile = join(f.home,'storages/workspace.json'), registry = read(registryFile);
+  registry.global.workspaceIds.push(target.id);
+  registry.tables.workspaces[target.id] = {path:repo,title:target.title,sessionIds:[]};
+  writeFileSync(registryFile,JSON.stringify(registry));
+  const installation = join(f.out,name + '.json');
+  writeFileSync(installation,JSON.stringify({...read(f.installation),config}));
+  return {...f,repo,data,managed:join(repo,'.chatpet'),target,config,installation};
+}
+
+test('a relocated Repo retains settled history but cannot resume an unfinished segment at the new path', {timeout:60000}, async t => {
+  mockDsh(t);
+  const f = await offlineFixture(t, false), oldBackup = join(f.out,'old');
+  await runMigration({installation:f.installation,backup:oldBackup});
+  const moved = await copyAndBind(f,'new-workspace');
+  const log = join(moved.data,'migrations.jsonl'), original = readFileSync(log,'utf8');
+  for (const command of ['status','plan']) {
+    const result = cli(moved,[command,'--installation',moved.installation]);
+    assert.equal(result.status,0,result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout).steps,command === 'plan' ? [] : [{id:'0001-storage-manifest',state:'complete'}]);
+  }
+  rmSync(oldBackup,{recursive:true});
+  await runMigration({installation:moved.installation,resume:true});
+  assert.equal(readFileSync(log,'utf8'),original);
+
+  const backup = join(f.out,'new');
+  const interrupted = await child(moved,backup,'manifest');
+  assert.equal(interrupted.signal,'SIGKILL',interrupted.stderr);
+  assert.equal(header(log).binding.repoHash,hash(moved.repo));
+  const copied = await copyAndBind(moved,'copied-in-progress');
+  const status = await child(copied,backup,'','status');
+  assert.equal(status.code,0,status.stderr);
+  assert.equal(JSON.parse(status.stdout).segment,'unfinished');
+  const refused = await child(copied,backup,'','resume');
+  assert.equal(refused.code,1,refused.stderr);
+  assert.equal(JSON.parse(refused.stderr).code,'binding-changed');
+  const resumed = await child(moved,backup,'','resume');
+  assert.equal(resumed.code,0,resumed.stderr);
+  assert.equal(read(join(moved.data,'synthetic-step.json')).applications,1);
+  assert.ok(readFileSync(log,'utf8').startsWith(original));
+
+  const foreign = rows(log);
+  foreign[0].binding.storageId = 'foreign-storage';
+  writeFileSync(log,foreign.map(JSON.stringify).join('\n')+'\n');
+  refusedCli(moved,['status','--installation',moved.installation],'binding-changed');
+});

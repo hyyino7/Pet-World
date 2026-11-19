@@ -9,6 +9,7 @@ import { ToolsService } from '@deepseek-ai/dsh-tools';
 import { Session } from '@deepseek-ai/dsh-session';
 import { emotionFor, installEmotion } from '../../dist/src/emotion/plugin.js';
 import { createCore } from '../../dist/src/core/index.js';
+import { fixture as nativeHost } from '../behavior-list/fixture.mjs';
 
 const value = result => { assert.ok(result.ok, JSON.stringify(result.error)); return result.value; };
 const message = (id, text) => ({ id, role:'user', source:{kind:'user'}, content:[{type:'text',text}] });
@@ -106,7 +107,7 @@ test('native tools commit correction and a separate save in the same turn; later
   await assert.rejects(f.tool('other-workspace','recall',{query:'Hue'}),/bound workspace/);
 });
 
-test('a later native request can read the full prior reply and recover a lost observation acknowledgement', {timeout:25000}, async t => {
+test('a later native request can read the full prior reply', {timeout:25000}, async t => {
   const f = await fixture(t);
   const conclusion = 'Background for the supplied documents. '.repeat(24) + 'Cedar costs 3 USD less than Willow.';
   const owner = message('analysis-1','Compare Cedar and Willow documents.');
@@ -126,7 +127,7 @@ test('a later native request can read the full prior reply and recover a lost ob
   const hello = await f.memory.prepare('greeting');
   await f.memory.recall('greeting','Hello.',true,hello);
   assert.match(f.memory.context('greeting'),/Compare Cedar and Willow/);
-  let binding = await f.memory.prepare('follow-up');
+  const binding = await f.memory.prepare('follow-up');
   f.input('follow-up',1,'Carry on from there.');
   await f.memory.recall('follow-up','Carry on from there.',true,binding);
   const preview = f.memory.context('follow-up');
@@ -136,27 +137,40 @@ test('a later native request can read the full prior reply and recover a lost ob
   const detail = records.records.find(row => row.conversation?.some(part => part.text === conclusion));
   assert.ok(detail);
   assert.ok((await f.tool('follow-up','read',{memory_id:detail.memory.id})).includes(conclusion));
+});
 
-  const source = f.input('lost-ack',1,'Owner uses metric units.');
-  const call = f.port.call.bind(f.port);
-  let accepted;
-  f.port.call = async (operation,args,bank) => {
+test('native turn/end completes after a lost Memory acknowledgement and restart reuses the observation', {timeout:25000}, async t => {
+  const f = await nativeHost(t,{memory:true,life:false,economy:false});
+  const active = await f.begin('home',message('lost-ack','Owner uses metric units.'));
+  const reply = 'I will use metric units.', reason = 'Injected lost acknowledgement after provider acceptance';
+  const memory = f.service('petMemory'), port = memory.connection;
+  const call = port.call.bind(port);
+  let source, accepted;
+  t.mock.method(port,'call',async (operation,args,bank) => {
     const result = await call(operation,args,bank);
-    if (operation === 'observe' && args.source_id === source) {
+    if (operation === 'observe' && args.content === reply) {
+      source = args.source_id;
       accepted = result.observationId;
-      throw Error('Injected lost acknowledgement after provider acceptance');
+      throw Error(reason);
     }
     return result;
-  };
-  await assert.rejects(f.native.finishTurn('lost-ack',1,completed('Acknowledged.')),/lost acknowledgement/);
+  });
+  await f.end(active,'completed',reply);
+  assert.equal(active.agent.status,'idle');
+  const terminal = active.agent.session.snapshotEvents().find(event => event.type === 'turn/end' && event.data.turn === active.turn);
+  assert.equal(terminal?.data.reason.kind,'completed');
+  assert.equal(memory.lastError,reason);
   assert.ok(accepted);
-  assert.equal(f.native.runtime.store.require('memory-source-work',source).state,'queued');
+  const work = () => f.host.workspace.runtime.store.require('memory-source-work',source);
+  assert.equal(work().state,'queued');
+  assert.equal(work().observationId,null);
+
   await f.restart();
-  binding = await f.memory.prepare('after-restart');
-  const acknowledged = f.native.runtime.store.require('memory-source-work',source);
+  const restarted = f.service('petMemory'), binding = await restarted.prepare('home');
+  const acknowledged = work();
   assert.equal(acknowledged.state,'acknowledged');
   assert.equal(acknowledged.observationId,accepted);
-  assert.equal(await f.port.validate({sources:[{id:source,revision:'1'}],memories:[]},binding.storageId),'eligible');
+  assert.equal(await restarted.connection.validate({sources:[{id:source,revision:'1'}],memories:[]},binding.storageId),'eligible');
 });
 
 test('native playback evidence reaches the prompt and preference correction retires associated feedback', {timeout:25000}, async t => {

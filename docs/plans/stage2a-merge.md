@@ -450,4 +450,35 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - 建议提交 4「验收迁移的崩溃边界、并发与回退」· `tests/migrate/concurrency.test.mjs`、`tests/migrate/crash.test.mjs`、`tests/migrate/lock-gate.mjs`、`tests/migrate/migration-child.mjs`、`tests/migrate/normal.test.mjs`、`tests/migrate/rollback.test.mjs`（6 文件，386 行）。
 - 建议提交 5「更新离线迁移说明和 1B 执行记录」· `docs/development.md`、`docs/plans/stage2a-merge.md`（2 文件，28 行）。所有改动留在当前工作区，由 Claude 代提交。
 
+#### 第一轮返工
+
+- 已收尾段按 `storageId` 核对，未收尾段续做核对原路径和原备份。`status` 新增 `segment`，已收尾目标缺失时显示 `inconsistent`，续做以 `migration-inconsistent` 拒绝。合成用例覆盖搬家、第二轮中断和清单落盘后尚未写完成记录。
+- Memory 门禁通过合成宿主触发 `turn/end`，验证确认丢失时回合仍完成并记录故障，重启后按原观察 ID 补账。
+- 合成验证中迁移 136/136、Memory 门禁 4/4、构建及行为清单 52/52 通过。`verify` 的 Node 测试 1432 通过、1 失败，原因是 `tests/memory/memory-process.test.mjs:81` 遇到 `spawnSync /bin/ps EPERM`，由 Claude 在沙箱外重跑。
+
 ## 审查结论
+
+### 1B 第一轮验收（Codex 审查 + Claude 核实）
+
+**必须修**
+
+1. `scripts/migrate/journal.mjs:53-57` 对每个第 2 版日志段都要求 `binding` 完全相等，其中包括仓库路径摘要 `repoHash`。迁移日志在 `.chatpet/data/` 里，会随 Repo 一起搬走；而 `docs/portability.md:78-81` 支持把 Repo 复制到新路径、存储身份不变。这样，0.3.0 迁移过一次之后再换设备或换路径，`status`、`plan` 和下一轮 `run` 都会报 `binding-changed`，没有出路。改法：已经全部 `done/skip` 的历史段只核对 `storageId`；只有续做最后一个未收尾的段时，才要求原路径和原备份。日志头照常记录两者。这一条修订了方案 1B「绑定（`storageId` 和仓库路径的摘要）」的校验口径：记录不变，校验分成两种情况。
+2. `scripts/migrate/runner.mjs:47-51` 在续做时，只有最后一段已经收尾才去核对上一轮的目标。如果第二轮中断，而上一轮完成的目标（例如清单）后来丢了，`--resume` 会把上一轮已完成的步骤当作没做过，再跑一遍。第 5 批的步骤会删掉源数据（Core 的 `economy.initialized` 键），重跑这类步骤会出错，甚至写出错误的证据。`status` 在这种情况下也会显示 `pending`，而不是 `inconsistent`。改法：`validateJournal` 同时记下最近一个已收尾段的步骤数；续做和 `status` 都先核对这些步骤的目标，缺了就报 `migration-inconsistent`；崩溃测试补上「第二轮中断加上一轮目标缺失」这一条。
+3. `tests/memory/native-memory-flow.test.mjs:150-155` 只断言 `finishTurn` 抛错。原脚本断言的是「Memory 确认丢失或服务掉线时，原生回合照样完成」（原 `scripts/checks/check-native-memory.mjs:314,339`），这件事靠 `src/core/native/agent.ts:306-311` 的 `.catch` 隔离，现在门禁里没有别的测试覆盖（已用 `git grep` 核对 `tests/`）。按方案「门禁里没有的断言要搬过来」，补一条：用合成宿主驱动 `turn/end`，`finishTurn` 失败时回合仍然完成、Memory 标记为不可用，重启后按原观察 ID 补账。
+
+**建议修（不影响合并，返工时可以一起做）**
+
+- `scripts/migrate/runner.mjs:38-41`：如果最后一步的数据和清单都已落盘、`done` 还没写，`status` 会全部显示 `complete`，但新的 `run` 会报 `journal-exists`。真实副本检查点上，Agent 只看得到这份输出。建议在 `status` 里加一个段级状态（本轮是否已收尾），并在对应的崩溃边界测试里断言它。
+
+**核实结果**：范围在允许修改名单内（`companion-backup.mjs` 拆成了 `main()` 并导出两个函数，见下面的拍板点）；快测 `tests/migrate/*.test.mjs` 加新的 Memory 门禁共 137/137 通过；新测试和新脚本都不读本机 profile 或真实数据（`tests/migrate/offline-helpers.mjs:14` 在临时目录里建合成 profile，Memory 门禁用 `mkdtemp` 根目录，用 `git grep` 核对过家目录、`HOME` 和 profile 路径）。在合成副本上从 CLI 跑了 `status`、`plan`，源目录保持不变；`run` 被 `dsh-running` 拒绝，因为主人的 DSH 正在运行，按规则不能停，所以 `run`、`restore` 没有实机走过，只由测试里的 mockDsh 覆盖。删掉的断言里，旧 Core 账本三条（原 `:177-180`，方案已经认定过期）、模型调用计数、文件工具联跑这几条删得合理；只有上面第 3 条要补回来。
+
+**迁移与恢复共用的互斥文件**（方案外机制）：主人已拍板保留（2026-11-19），返工不用动它。理由：恢复会整个替换 `.chatpet/`，放在 `.chatpet/data/` 里的 `migration.lock` 守不住「迁移进行中做恢复」（方案 1B 锁的窗口 (c)）；用 SQLite 的 `BEGIN IMMEDIATE` 做互斥，进程被杀时会自动释放，不留陈旧锁；互斥函数放在 `scripts/companion-backup.mjs` 里，是因为它随包发布，而在 `scripts/lib/` 新建文件要改 `package.json` 的 `files`（高风险）。合并时由 Claude 补进方案的「概念与扩展检查」和 `docs/development.md`：路径是 `/tmp/her-world-offline-<uid>/<仓库路径 sha256>.sqlite`，目录权限 0700、只属于当前用户，只有本检出的 `run` 和 `restore` 会去拿；0.2.0 包里自带的 `companion-backup.mjs` 不拿这个互斥，所以回退恢复要用本检出的命令（`docs/development.md` 已经这样写）。
+
+**合并时由 Claude 同步的文档和声明**
+
+- `arch/storage.json:58` 的 `protocol` 和 `evidence` 还写着「`scripts/checks/check-native-memory.mjs` 仍按它断言」，这个脚本已经删了。
+- `docs/portability.md:220-234`：`companion-backup plan/verify` 和 `install-dsh` 的预演（不带 `--apply`，`scripts/install-dsh.mjs:88,207`）现在遇到活跃的 Core 会拒绝，以前不会，要把这个前提写进文档。
+- `docs/product.md` 已知问题 5、7 的状态，以及 `:382` 第一批的完成勾选。
+- 两个分支都改了「执行结果」，合并第二个分支时两段都要保留。
+
+**复查（返工一轮后）**：必须修 1–3 已修好，`status` 的段级状态（`segment`）也已加上。快测（迁移测试加 Memory 门禁）140/140 通过，`test:behavior-list` 52 条通过。`--resume` 遇到已收尾的段时改成不写任何日志（`tests/migrate/normal.test.mjs` 相应改断言），这是有意的行为变化，不算放宽断言。上面列的「合并时由 Claude 同步」各项照旧。

@@ -39,9 +39,10 @@ fs.renameSync = (from, to) => {
   if (mode) return;
   if (point === 'backup' && to === backup) kill();
   if (point === 'manifest' && String(to).endsWith('/storage-manifest.json') && json(to).modules.core === 2) kill();
-  if (point === 'complete' && String(to).endsWith('/migrations.jsonl')) {
+  if (['header','complete'].includes(point) && String(to).endsWith('/migrations.jsonl')) {
     const row = fs.readFileSync(to,'utf8').trimEnd().split('\n').map(JSON.parse).at(-1);
-    if (row.event === 'done' && row.step === step.id) kill();
+    if (point === 'header' && row.event === 'migration') kill();
+    if (point === 'complete' && row.event === 'done' && row.step === step.id) kill();
   }
 };
 syncBuiltinESMExports();
