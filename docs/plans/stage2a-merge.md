@@ -863,6 +863,18 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - `pnpm run check:types` 通过。另跑 `node --test dist/tests/core/dynamic-context.test.js`，通过 1 项、失败 0 项。
 - 建议一个提交。标题草稿 `2a-3c: 退休重开会话中的旧生活快照`。正文草稿「三区全卸载后，新 Agent 会从历史恢复过期的环境与互动快照。在请求投影中退休这两段并保留原生日志，补上重开会话回归与 Economy 重挂的确定断言。」
 
+### 第 3 批 · 3D
+
+- 01 登记 WebM 读取器为动画映射生成源。1 个文件，2 行（+1 / −1）。共同快测 43/43，WebM 52/52。
+- 02 用 `RegistrationTable` 接 Desktop 的暂停、恢复和呈现，复用 Plan 租约读取持久启用意图。10 个文件，358 行（+299 / −59）。共同快测 46/46，桌宠、身体和三区生命周期快测 53/53。
+- 03 Channels 登记送达出口，原样转发带 `deliveryId` 的 `push`。6 个文件，80 行（+77 / −3）。共同快测 47/47，Channels 快测 11/11。
+- 每组在临时副本执行 `pnpm run build && pnpm run check:arch` 和细则对应的 `node --test`，均通过。03 快测首跑因副本缺 `.venv` 有 1 项失败，补齐后原命令通过。
+- 红测确认 WebM 归属未登记、探测抛错中断 `reach_out`、同名 Channels 服务未登记也被误认送达。保留 1A 入口和契约断言，验证使用合成数据。
+- 每组用 `pnpm run check:arch -- --write-baseline` 收紧。`--report` 核对 `living` 5 → 4 → 1 → 0，最终 R1–R4 全零，R8 1053 条且无新增。
+- `pnpm run check:types` 通过。`pnpm run test:life-integration` 通过 171/171、940/940。`pnpm run build && pnpm run test:behavior-list` 通过索引 11/11、行为 93/93。
+- 桌宠探测或呈现抛错时保留原告警并继续尝试 Channels，原先探测抛错会中断送达。其余按细则执行。文件数和行数均排除 `dist/src/**` 和基线。
+- 三补丁在 `/tmp/her-world-3d-patches/`，按序应用到 `aed7f27` 后与工作区版本文件逐字节一致。门禁由 Claude 在沙箱外运行。
+
 ## 审查结论
 
 ### 1A 第一轮验收（Codex 审查 + Claude 核实）

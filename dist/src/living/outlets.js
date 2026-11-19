@@ -1,6 +1,6 @@
 import { RegistrationTable } from '../core/tables/registry.js';
 import { LivingWorld, serviceLabel } from './index.js';
-const services = { desktop: 'petDesktop' };
+const services = { desktop: 'petDesktop', channels: 'petChannels' };
 const outlets = new WeakMap();
 export function registerLifeOutlet(ctx, host, slot, callbacks) {
     let hosts = outlets.get(ctx.root);
@@ -8,7 +8,7 @@ export function registerLifeOutlet(ctx, host, slot, callbacks) {
         outlets.set(ctx.root, hosts = new WeakMap());
     let slots = hosts.get(host);
     if (!slots)
-        hosts.set(host, slots = { desktop: new Map() });
+        hosts.set(host, slots = { desktop: new Map(), channels: new Map() });
     const tables = slots[slot];
     const label = serviceLabel(ctx, services[slot]);
     let table = tables.get(label);

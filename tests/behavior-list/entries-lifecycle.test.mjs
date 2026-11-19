@@ -447,6 +447,51 @@ if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1]))
     const warnings = f.ctx.logger.buffer.filter(row=>row.type==='warn' && row.args[0]==='Life presentation delivery failed');
     assert.deepEqual(warnings.map(row=>row.args[1]),[fault]);
   });
+
+  test('3D 主动消息先呈现再走渠道且无送达时报错',async t=>{
+    const {f,transport,reach} = await lifeReachFixture(t);
+    const channels = f.ctx.petChannels, desktop = f.ctx.petDesktop, frames = [];
+    let available = true;
+    const stop = desktop.onPresentation((type,value)=>{
+      if (type==='say' && value.life) frames.push({text:value.text,sticker:value.sticker,alreadySent:transport.sent.length});
+    },()=>available);
+    t.after(stop);
+    const lost = 'Fixture surface disappears during presentation';
+    const both = 'Fixture presentation and QQ delivery';
+    const present = desktop.presentLife.bind(desktop);
+    const disappearing = t.mock.method(desktop,'presentLife',(text,sticker)=>{
+      available = false;
+      present(text,sticker);
+    });
+    assert.match(await reach(lost),/已送到/);
+    disappearing.mock.restore();
+    available = true;
+    assert.deepEqual(frames,[]);
+    assert.deepEqual(transport.sent,[{id:'200',text:lost}]);
+    assert.ok(f.ctx.logger.buffer.some(row=>row.type==='warn' && row.args[0]==='Life presentation delivery failed' &&
+      row.args[1].message==='当前桌宠不可用，主动消息未发送'));
+    assert.match(await reach(both),/已送到/);
+    assert.deepEqual(frames,[{text:both,sticker:'praise',alreadySent:1}]);
+    const sent = [{id:'200',text:lost},{id:'200',text:both}];
+    assert.deepEqual(transport.sent,sent);
+
+    available = false;
+    const {messaging} = await channels.request(f.id,'channelStatus',{});
+    await channels.request(f.id,'messagingSettings',{expected:messaging.config,
+      next:{qq:{mutedUntil:new Date(Date.now()+hour).toISOString()}}});
+    const undelivered = /当前没有送达主动消息的渠道/;
+    await assert.rejects(reach('Fixture unavailable Desktop and muted QQ'),undelivered);
+    await f.unload('desktop');
+    await f.unload('channels');
+    await assert.rejects(reach('Fixture with both outlets absent'),undelivered);
+    assert.deepEqual(transport.sent,sent);
+
+    const legacy = await f.ctx.plugin(scope=>{
+      scope.provide('petChannels',{reach:async()=>[{status:'fulfilled',value:'unregistered'}]});
+    });
+    try { await assert.rejects(reach('Fixture without a registered channel outlet'),undelivered); }
+    finally { await legacy.dispose(); }
+  });
   test('卸载 Life 取消原生轮次并以原编号恢复在途身体计划',async t=>{
     const f = await cordisFixture(t);
     let entered;

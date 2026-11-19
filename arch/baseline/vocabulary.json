@@ -2061,13 +2061,13 @@
       "other": {
         "file": "src/channels/plugin.ts",
         "scope": "CompanionChannels/qqConnection",
-        "line": 71
+        "line": 72
       }
     },
     {
       "rule": "R8",
       "file": "src/channels/plugin.ts",
-      "line": 71,
+      "line": 72,
       "column": 19,
       "scope": "CompanionChannels/qqConnection",
       "target": "{\"file\":\"src/channels/messaging.ts\",\"scope\":\"createMessaging/qqConnection\"}",
@@ -2088,7 +2088,7 @@
     {
       "rule": "R8",
       "file": "src/channels/plugin.ts",
-      "line": 97,
+      "line": 98,
       "column": 11,
       "scope": "CompanionChannels/request/this . serial:callback0",
       "target": "{\"file\":\"src/console/plugin.ts\",\"scope\":\"apply\"}",
@@ -2182,13 +2182,13 @@
       "other": {
         "file": "src/channels/plugin.ts",
         "scope": "CompanionChannels/request/this . serial:callback0",
-        "line": 97
+        "line": 98
       }
     },
     {
       "rule": "R8",
       "file": "src/channels/plugin.ts",
-      "line": 118,
+      "line": 119,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/desktop/plugin.ts\",\"scope\":\"<module>\"}",
@@ -2229,7 +2229,7 @@
       "other": {
         "file": "src/channels/plugin.ts",
         "scope": "<module>",
-        "line": 118
+        "line": 119
       }
     },
     {

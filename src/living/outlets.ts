@@ -1,4 +1,5 @@
 import {FiberState, type Context, type Fiber} from '@deepseek-ai/cordis';
+import type {Push} from '#dsh-world/ecosystem/shared/outlets';
 import type {PetCoreHost} from '../core/index.js';
 import {RegistrationTable} from '../core/tables/registry.js';
 import {LivingWorld, serviceLabel} from './index.js';
@@ -9,19 +10,22 @@ interface LifeOutlets {
     restore(): void;
     present(text: string, sticker?: string): boolean;
   };
+  channels: {
+    reach(workspaceId: string, push: Push): Promise<PromiseSettledResult<string>[]>;
+  };
 }
 
 type Slot = keyof LifeOutlets;
 type OutletTables<T> = Map<symbol, RegistrationTable<{callbacks: T; fiber: Fiber}>>;
 type Slots = {[K in Slot]: OutletTables<LifeOutlets[K]>};
-const services = {desktop: 'petDesktop'};
+const services = {desktop: 'petDesktop', channels: 'petChannels'};
 const outlets = new WeakMap<Context, WeakMap<PetCoreHost, Slots>>();
 
 export function registerLifeOutlet<K extends Slot>(ctx: Context, host: PetCoreHost, slot: K, callbacks: LifeOutlets[K]) {
   let hosts = outlets.get(ctx.root);
   if (!hosts) outlets.set(ctx.root, hosts = new WeakMap());
   let slots = hosts.get(host);
-  if (!slots) hosts.set(host, slots = {desktop: new Map()});
+  if (!slots) hosts.set(host, slots = {desktop: new Map(), channels: new Map()});
   const tables: OutletTables<LifeOutlets[K]> = slots[slot];
   const label = serviceLabel(ctx, services[slot]);
   let table = tables.get(label);

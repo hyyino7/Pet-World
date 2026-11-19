@@ -330,18 +330,6 @@
       "reason": "本地依赖未声明模块归属"
     },
     {
-      "rule": "R2",
-      "file": "src/living/plan/plugin.ts",
-      "line": 323,
-      "column": 31,
-      "scope": "CompanionLife/startRuntime/send",
-      "target": "petChannels",
-      "expression": "this . ctx . get ( \"petChannels\" )",
-      "from": "living",
-      "to": "channels",
-      "reason": "服务读取未获准或方向违规"
-    },
-    {
       "rule": "R1",
       "file": "src/memory/client.ts",
       "line": 55,

@@ -6,6 +6,7 @@ import type {Push} from '#dsh-world/ecosystem/shared/outlets';
 import {CONTRACT_VERSION} from '../contracts/version.js';
 import {digest} from '../core/storage.js';
 import type {PetCoreHost} from '../core/index.js';
+import {registerLifeOutlet} from '../living/outlets.js';
 import {bridgePrefix, LocalBridge, privateDeviceDirectory} from './bridge.js';
 import {createMessaging} from './messaging.js';
 import {isCompanionHome, resolveCompanionHome} from '../core/companion-foundation.js';
@@ -122,6 +123,9 @@ export function apply(ctx: Context, config: {deviceDirectory?:string} = {}) {
   const host = ctx.petCore;
   const channels = new CompanionChannels(ctx, host, services, config.deviceDirectory ?? profile?.dir ?? '');
   ctx.provide('petChannels', channels);
+  ctx.effect(() => registerLifeOutlet(ctx, host, 'channels', {
+    reach: (workspaceId, push) => channels.reach(workspaceId, push),
+  }).revoke);
   ctx.effect(() => services.webServer.register(bridgeRoute(bridgePrefix, () => channels.local)));
   ctx.effect(() => services.webServer.register(compactRoute(bridgePrefix, () => channels.local, () => channels.compact())));
   const refresh = () => { void channels.refresh().catch(error => ctx.logger.warn('Channel refresh failed', error)); };

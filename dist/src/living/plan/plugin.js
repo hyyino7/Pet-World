@@ -366,7 +366,7 @@ export class CompanionLife {
                             catch (error) {
                                 this.ctx.logger.warn('Life presentation delivery failed', error);
                             }
-                            const results = await this.ctx.get('petChannels')?.reach(bound.id, push) ?? [];
+                            const results = await lookupLifeOutlet(this.ctx, host, 'channels')?.reach(bound.id, push) ?? [];
                             if (!delivered && !results.some(result => result.status === 'fulfilled'))
                                 throw Error('当前没有送达主动消息的渠道');
                         } }] },

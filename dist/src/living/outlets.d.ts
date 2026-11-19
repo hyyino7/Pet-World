@@ -1,10 +1,14 @@
 import { type Context } from '@deepseek-ai/cordis';
+import type { Push } from '#dsh-world/ecosystem/shared/outlets';
 import type { PetCoreHost } from '../core/index.js';
 interface LifeOutlets {
     desktop: {
         pause(): void;
         restore(): void;
         present(text: string, sticker?: string): boolean;
+    };
+    channels: {
+        reach(workspaceId: string, push: Push): Promise<PromiseSettledResult<string>[]>;
     };
 }
 type Slot = keyof LifeOutlets;

@@ -1192,6 +1192,15 @@
       "families": []
     },
     {
+      "id": "2A3D-04",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "3D 主动消息先呈现再走渠道且无送达时报错",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
       "id": "2A2-01",
       "categories": [],
       "level": "L1",
