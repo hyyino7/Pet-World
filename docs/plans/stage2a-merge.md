@@ -292,6 +292,93 @@
 
 **验收**：第一层基线剩 5 条（`core/companion-settings.ts` 1、`core/initialization.ts` 2、`memory/client.ts` 2）；1A 的契约测试和入口测试全绿。
 
+#### 3C 开工细则
+
+（Codex 只读起草、Claude 核对行号后定稿，主人 2026-11-19 过目同意；行号以 3B 的 `d71d4ef` 为准，3B 返工后 Plan 区行号可能小幅移动，执行时以当时文件为准。）
+
+以 3B 完成后的 `d71d4ef` 为准，复用 `LivingWorld` 的三区租约。本次只读运行了架构报告和内存改键校验。以下按拍板点 8、9、11、13 落实场景 1、3，快测留到实现后执行。`src/living/index.ts:19-85`、`docs/plans/stage2a-merge.md:444-445,476-484`
+
+**第一层现存违规**
+
+`pnpm run check:arch -- --report` 核实第一层 23 条，按违规目标计数。同一行读取两个服务时各计一条。`scripts/arch/check.mjs:7-15`、`package.json:125`
+
+| 组别 | 当前违规 |
+| --- | --- |
+| 环境与事实 12 条 | R2 `src/core/companion-foundation.ts:141` → `petBehavior` |
+| 环境与事实 | R2 `src/core/companion-foundation.ts:179` → `petBehavior`、`petEconomy` |
+| 环境与事实 | R2 `src/core/companion-foundation.ts:202` → `petBehavior`、`petLife` |
+| 环境与事实 | R2 `src/core/companion-foundation.ts:207` → `petBehavior`、`petLife` |
+| 环境与事实 | R2 `src/core/companion-foundation.ts:228` → `petEconomy` |
+| 环境与事实 | R2 `src/core/companion-foundation.ts:233` → `petBehavior`、`petLife` |
+| 环境与事实 | R2 `src/core/companion-foundation.ts:247` → `petBehavior`、`petLife` |
+| 相册 3 条 | R1 `src/core/plugin.ts:6` → `album-tools` |
+| 相册 | R2 `src/core/plugin.ts:42` → `petRoom` |
+| 相册 | R2 `src/core/plugin.ts:43` → `petLife` |
+| 回顾对话 1 条 | R1 `src/core/native/memory.ts:7` → `review-dialogue` |
+| 回顾整理 2 条 | R3 `src/memory/batch.ts:14` → `pet/life.review` |
+| 回顾整理 | R2 `src/memory/batch.ts:93` → `petLife` |
+| 保留 5 条 | R1 `src/core/companion-settings.ts:2` → `desktop/appearance`；R1 `src/core/initialization.ts:5` → `living/plan/library`、`src/core/initialization.ts:12` → 动态加载平台 runtime；R1 `src/memory/client.ts:55` → 动态加载 `memory-process`、`src/memory/client.ts:56` → 动态加载 `memory-client` |
+
+**五个登记口**
+
+新建 `src/core/tables/companion-ports.ts`，由 `CoreNative` 持有，在 Core 原入口绑定消费作用域。五个类型化槽复用 `RegistrationTable` 的 `get`、`lease`、`revoke`。生产方按原 Cordis 根、Core 实例和相应隔离标签判断对 Core 的可见性，读取时核对租约。来源适配、工具声明、能力状态继续各用原表。`src/core/native/conversation.ts:84-97`、`src/core/plugin.ts:33-48`、`src/core/tables/registry.ts:20-42,66-78`、`src/core/tables/sources.ts:45-74`、`src/core/tables/tools.ts:30-56`、`src/core/tables/capabilities.ts:31-47`、`src/living/index.ts:19-27,71-85`
+
+| 登记形状 | 登记和撤销位置 | 缺省 |
+| --- | --- | --- |
+| `bodyAvailable(): boolean` | Body 在 `src/living/body/plugin.ts:392-397` 的 `provide` 后登记，随区租约在 `src/living/index.ts:139-149` 撤销。判定区是否可见、生效，替换 `src/core/companion-foundation.ts:141` 的 `behavior` 条件。 | `false`，模板省去身体内容，无需新增能力行。 |
+| `lifeOwnsAlbum(sessionId: string): boolean` | Plan 在 `src/living/plan/plugin.ts:614-620` 登记 `life.isHome(id)`，随 `src/living/index.ts:139-149` 撤销。运行和归属沿用 `src/living/plan/plugin.ts:118-141`。 | `false`，Core 相册走其余门控。 |
+| `watchingTelevision(sessionId: string): boolean` | Room 在 `src/room/plugin.ts:174-177` 与来源登记一起挂载，复用 `Room.watching`，关闭时取消并等在途轮次后撤租约。`src/room/plugin.ts:100,154`、`src/room/chat.ts:87,173-195` | `false`，等同 Room 服务缺席。 |
+| `isRunningLifeHome(sessionId: string): boolean` | Plan 同一入口另登记同一个 `life.isHome(id)` 判定，随 Plan 撤销。`src/living/plan/plugin.ts:124-141,614-620`、`src/living/index.ts:139-149` | `false`，回顾标记暂不能触发提前整理，普通批量整理照常判断。 |
+| `activityDays(binding): readonly string[]`、`activity(binding, day): readonly ActivityRecord[]` | `LivingWorld` 从 `src/living/index.ts:134-149` 的共同挂载口，在首个可见区成功启动时登记 `src/living/plan/activity-reader.ts` 的只读实现，最后一个可见区撤销时收回。`binding` 含 `workspaceId/path/storageId`。`src/living/index.ts:50-85,139-154` | 两个活动结果均为 `[]`，日期和正文仍由记录库提供日记部分。`src/core/records.ts:31-42,102-115`、`docs/plans/stage2a-merge.md:476` |
+
+记录库在 `dates`、`journal` 和搜索所用的日期查询中按当前绑定取活动读口，保留日期合并、去重、倒序和日记读取后的绑定复核。只读实现参照上游的日期筛选和 JSONL 解析，缺文件返回空，保留非法路径拒绝，读取用 `O_RDONLY/O_NOFOLLOW` 和描述符复核。查询全程不建目录、不实例化 `createLifeStore`。`src/core/records.ts:13-17,31-42,56-63,102-126`、`src/core/record-paths.ts:7-18`、`vendor/dsh-world/lib/life/lifeStore.js:25-58,116-136,213-219`
+
+**环境与事实迁入 `src/living/prompt-context.ts`**
+
+- `src/core/companion-foundation.ts:71-76,145-155` → Core 提供原登记 `ctx` 和原主人作用域检查。继续排除 guest、非就绪、非成员和已归档会话，绑定键仍为 `workspaceId/path/storageId`。`src/living/index.ts:50-85,134-154` 从同一实例的区槽按 Core 标签取视图，首个可见区挂两段，最后一个撤两段，避免随首先挂载的单区退出。
+- `src/core/companion-foundation.ts:200-228` → `chatpet.environment` 仍用 `14`。准备先取三区租约，Body 仍先 `snapshot` 再 `promptLine`，Plan 仍用 `currentPlanSummary`，暂停的 Plan 也可给出持久计划。缺 Body 时只要还有可见区，沿用原能力提示。`src/living/plan/plugin.ts:429-444`
+- `src/core/companion-foundation.ts:228-248` → Body、Economy 各最多准备 16 条事实，单区读取失败保留另一区结果。准备后及两个段读取时复核作用域、三区代次和同一份 `Agent` 缓存，缺席也参与代次比较。准备合格后继续调用 `host.native.observeFacts`。`chatpet.interactions` 仍用 `15`、`INTERACTION_CONTEXT` 和原 `presentFacts` 投影。`src/core/interaction-presentation.ts:4-16`、`src/core/native/conversation.ts:191-217`、`src/living/index.ts:78-85`
+- `src/core/companion-foundation.ts:156-165,200-207,245-248` → 两段继续在原 Core 的原生作用域调用 `registerWorldContext`。环境 `prepare` 在 `system-prompt/assemble` 的前置 middleware 等待完成，再同步读取两段。事实轮次的 `agent/pre-step` hook 保持在原生准入前绑定同一份准备结果，输入准入和 schema 前的工具限制沿用 Core。`src/core/native/prompt.ts:97-117,125-159,179-184`、`src/core/native/agent.ts:104-115,211-241,280-292`
+- `src/core/companion-foundation.ts:167-180` → Core 保留 home 的 `turnEnded`，Living 处理同一已完成轮次的事实确认。Core 在 `agent/request` 内退休旧快照和召回，Living 继续调用 `acknowledgePromptFacts`，只按原生有效 surface 的段名和原样事实投影匹配，`flush === true` 后逐源确认。`src/core/native/agent.ts:173-185`、`src/core/native/prompt.ts:25-55`、`src/core/interaction-context.ts:12-22`、`src/core/interaction-presentation.ts:21-33`
+- `src/core/companion-foundation.ts:177-180,264-266` → 确认前、落盘后和每源写入前，复核同一实例、绑定、Body／Plan／Economy 租约代次及待确认缓存身份。Body 入队复用 `withLivingCaller`，让队列执行前也复核。代次失效时保留原事实供下一轮重读。卸载和 Agent 销毁清理准备缓存和 hook，旧动态段由已有退休逻辑处理。`src/living/index.ts:78-85,157-167`、`src/living/body/plugin.ts:108-120,311-315`、`src/core/native/prompt.ts:150-174`
+
+**相册门控**
+
+- Core 继续挂载 `pet_*` 相册工具，保留当前绑定、非 guest、就绪检查，以 `lifeOwnsAlbum` 和 `watchingTelevision` 替换两次服务读取。`when`、`execute` 和 `inside` 走同一判定，保留 `manages`、取消和相册身份复核。`sources:['owner']` 继续用于工具声明。`src/core/plugin.ts:38-45`、`src/living/plan/album-tools.ts:14-29`
+- 电视从加入 `admission` 到请求收尾持续隐藏 Core 相册 schema，主人接管时仍隐藏，原 `guardDuringTakeover` 继续挡执行。运行中的 Life home 继续用上游无前缀相册，主人接管解除 Life 的轮次限制后仍由 Life 提供。暂停、卸载或三入口全卸载后，合格主人会话恢复 Core 相册。`src/room/chat.ts:87,94-98,118-122,173-195`、`src/core/native/agent.ts:198-209,225-231,243-253`、`src/living/plan/plugin.ts:124-141`、`vendor/dsh-world/lib/life/runtime.js:985-1012`
+- `src/core/records.ts:20-30` 提供同一记录库实例的稳定受限句柄，运行时仅暴露 `keep(image, description, tags)`、`list(limit, offset)`、`forget(id)`。Core 和 Life 都用它，继续复用上游的图片读取、取消和读取后 `inside` 复核。Life 在 `src/living/plan/plugin.ts:212` 对 `LifeDeps.photos` 做局部类型适配，其唯一运行时用途是传给 `photoTools`。`vendor/dsh-world/lib/life/photoTools.js:29-49`、`vendor/dsh-world/lib/life/runtime.d.ts:25-33`、`vendor/dsh-world/lib/life/runtime.js:1011`
+
+**回顾整理**
+
+- `CoreNative.requestReviewCompaction(sessionId: string): void` 由 `installMemoryBatch` 接入每个 Core 实例的同步处理函数，停止时撤自己的处理函数。仍只在 `memoryFor(id)` 可用时向 `reviews` 加标记并去重。每秒 tick 才按当前绑定、有待处理轮次、无在途任务、仍是运行中的 Life home、Agent 空闲、`retryAt` 和最短间隔择机运行。标记只替代轮数／闲置触发门槛，未运行、失败或取消时保留，成功消费后清除。`src/core/native/conversation.ts:84-96,125-130`、`src/memory/batch.ts:10-28,89-127`
+- Life 保留回顾完成后读取 home、`compactAfterReview` 和 `running()` 三个条件，改调 `host.native.requestReviewCompaction(id)`。Channels 的 `compact()` 保留从旧门面取运行中 home、Bridge 和 Memory 可用、有待处理轮次三个检查，最后改同一调用。`src/living/plan/plugin.ts:218-221`、`vendor/dsh-world/lib/life/runtime.js:655-671`、`src/channels/plugin.ts:77-83`
+- `/bridge/compact` 对合法请求仍在可排队时返回 `202`，忙碌仅延后执行。Life／Memory 不可用或无待处理轮次时保留两条原拒绝文案和 `409`。Bridge 缺席的 `503` 及原鉴权照旧。删除 `pet/life.review` 的事件类型及收发声明，其他事件保留原通知方式。`src/channels/plugin.ts:77-83,125-129`、`vendor/dsh-world/lib/ecosystem/bridge/route.js:5-19,46-51`、`src/living/plan/plugin.ts:610-612`、`arch/layers.json:21,60-61,109-110`
+
+**提交顺序与改动范围**
+
+1. **只搬回顾对话**。`src/living/plan/review-dialogue.ts` → `src/core/review-dialogue.ts`，更新 `src/core/native/memory.ts:7` 和 `tests/infrastructure/review-dialogue.test.ts:7` 的 import。清该处 1 条 R1，改 6 个 R8 键。第一层 **23 → 22**。`src/living/plan/review-dialogue.ts:1-7`
+2. **只搬相册工具**。`src/living/plan/album-tools.ts` → `src/core/album-tools.ts`，更新 `src/core/plugin.ts:6`、`src/living/plan/tool-policy.ts:9` 的 import 和 `arch/storage.json:44` 的证据路径。清相册 1 条 R1，两个门控留到第 4 提交。**22 → 21**。
+3. **第二层接管环境、事实和活动读取**。清上表 `companion-foundation.ts` 的 12 条 R2，活动读取一并交付，当前报告无额外 R1–R4 条目。`arch/layers.json:61` 增迁入的 `agent/pre-step`、`agent/disposed`、`session/event` 订阅。**21 → 9**。`src/core/companion-foundation.ts:141,160-180,200-248`、`src/core/records.ts:31-42`
+4. **会话门控与回顾整理直调**。清 `src/core/plugin.ts:42-43` 的两条相册 R2、`src/memory/batch.ts:14,93` 的 R3／R2。**9 → 5**，全仓规则 **60 → 42**。`arch/layers.json:21,60,109`
+
+两个纯搬家提交各在临时源码副本先仅移除对应的旧 import，跑 `pnpm run check:arch -- --write-baseline` 收紧一条 R1，再完成移动及引用重连，跑 `pnpm run check:arch -- --write-baseline --move <对照文件>`。用现有工具生成两份基线，临时状态不提交。内存校验已证实直接跑 `--move` 会因少一条 R1 被拒，两步做法可逐条对上。第 3、4 提交用 `--write-baseline` 收紧，验收 R1–R4 和 R8 均零新增。构建产物与生成基线按项目规则随提交。`scripts/arch/check.mjs:29-47`、`scripts/arch/lib/ratchet.mjs:22-38`、`AGENTS.md:63-64`
+
+- **源码清单**　`src/core/companion-foundation.ts`、`src/core/plugin.ts`、`src/core/native/conversation.ts`、`src/core/native/memory.ts`、`src/core/records.ts`、`src/core/tables/companion-ports.ts`、`src/core/album-tools.ts`、`src/core/review-dialogue.ts`、`src/living/index.ts`、`src/living/prompt-context.ts`、`src/living/plan/activity-reader.ts`、`src/living/body/plugin.ts`、`src/living/plan/plugin.ts`、`src/living/plan/tool-policy.ts`、上述两个搬出路径、`src/memory/batch.ts`、`src/room/plugin.ts`、`src/channels/plugin.ts`（仅 `compact()`）。`docs/plans/stage2a-merge.md:280-291`
+- **声明、文档和测试清单**　`arch/layers.json`、`arch/storage.json`（仅相册证据路径）、`arch/baseline/rules.json`、`arch/baseline/vocabulary.json`、`docs/architecture.md`（第 4 节、5.8、5.9.1）、本方案、`tests/infrastructure/review-dialogue.test.ts`、`tests/life/life-core-integration.test.ts`、`tests/living/living-lifecycle.test.mjs`、`tests/behavior-list/entries-lifecycle.test.mjs`、`tests/behavior-list/index.json`、`tests/behavior-list/policy-life.test.mjs`、`tests/behavior-list/policy-room.test.mjs`、`tests/behavior-list/channels.test.mjs`、`tests/behavior-list/fixture.mjs`（仅路由捕获）。`docs/plans/stage2a-merge.md:289,403-406`
+- **范围止于 3C**　`src/core/storage.ts`、`src/core/workspace.ts`、vendor、发布和数据格式均排除。共享 home 身份与 `life.json` 镜像继续走现有路径，身份迁移留第 4 批。事件改直调只处理 `pet/life.review`。`src/core/companion-foundation.ts:49-69,89-109`、`docs/plans/stage2a-merge.md:289-291,330,479,484`
+
+**测试与快测**
+
+- 保留 1A 契约和入口断言。`2A1A-17` 按已拍板的全卸载行为更新两段缺席、活动日期及正文断言和索引名称，保留普通回复、相册、日记原文。旧 Life 集成夹具改为驱动三区租约，保留失效和落盘断言。`tests/core/context-contracts.test.ts:24-190`、`tests/behavior-list/entries-lifecycle.test.mjs:751-779`、`tests/behavior-list/index.json:1136-1142`、`tests/life/life-core-integration.test.ts:49-76,106-133`
+- 扩展 `2A1A-17`，经记录库实际入口覆盖 Life 卸载但 Body 仍在、只挂 Economy、三个全卸载、重挂。前两种和重挂都能读活动日期、同日活动和日记，全卸载只剩日记，并验证查询缺失活动目录时不创建目录。补 R6 用例，卡住事实准备或原生日志 flush，换绑或卸载重挂后放行，确认旧代不得确认，新轮次可重读并确认。`src/core/records.ts:102-126`、`tests/living/living-lifecycle.test.mjs:61-132`
+- `policy-life` 的三处事件注入 `tests/behavior-list/policy-life.test.mjs:125,155,175` 改走 `f.host.native.requestReviewCompaction(id)`，原断言保留。新增运行中 home 接管、暂停、卸载恢复相册的 schema 和执行测试，补电视接管时隐藏及拒绝旧工具、电视结束后恢复。用真实 Channels 路由处理器测试两类 `409` 和忙时 `202` 后空闲整理。`tests/behavior-list/policy-life.test.mjs:70-84,105-178`、`tests/behavior-list/policy-room.test.mjs:59-90`、`tests/behavior-list/fixture.mjs:174-181`、`src/channels/plugin.ts:77-83,125-126`
+- 每个提交先跑 `pnpm run build && pnpm run check:arch`。提交 1 跑 `node --test dist/tests/infrastructure/review-dialogue.test.js`，提交 2 跑 `node --test tests/life/tool-declarations.test.mjs dist/tests/life/voice-and-life-library.test.js tests/behavior-list/entries-lifecycle.test.mjs`。`AGENTS.md:49-52`、`package.json:92,125`、`tsconfig.build.json:3-5`
+- 提交 3 跑 `node --test dist/tests/core/{context-contracts,interaction-context,companion-foundation}.test.js dist/tests/life/life-core-integration.test.js tests/behavior-list/{entries-lifecycle,families}.test.mjs tests/living/living-lifecycle.test.mjs`。提交 4 加跑 `node --test dist/tests/memory/memory-batch.test.js tests/behavior-list/{policy-life,policy-room,channels}.test.mjs tests/life/tool-declarations.test.mjs`。批末跑 `pnpm run test:life-integration` 并用 `pnpm run check:arch -- --report` 复核只剩指定五条。Memory 用例在允许本机回环的环境运行。`docs/plans/stage2a-merge.md:499`、`package.json:114,125`、`AGENTS.md:49-52`
+
+**需主人拍板**
+
+- 确认上面的四提交拆法，推荐让两次纯搬家各自通过改键检查，再将剩余相册门控与共享 Plan 判定的回顾整理放在同一提交。确认补列第一层登记表、`CoreNative` 接线和相册证据路径，推荐只补这三处，以保住原作用域并让存储证据继续可追溯。其余行为按已拍板项执行。`docs/plans/stage2a-merge.md:278,289,476-484`、`scripts/arch/lib/ratchet.mjs:30-35`、`arch/storage.json:44` 决定：按推荐（主人 2026-11-19 过目同意）。
+
 ### 3D 清 Life 读第三层的 4 条
 
 Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/plan/plugin.ts:131,180,285-305`）。改成第二层的登记口：`src/living/` 提供「生活出口」登记，Desktop 和 Channels 在各自入口登记、卸载时撤销。
