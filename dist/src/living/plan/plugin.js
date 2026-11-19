@@ -1,4 +1,3 @@
-import { mountLivingArea } from '../index.js';
 import { reviewDiaryStatus } from './review-completion.js';
 import { existsSync, lstatSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -18,6 +17,7 @@ import { readFactReferences } from './facts.js';
 import { createLifeSourceAdapter } from './tool-policy.js';
 import { recordGardenPause } from '../economy/garden-clock.js';
 import { lifeDirectories, readLifeControl, readLifeSettings, safeLifeFile } from './control-file.js';
+import { InFlight, LivingView, mountLivingArea, settleCleanup, withLivingCaller } from '../index.js';
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
 /** The upstream fact layer is the only state writer. World owns scheduling,
  * journal and native home recovery; Core owns every model step and Memory. */
@@ -32,26 +32,35 @@ export class CompanionLife {
     pauses;
     preferences = { ...defaultLifePreferences };
     closed = false;
+    closing;
+    living;
+    inFlight = new InFlight();
     fault;
     serial = Promise.resolve();
     timer;
     subscriptions = [];
     sourceRegistration;
     timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    constructor(ctx, host, preset) {
+    constructor(ctx, host, preset, ports = {}) {
         this.ctx = ctx;
         this.host = host;
         this.preset = preset;
+        this.living = ports instanceof LivingView ? ports : new LivingView(ports);
+        if (!(ports instanceof LivingView))
+            this.activate();
+    }
+    activate() {
+        const { ctx, host } = this;
         for (const dispose of registerPlanTools(ctx, host, this))
             ctx.effect(() => dispose);
         installLifeReview(ctx, host, () => {
             const workspace = this.current();
-            if (!this.closed && workspace && this.binding?.id === workspace.id && this.binding.path === workspace.path)
+            if (this.isOpen() && workspace && this.binding?.id === workspace.id && this.binding.path === workspace.path)
                 return {
                     id: workspace.id, directory: companionRecordPaths(workspace.path).directory, sessionIds: workspace.sessionIds,
                     isHome: (id) => this.isHome(id), timeZone: this.timeZone, running: this.running(),
                 };
-        });
+        }, this.inFlight);
         registerWorldPrompt(ctx, 'chatpet.life', 34, agent => {
             if (!this.running() || ctx.petWorld.sessionStatus(agent.session)?.state !== 'ready')
                 return '';
@@ -59,8 +68,11 @@ export class CompanionLife {
                 '这是你当前的自主规划投递会话，不是生活状态的存储位置。收到生活唤醒时先用 life_plan_read 读取持久计划及版本，然后实际保存本次考虑结果：需要改变意图用 life_plan_update；决定继续原活动或保持等待用 life_plan_keep，不重建活动；需要暂停或取消用 life_activity_control。没有计划时也由你决定，不必等主人逐项安排；想安静等待可保存有原因的空步骤计划并将 nextConsiderAt 设为 null。口头描述、读取状态或只设闹钟都不能代替保存生活意图。经济活动先用 pet_economy_state 查看真实目录、余额与库存；收菜、出售、补种和库存餐食都由你明确选择并写入计划，成熟不会自动处理。阅读步骤先取得该步原 operationId，再用 life_read_segment 接收实际文字，读到内容后用 life_read_confirm 确认原片段，动画或购买不能冒充阅读或读懂。根据兴趣和真实状态安排有原因的完整活动，不用密集动作清单替代生活。由程序持续执行已接受活动，模型回复结束或动画结束不代表活动结束。不必为了每个小动作再唤醒。允许长时间继续、休息或没有下一安排。hold、躺在床上和下次考虑时间都不会让身体入睡；决定睡觉时用 life_plan_update 明确安排 kind=body、action=sleep，再按需要接 hold 等待。入睡要以身体回执及 asleep 状态为准；失败时查看真实原因并修订或恢复原计划，不能用“睡了”的文字代替。有限活动全部完成后若未选下次考虑时间，会给你一次接续机会；你仍可明确选择等待，不会被反复催促。plan_next 设置同一计划下次考虑时间，check_alarm 查看。需要主动联系时用 reach_out，不必每轮发言；生活事件不是用户发言。普通主人聊天无需每轮重写计划。保持现有人设、自述和记忆。' : '';
         });
         const changed = () => this.scheduleTick();
-        this.subscriptions.push(ctx.on('pet/core.changed', changed), ctx.on('pet/behavior.changed', event => { if (event.reason !== 'observation')
-            changed(); }), ctx.on('pet/economy.fact', changed), ctx.on('pet/life.changed', changed));
+        this.subscriptions.push(ctx.on('pet/core.changed', changed));
+        this.subscriptions.push(ctx.on('pet/behavior.changed', event => { if (event.reason !== 'observation')
+            changed(); }));
+        this.subscriptions.push(ctx.on('pet/economy.fact', changed));
+        this.subscriptions.push(ctx.on('pet/life.changed', changed));
         this.scheduleTick();
     }
     registerSource() {
@@ -69,7 +81,7 @@ export class CompanionLife {
     }
     /** Domain changes and native alarms wake Life; an idle world needs no pump. */
     scheduleTick() {
-        if (this.closed || this.timer)
+        if (!this.isOpen() || this.timer)
             return;
         this.timer = setTimeout(() => {
             this.timer = undefined;
@@ -78,8 +90,21 @@ export class CompanionLife {
         this.timer.unref();
     }
     native() { return this.ctx; }
+    isOpen() { return !this.closed && this.living.isCurrent(); }
+    assertOpen() { if (!this.isOpen())
+        throw Error('生活组件已停止'); }
+    guardArea(area, validate) {
+        return () => {
+            this.assertOpen();
+            if (area && !area.isCurrent())
+                throw Error('生活区已变化');
+            validate?.();
+        };
+    }
     enqueue(work) {
-        const next = this.serial.then(work);
+        if (!this.isOpen())
+            return Promise.reject(Error('生活组件已停止'));
+        const next = this.serial.then(() => { this.assertOpen(); return work(); });
         this.serial = next.catch(() => { });
         return next;
     }
@@ -92,12 +117,12 @@ export class CompanionLife {
     }
     running() {
         const current = this.current();
-        return !this.closed && this.enabled && !!this.runtime && current?.id === this.binding?.id && current?.path === this.binding?.path;
+        return this.isOpen() && this.enabled && !!this.runtime && current?.id === this.binding?.id && current?.path === this.binding?.path;
     }
     /** Saved clock intent is independent of native planner readiness. This read
      * never waits on Life's queue or initializes a missing control directory. */
     bodyClockState(workspaceId) {
-        if (this.closed)
+        if (!this.isOpen())
             return;
         const current = this.current();
         if (!current || current.id !== workspaceId)
@@ -114,7 +139,8 @@ export class CompanionLife {
     /** Presentation reads the original body's two distinct states: walking to bed
      * can be cancelled, but the sleeping animation starts only after arrival. */
     restState(workspaceId) {
-        return this.ctx.get('petBehavior')?.restState(workspaceId);
+        if (this.isOpen())
+            return this.living.get('body')?.restState(workspaceId);
     }
     publishRest() { this.ctx.get('petDesktop')?.features?.restore(false); }
     directory(root) {
@@ -129,18 +155,20 @@ export class CompanionLife {
         return directories[2];
     }
     async synchronize() {
+        this.assertOpen();
         const selected = this.current();
         if (selected?.id === this.binding?.id && selected?.path === this.binding?.path
             && (!this.binding || this.binding.plan.storageId === this.host.workspace.storageId()))
             return;
         await this.stopRuntime();
+        this.assertOpen();
         this.binding = undefined;
         this.enabled = false;
         this.restoredClock = false;
         this.pauses = undefined;
         this.fault = undefined;
         const current = this.current();
-        if (!current || this.closed)
+        if (!current)
             return;
         const directory = this.directory(current.path);
         for (const name of ['home.json', 'life.json'])
@@ -154,31 +182,40 @@ export class CompanionLife {
         this.binding = { id: current.id, path: current.path, directory, library: this.host.records.getLibrary(current.id),
             plan: new PersistentLifePlan(directory, this.host.workspace.runtime.identity().companionId, storageId, this.timeZone, () => {
                 const selected = this.current();
-                return selected?.id === current.id && selected.path === current.path && this.host.workspace.storageId() === storageId;
+                return this.isOpen() && selected?.id === current.id && selected.path === current.path && this.host.workspace.storageId() === storageId;
             }) };
     }
     async startRuntime(resumed = false) {
-        if (this.runtime || !this.binding || !this.enabled || this.closed)
+        if (this.runtime || !this.binding || !this.enabled || !this.isOpen())
             return;
         const bound = this.binding, native = this.native(), host = this.host;
         const active = () => {
             const current = this.current();
-            return !this.closed && this.enabled && current?.id === bound.id && current.path === bound.path && this.binding === bound
+            return this.isOpen() && this.enabled && current?.id === bound.id && current.path === bound.path && this.binding === bound
                 && host.workspace.storageId() === bound.plan.storageId && host.workspace.runtime.identity().companionId === bound.plan.companionId;
         };
         const member = (id) => active() && this.current()?.sessionIds.includes(id) === true
             && !native.get('workspaceRegistry')?.archivedSessionIds.includes(id) && !host.native.isGuest(id);
         this.ctx.get('petDesktop')?.features?.pause();
         await this.ctx.get('petTranscripts')?.restore();
-        const selected = this.current();
-        if (selected?.id !== bound.id || selected.path !== bound.path || this.closed || !this.enabled)
+        if (!active())
             return;
         // Foreground Room and Life share Core's single-flight opener. Its moveIn
         // records World's pending arrival, so reusing this home does not skip it.
         await resolveCompanionHome(this.ctx, this.host, this.preset);
+        if (!active())
+            return;
         const store = createLifeStore(bound.directory, this.timeZone);
         const runtime = createLifeRuntime({
-            ctx: this.ctx, store,
+            ctx: this.ctx, store: { ...store,
+                write: state => {
+                    if (!active() || this.runtime !== runtime)
+                        throw Error('生活工作区或执行通道已变化');
+                    store.write(state);
+                },
+                appendWake: wake => { if (active() && this.runtime === runtime)
+                    store.appendWake(wake); },
+            },
             config: { worldId: this.host.workspace.storageId(), agentPreset: this.preset, timeZone: this.timeZone, companionName: this.host.workspace.runtime.identity().displayName },
             names: { get companion() { return host.workspace.runtime.identity().displayName; }, partner: '伙伴' },
             options: { worldDir: bound.directory, roomDir: bound.path, diaryDir: bound.library.paths.diaryDir, selfFile: bound.library.paths.selfFile, timeZone: this.timeZone,
@@ -198,7 +235,7 @@ export class CompanionLife {
             },
             inWorkspace: id => this.current()?.id === bound.id && this.current()?.path === bound.path
                 && this.current()?.sessionIds.includes(id) === true && !host.native.isGuest(id),
-            alarmContext: () => [this.ctx.get('petBehavior')?.promptLine(bound.id), bound.plan.summary()].filter(Boolean).join('\n'),
+            alarmContext: () => [this.living.get('body')?.promptLine(bound.id), bound.plan.summary()].filter(Boolean).join('\n'),
             hasCurrentPlan: () => !!bound.plan.read().plan,
             requirePlanningDecision: true,
             planningRepairAttempts: () => this.preferences.planningRepairAttempts ?? 1,
@@ -215,13 +252,18 @@ export class CompanionLife {
             facts: {
                 pending: async () => (await this.pendingFacts(bound, active)).map(fact => ({ domain: fact.domain, id: fact.id })),
                 read: async (refs) => {
-                    const facts = await readFactReferences(bound.id, refs, domain => this.factSource(domain), () => {
+                    const sources = { body: this.factSource('body'), economy: this.factSource('economy') };
+                    const validate = () => {
                         if (!active())
                             throw Error('互动事实工作区已切换');
-                    });
+                    };
+                    const facts = await withLivingCaller(validate, () => readFactReferences(bound.id, refs, domain => {
+                        const source = sources[domain];
+                        return source?.isCurrent() ? source.value : undefined;
+                    }, validate));
                     return { facts, text: presentFacts(facts) };
                 },
-                confirmAdmission: async (sessionId, messageId, sourceDigest) => {
+                confirmAdmission: (sessionId, messageId, sourceDigest) => this.inFlight.run(async () => {
                     if (!active() || !this.current()?.sessionIds.includes(sessionId))
                         throw Error('原互动事实会话已离开绑定工作区');
                     const matches = (events) => events.some(event => event.type === 'user/message' && event.data.id === messageId
@@ -246,7 +288,7 @@ export class CompanionLife {
                     finally {
                         await reader.close();
                     }
-                },
+                }),
                 acknowledge: async (refs) => {
                     for (const domain of ['body', 'economy']) {
                         const ids = refs.filter(ref => ref.domain === domain).map(ref => ref.id);
@@ -257,9 +299,10 @@ export class CompanionLife {
                         const source = this.factSource(domain);
                         if (!source)
                             throw Error('互动事实所属组件暂不可用');
-                        await source.acknowledgeFacts(bound.id, ids);
-                        if (!active() || this.factSource(domain) !== source)
-                            throw Error('互动事实所属组件已变化');
+                        const validate = () => { if (!active() || !source.isCurrent())
+                            throw Error('互动事实所属组件已变化'); };
+                        await withLivingCaller(validate, () => source.value.acknowledgeFacts(bound.id, ids));
+                        validate();
                     }
                 },
             },
@@ -325,10 +368,12 @@ export class CompanionLife {
         }
         catch (error) {
             runtime.stop();
-            this.runtime = undefined;
+            if (this.runtime === runtime)
+                this.runtime = undefined;
             throw error;
         }
-        this.ctx.emit('pet/life.changed');
+        if (active() && this.runtime === runtime)
+            this.ctx.emit('pet/life.changed');
     }
     async stopRuntime(pauseIntent = false) {
         const runtime = this.runtime;
@@ -336,45 +381,48 @@ export class CompanionLife {
         try {
             const current = this.current();
             if (pauseIntent && this.binding && current?.id === this.binding.id && current.path === this.binding.path) {
+                const body = this.living.lookup('body'), validate = this.guardArea(body);
                 const saved = this.binding.plan.read();
                 if (saved.plan && ['active', 'waiting'].includes(saved.plan.status)) {
-                    await this.binding.plan.control(saved.revision, 'pause', 'Autonomous life paused', this.ctx.get('petBehavior'), current.id);
+                    await this.binding.plan.control(saved.revision, 'pause', 'Autonomous life paused', body?.value, current.id, validate);
+                    validate();
                     this.binding.plan.markAutoResume(true);
                 }
-                await this.ctx.get('petBehavior')?.setAutonomy(this.binding.id, false);
+                if (body)
+                    await withLivingCaller(validate, () => body.value.setAutonomy(current.id, false));
             }
         }
         catch (error) {
             bodyError = error;
         }
-        this.runtime = undefined;
         // A stale or unavailable optional body must never prevent cancellation of
         // the old native home after rebinding or during component disposal.
-        if (runtime) {
-            this.ctx.emit('pet/life.changed');
-            const id = runtime.snapshot().homeSessionId;
-            runtime.stop();
-            if (id)
-                this.native().get('sessionController').cancel({ sessionId: id });
-            await runtime.settled();
+        if (runtime && this.runtime === runtime) {
+            this.runtime = undefined;
+            let id;
+            await settleCleanup(() => this.ctx.emit('pet/life.changed'), () => { id = runtime.snapshot().homeSessionId; }, () => runtime.stop(), async () => { if (id)
+                await this.native().get('sessionController').cancel({ sessionId: id }); }, () => runtime.settled());
         }
         if (bodyError)
             throw bodyError;
     }
     async tick() {
-        if (this.closed)
+        if (!this.isOpen())
             return;
         await this.synchronize();
         if (!this.enabled || !this.binding)
             return;
         const bound = this.binding;
-        const behavior = this.ctx.get('petBehavior');
+        const body = this.living.lookup('body'), validate = this.guardArea(body);
         let advanced = false;
         let continueAccepted = false;
-        if (bound && behavior) {
-            await this.resumeAcceptedPlan(bound);
+        if (body) {
+            const behavior = body.value;
+            await this.resumeAcceptedPlan(bound, body);
+            validate();
             const before = bound.plan.read().plan;
-            advanced = await bound.plan.advance(bound.id, behavior);
+            advanced = await bound.plan.advance(bound.id, behavior, validate);
+            validate();
             const after = bound.plan.read().plan;
             // A consumed completion transition must schedule the next accepted step
             // itself. No new model consideration or unrelated domain event is needed.
@@ -384,36 +432,41 @@ export class CompanionLife {
             // must not consume the only continuation of this accepted queue.
             if (continueAccepted)
                 this.scheduleTick();
-            await behavior.setReconsiderConditions(bound.id, bound.plan.read().plan?.reconsiderWhen ?? []);
+            await withLivingCaller(validate, () => behavior.setReconsiderConditions(bound.id, bound.plan.read().plan?.reconsiderWhen ?? []));
+            validate();
         }
         await this.startRuntime();
+        this.assertOpen();
         if (advanced)
             this.runtime?.reschedulePlan();
         this.runtime?.notifyFacts();
     }
-    async resumeAcceptedPlan(bound) {
+    async resumeAcceptedPlan(bound, body = this.living.lookup('body')) {
         const current = this.current();
-        if (!this.enabled || this.closed || this.binding !== bound || current?.id !== bound.id || current.path !== bound.path)
+        if (!this.enabled || !this.isOpen() || this.binding !== bound || current?.id !== bound.id || current.path !== bound.path)
             return;
         const saved = bound.plan.read();
         if (saved.plan?.resumeOnEnable && saved.plan.status === 'paused') {
-            await bound.plan.control(saved.revision, 'resume', 'Autonomous life resumed', this.ctx.get('petBehavior'), bound.id);
+            const validate = this.guardArea(body);
+            await bound.plan.control(saved.revision, 'resume', 'Autonomous life resumed', body?.value, bound.id, validate);
+            validate();
             bound.plan.markAutoResume(false);
         }
     }
     factSource(domain) {
-        return this.ctx.get(domain === 'body' ? 'petBehavior' : 'petEconomy');
+        return this.living.lookup(domain);
     }
     async pendingFacts(bound, active) {
         if (!active())
             throw Error('互动事实工作区已切换');
-        const sources = ['body', 'economy'].map(domain => ({ domain, source: this.factSource(domain) }));
-        const results = await Promise.all(sources.map(async ({ domain, source }) => {
-            if (!source?.pendingFacts)
+        const sources = ['body', 'economy'].map(domain => this.factSource(domain));
+        const results = await Promise.all(sources.map(async (source) => {
+            if (!source?.value.pendingFacts)
                 return [];
-            const facts = await source.pendingFacts(bound.id);
-            if (!active() || this.factSource(domain) !== source)
-                throw Error('互动事实所属组件已变化');
+            const validate = () => { if (!active() || !source.isCurrent())
+                throw Error('互动事实所属组件已变化'); };
+            const facts = await withLivingCaller(validate, () => source.value.pendingFacts(bound.id));
+            validate();
             return facts;
         }));
         return results.flat().sort((a, b) => a.occurredAt.localeCompare(b.occurredAt) || a.id.localeCompare(b.id));
@@ -424,8 +477,12 @@ export class CompanionLife {
             if (this.binding?.id !== workspaceId)
                 throw Error('生活工作区已切换');
             const store = createLifeStore(this.binding.directory, this.timeZone);
-            return { workspaceId, enabled: this.enabled, running: this.running(), timeZone: this.timeZone, preferences: { ...this.preferences },
-                home: await this.ctx.get('petBehavior')?.roomState(workspaceId) ?? null, life: this.runtime?.snapshot() ?? store.read(),
+            const body = this.living.lookup('body'), validate = this.guardArea(body);
+            const state = { workspaceId, enabled: this.enabled, running: this.running(), timeZone: this.timeZone, preferences: { ...this.preferences } };
+            const home = await (body && withLivingCaller(validate, () => body.value.roomState(workspaceId)));
+            validate();
+            return { ...state, home: home ?? null,
+                life: this.runtime?.snapshot() ?? store.read(),
                 activity: store.activityDays().slice(0, 2).reverse().flatMap(day => store.activity(day)).slice(-20),
                 fault: this.fault ?? null };
         });
@@ -433,7 +490,7 @@ export class CompanionLife {
     /** Synchronous, read-only prompt projection; no implicit scheduling or model calls. */
     currentPlanSummary(workspaceId) {
         const current = this.current(), bound = this.binding;
-        if (current?.id !== workspaceId)
+        if (!this.isOpen() || current?.id !== workspaceId)
             return '';
         let summary;
         if (bound?.id === workspaceId && bound.path === current.path)
@@ -456,6 +513,7 @@ export class CompanionLife {
     }
     async checkedPlan(workspaceId) {
         await this.synchronize();
+        this.assertOpen();
         if (!this.binding || this.binding.id !== workspaceId)
             throw Error('生活工作区已切换');
         return this.binding;
@@ -472,7 +530,9 @@ export class CompanionLife {
         return this.enqueue(async () => {
             const bound = await this.checkedPlan(workspaceId);
             validate();
-            const result = await bound.plan.commit(expectedRevision, draft, this.ctx.get('petBehavior'), workspaceId, validate);
+            const body = this.living.lookup('body'), admit = this.guardArea(body, validate);
+            const result = await bound.plan.commit(expectedRevision, draft, body?.value, workspaceId, admit);
+            admit();
             this.runtime?.reschedulePlan();
             this.ctx.emit('pet/life.changed');
             return { enabled: this.enabled, running: this.running(), ...result };
@@ -504,7 +564,9 @@ export class CompanionLife {
             const bound = await this.checkedPlan(workspaceId);
             const guard = () => { validate(); this.checkReadingPlan(bound, expectedRevision, operationId); };
             guard();
-            const segment = await this.behavior().readPlannedSegment(workspaceId, operationId, guard);
+            const body = this.behavior(), admit = this.guardArea(body);
+            const segment = await withLivingCaller(admit, () => body.value.readPlannedSegment(workspaceId, operationId, guard));
+            admit();
             guard();
             return { ...segment, operationId, confirmation: 'Read this actual text before calling life_read_confirm with the returned receiptToken. Receiving an animation or owning the item does not advance the bookmark or establish understanding.' };
         });
@@ -514,12 +576,14 @@ export class CompanionLife {
             const bound = await this.checkedPlan(workspaceId);
             const guard = () => { validate(); this.checkReadingPlan(bound, expectedRevision, operationId, true); };
             guard();
-            const execution = await this.behavior().confirmPlannedReading(workspaceId, operationId, receiptToken, guard);
+            const body = this.behavior(), admit = this.guardArea(body, validate);
+            const execution = await withLivingCaller(admit, () => body.value.confirmPlannedReading(workspaceId, operationId, receiptToken, guard));
+            admit();
             guard();
             // Completion is still accounted by the same persistent-plan executor.
             // The tool's confirmation records actual text receipt, never comprehension.
-            await bound.plan.advance(workspaceId, this.behavior());
-            validate();
+            await bound.plan.advance(workspaceId, body.value, admit);
+            admit();
             this.runtime?.reschedulePlan();
             this.ctx.emit('pet/life.changed');
             return { execution, ...bound.plan.read() };
@@ -533,19 +597,22 @@ export class CompanionLife {
             validate();
             if (action === 'resume' && !this.running())
                 throw Error('Enable autonomous Life before resuming; this tool does not change that setting');
-            const result = await bound.plan.control(expectedRevision, action, reason, this.ctx.get('petBehavior'), workspaceId, validate);
+            const body = this.living.lookup('body'), admit = this.guardArea(body, validate);
+            const result = await bound.plan.control(expectedRevision, action, reason, body?.value, workspaceId, admit);
+            admit();
             this.runtime?.reschedulePlan();
             this.ctx.emit('pet/life.changed');
             return result;
         });
     }
     writeControl(bound, enabled, preferences, pauses) {
+        this.assertOpen();
         const file = join(bound.directory, 'control.json');
         safeLifeFile(file);
         if (pauses?.some(pause => pause.to !== null)) {
             let committedAt;
             try {
-                committedAt = this.ctx.get('petEconomy')?.committedGardenAt(bound.id);
+                committedAt = this.living.get('economy')?.committedGardenAt(bound.id);
             }
             catch { /* An unavailable Economy leaves the interval history intact. */ }
             const at = committedAt;
@@ -581,24 +648,33 @@ export class CompanionLife {
     act(workspaceId, action, requestId, channel = 'settings') {
         if (!actions.includes(action))
             return Promise.reject(Error('未知的生活动作'));
-        return this.behavior().act(workspaceId, action, requestId, channel);
+        return this.forwardToBody(body => body.act(workspaceId, action, requestId, channel));
     }
     /** Compatibility methods delegate; Behavior remains available after Life unload. */
     desktopRest(workspaceId, action) {
-        return this.behavior().act(workspaceId, action);
+        return this.forwardToBody(body => body.act(workspaceId, action));
     }
     behavior() {
-        const behavior = this.ctx.get('petBehavior');
+        this.assertOpen();
+        const behavior = this.living.lookup('body');
         if (!behavior)
             throw Error('共享身体组件尚未启用');
         return behavior;
     }
-    roomAction(workspaceId, input, by = '伙伴') {
-        return this.behavior().roomAction(workspaceId, input, by);
+    forwardToBody(work) {
+        const body = this.behavior(), validate = this.guardArea(body);
+        return this.inFlight.run(async () => {
+            const result = await withLivingCaller(validate, () => work(body.value));
+            validate();
+            return result;
+        });
     }
-    roomState(workspaceId) { return this.behavior().roomState(workspaceId); }
+    roomAction(workspaceId, input, by = '伙伴') {
+        return this.forwardToBody(body => body.roomAction(workspaceId, input, by));
+    }
+    roomState(workspaceId) { return this.forwardToBody(body => body.roomState(workspaceId)); }
     garden(workspaceId, operation, input) {
-        return this.behavior().garden(workspaceId, operation, input);
+        return this.forwardToBody(body => body.garden(workspaceId, operation, input));
     }
     settings(workspaceId, expected, next) {
         return this.enqueue(async () => {
@@ -618,32 +694,26 @@ export class CompanionLife {
         });
     }
     library(workspaceId, operation, input) {
-        return this.host.records.library(workspaceId, operation, input);
+        this.assertOpen();
+        return this.inFlight.run(() => this.host.records.library(workspaceId, operation, input));
     }
-    async close() {
+    close() {
+        if (this.closing)
+            return this.closing;
         this.closed = true;
         clearTimeout(this.timer);
         this.timer = undefined;
-        const revoked = this.sourceRegistration?.revoke();
-        for (const stop of this.subscriptions.splice(0))
-            stop();
-        this.publishRest();
-        await revoked;
-        await this.enqueue(async () => {
-            try {
-                await this.stopRuntime();
-            }
-            finally {
-                this.binding = undefined;
-            }
-        });
+        const subscriptions = this.subscriptions.splice(0);
+        return this.closing = settleCleanup(() => this.sourceRegistration?.revoke(), ...subscriptions, () => { if (subscriptions.length)
+            this.publishRest(); }, () => this.stopRuntime(false), async () => { await this.serial; }, () => this.inFlight.settled()).finally(() => { this.binding = undefined; });
     }
 }
 export const name = '40-Life';
 export const inject = ['petCore', 'petWorld', 'agents', 'sessions', 'tools', 'systemPrompt'];
 export function apply(ctx, config = {}) {
     const host = ctx.petCore;
-    return mountLivingArea(ctx, host, 'plan', () => new CompanionLife(ctx, host, config.agentPreset ?? 'standard'), life => {
+    return mountLivingArea(ctx, host, 'plan', view => new CompanionLife(ctx, host, config.agentPreset ?? 'standard', view), life => {
+        life.activate();
         ctx.provide('petLife', life);
         life.registerSource();
         ctx.effect(() => host.workspace.runtime.capabilityTable.register({

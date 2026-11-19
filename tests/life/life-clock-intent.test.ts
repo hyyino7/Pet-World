@@ -4,6 +4,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync} from
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import type {Context} from '@deepseek-ai/cordis';
+import type {CompanionBehavior} from '../../src/living/body/plugin.js';
 import type {PetCoreHost} from '../../src/core/index.js';
 import {CompanionLife} from '../../src/living/plan/plugin.js';
 import {readLifeControl} from '../../src/living/plan/control-file.js';
@@ -25,7 +26,7 @@ function fixture(t:TestContext,enabled?:boolean) {
     resumePlanned:async()=>{resumes++;order.push('resume');row.status='running';return structuredClone(row);}};
   const ctx={get:(name:string)=>name==='workspaceRegistry'?{get:()=>target}:name==='petBehavior'?body:undefined,
     tools:{register:()=>()=>{}},on:()=>()=>{},effect:()=>()=>{},emit:()=>{},logger:{warn(){}}} as unknown as Context;
-  life=new CompanionLife(ctx,host,'standard');
+  life=new CompanionLife(ctx,host,'standard',{body:()=>body as unknown as CompanionBehavior});
   (life as any).startRuntime=async()=>{order.push('native-start');throw Error('scripted native home unavailable');};
   t.after(()=>life.close());
   return {life,root,directory,body,order,clockChanges,get starts(){return starts;},get resumes(){return resumes;}};

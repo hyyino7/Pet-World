@@ -30,7 +30,7 @@ test('quiet waiting stays awake; explicit sleep reaches bed, survives gentle tou
     on(name:string,fn:Function){const set=listeners.get(name)??new Set();listeners.set(name,set);set.add(fn);return()=>set.delete(fn);},
     emit(name:string,...args:unknown[]){for(const fn of listeners.get(name)??[])fn(...args);},tools:{register:()=>()=>{}},effect:()=>()=>{},logger:()=>({warn(){}})} as unknown as Context;
   const body=new CompanionBehavior(ctx,host,{plan:()=>life});
-  life=new CompanionLife(ctx,host,'standard');
+  life=new CompanionLife(ctx,host,'standard',{body:()=>body});
   (life as any).startRuntime=async()=>{};
   t.after(async()=>{await life.close();await body.close();rmSync(root,{recursive:true,force:true});});
   const settle=async()=>{for(let i=0;i<20;i++){t.mock.timers.tick(25);await Promise.resolve();}await (life as any).serial;};

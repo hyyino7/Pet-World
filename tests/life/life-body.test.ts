@@ -94,7 +94,7 @@ test('the desktop and room use one saved body through pending sleep, arrival, ca
     tools: {register() {}}, on(name:string,fn:(...args:any[])=>void){const set=listeners.get(name)??new Set();listeners.set(name,set);set.add(fn);return()=>set.delete(fn);}, effect: () => () => {}, emit(name:string,...args:any[]){for(const fn of listeners.get(name)??[])fn(...args);},logger:()=>({warn(){}}),
   } as unknown as Context;
   features = new DesktopFeatures(context, host, (type, value) => frames.push({type, value}), () => true, () => false);
-  life = new CompanionLife(context, host, 'standard');
+  life = new CompanionLife(context, host, 'standard', {body:()=>behavior});
   behavior = new CompanionBehavior(context, host, {plan:()=>life});
   await behavior.setAutonomy(target.id, true);
   t.after(async () => {await life.close(); await behavior.close(); await features.close();});
@@ -128,7 +128,7 @@ test('the desktop and room use one saved body through pending sleep, arrival, ca
   assert.equal(sleepingLamp.home.room.events.at(-1).text, 'off');
   await assert.rejects(life.roomAction(target.id, {action: 'command', room: 'living', spot: 'sofa'}, '大肥鱼'), /睡着了/);
   await life.close();
-  life = new CompanionLife(context, host, 'standard');
+  life = new CompanionLife(context, host, 'standard', {body:()=>behavior});
   await life.roomState(target.id); features.restore();
   assert.ok(rest().sleeping);
   await desktop('/wake');
@@ -212,7 +212,7 @@ test('paused or absent Life permits explicit body and garden work without passiv
   const stopped=(await behavior.garden(target.id,'state')).garden;
   assert.equal(stopped.care.task,null);
   assert.deepEqual(stopped.inventory,replay.inventory,'Stopping automatic work does not manufacture its harvest');
-  const life=new CompanionLife(ctx,host,'standard');
+  const life=new CompanionLife(ctx,host,'standard',{body:()=>behavior});
   await life.control(target.id,false);await life.close();
   assert.ok((await behavior.act(target.id,'pet')).changed,'Unloading the actual Life owner leaves the body service operational');
   assert.ok(changes.length);

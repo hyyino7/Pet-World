@@ -49,7 +49,7 @@ async function fixture(t:TestContext) {
   services.set('workspaceRegistry',registry);services.set('agents',ctx.agents);
   const world=createWorldService(host,()=>registry);
   const behavior=new CompanionBehavior(ctx,host,{plan:()=>services.get('petLife')});
-  const life=new CompanionLife(ctx,host,'standard');
+  const life=new CompanionLife(ctx,host,'standard',{body:()=>services.get('petBehavior')});
   services.set('petBehavior',behavior);services.set('petLife',life);
   const directory=join(repo,'.chatpet/data/life');mkdirSync(directory,{recursive:true});
   const plan=new PersistentLifePlan(directory,'fish',host.workspace.storageId(),'UTC');

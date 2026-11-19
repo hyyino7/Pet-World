@@ -50,7 +50,7 @@ async function fixture(t:TestContext,needs:Record<string,number>={}) {
     },
   } as unknown as Context;
   behavior=new CompanionBehavior(ctx,host,{plan:()=>life});
-  life=new CompanionLife(ctx,host,'standard');
+  life=new CompanionLife(ctx,host,'standard',{body:()=>behavior});
   t.after(async()=>{await life.close();await behavior.close();rmSync(root,{recursive:true,force:true});});
   const internal=life as any;
   await internal.synchronize();

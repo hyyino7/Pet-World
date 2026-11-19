@@ -33,7 +33,7 @@ export async function eventually(check, label) {
 // Cordis owns every plugin and subscription. The host supplies a scripted loop,
 // workspace registry, and disk-backed session persistence in a disposable directory.
 export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,22,59), legacyGarden = false,
-  order = Object.keys(entries)} = {}) {
+  order = Object.keys(entries), io = {}} = {}) {
   t.mock.timers.enable({apis:['Date'], now:Number(now)});
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'her-world-entries-')));
   const repo = join(root, 'workspace'), id = 'world';
@@ -178,12 +178,15 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       cancel({sessionId}) { agents.get(sessionId)?.cancel({kind:'user'}); },
     };
     const persisted = header => ({header,inheritedEventCount:0,
-      async read() { return {events:existsSync(logFile(header.id))?saved(header.id).events:[]}; },
+      async read() {
+        const read = () => ({events:existsSync(logFile(header.id))?saved(header.id).events:[]});
+        return io.read ? io.read(header.id,read) : read();
+      },
       async append(events) {
         const before = existsSync(logFile(header.id)) ? saved(header.id).events : [];
         writeFileSync(logFile(header.id),JSON.stringify({header,events:[...before,...events]}));
       },
-      async flush() {}, async close() {}});
+      async flush() {}, async close() {io.close?.(header.id);}});
     await ctx.plugin(Sessions);
     native = {...host,sessions:ctx.sessions};
     await ctx.plugin({apply(scope) {
@@ -197,6 +200,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       scope.provide('sessionPersistence',{
         async open(sessionId) {
           if (!existsSync(logFile(sessionId))) throw Object.assign(Error('Missing synthetic session'),{name:'SessionNotFound'});
+          io.open?.(sessionId);
           return persisted(saved(sessionId).header);
         },
         async create(header) { return persisted(header); },

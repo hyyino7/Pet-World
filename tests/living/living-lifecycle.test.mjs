@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
-import {existsSync, readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {existsSync, readFileSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import test from 'node:test';
 import {Context} from '@deepseek-ai/cordis';
+import {createLifeStore} from '#dsh-world/life/lifeStore';
 import {cordisFixture, eventually} from '../behavior-list/entries-lifecycle.test.mjs';
 
 const zones = {body: 'body', life: 'plan', economy: 'economy'};
@@ -199,4 +201,48 @@ test('R6 卸载停掉实际身体计时、计划 tick、上游闹钟和各自订
   await delay(10);
   assert.deepEqual(created, before);
   assert.ok(Object.values(pending).every(handles => handles.size === 0));
+});
+
+test('R6 Life 卸载等待原生持久日志的无信号读取关闭 reader', async t => {
+  const original = 'prior-home', release = Promise.withResolvers();
+  let readers = 0, inFlight = 0, disposed = false;
+  const f = await cordisFixture(t, {io: {
+    open(id) { if (id === original) readers++; },
+    close(id) { if (id === original) readers--; },
+    async read(id, read) {
+      if (id !== original) return read();
+      inFlight++;
+      try { await release.promise; return read(); }
+      finally { inFlight--; }
+    },
+  }});
+  await f.bound.attachSession(original);
+  await f.body.act(f.id, 'water', 'r6-original-receipt');
+  const fact = (await f.body.pendingFacts(f.id)).at(-1);
+  const source = {kind: 'dsh-world-life', facts: [fact]}, messageId = 'r6-fact-message';
+  const sourceDigest = createHash('sha256').update(JSON.stringify(source)).digest('hex');
+  const log = JSON.stringify({header: {id: original}, events: [{type: 'user/message', data: {id: messageId, source}}]});
+  writeFileSync(f.logFile(original), log);
+  const store = createLifeStore(f.directory, Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const at = new Date().toISOString();
+  store.write({...store.read(), delivering: {sessionId: original, messageId, sentAt: at, scheduledAt: at,
+    source: 'facts', what: '互动事实', job: {facts: {at, messageId, sourceDigest, refs: [{domain: fact.domain, id: fact.id}]}}}});
+  let unloading;
+  const enabling = Promise.allSettled([f.enable()]);
+  try {
+    await eventually(() => inFlight === 1, 'Life 已打开原生持久日志');
+    unloading = f.unload('life').then(() => {disposed = true;});
+    await eventually(() => !f.life, 'Life 门面已撤下');
+    await delay(10);
+    assert.equal(disposed, false);
+    assert.equal(readers, 1);
+  } finally {
+    release.resolve();
+    await enabling;
+    await unloading;
+  }
+  assert.equal(readers, 0);
+  assert.equal(inFlight, 0);
+  assert.equal(readFileSync(f.logFile(original), 'utf8'), log);
+  assert.ok((await f.body.pendingFacts(f.id)).some(row => row.id === fact.id));
 });
