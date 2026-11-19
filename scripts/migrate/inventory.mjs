@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-import { requireMigration, diagnostic } from './errors.mjs';
-import { lstatSync, readdirSync, mkdtempSync, cpSync, rmSync } from 'node:fs';
+import { checked, requireMigration, diagnostic } from './errors.mjs';
+import { lstatSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { join, relative, matchesGlob, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { storage } from './context.mjs';
+import { assertStopped, copyDatabase } from '../lib/repo-storage.mjs';
 import { inventoryPlan } from './inventory-plan.mjs';
 
 const quote = name => '"' + name.replaceAll('"', '""') + '"';
@@ -15,9 +16,7 @@ function sqliteMetadata(file, core) {
   const scratch = mkdtempSync(join(tmpdir(), 'companion-inventory-'));
   try {
     const copy = join(scratch, 'database');
-    for (const suffix of ['', '-wal', '-shm', '-journal']) {
-      if (lstatSync(file + suffix, {throwIfNoEntry:false})) cpSync(file + suffix, copy + suffix);
-    }
+    copyDatabase(file, copy);
     const db = new DatabaseSync(copy, {readOnly:true});
     try {
       const names = db.prepare("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name").all().map(row => row.name);
@@ -45,6 +44,11 @@ function logicalPath(context, root, path) {
 }
 export function inventory(installation) {
   const context = inventoryPlan(installation), files = [], directories = [], logical = new Map();
+  checked('writer-running', () => {
+    assertStopped(context.plan.coreDirectory, 'core');
+    assertStopped(join(context.plan.repo, '.chatpet/data/economy'), 'economy');
+    if (context.plan.memoryDirectory) assertStopped(context.plan.memoryDirectory, 'memory');
+  });
   const counts = new Map();
   const roots = context.plan.roots.map(root => {
     const base = root.id.startsWith('sessions-') ? 'sessions' : root.id.startsWith('cache-') ? 'cache' : root.id;

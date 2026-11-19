@@ -1,7 +1,8 @@
 // Offline relocation only: retain each module's authority and exact stored bytes.
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
-import { closeSync, cpSync, existsSync, fsyncSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, cpSync, existsSync, fsyncSync, linkSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -10,6 +11,24 @@ const within = (root, path) => {
   return local && local !== '..' && !local.startsWith('..' + sep) && !isAbsolute(local);
 };
 
+/** Copy an offline SQLite database before opening it. SHM is rebuilt privately. */
+export function copyDatabase(source, target) {
+  const files = ['', '-wal', '-journal'];
+  const snapshot = () => files.map(suffix => {
+    const stat = lstatSync(source + suffix, { throwIfNoEntry: false, bigint: true });
+    if (!stat) return null;
+    assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1n, 'Invalid SQLite database or sidecar');
+    return [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs];
+  });
+  const before = snapshot();
+  assert.ok(before[0], 'SQLite database is absent');
+  mkdirSync(dirname(target), { recursive: true, mode: 0o700 });
+  for (const [index, suffix] of files.entries()) {
+    if (before[index]) cpSync(source + suffix, target + suffix, { force: false, errorOnExist: true });
+  }
+  assert.deepEqual(snapshot(), before, 'SQLite source changed during copy; stop its writers and retry');
+}
+
 /** Read only the installed Core's identity/binding metadata. A remembered
  * ready flag alone cannot authorize reconstructing a missing workspace. */
 export function inspectRepoBinding(config) {
@@ -17,24 +36,36 @@ export function inspectRepoBinding(config) {
   const stat = lstatSync(file, { throwIfNoEntry: false });
   if (!stat) return { state: 'unavailable', reason: 'Existing Core database is absent' };
   assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1, 'Inspect the existing Core database before installation');
-  const db = new DatabaseSync(file, { readOnly: true });
+  // CLI readers can only snapshot a stopped external writer. A synchronous
+  // caller in the Core process itself can read committed bytes on this stack.
+  const lease = join(dirname(file), 'core.lock'), lock = lstatSync(lease, { throwIfNoEntry: false });
+  if (lock) {
+    assert.ok(lock.isFile() && lock.nlink === 1, 'Invalid Core owner record');
+    if (!readFileSync(lease, 'utf8').startsWith(process.pid + ':')) assertStopped(dirname(file), 'core');
+  }
   let prefs, binding, owner, storedId;
+  const scratch = mkdtempSync(join(tmpdir(), 'companion-binding-'));
   try {
-    const record = kind => {
-      const row = db.prepare('SELECT value FROM records WHERE kind=? AND id=?').get(kind, 'current');
-      return row ? JSON.parse(row.value) : null;
-    };
-    const meta = key => {
-      const row = db.prepare('SELECT value FROM meta WHERE key=?').get(key);
-      return row ? JSON.parse(row.value) : null;
-    };
-    const identity = record('identity');
-    assert.equal(identity?.companionId, config.companionId, 'Installed Core database belongs to another companion');
-    assert.equal(identity?.ownerActorId, config.ownerActorId, 'Installed Core owner does not match its configuration');
-    assert.equal(meta('scope'), config.scopeId, 'Installed Core scope does not match its configuration');
-    prefs = record('preferences'); binding = record('workspace-binding');
-    owner = meta('memory-configured-directory-owner'); storedId = meta('workspace.storage-id');
-  } finally { db.close(); }
+    const copy = join(scratch, 'core.sqlite');
+    copyDatabase(file, copy);
+    const db = new DatabaseSync(copy, { readOnly: true });
+    try {
+      const record = kind => {
+        const row = db.prepare('SELECT value FROM records WHERE kind=? AND id=?').get(kind, 'current');
+        return row ? JSON.parse(row.value) : null;
+      };
+      const meta = key => {
+        const row = db.prepare('SELECT value FROM meta WHERE key=?').get(key);
+        return row ? JSON.parse(row.value) : null;
+      };
+      const identity = record('identity');
+      assert.equal(identity?.companionId, config.companionId, 'Installed Core database belongs to another companion');
+      assert.equal(identity?.ownerActorId, config.ownerActorId, 'Installed Core owner does not match its configuration');
+      assert.equal(meta('scope'), config.scopeId, 'Installed Core scope does not match its configuration');
+      prefs = record('preferences'); binding = record('workspace-binding');
+      owner = meta('memory-configured-directory-owner'); storedId = meta('workspace.storage-id');
+    } finally { db.close(); }
+  } finally { rmSync(scratch, { recursive: true, force: true }); }
   const target = prefs?.workspace;
   if (!target) return { state: 'unbound', reason: 'No selected workspace' };
   assert.ok(typeof target.id === 'string' && typeof target.path === 'string' && isAbsolute(target.path), 'Invalid saved workspace binding');
