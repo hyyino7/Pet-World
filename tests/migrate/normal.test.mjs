@@ -28,7 +28,7 @@ for (const variant of variants) test(`${variant}: migration, actual recall and p
   const version = read(join(f.data, 'storage-manifest.json'));
   assert.equal(version.schemaVersion, 1); assert.equal(version.companionId, f.config.companionId);
   const header = JSON.parse(readFileSync(join(f.data, 'migrations.jsonl'),'utf8').split('\n')[0]);
-  assert.equal(header.backup, backup); assert.equal(header.manifestHash, hash(readFileSync(join(backup,'manifest.json'))));
+  assert.equal(header.backup, backup); assert.equal(header.backupHash, hash(readFileSync(join(backup,'manifest.json'))));
   verifyOfflineBackup(backup, planFor(f));
   assert.deepEqual(memoryLogical(f), before, 'Migration never changes Bank logical content');
   await coreReady(f); await recall(f);
