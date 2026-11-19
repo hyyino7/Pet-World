@@ -204,7 +204,7 @@
     {
       "rule": "R1",
       "file": "src/desktop/features.ts",
-      "line": 14,
+      "line": 15,
       "column": 50,
       "scope": "upstream",
       "target": "?",
@@ -214,7 +214,7 @@
     {
       "rule": "R2",
       "file": "src/desktop/features.ts",
-      "line": 65,
+      "line": 66,
       "column": 43,
       "scope": "DesktopFeatures/get",
       "target": "?",
@@ -224,7 +224,7 @@
     {
       "rule": "R2",
       "file": "src/desktop/features.ts",
-      "line": 143,
+      "line": 141,
       "column": 23,
       "scope": "DesktopFeatures/request",
       "target": "petVoice",
@@ -332,43 +332,7 @@
     {
       "rule": "R2",
       "file": "src/living/plan/plugin.ts",
-      "line": 158,
-      "column": 27,
-      "scope": "CompanionLife/publishRest",
-      "target": "petDesktop",
-      "expression": "this . ctx . get ( \"petDesktop\" )",
-      "from": "living",
-      "to": "desktop",
-      "reason": "服务读取未获准或方向违规"
-    },
-    {
-      "rule": "R2",
-      "file": "src/living/plan/plugin.ts",
-      "line": 193,
-      "column": 5,
-      "scope": "CompanionLife/startRuntime",
-      "target": "petDesktop",
-      "expression": "this . ctx . get ( \"petDesktop\" )",
-      "from": "living",
-      "to": "desktop",
-      "reason": "服务读取未获准或方向违规"
-    },
-    {
-      "rule": "R2",
-      "file": "src/living/plan/plugin.ts",
-      "line": 318,
-      "column": 25,
-      "scope": "CompanionLife/startRuntime/send",
-      "target": "petDesktop",
-      "expression": "this . ctx . get ( \"petDesktop\" )",
-      "from": "living",
-      "to": "desktop",
-      "reason": "服务读取未获准或方向违规"
-    },
-    {
-      "rule": "R2",
-      "file": "src/living/plan/plugin.ts",
-      "line": 324,
+      "line": 323,
       "column": 31,
       "scope": "CompanionLife/startRuntime/send",
       "target": "petChannels",

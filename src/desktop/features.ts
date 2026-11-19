@@ -7,6 +7,7 @@ import {randomUUID} from 'node:crypto';
 import type {CompanionFactActor} from '../contracts/interaction.js';
 import {sameBinding, type Binding} from './conversation.js';
 import {DEFAULT_CONVERSATION} from '../core/options.js';
+import {readLifeEnabled} from '../living/outlets.js';
 
 // All feature algorithms live in the pinned upstream modules. This adapter
 // binds them to native services and the single companion Repo, without HTTP
@@ -78,10 +79,7 @@ export class DesktopFeatures {
   private same(binding: Binding) { return this.current(binding) && this.available(); }
   private assertCurrent(binding: Binding) { if (!this.current(binding)) throw Error('桌宠工作区已切换，操作已取消'); }
   private lifeOwnsAutonomy(workspaceId:string):boolean {
-    const life=this.ctx.get('petLife');
-    // A saved enabled life still owns its intentions while native execution is
-    // unavailable. Planner readiness must not admit the older inference chain.
-    return life?.bodyClockState?.(workspaceId)?.enabled ?? life?.running() ?? false;
+    return readLifeEnabled(this.ctx, this.host, workspaceId);
   }
   private automaticAllowed(binding:Binding,dream:boolean) {
     return this.proactiveAllowed(binding)

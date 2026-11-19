@@ -26,6 +26,7 @@ import type {TableRegistration} from '../../contracts/tables.js';
 import {recordGardenPause, type GardenClock, type GardenPause} from '../economy/garden-clock.js';
 import {lifeDirectories, readLifeControl, readLifeSettings, safeLifeFile} from './control-file.js';
 import {InFlight, LivingView, mountLivingArea, settleCleanup, withLivingCaller, type AreaReference, type LivingPorts} from '../index.js';
+import {lookupLifeOutlet} from '../outlets.js';
 
 type Runtime = ReturnType<typeof createLifeRuntime>;
 interface Workspace { id: string; path: string; sessionIds: readonly string[]; attachSession(id: string): Promise<void> }
@@ -155,7 +156,7 @@ export class CompanionLife {
   restState(workspaceId: string) {
     if (this.isOpen()) return this.living.get('body')?.restState(workspaceId);
   }
-  private publishRest() { this.ctx.get('petDesktop')?.features?.restore(false); }
+  private publishRest() { lookupLifeOutlet(this.ctx, this.host, 'desktop')?.restore(); }
   private directory(root: string) {
     const directories = lifeDirectories(root);
     for (const dir of directories) {
@@ -190,7 +191,7 @@ export class CompanionLife {
     if (this.runtime || !this.binding || !this.enabled || !this.isOpen()) return;
     const bound = this.binding, native = this.native(), host = this.host;
     const canStart = () => this.isOpen() && this.enabled && this.isCurrentBinding(bound);
-    this.ctx.get('petDesktop')?.features?.pause();
+    lookupLifeOutlet(this.ctx, host, 'desktop')?.pause();
     await this.ctx.get('petTranscripts')?.restore();
     if (!canStart()) return;
     // Foreground Room and Life share Core's single-flight opener. Its moveIn
@@ -315,12 +316,10 @@ export class CompanionLife {
       notifier: {outlets: [{get name() {return host.workspace.runtime.identity().displayName || '伙伴';}, kinds: ['reach'], send: async push => {
         if (!active()) throw Error('生活已停止');
         if (this.host.workspace.runtime.policy().quiet) throw Error('安静模式中，主动消息未发送');
-        const desktop = this.ctx.get('petDesktop');
+        const desktop = lookupLifeOutlet(this.ctx, host, 'desktop');
         let delivered = false;
-        if (desktop && (desktop.presentationAvailable?.() ?? desktop.status().running)) {
-          try { desktop.presentLife(push.text,push.image); delivered = true; }
-          catch (error) { this.ctx.logger.warn('Life presentation delivery failed',error); }
-        }
+        try { delivered = desktop?.present(push.text,push.image) ?? false; }
+        catch (error) { this.ctx.logger.warn('Life presentation delivery failed',error); }
         const results = await this.ctx.get('petChannels')?.reach(bound.id, push) ?? [];
         if (!delivered && !results.some(result => result.status === 'fulfilled')) throw Error('当前没有送达主动消息的渠道');
       }}]},

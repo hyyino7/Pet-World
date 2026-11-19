@@ -1165,6 +1165,33 @@
       "families": []
     },
     {
+      "id": "2A3D-01",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "3D Desktop 先装时按 Life 意图调度并在重载后使用新出口",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A3D-02",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "3D Desktop 晚装时按 Life 意图调度并在重载后使用新出口",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A3D-03",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/entries-lifecycle.test.mjs",
+      "name": "3D 桌宠探测抛错时保留告警并继续送达 QQ",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
       "id": "2A2-01",
       "categories": [],
       "level": "L1",

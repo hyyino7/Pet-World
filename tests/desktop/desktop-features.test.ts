@@ -3,12 +3,23 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,realpathSync,readFileSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import type {Context} from '@deepseek-ai/cordis';
+import {Context} from '@deepseek-ai/cordis';
 import {createCore} from '../../src/core/index.js';
 import {DesktopFeatures} from '../../src/desktop/features.js';
 import type {TestContext} from 'node:test';
 import type {PetCoreHost} from '../../src/core/index.js';
 import {DEFAULT_COMPANION_SETTINGS,type CompanionSettings} from '../../src/core/companion-settings.js';
+import {mountLivingArea} from '../../src/living/index.js';
+import type {CompanionLife} from '../../src/living/plan/plugin.js';
+
+async function planLease(host:PetCoreHost, running:()=>boolean) {
+  const root = new Context();
+  await root.plugin(scope => {
+    mountLivingArea(scope,host,'plan',()=>({bodyClockState:()=>undefined,running}) as unknown as CompanionLife,
+      ()=>{},()=>{});
+  });
+  return root;
+}
 
 test('upstream Desktop todos survive restart; malformed data is preserved; native whisper and unsupported balance are explicit',async t=>{
   const root=realpathSync(mkdtempSync(join(tmpdir(),'pet-features-'))),repo=join(root,'repo');mkdirSync(repo);
@@ -33,9 +44,9 @@ test('upstream Desktop todos survive restart; malformed data is preserved; nativ
       return {changed,home:{her:{activity:sleeping?'正在睡觉':'醒来了'}}};
     },
   };
-  const ctx={get(name:string){
+  const lifetime = await planLease(host,()=>lifeRunning);
+  const ctx={root:lifetime,[Context.isolate]:lifetime[Context.isolate],get(name:string){
     if(name==='petBehavior')return behavior;
-    if(name==='petLife')return {running:()=>lifeRunning};
     if(name==='agentDefaultModel')return {currentSelection:()=>({provider:'fixture',model:'local'})};
     if(name==='llm')return {async *stream(options:any){calls++;assert.match(options.system,/Preserved personality/);yield {type:'block-start',index:0,blockType:'text'};yield {type:'text-delta',index:0,text:'今天也慢慢来。'};yield {type:'block-end',index:0,block:{type:'text',text:'今天也慢慢来。'}};yield {type:'finish',reason:{kind:'stop'}};}};
   },logger:()=>({warn(){},info(){}})} as unknown as Context;
@@ -82,10 +93,10 @@ test('upstream Desktop todos survive restart; malformed data is preserved; nativ
     assert.deepEqual(bodyRequests,['sleep','wake','sleep','wake']);
     const file=join(repo,'.chatpet/data/desktop/todos.json');writeFileSync(file,'broken original');
     await assert.rejects(features.request({path:'/todos',method:'POST',body:'{"text":"cannot overwrite"}'}));assert.equal(readFileSync(file,'utf8'),'broken original');
-  } finally {t.mock.timers.reset();await features.close();await host.close();rmSync(root,{recursive:true,force:true});}
+  } finally {t.mock.timers.reset();await features.close();await lifetime.fiber.dispose();await host.close();rmSync(root,{recursive:true,force:true});}
 });
 
-function maintenanceFixture(t:TestContext) {
+async function maintenanceFixture(t:TestContext) {
   const root=realpathSync(mkdtempSync(join(tmpdir(),'desktop-deadline-'))),events=new Map<string,Set<(...args:any[])=>void>>();
   const now=new Date('2026-11-13T02:00:00Z').getTime();
   t.mock.timers.enable({apis:['Date','setTimeout'],now});
@@ -94,16 +105,16 @@ function maintenanceFixture(t:TestContext) {
   const frames:{type:string;value:any}[]=[];
   const host={workspace:{status:()=>({state:'ready',target:{id:'fixture',path:root}}),companionSettings:()=>settings,
     runtime:{policy:()=>({quiet}),identity:()=>({displayName:'Fixture'})}},native:{context:()=>({identity:'Fixture identity'})}} as unknown as PetCoreHost;
-  const ctx={get(name:string){
+  const lifetime = await planLease(host,()=>lifeRunning);
+  const ctx={root:lifetime,[Context.isolate]:lifetime[Context.isolate],get(name:string){
     if(name==='petBehavior')return {restState:()=>({sleeping,pending:false})};
-    if(name==='petLife')return {running:()=>lifeRunning};
     if(name==='agentDefaultModel')return {currentSelection:()=>({provider:'fixture',model:'local'})};
     if(name==='llm')return {async *stream(){calls++;yield {type:'block-start',index:0,blockType:'text'};yield {type:'text-delta',index:0,text:'A fixture thought.'};yield {type:'block-end',index:0,block:{type:'text',text:'A fixture thought.'}};yield {type:'finish',reason:{kind:'stop'}};}};
   },on(name:string,fn:(...args:any[])=>void){const listeners=events.get(name)??new Set();listeners.add(fn);events.set(name,listeners);return()=>{listeners.delete(fn);};},logger:()=>({warn(){},info(){}})} as unknown as Context;
   const features=new DesktopFeatures(ctx,host,(type,value)=>frames.push({type,value}),()=>visible,()=>busy);
   const emit=(name:string,...args:any[])=>{for(const fn of events.get(name)??[])fn(...args);};
   const settled=async()=>{await features['maintenance'];await features['scheduling'];};
-  t.after(async()=>{await features.close();t.mock.timers.reset();rmSync(root,{recursive:true,force:true});});
+  t.after(async()=>{await features.close();await lifetime.fiber.dispose();t.mock.timers.reset();rmSync(root,{recursive:true,force:true});});
   return {root,features,frames,events,emit,settled,calls:()=>calls,
     configure(next:Partial<typeof settings>){settings={...settings,...next};emit('pet/core.changed','workspace.saveCompanion');},
     sleep(value:boolean){sleeping=value;emit('pet/behavior.changed',{workspaceId:'fixture'});},
@@ -116,7 +127,7 @@ function maintenanceFixture(t:TestContext) {
 }
 
 test('maintenance has no idle poll and wakes at the original todo reminder deadline',async t=>{
-  const f=maintenanceFixture(t);await f.features.refresh();
+  const f=await maintenanceFixture(t);await f.features.refresh();
   const tick=t.mock.method(f.features as any,'tick',f.features['tick'].bind(f.features));
   assert.equal(f.features['timer'],undefined);
   await f.advance(60*60_000);assert.equal(tick.mock.callCount(),0);
@@ -128,7 +139,7 @@ test('maintenance has no idle poll and wakes at the original todo reminder deadl
 });
 
 test('a far-future todo wakes when the original policy first admits it, without daily polling',async t=>{
-  const f=maintenanceFixture(t);await f.features.refresh();
+  const f=await maintenanceFixture(t);await f.features.refresh();
   const tick=t.mock.method(f.features as any,'tick',f.features['tick'].bind(f.features));
   const day=24*60*60_000;
   await f.features.request({path:'/todos',method:'POST',body:JSON.stringify({text:'Far future fixture',dueAt:Date.now()+10*day})});
@@ -138,7 +149,7 @@ test('a far-future todo wakes when the original policy first admits it, without 
 });
 
 test('settings, Life ownership, busy and quiet changes rearm one deadline without a parallel inference chain',async t=>{
-  const f=maintenanceFixture(t);await f.features.refresh();
+  const f=await maintenanceFixture(t);await f.features.refresh();
   f.life(true);f.configure({desktopWhisperEnabled:true,desktopWhisperMinutes:1});await f.settled();
   assert.equal(f.features['timer'],undefined);
   await f.advance(20*60_000);assert.equal(f.calls(),0,'Life owns autonomous speech');
@@ -155,7 +166,7 @@ test('settings, Life ownership, busy and quiet changes rearm one deadline withou
 });
 
 test('sleep, visibility and close preserve balance/dream semantics while cancelling unused deadlines',async t=>{
-  const f=maintenanceFixture(t);await f.features.refresh();let balances=0;
+  const f=await maintenanceFixture(t);await f.features.refresh();let balances=0;
   t.mock.method(f.features,'balance',async()=>{balances++;return {ok:false,reason:'fixture'};});
   f.configure({desktopWhisperEnabled:true,desktopWhisperMinutes:1,desktopSleepTalkSeconds:30,desktopBalanceEnabled:true,desktopBalanceMinutes:1});
   f.sleep(true);await f.settled();await f.advance(29_999);assert.equal(f.calls(),0);assert.equal(balances,0);
@@ -172,7 +183,7 @@ test('sleep, visibility and close preserve balance/dream semantics while cancell
 });
 
 test('a failed due action waits for a real lifecycle change instead of retrying a hot timer',async t=>{
-  const f=maintenanceFixture(t);await f.features.refresh();let attempts=0;
+  const f=await maintenanceFixture(t);await f.features.refresh();let attempts=0;
   t.mock.method(f.features,'whisper',async()=>{attempts++;throw Error('injected missing resource');});
   f.configure({desktopWhisperEnabled:true,desktopWhisperMinutes:1});await f.settled();
   await f.advance(60_000);assert.equal(attempts,1);assert.equal(f.features['timer'],undefined);

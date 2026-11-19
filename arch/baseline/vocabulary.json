@@ -2208,13 +2208,13 @@
       "other": {
         "file": "src/desktop/plugin.ts",
         "scope": "<module>",
-        "line": 7
+        "line": 8
       }
     },
     {
       "rule": "R8",
       "file": "src/desktop/plugin.ts",
-      "line": 7,
+      "line": 8,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/channels/plugin.ts\",\"scope\":\"<module>\"}",
@@ -4134,13 +4134,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 349
+        "line": 348
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 349,
+      "line": 348,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
@@ -4177,13 +4177,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 498
+        "line": 497
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 498,
+      "line": 497,
       "column": 11,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
@@ -6558,13 +6558,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 42
+        "line": 43
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 42,
+      "line": 43,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -6606,13 +6606,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/desktopRest",
-        "line": 574
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 574,
+      "line": 573,
       "column": 44,
       "scope": "CompanionLife/desktopRest",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -8188,13 +8188,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 416
+        "line": 415
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 416,
+      "line": 415,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -8554,13 +8554,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 42
+        "line": 43
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 42,
+      "line": 43,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -8601,13 +8601,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/desktopRest",
-        "line": 574
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 574,
+      "line": 573,
       "column": 44,
       "scope": "CompanionLife/desktopRest",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -10394,13 +10394,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 416
+        "line": 415
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 416,
+      "line": 415,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/contracts/interaction.ts\",\"scope\":\"<module>\"}",
@@ -10802,13 +10802,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 631
+        "line": 630
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 631,
+      "line": 630,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/core/native/agent.ts\",\"scope\":\"<module>\"}",
@@ -11067,13 +11067,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 416
+        "line": 415
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 416,
+      "line": 415,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/core/native/conversation.ts\",\"scope\":\"CoreNative/observeFacts\"}",
@@ -11940,13 +11940,13 @@
       "other": {
         "file": "src/desktop/features.ts",
         "scope": "DesktopFeatures/constructor/ctx . on:callback1",
-        "line": 60
+        "line": 61
       }
     },
     {
       "rule": "R8",
       "file": "src/desktop/features.ts",
-      "line": 60,
+      "line": 61,
       "column": 12,
       "scope": "DesktopFeatures/constructor/ctx . on:callback1",
       "target": "{\"file\":\"src/desktop/conversation.ts\",\"scope\":\"Conversation/event\"}",
@@ -11966,7 +11966,7 @@
     {
       "rule": "R8",
       "file": "src/desktop/features.ts",
-      "line": 60,
+      "line": 61,
       "column": 12,
       "scope": "DesktopFeatures/constructor/ctx . on:callback1",
       "target": "{\"file\":\"src/desktop/index.ts\",\"scope\":\"Desktop/event\"}",
@@ -12003,13 +12003,13 @@
       "other": {
         "file": "src/desktop/features.ts",
         "scope": "DesktopFeatures/constructor/ctx . on:callback1",
-        "line": 60
+        "line": 61
       }
     },
     {
       "rule": "R8",
       "file": "src/desktop/features.ts",
-      "line": 142,
+      "line": 140,
       "column": 9,
       "scope": "DesktopFeatures/request",
       "target": "{\"file\":\"src/voice/plugin.ts\",\"scope\":\"CompanionVoice/handle\"}",
@@ -12045,7 +12045,7 @@
       "other": {
         "file": "src/desktop/features.ts",
         "scope": "DesktopFeatures/request",
-        "line": 142
+        "line": 140
       }
     },
     {
@@ -13065,13 +13065,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 42
+        "line": 43
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 42,
+      "line": 43,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
@@ -13110,13 +13110,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/desktopRest",
-        "line": 574
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 574,
+      "line": 573,
       "column": 44,
       "scope": "CompanionLife/desktopRest",
       "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
@@ -13444,7 +13444,7 @@
     {
       "rule": "R8",
       "file": "src/desktop/plugin.ts",
-      "line": 7,
+      "line": 8,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"<module>\"}",
@@ -13459,13 +13459,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 631
+        "line": 630
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 631,
+      "line": 630,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/desktop/plugin.ts\",\"scope\":\"<module>\"}",
@@ -13483,13 +13483,13 @@
       "other": {
         "file": "src/desktop/plugin.ts",
         "scope": "<module>",
-        "line": 7
+        "line": 8
       }
     },
     {
       "rule": "R8",
       "file": "src/desktop/plugin.ts",
-      "line": 7,
+      "line": 8,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"<module>\"}",
@@ -13530,7 +13530,7 @@
       "other": {
         "file": "src/desktop/plugin.ts",
         "scope": "<module>",
-        "line": 7
+        "line": 8
       }
     },
     {
@@ -13955,13 +13955,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 631
+        "line": 630
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 631,
+      "line": 630,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/emotion/plugin.ts\",\"scope\":\"<module>\"}",
@@ -14661,13 +14661,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 42
+        "line": 43
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 42,
+      "line": 43,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/plugin.ts\",\"scope\":\"<module>\"}",
@@ -14709,13 +14709,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/desktopRest",
-        "line": 574
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 574,
+      "line": 573,
       "column": 44,
       "scope": "CompanionLife/desktopRest",
       "target": "{\"file\":\"src/living/body/plugin.ts\",\"scope\":\"<module>\"}",
@@ -14844,13 +14844,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/garden",
-        "line": 594
+        "line": 593
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 594,
+      "line": 593,
       "column": 42,
       "scope": "CompanionLife/garden",
       "target": "{\"file\":\"src/living/body/plugin.ts\",\"scope\":\"CompanionBehavior/garden\"}",
@@ -15584,13 +15584,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 42
+        "line": 43
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 42,
+      "line": 43,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
@@ -15636,13 +15636,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/desktopRest",
-        "line": 574
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 574,
+      "line": 573,
       "column": 44,
       "scope": "CompanionLife/desktopRest",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
@@ -17133,13 +17133,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 42
+        "line": 43
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 42,
+      "line": 43,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchExecution\"}",
@@ -17177,13 +17177,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/desktopRest",
-        "line": 574
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 574,
+      "line": 573,
       "column": 44,
       "scope": "CompanionLife/desktopRest",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchExecution\"}",
@@ -17504,13 +17504,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 416
+        "line": 415
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 416,
+      "line": 415,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
@@ -17729,13 +17729,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 42
+        "line": 43
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 42,
+      "line": 43,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
@@ -17776,13 +17776,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/desktopRest",
-        "line": 574
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 574,
+      "line": 573,
       "column": 44,
       "scope": "CompanionLife/desktopRest",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
@@ -18096,13 +18096,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 416
+        "line": 415
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 416,
+      "line": 415,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
@@ -18355,13 +18355,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 42
+        "line": 43
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 42,
+      "line": 43,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/animationContext\"}",
@@ -19107,13 +19107,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/desktopRest",
-        "line": 574
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 574,
+      "line": 573,
       "column": 44,
       "scope": "CompanionLife/desktopRest",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/act\"}",
@@ -19148,13 +19148,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/garden",
-        "line": 594
+        "line": 593
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 594,
+      "line": 593,
       "column": 42,
       "scope": "CompanionLife/garden",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -19274,13 +19274,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 523
+        "line": 522
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 523,
+      "line": 522,
       "column": 65,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -19316,13 +19316,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 524
+        "line": 523
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 524,
+      "line": 523,
       "column": 9,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -19494,13 +19494,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 631
+        "line": 630
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 631,
+      "line": 630,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"<module>\"}",
@@ -20627,13 +20627,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 416
+        "line": 415
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 416,
+      "line": 415,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -20716,13 +20716,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 42
+        "line": 43
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 42,
+      "line": 43,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -20763,13 +20763,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/desktopRest",
-        "line": 574
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 574,
+      "line": 573,
       "column": 44,
       "scope": "CompanionLife/desktopRest",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -21111,13 +21111,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 523
+        "line": 522
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 523,
+      "line": 522,
       "column": 65,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -21153,13 +21153,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 524
+        "line": 523
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 524,
+      "line": 523,
       "column": 9,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -21239,13 +21239,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 349
+        "line": 348
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 349,
+      "line": 348,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
@@ -21282,13 +21282,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 498
+        "line": 497
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 498,
+      "line": 497,
       "column": 11,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
@@ -21327,13 +21327,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 416
+        "line": 415
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 416,
+      "line": 415,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -21427,13 +21427,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 42
+        "line": 43
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 42,
+      "line": 43,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -21474,13 +21474,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/desktopRest",
-        "line": 574
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 574,
+      "line": 573,
       "column": 44,
       "scope": "CompanionLife/desktopRest",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -21568,13 +21568,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 416
+        "line": 415
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 416,
+      "line": 415,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -21611,13 +21611,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 349
+        "line": 348
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 349,
+      "line": 348,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/decode\"}",
@@ -21654,13 +21654,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 498
+        "line": 497
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 498,
+      "line": 497,
       "column": 11,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/decode\"}",
@@ -21694,13 +21694,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 349
+        "line": 348
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 349,
+      "line": 348,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/change/this . store . update:callback0\"}",
@@ -21734,13 +21734,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 498
+        "line": 497
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 498,
+      "line": 497,
       "column": 11,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/change/this . store . update:callback0\"}",
@@ -21774,13 +21774,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 349
+        "line": 348
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 349,
+      "line": 348,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/retryAt\"}",
@@ -21814,13 +21814,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 498
+        "line": 497
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 498,
+      "line": 497,
       "column": 11,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/retryAt\"}",
@@ -21854,13 +21854,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 349
+        "line": 348
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 349,
+      "line": 348,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/keep/this . change:callback1\"}",
@@ -21894,13 +21894,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 498
+        "line": 497
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 498,
+      "line": 497,
       "column": 11,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/keep/this . change:callback1\"}",
@@ -21935,13 +21935,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 523
+        "line": 522
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 523,
+      "line": 522,
       "column": 65,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -21977,13 +21977,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 524
+        "line": 523
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 524,
+      "line": 523,
       "column": 9,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -22060,13 +22060,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 349
+        "line": 348
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 349,
+      "line": 348,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/reconsider\"}",
@@ -22100,13 +22100,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 498
+        "line": 497
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 498,
+      "line": 497,
       "column": 11,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/reconsider\"}",
@@ -22140,13 +22140,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 349
+        "line": 348
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 349,
+      "line": 348,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance\"}",
@@ -22180,13 +22180,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 498
+        "line": 497
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 498,
+      "line": 497,
       "column": 11,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance\"}",
@@ -22206,7 +22206,7 @@
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 42,
+      "line": 43,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"<module>\"}",
@@ -22252,13 +22252,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 42
+        "line": 43
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 523,
+      "line": 522,
       "column": 65,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/request\"}",
@@ -22294,13 +22294,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 523
+        "line": 522
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 524,
+      "line": 523,
       "column": 9,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/request\"}",
@@ -22336,13 +22336,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 524
+        "line": 523
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 574,
+      "line": 573,
       "column": 44,
       "scope": "CompanionLife/desktopRest",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"<module>\"}",
@@ -22384,7 +22384,7 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/desktopRest",
-        "line": 574
+        "line": 573
       }
     },
     {

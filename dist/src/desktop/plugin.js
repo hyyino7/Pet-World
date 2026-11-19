@@ -1,4 +1,5 @@
 import { CONTRACT_VERSION } from '../contracts/version.js';
+import { registerLifeOutlet } from '../living/outlets.js';
 import { desktopFor, registerDesktop } from './index.js';
 export const name = '30-Desktop';
 export const inject = ['petCore', 'agents', 'sessions'];
@@ -32,6 +33,16 @@ export function apply(ctx) {
     registerDesktop(ctx, host);
     const desktop = desktopFor(host);
     ctx.provide('petDesktop', desktop);
+    ctx.effect(() => registerLifeOutlet(ctx, host, 'desktop', {
+        pause: () => desktop.features?.pause(),
+        restore: () => desktop.features?.restore(false),
+        present(text, sticker) {
+            if (!desktop.presentationAvailable())
+                return false;
+            desktop.presentLife(text, sticker);
+            return true;
+        },
+    }).revoke);
     ctx.effect(() => host.native.sourceTable.register({
         id: 'desktop', order: 30, sources: [], branches: {}, policyRows: desktopPolicies,
         admit: () => ({ kind: 'unclaimed' }),
