@@ -195,7 +195,83 @@
 - **R6**：`src/living/` 带一条「关闭后不留尾巴」测试，放在 `verify` 收集得到的位置（`tests/**/*.test.mjs` 或 `.test.ts`）：六种实际激活顺序、三种先卸载、同名重挂、旧回调晚到；断言没有残留定时器、订阅和在途 I/O。
 - **R7**：卸载生活入口、显式暂停生活、卸载身体入口三种，由 1A 的入口测试覆盖。
 
-**允许修改**：`src/living/**`、`arch/layers.json`、相关测试。
+**允许修改**：见下面「3B 开工细则」的「允许修改与批次边界」。
+
+#### 3B 开工细则
+
+（Codex 只读起草、Claude 核对行号后定稿，主人 2026-11-19 过目同意；行号以 `27e9232` 为准。）
+
+**实例与可见性**
+
+- `src/living/index.ts` 新建 `LivingWorld`。外层按 `ctx.root`、实际注入的 `ctx.petCore` 对象用 `WeakMap` 取值，内层按 `petBehavior`、`petLife`、`petEconomy` 三个隔离标签逐项 `===` 复用实例。标签取 `ctx[Context.isolate][name]`，入口先按 Cordis 的 `??= Symbol(name)` 补齐根默认标签。首个入口创建，最后一个入口完成清理后释放。`src/core/index.ts:36-47`、`src/core/plugin.ts:20,34`、`node_modules/@deepseek-ai/cordis/src/context.ts:72-78,109-124`、`node_modules/@deepseek-ai/cordis/src/reflect.ts:291-306`、`docs/plans/stage2a-merge.md:389-390`
+- 每个区的登记槽按同一根、宿主、目标区和**目标服务自己的标签**索引。读区时只取同标签、租约有效且提供者处于 `FiberState.ACTIVE` 的值。只隔离 `petLife` 时，原标签的 Plan 不可见，仍能读到同标签的 Body 和 Economy。Body 的单写者约束及 Economy 的初始化与库锁照旧。`node_modules/@deepseek-ai/cordis/src/reflect.ts:239-256`、`src/living/body/plugin.ts:20,38-40`、`src/core/workspace.ts:182-187`、`src/living/economy/store.ts:47-63`
+- 三个 `apply` 复用 `RegistrationTable` 登记。重复登记报错，`revoke()` 在首次 `await` 前删槽，同名重挂生成新 `Symbol`，旧 `revoke()` 不会删掉新槽。排队前、恢复执行后及写入或发布前核对原调用方和所用区的租约，晚到回调到此为止。`src/core/tables/registry.ts:20-44,66-77`、`tests/core/tables-registry.test.ts:24-74`
+- `living.watch()` 在 Body 作用域安装，首次读取当前可见项，再用 Cordis `internal/status` 刷新。按可见租约的变化通知，进出各一次。退出回调带原观察代次，已有新代时丢弃。业务事件仍走原订阅。`node_modules/@deepseek-ai/cordis/src/fiber.ts:587-600`、`node_modules/@deepseek-ai/cordis/src/events.ts:334-341`、`src/living/body/plugin.ts:48,67-85`
+
+**区间调用逐点替换**
+
+`living` 表示当前入口的类型化视图。保留原可选调用、缺席处理和持久化读取路径。`src/living/body/plugin.ts:142-159`、`src/living/economy/plugin.ts:112-121`、`src/living/plan/plugin.ts:499-502`
+
+- `src/living/body/plugin.ts:44` → `!living.get('plan')`，保留 observation 分支。
+- `src/living/body/plugin.ts:48` → `living.watch('economy', …)`，进出都调用 `refreshBinding()`。
+- `src/living/body/plugin.ts:67` → `living.watch('plan', …)`，进入时同步自治并订阅原 `pet/life.changed`，退出时先退订再排队挂起。
+- `src/living/body/plugin.ts:68` → 从 `watch` 通知取 `{ value: life, lease: planLease }`。
+- `src/living/body/plugin.ts:70` → 检查 `planLease.isCurrent()` 与同一可见代次，在 `:74` 等待返回后再查一次。
+- `src/living/body/plugin.ts:83` → 仅当前缺席通知可以挂起，检查 `living.get('plan')` 仍为空。
+- `src/living/body/plugin.ts:143` → `living.get('economy')`，保留权威菜园不可用时报错。
+- `src/living/body/plugin.ts:150` → `living.get('plan')?.bodyClockState?.(id) ?? readLifeControl(target.path)`。
+- `src/living/body/plugin.ts:152` → `living.get('plan')?.bodyClockState?.(id)`。
+- `src/living/body/plugin.ts:301` → `enabled ? living.get('plan')?.bodyClockState?.(workspaceId) : undefined`。
+- `src/living/plan/plugin.ts:123` → `living.get('body')?.restState(workspaceId)`。
+- `src/living/plan/plugin.ts:194` → `living.get('body')?.promptLine(bound.id)`。
+- `src/living/plan/plugin.ts:302` → `plan.control` 的 Body 参数取 `living.get('body')`。
+- `src/living/plan/plugin.ts:305` → `living.get('body')?.setAutonomy(this.binding.id, false)`。
+- `src/living/plan/plugin.ts:324` → `const behavior = living.get('body')`，同一轮推进使用捕获的租约。
+- `src/living/plan/plugin.ts:350` → `plan.control` 的 Body 参数取 `living.get('body')`。
+- `src/living/plan/plugin.ts:355` → `living.get(domain)`，沿用事实读取、确认后的代次复核。`src/living/plan/plugin.ts:235-241,357-364`、`src/living/plan/facts.ts:5-19`
+- `src/living/plan/plugin.ts:374` → `await living.get('body')?.roomState(workspaceId) ?? null`。
+- `src/living/plan/plugin.ts:413` → `plan.commit` 的 Body 参数取 `living.get('body')`。
+- `src/living/plan/plugin.ts:458` → `plan.control` 的 Body 参数取 `living.get('body')`。
+- `src/living/plan/plugin.ts:466` → `living.get('economy')?.committedGardenAt(bound.id)`。
+- `src/living/plan/plugin.ts:500` → `const behavior = living.get('body')`，沿用缺席报错。
+- `src/living/economy/plugin.ts:113` → `living.get('plan')?.bodyClockState?.(workspaceId)`。
+- `src/living/economy/plugin.ts:120` → `living.get('body')?.gardenClockState?.(workspaceId)`。
+- `src/living/economy/plugin.ts:206` → `const body = living.get('body')`，沿用投喂缺席报错。
+- `src/living/economy/plugin.ts:223` → `const behavior = living.get('body')`，设置保存前仍先等 Body 快照。
+- 第一层调用继续走旧门面，归 3C。`src/core/plugin.ts:43`、`src/core/companion-foundation.ts:139-141,179,202,207,228,233,247`、`src/memory/batch.ts:93`、`docs/plans/stage2a-merge.md:200-211`
+- 第三层调用继续走旧门面，包括 PetPlatform 的动态 `inject` 和两处 `get(..., false)`，以及 Room 的硬 `inject` 和属性读。`src/channels/plugin.ts:78,88`、`src/channels/messaging.ts:197`、`src/console/plugin.ts:23,27`、`src/desktop/index.ts:281`、`src/desktop/features.ts:81,123,167`、`src/desktop/platform/plugin.ts:235,366,671,678`、`src/room/plugin.ts:67,103,114,158`
+
+**入口与卸载**
+
+- 每个 `apply` 在启动资源前装好本入口唯一的卸载 `ctx.effect`，用同一幂等清理函数回滚挂载失败。卸载时调用 `revoke()`，在首次等待前同步关准入、停调度及退订，再等待已开始的工作并执行 `close()`。某项清理失败仍执行其余清理并释放实例引用。Cordis 同级 effect 并行执行，顺序由这个回调保证。`src/core/tables/registry.ts:66-71`、`node_modules/@deepseek-ai/cordis/src/fiber.ts:712-735`
+- Body 在 `apply` 的 `:355` 接入。`:340-344` 拆出停接单、清物理定时器和退订，再排队做 `suspendAutonomy()`、`flush()`、释放绑定及写者。已进队列的工作在副作用前复核，最终检查点仍可按本域读取活跃 Economy。硬 `inject`、`provide` 锚点分别为 `:348`、`:354`。`src/living/body/plugin.ts:88-109,142-150,340-355`、`src/living/body/room.ts:271-296`
+- Plan 在 `apply` 的 `:551` 接入。`:528-537` 先封队列和转发入口、清 tick、撤来源并退订，停止上游调度并取消原生 home 轮次，再等队列、`runtime.settled()` 和已进入的回顾 I/O。卸载走 `stopRuntime(false)`，显式暂停仍走 `true`。硬 `inject`、`provide` 为 `:541`、`:550`。`src/living/plan/plugin.ts:78-94,294-317,474-488,499-552`、`src/living/plan/review.ts:23-34`
+- Economy 把 `:275` 的清理前移到 `apply` 起点 `:238-239` 建立。撤登记后关准入，撤 `stopAccess` 和 `stopInitializer`，取消并等文件守卫及跨区请求收尾，再走 `:229` 的同步 `close()` 关库、释锁。硬 `inject`、`provide` 为 `:233`、`:248`。`src/living/economy/plugin.ts:187-249,250-275`、`src/living/economy/access.ts:61-95`、`src/living/economy/store.ts:470`
+
+**R6、R7 与验收**
+
+- 新增 `tests/living/living-lifecycle.test.mjs`，复用 `cordisFixture`。夹具只加可选装载顺序、挂载作用域和 I/O 探针，默认行为及 1A 断言照旧。R7 沿用 Life 卸载、显式暂停和 Body 卸载用例，菜园基准为 2/12。`tests/behavior-list/entries-lifecycle.test.mjs:35-39,207-239,323-354,369-394,681-738`、`docs/plans/stage2a-merge.md:543`、`scripts/checks/verify.mjs:13-16`
+- 用真实 `ctx.plugin()` 逐次 `await` 跑三入口六种排列，每种分别让 Body、Plan、Economy 第一个卸载。核对剩余门面对象及行为，同名重挂取得新租约，全部卸载后实例释放。再测同宿主的单项隔离、同标签恢复可见以及不同宿主隔离。`tests/behavior-list/entries-lifecycle.test.mjs:218-236,252,681-709,741-768`、`node_modules/@deepseek-ai/cordis/src/context.ts:109-124`
+- 用延迟 Promise 卡住一次 Body 的 `petEmotion.read()`，让它持有旧 Plan 代次，等 Plan 同名重挂后再放行。断言旧回调没有写盘、发布或调新 Plan，旧撤销也不会撤掉新登记。另向已卸载入口投递原事件，断言无新增工作。`src/living/body/plugin.ts:67-85,231-235`、`tests/core/tables-registry.test.ts:32-74`、`tests/regressions/audit-r6-memory-scope.test.mjs:88-94`
+- 计数 Body 物理定时器、Plan tick 和上游闹钟的实际句柄，先断言已挂起，再断言卸载区句柄与其 Cordis 订阅归零、推进时钟也不重挂。保留其余区的订阅。`src/living/body/plugin.ts:92-109`、`src/living/plan/plugin.ts:84-90`、`vendor/dsh-world/lib/life/runtime.js:1161-1181`、`node_modules/@deepseek-ai/cordis/src/events.ts:263-279`、`tests/regressions/audit-r6-garden-refresh.test.mjs:140-155,171-176`
+- 在原生落盘或读取、Economy 文件解析边界卡住真实入口发起的调用。有信号的断言收到取消，无信号的断言 `dispose()` 等待收尾。卸载完成时断言在途计数、打开的 reader 和 `economy.lock` 均归零，已提交写入保留。`tests/behavior-list/entries-lifecycle.test.mjs:95,142-150,179-203,340-347`、`src/living/plan/plugin.ts:215-233`、`src/living/economy/access.ts:64-85`、`src/living/economy/store.ts:470`
+
+**允许修改与批次边界**
+
+- 实现限 `src/living/index.ts`（新增）、`src/living/body/plugin.ts`、`src/living/plan/plugin.ts`、`src/living/plan/plan.ts`、`src/living/plan/review.ts`、`src/living/economy/plugin.ts`、`src/living/economy/access.ts`。`arch/layers.json:54-61` 删除 `living.reads` 中三个旧名，登记 `internal/status`。构建同步 `dist/src/living/`，按入口登记与逐区替换拆提交。`docs/plans/stage2a-merge.md:188-198,410`、`AGENTS.md:64`
+- 测试限 `tests/living/living-lifecycle.test.mjs`、`tests/behavior-list/entries-lifecycle.test.mjs:35-239` 的夹具和 `tests/behavior-list/fixture.mjs:84-96,154-168` 的宿主接线。直接构造对象的夹具显式传邻区读取端口，Cordis 替身在对应域登记，断言沿用原稿。
+- 上述夹具接线限 `tests/behavior/behavior-scheduling.test.ts:42-54,82-95`、`tests/behavior/garden-clock-continuity.test.ts:32-35,96-135`、`tests/life/life-body.test.ts:86-98,131,215`、`tests/life/life-clock-intent.test.ts:26-28`、`tests/life/life-core-integration.test.ts:50-51,118-119`、`tests/life/life-desktop-integration.test.ts:29-47`、`tests/life/life-domain-integration.test.ts:39-49`、`tests/life/life-sleep-continuity.test.ts:29-32`。
+- 同类接线还包括 `tests/regressions/audit-r5-garden-clock.test.mjs:34-38`、`tests/regressions/mapped-playback-context.test.ts:55-60`、`tests/regressions/mapped-refresh-convergence.test.mjs:46-66`、`tests/regressions/mapped-refused-movement.test.mjs:45-49`、`tests/regressions/mapped-sleeping-inventory.test.mjs:53-54`。
+- 三个 `provide` 仍交付原对象及原方法签名。沿用现有事件名、载荷、发布与订阅时机、`observation` 过滤及通知失败后保留落盘回执。第一层治理、第三层出口、新契约、数据迁移和事件改直调分别留给后续批次。`src/living/body/plugin.ts:192-222,354`、`src/living/plan/plugin.ts:73-76,550`、`src/living/economy/plugin.ts:181-185,212,248`、`docs/plans/stage2a-merge.md:194,200-225,408`
+
+**主人拍板**
+
+- 合成夹具接线 — 推荐把 `scripts/fixtures/synthetic-companion.mjs:31-38` 的端口接线一并列入 3B。它直接构造 Body 和 Economy，迁移结算测试复用该入口，应让它继续走真实的跨区结算。改动只在合成夹具接线。`tests/migrate/settlement.test.mjs:7-17,35`、`docs/plans/stage2a-merge.md:198` 决定：按推荐（主人 2026-11-19 过目同意）。
+
+**快测**
+
+- `pnpm run build && node --test tests/behavior-list/{entries-lifecycle,families,domains}.test.mjs tests/living/living-lifecycle.test.mjs dist/tests/core/tables-registry.test.js && pnpm run check:arch`。1A 原断言与 G9 的落盘、重启、补结算一起验收。`docs/plans/stage2a-merge.md:422,430`、`tests/behavior-list/families.test.mjs:125-195`、`package.json:92,125`
+- `node --test dist/tests/behavior/{behavior-scheduling,garden-clock-continuity}.test.js dist/tests/life/{life-body,life-clock-intent,life-core-integration,life-desktop-integration,life-domain-integration,life-sleep-continuity}.test.js dist/tests/regressions/mapped-playback-context.test.js tests/regressions/{audit-r5-garden-clock,mapped-refresh-convergence,mapped-refused-movement,mapped-sleeping-inventory}.test.mjs`。合成脚本接线获准后加跑 `node --test tests/migrate/settlement.test.mjs`。`tsconfig.build.json:3-5`、`tests/migrate/settlement.test.mjs:7-17`
 
 ### 3C 清第一层 18 条违规
 
