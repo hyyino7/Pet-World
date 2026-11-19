@@ -8,7 +8,7 @@ import type {PetCoreHost} from '../../src/core/index.js';
 import {emptyHomeState, homeView} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
 import {canonical} from '../../src/core/storage.js';
-import {CompanionBehavior} from '../../src/behavior/plugin.js';
+import {CompanionBehavior} from '../../src/living/body/plugin.js';
 import {Room} from '../../src/room/plugin.js';
 
 const jobs = [

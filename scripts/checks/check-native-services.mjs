@@ -64,7 +64,7 @@ try{
   }
   async function send(handle,text){handle.agent.followup(createUserMessage({source:{kind:'user'},content:[{type:'text',text}]}));await handle.agent.whenIdle();await ctx.sessions.flush(handle.agent.session);const end=[...handle.agent.session.snapshotEvents()].reverse().find(event=>event.type==='turn/end');assert.equal(end?.data.reason.kind,'completed',JSON.stringify(end?.data.reason));}
   const cold=await open(),initialPrepare=host.native.memory.prepare.bind(host.native.memory);
-  const {createLifeSourceAdapter}=await import('../../dist/src/life/tool-policy.js');
+  const {createLifeSourceAdapter}=await import('../../dist/src/living/plan/tool-policy.js');
   const coldSource=host.native.sourceTable.register(createLifeSourceAdapter(ctx,host,id=>id===cold.agent.id));
   host.native.memory.prepare=async()=>{throw Error('Synthetic cold Memory outage');};
   program=async function*(){yield* say('Autonomous turn survives cold Memory outage.');};

@@ -1,1 +1,1 @@
-export const lazy = () => import('../life/plugin.js');
+export const lazy = () => import('../living/plan/plugin.js');

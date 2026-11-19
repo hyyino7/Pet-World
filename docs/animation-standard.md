@@ -19,7 +19,7 @@ models have a separate contract below; a 2D clip does not provide a 3D action.
 | Life production artwork | 8 RGBA PNG sheets; 1536 × 1024; six 512 × 512 cells in a 3-column, 2-row grid | [Source artwork and conversion](../art/life-animation-sources/README.md) |
 | Life posters | 8 RGBA PNG files; same presentation canvas as their clips | [Life media manifest](../src/desktop/assets/life-animations.json) |
 | Registered chat stickers | 27 RGB PNG files; width 384; heights 288–384; existing backgrounds are part of the artwork | [Catalog](../src/desktop/assets/catalog.json) |
-| Existing composited food props | Three 512 × 512 RGBA PNG files | [Prop allocation](../src/behavior/animation-allocation.json), [prop files](../vendor/dsh-pet/platform/assets/pic/baifan/) |
+| Existing composited food props | Three 512 × 512 RGBA PNG files | [Prop allocation](../src/living/body/animation-allocation.json), [prop files](../vendor/dsh-pet/platform/assets/pic/baifan/) |
 | Room 3D models | Two GLB files; both have no skins or animation clips | [Model contract](../vendor/feiyu-room-template/public/room/assets/models/README.md) |
 
 The registered animation set contains 122 clips, approximately 60.46 MB in total.
@@ -266,9 +266,9 @@ transparency. No extra browser codec or fallback is introduced by this standard.
 
 - Register shipped actions and stickers in the [catalog](../src/desktop/assets/catalog.json).
 - Keep Life hashes, poster metadata and source hashes in the [Life manifest](../src/desktop/assets/life-animations.json) when using that workflow.
-- Map approved action roles in the [allocation](../src/behavior/animation-allocation.json).
+- Map approved action roles in the [allocation](../src/living/body/animation-allocation.json).
   A name-based match is not proof that all required sub-actions exist visually.
-- Generate [the runtime index](../src/behavior/animation-map.ts) through the
+- Generate [the runtime index](../src/living/body/animation-map.ts) through the
   existing build; do not edit it as a separate animation list.
 - Preserve [Room's shared asset route](../src/room/assets.ts). New shared clips
   should use the canonical media, rather than creating another Room copy.

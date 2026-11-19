@@ -3,7 +3,7 @@ import test from 'node:test';
 import type { CompanionToolSource } from '../../src/contracts/index.js';
 import { historicalStateOverview } from '../../src/core/native/history-maintenance.js';
 import { CompanionToolTable } from '../../src/core/tables/tools.js';
-import { lifePlanReadToolDeclaration } from '../../src/life/plan-tools.js';
+import { lifePlanReadToolDeclaration } from '../../src/living/plan/plan-tools.js';
 
 test('tool declarations are unique by name and validate their sources before registration', () => {
   const table = new CompanionToolTable();

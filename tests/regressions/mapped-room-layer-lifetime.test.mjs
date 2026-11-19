@@ -12,7 +12,7 @@ const source=readFileSync(process.env.CHATPET_ROOM_LAYER_TEST_SOURCE||'vendor/fe
 const tree=ts.createSourceFile('actor.js',source,ts.ScriptTarget.Latest,true);
 const declaration=tree.statements.find(node=>ts.isClassDeclaration(node)&&node.name?.text==='Layer');
 assert.ok(declaration,'Actual Room Layer boundary changed');
-const {sampleActivityPlayback}=await import(pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/behavior/playback.js')));
+const {sampleActivityPlayback}=await import(pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/living/body/playback.js')));
 const flush=async()=>{await Promise.resolve();await Promise.resolve();};
 function clock(initial=0) {
   let now=initial,sequence=0,scheduled=0;const jobs=new Map();

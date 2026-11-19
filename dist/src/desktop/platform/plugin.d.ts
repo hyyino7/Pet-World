@@ -172,7 +172,7 @@ export declare class PetPlatform {
                 etaMs: any;
                 gardenWork: any;
             };
-            playback: import("../../behavior/playback.js").ActivityPlayback;
+            playback: import("../../living/body/playback.js").ActivityPlayback;
             notice: string | undefined;
         };
         packsDirectory: string;
@@ -221,7 +221,7 @@ export declare class PetPlatform {
                 etaMs: any;
                 gardenWork: any;
             };
-            playback: import("../../behavior/playback.js").ActivityPlayback;
+            playback: import("../../living/body/playback.js").ActivityPlayback;
             notice: string | undefined;
         };
         packsDirectory: string;
@@ -270,7 +270,7 @@ export declare class PetPlatform {
                 etaMs: any;
                 gardenWork: any;
             };
-            playback: import("../../behavior/playback.js").ActivityPlayback;
+            playback: import("../../living/body/playback.js").ActivityPlayback;
             notice: string | undefined;
         };
         packsDirectory: string;
@@ -343,7 +343,7 @@ export declare class PetPlatform {
                 etaMs: any;
                 gardenWork: any;
             };
-            playback: import("../../behavior/playback.js").ActivityPlayback;
+            playback: import("../../living/body/playback.js").ActivityPlayback;
             notice: string | undefined;
         };
         packsDirectory: string;

@@ -7,7 +7,7 @@ import {pathToFileURL} from 'node:url';
 import ts from 'typescript';
 
 const sourceOnly=process.env.CHATPET_ENDED_HOLD_SOURCE_ONLY==='1';
-const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/behavior/playback.js'));
+const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/living/body/playback.js'));
 const {sampleActivityPlayback}=await import(playbackURL);
 const {animationAssets}=await import(new URL('./animation-map.js',playbackURL));
 const native=readFileSync('vendor/dsh-pet/platform/runtime/electron-helper/events.js','utf8');

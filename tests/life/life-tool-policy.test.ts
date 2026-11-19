@@ -5,7 +5,7 @@ import {pathToFileURL} from 'node:url';
 import {Context} from '@deepseek-ai/cordis';
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt';
 import Tools from '@deepseek-ai/dsh-tools';
-import {lifeToolAllowed,lifeInheritedToolNames,registerLifeToolPolicy,restrictLifeTools} from '../../src/life/tool-policy.js';
+import {lifeToolAllowed,lifeInheritedToolNames,registerLifeToolPolicy,restrictLifeTools} from '../../src/living/plan/tool-policy.js';
 import {COMPANION_TOOL_SOURCES} from '../../src/contracts/tables.js';
 import {CompanionToolTable} from '../../src/core/tables/tools.js';
 

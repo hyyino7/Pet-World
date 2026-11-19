@@ -1,2 +1,2 @@
 const load = require;
-load('../life/plugin.js');
+load('../living/plan/plugin.js');

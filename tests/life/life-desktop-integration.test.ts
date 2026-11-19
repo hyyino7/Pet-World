@@ -7,7 +7,7 @@ import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
 import {DEFAULT_COMPANION_SETTINGS} from '../../src/core/companion-settings.js';
 import {CompanionRecordLibrary} from '../../src/core/records.js';
-import {CompanionLife} from '../../src/life/plugin.js';
+import {CompanionLife} from '../../src/living/plan/plugin.js';
 import {DesktopFeatures} from '../../src/desktop/features.js';
 
 /** Real Life admission and Desktop scheduling/whisper implementation. Only the

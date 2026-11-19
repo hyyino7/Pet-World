@@ -186,7 +186,7 @@
       "target": "petBehavior",
       "expression": "get ( \"petBehavior\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -198,7 +198,7 @@
       "target": "petBehavior",
       "expression": "ctx . get ( fact . domain === \"body\" ? \"petBehavior\" : \"petEconomy\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -210,7 +210,7 @@
       "target": "petEconomy",
       "expression": "ctx . get ( fact . domain === \"body\" ? \"petBehavior\" : \"petEconomy\" )",
       "from": "core",
-      "to": "economy",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -222,7 +222,7 @@
       "target": "petBehavior",
       "expression": "ctx . get ( \"petBehavior\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -234,7 +234,7 @@
       "target": "petLife",
       "expression": "ctx . get ( \"petLife\" )",
       "from": "core",
-      "to": "life",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -246,7 +246,7 @@
       "target": "petBehavior",
       "expression": "ctx . get ( \"petBehavior\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -258,7 +258,7 @@
       "target": "petLife",
       "expression": "ctx . get ( \"petLife\" )",
       "from": "core",
-      "to": "life",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -270,7 +270,7 @@
       "target": "petEconomy",
       "expression": "ctx . get ( \"petEconomy\" )",
       "from": "core",
-      "to": "economy",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -282,7 +282,7 @@
       "target": "petBehavior",
       "expression": "ctx . get ( \"petBehavior\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -294,7 +294,7 @@
       "target": "petLife",
       "expression": "ctx . get ( \"petLife\" )",
       "from": "core",
-      "to": "life",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -306,7 +306,7 @@
       "target": "petBehavior",
       "expression": "ctx . get ( \"petBehavior\" )",
       "from": "core",
-      "to": "behavior",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -318,7 +318,7 @@
       "target": "petLife",
       "expression": "ctx . get ( \"petLife\" )",
       "from": "core",
-      "to": "life",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -339,10 +339,10 @@
       "line": 5,
       "column": 1,
       "scope": "<module>",
-      "target": "src/life/library.js",
-      "expression": "import { defaultLifePreferences , parseLifePreferences } from \"../life/library.js\" ;",
+      "target": "src/living/plan/library.js",
+      "expression": "import { defaultLifePreferences , parseLifePreferences } from \"../living/plan/library.js\" ;",
       "from": "core",
-      "to": "life",
+      "to": "living",
       "reason": "依赖方向违规"
     },
     {
@@ -361,10 +361,10 @@
       "line": 7,
       "column": 1,
       "scope": "<module>",
-      "target": "src/life/review-dialogue.js",
-      "expression": "import { readReviewDialogue , type DialogueQuery } from \"../../life/review-dialogue.js\" ;",
+      "target": "src/living/plan/review-dialogue.js",
+      "expression": "import { readReviewDialogue , type DialogueQuery } from \"../../living/plan/review-dialogue.js\" ;",
       "from": "core",
-      "to": "life",
+      "to": "living",
       "reason": "依赖方向违规"
     },
     {
@@ -373,10 +373,10 @@
       "line": 6,
       "column": 1,
       "scope": "<module>",
-      "target": "src/life/album-tools.js",
-      "expression": "import { registerAlbumTools } from \"../life/album-tools.js\" ;",
+      "target": "src/living/plan/album-tools.js",
+      "expression": "import { registerAlbumTools } from \"../living/plan/album-tools.js\" ;",
       "from": "core",
-      "to": "life",
+      "to": "living",
       "reason": "依赖方向违规"
     },
     {
@@ -400,7 +400,7 @@
       "target": "petLife",
       "expression": "ctx . get ( \"petLife\" )",
       "from": "core",
-      "to": "life",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {
@@ -533,49 +533,49 @@
     },
     {
       "rule": "R2",
-      "file": "src/life/plugin.ts",
+      "file": "src/living/plan/plugin.ts",
       "line": 125,
       "column": 27,
       "scope": "CompanionLife/publishRest",
       "target": "petDesktop",
       "expression": "this . ctx . get ( \"petDesktop\" )",
-      "from": "life",
+      "from": "living",
       "to": "desktop",
       "reason": "服务读取未获准或方向违规"
     },
     {
       "rule": "R2",
-      "file": "src/life/plugin.ts",
+      "file": "src/living/plan/plugin.ts",
       "line": 167,
       "column": 5,
       "scope": "CompanionLife/startRuntime",
       "target": "petDesktop",
       "expression": "this . ctx . get ( \"petDesktop\" )",
-      "from": "life",
+      "from": "living",
       "to": "desktop",
       "reason": "服务读取未获准或方向违规"
     },
     {
       "rule": "R2",
-      "file": "src/life/plugin.ts",
+      "file": "src/living/plan/plugin.ts",
       "line": 275,
       "column": 25,
       "scope": "CompanionLife/startRuntime/send",
       "target": "petDesktop",
       "expression": "this . ctx . get ( \"petDesktop\" )",
-      "from": "life",
+      "from": "living",
       "to": "desktop",
       "reason": "服务读取未获准或方向违规"
     },
     {
       "rule": "R2",
-      "file": "src/life/plugin.ts",
+      "file": "src/living/plan/plugin.ts",
       "line": 281,
       "column": 31,
       "scope": "CompanionLife/startRuntime/send",
       "target": "petChannels",
       "expression": "this . ctx . get ( \"petChannels\" )",
-      "from": "life",
+      "from": "living",
       "to": "channels",
       "reason": "服务读取未获准或方向违规"
     },
@@ -588,10 +588,10 @@
       "target": "pet/life.review",
       "expression": "ctx . on ( \"pet/life.review\" , id => { if ( host . native . memoryFor ( id ) ) reviews . add ( id ) ; } , { global : true } )",
       "from": "memory",
-      "to": "life|channels",
+      "to": "living|channels",
       "reason": "订阅未声明或来自上层",
       "publishers": [
-        "life",
+        "living",
         "channels"
       ]
     },
@@ -604,7 +604,7 @@
       "target": "petLife",
       "expression": "ctx . get ( \"petLife\" )",
       "from": "memory",
-      "to": "life",
+      "to": "living",
       "reason": "服务读取未获准或方向违规"
     },
     {

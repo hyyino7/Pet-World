@@ -105,7 +105,7 @@ export declare function createMessaging(ctx: Context, host: PetCoreHost, options
         drafts: import("./group-qzone.js").QzoneDraft[];
         posts: {
             id: string;
-            status: "pending" | "sent" | "uncertain";
+            status: "sent" | "pending" | "uncertain";
             at: number;
         }[];
     } | Promise<{
@@ -160,7 +160,7 @@ export declare function createMessaging(ctx: Context, host: PetCoreHost, options
             meaning: string;
             usage: string;
             count: number;
-            status: "rejected" | "confirmed" | "candidate";
+            status: "confirmed" | "candidate" | "rejected";
         }[];
         stickers: {
             id: string;

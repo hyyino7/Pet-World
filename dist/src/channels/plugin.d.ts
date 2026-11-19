@@ -63,7 +63,7 @@ export declare class CompanionChannels {
         drafts: import("./group-qzone.js").QzoneDraft[];
         posts: {
             id: string;
-            status: "pending" | "sent" | "uncertain";
+            status: "sent" | "pending" | "uncertain";
             at: number;
         }[];
     } | {
@@ -118,7 +118,7 @@ export declare class CompanionChannels {
             meaning: string;
             usage: string;
             count: number;
-            status: "rejected" | "confirmed" | "candidate";
+            status: "confirmed" | "candidate" | "rejected";
         }[];
         stickers: {
             id: string;

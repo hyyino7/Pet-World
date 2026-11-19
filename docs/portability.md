@@ -16,7 +16,7 @@
 
 托管的 setup 会把核实过的打包 Memory 入口重新绑定到当前 Bundle。如果继承来的 `memory.serviceEntry` 认不出是打包代码，setup 会在探测 Python 之前停下，要求明确选择：用 `--memory-service-entry bundled` 选打包的 provider，或者传一个已有的自定义入口绝对路径，有意保留这项本机覆盖。自定义入口是程序选择，不是 Bank 数据；换一台设备要重新明确绑定。标准的 `--resume-repo` 路径使用打包的 provider。
 
-经济来源扩展把完整的 SQLite 聚合和存储标记放在 `.chatpet/data/economy/`。一次性采用之后，保留下来的旧菜园 JSON 只是来源记录。复制或恢复时，要在停止状态下把 Economy、Body 的食物回执、Life 计划、Core 和数据库附属文件一起处理；只恢复钱包可能和已经生效的效果冲突。离线备份除了 Core/Memory 写入者，也检查 `economy.lock`。已初始化的经济数据缺失时，状态是不可用，绝不当作可以新建空白钱包。源码检出里现在的经济拥有者实现在 `src/economy/`；已安装环境的恢复步骤见下文。
+经济来源扩展把完整的 SQLite 聚合和存储标记放在 `.chatpet/data/economy/`。一次性采用之后，保留下来的旧菜园 JSON 只是来源记录。复制或恢复时，要在停止状态下把 Economy、Body 的食物回执、Life 计划、Core 和数据库附属文件一起处理；只恢复钱包可能和已经生效的效果冲突。离线备份除了 Core/Memory 写入者，也检查 `economy.lock`。已初始化的经济数据缺失时，状态是不可用，绝不当作可以新建空白钱包。源码检出里现在的经济拥有者实现在 `src/living/economy/`；已安装环境的恢复步骤见下文。
 
 ## 搬到另一台设备
 

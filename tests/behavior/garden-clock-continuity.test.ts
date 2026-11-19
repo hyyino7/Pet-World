@@ -7,9 +7,9 @@ import {DatabaseSync} from 'node:sqlite';
 import {Context} from '@deepseek-ai/cordis';
 import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
-import {CompanionRoom} from '../../src/behavior/room.js';
-import * as behaviorPlugin from '../../src/behavior/plugin.js';
-import {CompanionEconomy} from '../../src/economy/plugin.js';
+import {CompanionRoom} from '../../src/living/body/room.js';
+import * as behaviorPlugin from '../../src/living/body/plugin.js';
+import {CompanionEconomy} from '../../src/living/economy/plugin.js';
 import type {PetCoreHost} from '../../src/core/index.js';
 
 const HOUR=3_600_000, start=Date.parse('2026-11-14T09:00:37.866Z');

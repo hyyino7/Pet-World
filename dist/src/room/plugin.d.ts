@@ -5,13 +5,13 @@ import { RoomWindow } from './window.js';
 import { RoomChat } from './chat.js';
 export declare const roomHistoryTools: readonly [{
     name: string;
-    sources: readonly ("owner" | "life" | "review")[];
+    sources: readonly ("life" | "owner" | "review")[];
     historyOverview(_args: unknown, value: unknown): {
         [x: string]: any;
     } | undefined;
 }, {
     name: string;
-    sources: readonly ("owner" | "life" | "review")[];
+    sources: readonly ("life" | "owner" | "review")[];
     historyOverview(args: unknown, value: unknown): {
         [x: string]: any;
     } | undefined;

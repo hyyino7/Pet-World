@@ -11,7 +11,7 @@ import type {NativeSession} from '../conversation.js';
 import type {} from '../plugin.js';
 import {activityPresentation,eatingClips,physicalClips,sleepingClips,projectActivityConfig} from './activity.js';
 import {migratePresentation,resolvePresentationMigration,type PresentationMigrationReceipt} from './migration.js';
-import { companionFeelings } from '../../behavior/presentation.js';
+import { companionFeelings } from '../../living/body/presentation.js';
 import type { PlaybackReceipt } from '../../emotion/index.js';
 import type { CompanionFactActor } from '../../contracts/interaction.js';
 

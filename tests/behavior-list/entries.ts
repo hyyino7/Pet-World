@@ -5,9 +5,9 @@ import {readFileSync} from 'node:fs';
 export const readHearControlSource = () => readFileSync(new URL('../../../src/desktop/platform/client.js', import.meta.url), 'utf8');
 
 export * as corePlugin from '../../src/core/plugin.js';
-export * as behaviorPlugin from '../../src/behavior/plugin.js';
-export * as economyPlugin from '../../src/economy/plugin.js';
-export * as lifePlugin from '../../src/life/plugin.js';
+export * as behaviorPlugin from '../../src/living/body/plugin.js';
+export * as economyPlugin from '../../src/living/economy/plugin.js';
+export * as lifePlugin from '../../src/living/plan/plugin.js';
 export * as channelsPlugin from '../../src/channels/plugin.js';
 export * as voicePlugin from '../../src/voice/plugin.js';
 export * as memoryPlugin from '../../src/memory/plugin.js';

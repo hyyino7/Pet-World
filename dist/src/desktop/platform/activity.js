@@ -1,4 +1,4 @@
-import { resolveActivityPlayback, sampleActivityPlayback } from '../../behavior/playback.js';
+import { resolveActivityPlayback, sampleActivityPlayback } from '../../living/body/playback.js';
 /** Semantic exclusions from the shipped catalogue; these clips assert a physical activity. */
 export const eatingClips = new Set([
     '偷吃零食被抓住', '中秋赏月吃月饼', '吃Token', '吃冰淇淋融化', '吃午餐', '吃大闸蟹',

@@ -7,8 +7,8 @@ import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
 import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
-import {CompanionBehavior} from '../../src/behavior/plugin.js';
-import {CompanionLife} from '../../src/life/plugin.js';
+import {CompanionBehavior} from '../../src/living/body/plugin.js';
+import {CompanionLife} from '../../src/living/plan/plugin.js';
 import {CompanionRecordLibrary} from '../../src/core/records.js';
 
 /** Real Life coordinator and Body, with only native model startup replaced.

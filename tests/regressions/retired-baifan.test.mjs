@@ -10,7 +10,7 @@ import ts from 'typescript';
 // Packaged output is the subject. Frozen-package runs need no pinned inputs.
 const client=readFileSync('src/desktop/platform/client.js','utf8');
 const tree=ts.createSourceFile('client.js',client,ts.ScriptTarget.Latest,true);
-const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/behavior/playback.js'));
+const playbackURL=pathToFileURL(process.env.CHATPET_PLAYBACK_TEST_MODULE||resolve('dist/src/living/body/playback.js'));
 const {CompanionRoom}=await import(new URL('./room.js',playbackURL));
 const {animationAssets}=await import(new URL('./animation-map.js',playbackURL));
 function fn(name) {

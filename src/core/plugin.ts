@@ -3,7 +3,7 @@ import { createWorldService, type PetWorld } from '../world/service.js';
 import type { Context } from '@deepseek-ai/cordis';
 import { createCore, type CoreConfig, type PetCoreHost } from './index.js';
 import { apply as installNativeAdapter } from './native/agent.js';
-import { registerAlbumTools } from '../life/album-tools.js';
+import { registerAlbumTools } from '../living/plan/album-tools.js';
 
 export const name = '00-Core';
 export const inject = ['agents', 'agentLoop', 'sessions', 'sessionPersistence', 'systemPrompt', 'tools'];

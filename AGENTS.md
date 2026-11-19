@@ -10,7 +10,7 @@ Her World（npm 包 `her-world`）是跑在 DSH 里的伙伴插件：同一个�
 
 ```
 第三层 呈现与连接   desktop · room · channels · voice · console
-第二层 生活世界     behavior · life · economy
+第二层 生活世界     living（body · plan · economy）
 第一层 伙伴本体     core · memory · emotion · contracts · world
                     DSH（聊天、调度、会话日志）
 ```
@@ -60,7 +60,7 @@ Her World（npm 包 `her-world`）是跑在 DSH 里的伙伴插件：同一个�
 - 禁改：
   - `vendor/**`、`references/`
   - 生成文件，名单在 `arch/layers.json` 各模块的 `generated` 里（例如 `src/desktop/platform/client.js`）。要改就改它的生成源
-  - `arch/baseline/**`：只能用 `pnpm run check:arch -- --write-baseline` 改，而且只能删除条目
+  - `arch/baseline/**`：只能用 `pnpm run check:arch -- --write-baseline` 删除条目，或在纯搬家提交里用 `pnpm run check:arch -- --write-baseline --move <对照文件>` 改键
 - 提交：一个提交只做一件事；单个提交不超过 15 个文件、600 行改动。`pnpm run build` 生成的 `dist/src/**`、脚本生成的基线文件和抄录的样例不计入阈值，但照常提交，并在方案里预先声明（构建产物一条来自 M2 方案拍板点 9：每改一个 `src/*.ts` 就多出 `.js` 和 `.d.ts`，C2、E2 等批按模块提交都靠它）。
 
 ## 目录

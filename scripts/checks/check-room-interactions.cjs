@@ -18,7 +18,7 @@ async function until(read) {
   throw Error('Timed out waiting for '+read.toString().slice(0,180));
 }
 async function main() {
-  const {CompanionRoom}=await import('../../dist/src/life/room.js'), {roomAsset}=await import('../../dist/src/room/assets.js');
+  const {CompanionRoom}=await import('../../dist/src/living/plan/room.js'), {roomAsset}=await import('../../dist/src/room/assets.js');
   const {loadHomeState,saveHomeState}=await import('#feiyu-home');
   const started=Date.now(), baseline=new Date(started), evening=process.argv.includes('--evening');
   baseline.setHours(evening?20:12,0,0,0);

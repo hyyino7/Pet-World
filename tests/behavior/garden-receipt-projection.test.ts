@@ -4,9 +4,9 @@ import {mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {emptyHomeState} from '#feiyu-home';
-import {CompanionRoom} from '../../src/behavior/room.js';
-import {gardenHomeProjection,gardenReceiptProjection,gardenReceiptText} from '../../src/behavior/garden-receipt.js';
-import {PersistentLifePlan,type CurrentLifePlan} from '../../src/life/plan.js';
+import {CompanionRoom} from '../../src/living/body/room.js';
+import {gardenHomeProjection,gardenReceiptProjection,gardenReceiptText} from '../../src/living/body/garden-receipt.js';
+import {PersistentLifePlan,type CurrentLifePlan} from '../../src/living/plan/plan.js';
 
 const receipt='小蓝鱼：收获小萝卜 × 3，已经放进仓库；这块田可以再播种了。';
 

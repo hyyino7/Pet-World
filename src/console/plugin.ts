@@ -3,7 +3,7 @@ import { CONTRACT_VERSION } from '../contracts/version.js';
 import type {} from '../desktop/plugin.js';
 import type {} from '../room/plugin.js';
 import type {} from '../channels/plugin.js';
-import type {} from '../economy/plugin.js';
+import type {} from '../living/economy/plugin.js';
 import type { PetPlatform } from '../desktop/platform/plugin.js';
 import { settingsHandler, type SettingsHandler, type SettingsWorkspaceRegistry } from './settings.js';
 

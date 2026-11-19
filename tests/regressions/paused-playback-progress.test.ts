@@ -5,8 +5,8 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
-import {CompanionRoom} from '../../src/behavior/room.js';
-import {resolveActivityPlayback,sampleActivityPlayback,type ActivityPlayback} from '../../src/behavior/playback.js';
+import {CompanionRoom} from '../../src/living/body/room.js';
+import {resolveActivityPlayback,sampleActivityPlayback,type ActivityPlayback} from '../../src/living/body/playback.js';
 
 function fixture(t:TestContext,kind:'hold'|'room'='hold',destination?:{room:string;spot:string}) {
   const directory=mkdtempSync(join(tmpdir(),'paused-playback-')),start=Date.parse('2026-11-14T05:00:00Z');

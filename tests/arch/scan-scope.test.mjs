@@ -7,9 +7,9 @@ import {report} from '../../scripts/arch/check.mjs';
 
 test('vendor 生成源只列为跳过，自有生成脚本和 src 生成源照扫',t=>{
   const work=workspace(t,{
-    'src/core/generated.js':"import '../life/plugin.js';",
+    'src/core/generated.js':"import '../living/plan/plugin.js';",
     'src/core/source.ts':"const words=['a','b','c'];",
-    'scripts/build/source.mjs':"import '../../src/life/plugin.js'; const words=['a','b','c'];",
+    'scripts/build/source.mjs':"import '../../src/living/plan/plugin.js'; const words=['a','b','c'];",
     'vendor/upstream/source.js':"ctx.get('petUnknown'); const words=['a','b','c']; store.put('desktop-session',{});",
   });
   const layers=JSON.parse(readFileSync(join(work.root,'arch/layers.json'),'utf8'));

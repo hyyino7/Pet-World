@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { createCore } from '../../dist/src/core/index.js';
-import { PersistentLifePlan } from '../../dist/src/life/plan.js';
+import { PersistentLifePlan } from '../../dist/src/living/plan/plan.js';
 import { openDomains } from '../../scripts/fixtures/synthetic-companion.mjs';
 import { runMigration } from '../../scripts/migrate/runner.mjs';
 import { createOfflineBackup, restoreOfflineBackup } from '../../scripts/lib/offline-backup.mjs';

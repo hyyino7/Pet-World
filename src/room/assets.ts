@@ -2,13 +2,13 @@ import {openAsBlob} from 'node:fs';
 import {realpath, stat, readFile} from 'node:fs/promises';
 import {extname, join, sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import { feelingLabels } from '../behavior/presentation.js';
-import { animationAssets, animationStickers, animationRoomAliases } from '../behavior/animation-map.js';
+import { feelingLabels } from '../living/body/presentation.js';
+import { animationAssets, animationStickers, animationRoomAliases } from '../living/body/animation-map.js';
 
 export const roomPrefix = '/chatpet-room';
 const root = fileURLToPath(new URL('../../../vendor/feiyu-room-template/public/room/', import.meta.url));
-const sharedPlayback = fileURLToPath(new URL('../behavior/playback.js',import.meta.url));
-const sharedAnimationMap = fileURLToPath(new URL('../behavior/animation-map.js',import.meta.url));
+const sharedPlayback = fileURLToPath(new URL('../living/body/playback.js',import.meta.url));
+const sharedAnimationMap = fileURLToPath(new URL('../living/body/animation-map.js',import.meta.url));
 const localVoice = fileURLToPath(new URL('../../../src/room/voice-client.js', import.meta.url));
 const localIdentity = fileURLToPath(new URL('../../../src/room/identity-client.js', import.meta.url));
 const sharedVoice = fileURLToPath(new URL('../../../src/desktop/helper/upstream/shared-core.js', import.meta.url));

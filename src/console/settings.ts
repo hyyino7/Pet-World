@@ -3,7 +3,7 @@ import type { ConversationOptions } from '../core/options.js';
 import type { WorkspaceTarget } from '../core/preferences.js';
 import { Rejection } from '../core/storage.js';
 import type { CompanionEmotion } from '../emotion/plugin.js';
-import type { CompanionLife } from '../life/plugin.js';
+import type { CompanionLife } from '../living/plan/plugin.js';
 import { estimateTokens } from '#dsh-world/console/snapshot';
 import { desktopAppearanceDefaults } from '../desktop/appearance.js';
 export interface EconomyControls {

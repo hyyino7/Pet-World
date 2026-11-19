@@ -12,7 +12,7 @@ import type {Agent} from '@deepseek-ai/dsh-agent';
 import {homeView,emptyHomeState} from '#feiyu-home';
 import type {SourceInput} from '../../src/contracts/tables.js';
 import type {PetCoreHost} from '../../src/core/index.js';
-import {createLifeSourceAdapter} from '../../src/life/tool-policy.js';
+import {createLifeSourceAdapter} from '../../src/living/plan/tool-policy.js';
 import {prepareLifeHistory,applyLifeHistory,historicalStateOverview} from '../../src/core/native/history-maintenance.js';
 import {SourceAdapterTable} from '../../src/core/tables/sources.js';
 import {CompanionToolTable} from '../../src/core/tables/tools.js';
@@ -20,7 +20,7 @@ import {CoreNative} from '../../src/core/native/conversation.js';
 import type {CoreRuntime} from '../../src/core/runtime.js';
 import {createChannelSourceAdapter} from '../../src/channels/sessions.js';
 import {roomHistoryTools} from '../../src/room/plugin.js';
-import {lifePlanReadToolDeclaration} from '../../src/life/plan-tools.js';
+import {lifePlanReadToolDeclaration} from '../../src/living/plan/plan-tools.js';
 
 declare module '../../src/contracts/tables.js' {
   interface CompanionToolSourceMap { 'fixture-history':true }

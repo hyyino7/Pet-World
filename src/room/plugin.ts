@@ -4,7 +4,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent';
 import { defineTool, type ToolDefinition, type ToolRunContext } from '@deepseek-ai/dsh-tools';
 import type { ImageBlock } from '@deepseek-ai/dsh-llm';
 import { lstatSync, readFileSync } from 'node:fs';
-import type {} from '../behavior/plugin.js';
+import type {} from '../living/body/plugin.js';
 import { RoomWindow } from './window.js';
 import { digest } from '../core/storage.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';

@@ -2,6 +2,7 @@ import {fileURLToPath} from 'node:url';
 import {resolve,join} from 'node:path';
 import {scan} from './lib/scan.mjs';
 import {updateBaselines} from './lib/ratchet.mjs';
+import {baselineMove} from './lib/move.mjs';
 
 export function report(result,log=console.log) {
   for(const rule of ['R1','R2','R3','R4']) {
@@ -27,19 +28,29 @@ export function report(result,log=console.log) {
 }
 export function main(args=process.argv.slice(2),root=resolve(import.meta.dirname,'../..')) {
   const flags=args.filter(arg=>arg!=='--');
-  if(flags.some(arg=>!['--report','--write-baseline'].includes(arg)))throw Error('只支持 --report 和 --write-baseline');
+  const write=flags.includes('--write-baseline');
+  const moveIndex=flags.indexOf('--move');
+  let movePath;
+  if(moveIndex!==-1) {
+    movePath=flags[moveIndex+1];
+    if(!write)throw Error('--move 必须与 --write-baseline 一起使用');
+    if(!movePath||movePath.startsWith('--'))throw Error('--move 需要对照文件路径');
+    flags.splice(moveIndex,2);
+  }
+  if(flags.some(arg=>!['--report','--write-baseline'].includes(arg)))throw Error('只支持 --report、--write-baseline 和 --move <对照文件>');
+  const rewrite=movePath?baselineMove(resolve(root,movePath)):undefined;
   const result=scan(root);
   if(flags.includes('--report'))report(result);
   const outcomes=updateBaselines([
     {file:join(root,'arch/baseline/rules.json'),items:result.rules},
     {file:join(root,'arch/baseline/vocabulary.json'),items:result.vocabulary},
-  ],flags.includes('--write-baseline'));
+  ],write,rewrite);
   for(const r of outcomes) {
     console.log(`${r.file}：当前 ${r.items.length}；新增 ${r.added.length}；消失 ${r.removed.length}`);
     if(r.added.length)console.error('新增违规：',JSON.stringify(r.added));
-    if(r.removed.length&&!flags.includes('--write-baseline'))console.error('旧违规已消失；请在同一提交用 --write-baseline 收紧基线：',JSON.stringify(r.removed));
+    if(r.removed.length&&!write)console.error('旧违规已消失；请在同一提交用 --write-baseline 收紧基线：',JSON.stringify(r.removed));
   }
-  const ok=flags.includes('--write-baseline')||outcomes.every(r=>r.ok);
+  const ok=write||outcomes.every(r=>r.ok);
   console.log(ok?'架构检查通过':'架构检查失败');
   return ok?0:1;
 }

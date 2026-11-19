@@ -4,7 +4,7 @@ import { MemoryConnection, type Dependencies, type MemoryConfig, type RecalledMe
 import { canonical, check, digest, reject } from '../storage.js';
 import type { SessionEvent } from '@deepseek-ai/dsh-session';
 import { finalReply } from '../upstream/messages.js';
-import { readReviewDialogue, type DialogueQuery } from '../../life/review-dialogue.js';
+import { readReviewDialogue, type DialogueQuery } from '../../living/plan/review-dialogue.js';
 import { preferences } from '../preferences.js';
 
 /** One asynchronous Memory operation, using the existing configuration revision.

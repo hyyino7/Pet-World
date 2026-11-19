@@ -99,11 +99,11 @@ Her World 是跑在 DSH 里的伙伴插件，同一个伙伴的身份、记忆�
 
 | 典型修改 | 基线（`bfe069f`） | M2 后（复测） | 目标 |
 | --- | --- | --- | --- |
-| 1. 把小萝卜的默认生长时间由 12 小时改为 10 小时，售价由 3 改为 4 | 3 文件：`src/` 1（手写 1、生成 0）、`dist/` 1、测试 1；1 层 / 1 模块（第二层 `economy`） | 未复测（M2 没有改这条路径） | 只动第二层·钱包区及其测试 |
+| 1. 把小萝卜的默认生长时间由 12 小时改为 10 小时，售价由 3 改为 4 | 3 文件：`src/` 1（手写 1、生成 0）、`dist/` 1、测试 1；1 层 / 1 模块（第二层 `economy`，现并入 `living` 的钱包区 `src/living/economy/`） | 未复测（M2 没有改这条路径） | 只动第二层·钱包区及其测试 |
 | 2. 给 Room 增加「当前口渴值」百分比状态项 | 3 文件：`src/` 1（手写 1、生成 0）、`dist/` 1、测试 1；1 层 / 1 模块（第三层 `room`） | 未复测（M2 没有改这条路径） | 只动 Room 及共用资源，不动第一层、第二层 |
 | 3. 给 QQ 加每账号每日主动消息额度 | 11 文件：`src/` 4（手写 3、生成 1）、`dist/` 6、测试 1；1 层 / 3 模块（第三层 `channels/console/desktop`，其中 Desktop 是生成联动） | 未复测（M2 没有改这条路径） | 只动 Channels，不动其他层 |
-| 4. 新增一个伙伴可调用的工具 | 1 文件（复用已挂载的工具集合，仅 owner 用）；2 文件（Life 也可用）；4 文件（另加历史投影） | **1 文件 / 1 层**（第二层 `behavior`）：4a、4b、4c 都只改 `src/behavior/plugin.ts`，另各有测试 1、`dist/src` 2；**达标** | 工具定义里一处声明来源，其余派生 |
-| 5. 新增一类输入来源 | 至少 3 文件（有独立准入及工具策略的后台来源）；至少 5 个自有文件（含设置与持久化的新聊天平台，上游身份支持另计） | 5a：**2 文件 / 1 层**（第二层 `life`：`src/life/tool-policy.ts`、`src/life/plugin.ts`），**未达标**（门槛最多 1 个）；5b 未复测，读码下限仍是至少 5 | 一个来源适配器登记 |
+| 4. 新增一个伙伴可调用的工具 | 1 文件（复用已挂载的工具集合，仅 owner 用）；2 文件（Life 也可用）；4 文件（另加历史投影） | **1 文件 / 1 层**（第二层 `behavior`，现并入 `living`）：4a、4b、4c 都只改 `src/behavior/plugin.ts`（现 `src/living/body/plugin.ts`），另各有测试 1、`dist/src` 2；**达标** | 工具定义里一处声明来源，其余派生 |
+| 5. 新增一类输入来源 | 至少 3 文件（有独立准入及工具策略的后台来源）；至少 5 个自有文件（含设置与持久化的新聊天平台，上游身份支持另计） | 5a：**2 文件 / 1 层**（第二层 `life`，现并入 `living`：`src/life/tool-policy.ts`、`src/life/plugin.ts`，现在都在 `src/living/plan/`），**未达标**（门槛最多 1 个）；5b 未复测，读码下限仍是至少 5 | 一个来源适配器登记 |
 | 6. 新增一个上下文段（例如天气） | 1–2 文件（已有模块内登记，或另拆读取器）；预算、有效期和 guest 可见性没有集中契约检查 | 不再复测 | 不设目标（段声明已砍出重构，见 [decisions.md](decisions.md)「阶段 1 缩小」） |
 | 7. 新增一个设置页项目 | 至少 3 文件（界面、拥有者的字段校验、实际消费，沿用透传 RPC）；新操作再加路由和处理器，共至少 5 文件 | 未复测（阶段 3） | 一份字段声明驱动显示、保存、执行 |
 | 8. 新增一个照料动作；新增一个事实领域 | 照料动作接入 Life、Room、Console 并新增播放映射，不进入计划：至少 7 个自有文件，2 层 / 4 模块；同一动作再进入计划：至少 10 个自有文件，3 层 / 5 模块；上游另计。事实领域至少 8 个文件（含提供者和 Python 侧识别） | 未复测（阶段 2） | 一份基础表或领域声明，其余派生，漏改能被检查发现 |
@@ -118,10 +118,10 @@ QQ 实验分支 `codex/m1-baseline-3-channel` 的手写代码涉及 Channels 与
 | --- | --- |
 | 4 工具 | 已挂载工具集合可在 `src/room/plugin.ts:95` 增加定义；Life 另有 `src/core/life-tool-policy.ts:2,12` 白名单。历史瘦身识别在 `src/core/native/history-maintenance.ts:16`，另需模块投影（如 `src/room/tool-context.ts:10`）；其消费者 `src/core/native/agent.ts:17` 无需跟着新增分支。1/2/4 的说法只适用于上述复用路径。 |
 | 5 输入来源 | 后台来源需适配器、`src/core/native/conversation.ts:24-26` 的准入端口、`src/core/native/agent.ts:56` 的工具策略；聊天平台至少涉及适配器（现有例 `src/channels/qq.ts:38`）、`src/channels/messaging-settings.ts:4`、`src/channels/messaging-storage.ts:6`、`src/channels/messaging.ts:57` 和 `src/console/client.js:344`。身份校验还依赖上游 `speakerIdentity`（`src/channels/sessions.ts:6`），因此 3/5 不能当所有来源的精确改动数。 |
-| 6 上下文 | 已挂载模块可直接调用 `src/core/native/prompt.ts:91,179` 的登记函数，现有例为 `src/life/plugin.ts:63`；读取器可同文件或独立文件。动态段退休在 `src/core/native/prompt.ts:25`，guest 可见性由登记回调自行决定（如 `src/emotion/plugin.ts:218` 的作用域条件），不是统一预算或可见性声明。 |
+| 6 上下文 | 已挂载模块可直接调用 `src/core/native/prompt.ts:91,179` 的登记函数，现有例为 `src/living/plan/plugin.ts:63`；读取器可同文件或独立文件。动态段退休在 `src/core/native/prompt.ts:25`，guest 可见性由登记回调自行决定（如 `src/emotion/plugin.ts:218` 的作用域条件），不是统一预算或可见性声明。 |
 | 7 设置 | `src/console/client.js:1049,1103` 的伙伴设置控件、`src/core/companion-settings.ts:4,56` 的字段声明及解析、消费端（如 `src/emotion/recent.ts:71-72`）构成 3 个文件；现有透传在 `src/console/settings.ts:339`。新操作还要改 `src/console/plugin.ts:28` 的路由清单和 `src/console/settings.ts:79` 一类处理分支。 |
-| 8 照料动作 | 按同时接入 Life、Room、Console 的现有入口并新增播放映射计：不进入计划时，至少涉及 `src/behavior/plugin.ts:18`、`src/behavior/room.ts:83,971`、`src/behavior/playback.ts:175,188`、`src/life/plugin.ts:36`、`src/room/plugin.ts:14`、`src/console/settings.ts:225`、`src/console/client.js:656` 共 7 文件，2 层 / 4 模块（第二层 `behavior/life`，第三层 `room/console`）。同一动作再进入计划时，还要改 `src/contracts/behavior.ts:58`、`src/life/plan.ts:93`、`src/life/plan-tools.ts:89`，并扩展已计入的 `src/behavior/room.ts:591` 和 `src/behavior/playback.ts:43-48`，共至少 10 文件，3 层 / 5 模块（另含第一层 `contracts`）。现有 `pet` 在照料词表中，未进入计划动作联合；复用现有上游执行和素材，新增上游动作或素材另计。 |
-| 8 事实领域 | 统一按文件计：领域提供者（现有例 `src/economy/plugin.ts:145`）加 `src/contracts/interaction.ts:13`、`src/core/native/conversation.ts:107`、`src/core/companion-foundation.ts:179,228`、`src/core/interaction-presentation.ts:15`、`src/life/facts.ts:9`、`src/life/plugin.ts:360,365`、`src/memory/provider.py:76`，至少 8 文件；存储布局、UI 或新公开接口增加的文件另计。 |
+| 8 照料动作 | 按同时接入 Life、Room、Console 的现有入口并新增播放映射计：不进入计划时，至少涉及 `src/living/body/plugin.ts:18`、`src/living/body/room.ts:83,971`、`src/living/body/playback.ts:175,188`、`src/living/plan/plugin.ts:36`、`src/room/plugin.ts:14`、`src/console/settings.ts:225`、`src/console/client.js:656` 共 7 文件，2 层 / 3 模块（第二层 `living`，第三层 `room/console`）。同一动作再进入计划时，还要改 `src/contracts/behavior.ts:58`、`src/living/plan/plan.ts:93`、`src/living/plan/plan-tools.ts:89`，并扩展已计入的 `src/living/body/room.ts:591` 和 `src/living/body/playback.ts:43-48`，共至少 10 文件，3 层 / 4 模块（另含第一层 `contracts`）。现有 `pet` 在照料词表中，未进入计划动作联合；复用现有上游执行和素材，新增上游动作或素材另计。 |
+| 8 事实领域 | 统一按文件计：领域提供者（现有例 `src/living/economy/plugin.ts:145`）加 `src/contracts/interaction.ts:13`、`src/core/native/conversation.ts:107`、`src/core/companion-foundation.ts:179,228`、`src/core/interaction-presentation.ts:15`、`src/living/plan/facts.ts:9`、`src/living/plan/plugin.ts:360,365`、`src/memory/provider.py:76`，至少 8 文件；存储布局、UI 或新公开接口增加的文件另计。 |
 
 **M2 复测**：起点 `d865bff`（M2 各批合并后的 `main`）。在独立分支实做，只度量、不合并，分支保留：`codex/m2-retest-4-tool` 的 `991c6fb`、`5d1ef47`、`9cfaeb7` 分别是 4a、4b、4c；`codex/m2-retest-5-source` 的 `2e7ab9e` 是第一次 5a（3 个文件、两层，第一层 `contracts` 的两份词表是封闭的）；补上可扩展词表后，从 `754a0a5`（代码与合并后的 `main` 相同）重测，`codex/m2-retest-5-source-v2` 的 `9be0496` 就是上表的 5a。主列只算手写 `src/`，测试和 `dist/src` 另列。
 
@@ -167,7 +167,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 阅读状态联合 | 4 份 | 1 份 |
 | 九种 feeling 的集合 | 2 份（外加标签表 1 份） | 1 份 |
 | Room 七维情绪集合 | 2 份 | 1 份 |
-| 把身体状态分类成呈现的分类器 | 2 套（`behavior/presentation.ts`、`behavior/playback.ts`），对同一情绪结果不同 | 1 套 |
+| 把身体状态分类成呈现的分类器 | 2 套（`living/body/presentation.ts`、`living/body/playback.ts`），对同一情绪结果不同 | 1 套 |
 | 第二层里出现 `roomClip / desktopClip` | 有（`ActivityClip`） | 0 处 |
 
 ### 防止越做越乱的机制
@@ -227,7 +227,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 1. guest 和电视回复 footer 会改共享情绪 | `src/core/native/agent.ts:46` 给 guest 作用域；`src/room/chat.ts:130` 产生 `chatpet-room-tv` 来源；`src/room/plugin.ts:149` 阻止电视工具；`src/emotion/plugin.ts:166` 的作用域解析、`:273-278` 的流处理和 `:269` 的完成处理未排除两者 | 没有主人工具权限也能经回复 footer 更新同一个情绪文件 | 已复现：在合成绑定上向真实 Emotion 流及完成处理分别送 guest 与 TV 来源原生事件，两者均落盘；guest 的原有断言另见 `scripts/checks/check-native-services.mjs:104`。未验证已安装 DSH 的电视完整入口 | **现有行为，是否改变待主人决定** |
 | 2. 发给 Memory provider 的 `workspaceId` 实际是 `storageId` | TS 侧 M2 后已改名：`MemoryScope` 的第三个字段是 `bankId`（`src/memory/client.ts:11`，取值见 `src/core/native/memory.ts:53`）；发给 Python provider 的兼容形状仍叫 `workspaceId`（`src/memory/client.ts:12,57`） | provider 边界的字段名仍混淆原生工作区和可搬迁 Bank 身份；本项不证明串库 | 已复现：合成工作区设置不同的两种 ID，经公开 `findForOwner` 驱动、仅在 provider 启动边界捕获 scope，收到的是 `storageId` | 待主人决定 |
 | 3. 错误码及设置回复的恢复语义不一致 | `src/contracts/common.ts:21` 有 `EXPIRED_USE`，`src/core/storage.ts:10` 的辅助联合没有；`src/console/settings.ts:17,400,402` 只保留 `code/message/details` | 辅助函数无法按声明类型表达该拒绝；设置调用者丢失 `effect/retry`，不能据此判断核对或重试 | 已复现：丢弃式 TypeScript 调用产生 TS2345；真实设置处理器收到 `partial/reconcile` 后，回复均无这两个字段 | 阶段 3 并入设置 RPC 声明（阶段 1 缩小方案） |
-| 4. 两套呈现分类器对混合情绪结论不同 | `src/behavior/presentation.ts:21`；`src/behavior/playback.ts:95,109` | 空闲且 `feelings=[anger,calm]` 时，语义呈现为 `emotion/anger`，播放槽为 `rest.calm` | 已复现：同一个合成 home 调用两个真实函数得到上述不同结果 | 待主人决定 |
+| 4. 两套呈现分类器对混合情绪结论不同 | `src/living/body/presentation.ts:21`；`src/living/body/playback.ts:95,109` | 空闲且 `feelings=[anger,calm]` 时，语义呈现为 `emotion/anger`，播放槽为 `rest.calm` | 已复现：同一个合成 home 调用两个真实函数得到上述不同结果 | 待主人决定 |
 | 6. 新装环境里桌宠外观编辑器没加载 | 已安装的 0.1.8 桌宠外观编辑器；源码位置在本仓库还没定位 | 新设备上界面固定提示 `EDITOR_NOT_LOADED`，没有添加形象的入口；桌宠服务本身可用 | 已在 Mac mini 新装 DSH + 0.1.8 上观察到（M1 D 批）。当时的 Codex 怀疑是可选命令依赖挡住了编辑器加载，并写了候选补丁，但补丁没有装上，修复效果没验证；默认独立桌宠的 Electron 路径缺失也是同时观察到的环境缺口，是不是原因还没确定 | 已观察到，原因未确认，待主人安排 |
 | 8. setup 安装的伙伴改用版本页换包会丢 Core 配置 | 旧版 setup 把 Core 配置写进本地重打的安装包里的 `cordis.patch.yml`，npm 包里的这份 patch 没有 `config`。现在 `scripts/install-dsh.mjs` 改为经 DSH 安装 npm 包，并把配置写进 profile 的 `cordis.patch.yml` 覆盖；已装机器用 `dafeiyu-setup migrate-core-config` 搬配置（见 [portability.md](portability.md)） | 旧 setup 装的伙伴，在版本页换成任何 npm 版本（同版本 0.1.8 也一样）后，`00-Core` 报 `Invalid companionId`，无法启动；profile 配置和数据不变。日常机器已是 npm 包加 profile 层覆盖，不受影响 | 已复现：M3 C 批隔离环境，setup 版 0.1.8 换成 npm 版 0.1.8 即出现。修后由行为测试 `2A2-01` 覆盖（合成 profile） | **代码已修，待主人隔离实机验收**（「setup 安装 → 版本页换包 → `migrate-core-config` 核对」）。还没验收的旧 setup 机器先退出 DSH，运行 `dafeiyu-setup migrate-core-config --apply` 后再换包 |
 | 9. 迁移兼容测试的 legacy 变体在 CI 偶发失败 | `tests/migrate/compatibility.test.mjs` 的 `legacy` 变体；失败的断言在 `scripts/fixtures/synthetic-companion.mjs:104`（刚写入的合成记忆召回不到） | 发布门禁偶发失败，重跑能过；0.2.0 正式版的发布运行一次通过 | 0.2.0-rc.1 的发布运行第 1 次尝试失败、第 3 次通过；本机单跑 15 次、加负载并行 30 次都没复现，召回前加 0–3 秒延迟也通过 | 原因未查，主人判断是 GitHub 侧问题。2a 扩展迁移测试时再出现，按 G3 处理 |
@@ -332,11 +332,11 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 违规 | 条数 | 去向 |
 | --- | ---: | --- |
 | `src/core/companion-foundation.ts` 读 `petBehavior / petLife / petEconomy`：事实准备、`environment` 和 `interactions` 段 11 条，`chatpet.foundation` 模板的身体条件 1 条 | 12 | 2a：事实准备和这两段搬入第二层；模板条件改用已有登记判断 |
-| `src/core/plugin.ts` import `life/album-tools`，读 `petRoom`、`petLife` 做相册门控 | 3 | 2a：相册工具的挂载和门控搬到第二层，门控改用来源声明；Life 没加载时普通聊天仍能用相册 |
-| `src/core/native/memory.ts` import `life/review-dialogue` | 1 | 2a：只搬家，该文件只依赖第一层和 vendor |
+| `src/core/plugin.ts` import `living/plan/album-tools`，读 `petRoom`、`petLife` 做相册门控 | 3 | 2a：相册工具的挂载和门控搬到第二层，门控改用来源声明；Life 没加载时普通聊天仍能用相册 |
+| `src/core/native/memory.ts` import `living/plan/review-dialogue` | 1 | 2a：只搬家，该文件只依赖第一层和 vendor |
 | `src/memory/batch.ts` 订阅 `pet/life.review`、读 `petLife` | 2 | 2a：回顾完成时 Life 向下调用 Memory，调度语义不变 |
 | `src/core/companion-settings.ts` import `desktop/appearance` | 1 | 阶段 3：设置字段声明 |
-| `src/core/initialization.ts` import `life/library`，按安装根加载 `vendor/dsh-pet` | 2 | 长期例外：Core 在显式初始化时一次建好并校验全部容器，不改成模块登记 |
+| `src/core/initialization.ts` import `living/plan/library`，按安装根加载 `vendor/dsh-pet` | 2 | 长期例外：Core 在显式初始化时一次建好并校验全部容器，不改成模块登记 |
 | `src/memory/client.ts` 动态 import `vendor/mnemosyne` | 2 | 长期例外：按构建产物位置加载上游引擎，包内运行由 `check:package` 验证 |
 
 2a 结束时第一层目标只剩 5 条，阶段 3 做完设置字段声明后剩 4 条长期例外。长期例外留在基线里，不改成放行规则，每个阶段末按 G8 复核。共享 home 记录的旧例外属于 R5，不在这 23 条里，仍在 2a 清。

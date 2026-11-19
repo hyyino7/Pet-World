@@ -1,0 +1,662 @@
+import { reviewDiaryStatus } from './review-completion.js';
+import { existsSync, lstatSync, mkdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { createLifeRuntime } from '#dsh-world/life/runtime';
+import { createLifeStore, durableWrite } from '#dsh-world/life/lifeStore';
+import { registerWorldPrompt } from '../../core/native/prompt.js';
+import { resolveCompanionHome } from '../../core/companion-foundation.js';
+import { defaultLifePreferences, parseLifePreferences } from './library.js';
+import { companionRecordPaths } from '../../core/record-paths.js';
+import { installLifeReview, REVIEW_ALARM_FILE } from './review.js';
+import { PersistentLifePlan, parsePlanDraft } from './plan.js';
+import { registerPlanTools } from './plan-tools.js';
+import { presentFacts } from '../../core/interaction-presentation.js';
+import { CONTRACT_VERSION } from '../../contracts/version.js';
+import { readFactReferences } from './facts.js';
+import { createLifeSourceAdapter } from './tool-policy.js';
+import { recordGardenPause } from '../economy/garden-clock.js';
+import { lifeDirectories, readLifeControl, readLifeSettings, safeLifeFile } from './control-file.js';
+const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
+/** The upstream fact layer is the only state writer. World owns scheduling,
+ * journal and native home recovery; Core owns every model step and Memory. */
+export class CompanionLife {
+    ctx;
+    host;
+    preset;
+    binding;
+    runtime;
+    enabled = false;
+    restoredClock = false;
+    pauses;
+    preferences = { ...defaultLifePreferences };
+    closed = false;
+    fault;
+    serial = Promise.resolve();
+    timer;
+    subscriptions = [];
+    sourceRegistration;
+    timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    constructor(ctx, host, preset) {
+        this.ctx = ctx;
+        this.host = host;
+        this.preset = preset;
+        for (const dispose of registerPlanTools(ctx, host, this))
+            ctx.effect(() => dispose);
+        installLifeReview(ctx, host, () => {
+            const workspace = this.current();
+            if (!this.closed && workspace && this.binding?.id === workspace.id && this.binding.path === workspace.path)
+                return {
+                    id: workspace.id, directory: companionRecordPaths(workspace.path).directory, sessionIds: workspace.sessionIds,
+                    isHome: (id) => this.isHome(id), timeZone: this.timeZone, running: this.running(),
+                };
+        });
+        registerWorldPrompt(ctx, 'chatpet.life', 34, agent => {
+            if (!this.running() || ctx.petWorld.sessionStatus(agent.session)?.state !== 'ready')
+                return '';
+            return this.runtime?.isHome(agent.id) ?
+                '这是你当前的自主规划投递会话，不是生活状态的存储位置。收到生活唤醒时先用 life_plan_read 读取持久计划及版本，然后实际保存本次考虑结果：需要改变意图用 life_plan_update；决定继续原活动或保持等待用 life_plan_keep，不重建活动；需要暂停或取消用 life_activity_control。没有计划时也由你决定，不必等主人逐项安排；想安静等待可保存有原因的空步骤计划并将 nextConsiderAt 设为 null。口头描述、读取状态或只设闹钟都不能代替保存生活意图。经济活动先用 pet_economy_state 查看真实目录、余额与库存；收菜、出售、补种和库存餐食都由你明确选择并写入计划，成熟不会自动处理。阅读步骤先取得该步原 operationId，再用 life_read_segment 接收实际文字，读到内容后用 life_read_confirm 确认原片段，动画或购买不能冒充阅读或读懂。根据兴趣和真实状态安排有原因的完整活动，不用密集动作清单替代生活。由程序持续执行已接受活动，模型回复结束或动画结束不代表活动结束。不必为了每个小动作再唤醒。允许长时间继续、休息或没有下一安排。hold、躺在床上和下次考虑时间都不会让身体入睡；决定睡觉时用 life_plan_update 明确安排 kind=body、action=sleep，再按需要接 hold 等待。入睡要以身体回执及 asleep 状态为准；失败时查看真实原因并修订或恢复原计划，不能用“睡了”的文字代替。有限活动全部完成后若未选下次考虑时间，会给你一次接续机会；你仍可明确选择等待，不会被反复催促。plan_next 设置同一计划下次考虑时间，check_alarm 查看。需要主动联系时用 reach_out，不必每轮发言；生活事件不是用户发言。普通主人聊天无需每轮重写计划。保持现有人设、自述和记忆。' : '';
+        });
+        const changed = () => this.scheduleTick();
+        this.subscriptions.push(ctx.on('pet/core.changed', changed), ctx.on('pet/behavior.changed', event => { if (event.reason !== 'observation')
+            changed(); }), ctx.on('pet/economy.fact', changed), ctx.on('pet/life.changed', changed));
+        this.scheduleTick();
+    }
+    registerSource() {
+        this.sourceRegistration = this.host.native.sourceTable.register(createLifeSourceAdapter(this.ctx, this.host, (id, message) => this.running() && this.runtime?.isHome(id) === true && message.source.kind === 'dsh-world-life'
+            && (!('facts' in message.source) || this.runtime.acceptsFactMessage(id, message))));
+    }
+    /** Domain changes and native alarms wake Life; an idle world needs no pump. */
+    scheduleTick() {
+        if (this.closed || this.timer)
+            return;
+        this.timer = setTimeout(() => {
+            this.timer = undefined;
+            void this.enqueue(() => this.tick()).catch(error => { this.fault = String(error); });
+        }, 0);
+        this.timer.unref();
+    }
+    native() { return this.ctx; }
+    enqueue(work) {
+        const next = this.serial.then(work);
+        this.serial = next.catch(() => { });
+        return next;
+    }
+    current() {
+        const status = this.host.workspace.status();
+        if (status.state !== 'ready' || !status.target)
+            return;
+        const workspace = this.native().get('workspaceRegistry')?.get(status.target.id);
+        return workspace?.path === status.target.path ? workspace : undefined;
+    }
+    running() {
+        const current = this.current();
+        return !this.closed && this.enabled && !!this.runtime && current?.id === this.binding?.id && current?.path === this.binding?.path;
+    }
+    /** Saved clock intent is independent of native planner readiness. This read
+     * never waits on Life's queue or initializes a missing control directory. */
+    bodyClockState(workspaceId) {
+        if (this.closed)
+            return;
+        const current = this.current();
+        if (!current || current.id !== workspaceId)
+            return;
+        if (this.binding?.id === current.id && this.binding.path === current.path
+            && this.binding.plan.storageId === this.host.workspace.storageId())
+            return { enabled: this.enabled, restoreElapsed: this.enabled && this.restoredClock, ...(this.pauses && { pauses: this.pauses }) };
+        const saved = readLifeControl(current.path);
+        const enabled = saved?.enabled ?? false;
+        return { enabled, restoreElapsed: enabled, ...(saved?.pauses && { pauses: saved.pauses }) };
+    }
+    isHome(id) { return this.running() && this.runtime?.isHome(id) === true; }
+    homeSessionId() { return this.running() ? this.runtime?.snapshot().homeSessionId : undefined; }
+    /** Presentation reads the original body's two distinct states: walking to bed
+     * can be cancelled, but the sleeping animation starts only after arrival. */
+    restState(workspaceId) {
+        return this.ctx.get('petBehavior')?.restState(workspaceId);
+    }
+    publishRest() { this.ctx.get('petDesktop')?.features?.restore(false); }
+    directory(root) {
+        const directories = lifeDirectories(root);
+        for (const dir of directories) {
+            if (!existsSync(dir))
+                mkdirSync(dir, { mode: 0o700 });
+            const stat = lstatSync(dir);
+            if (!stat.isDirectory() || stat.isSymbolicLink())
+                throw Error('生活数据目录无效');
+        }
+        return directories[2];
+    }
+    async synchronize() {
+        const selected = this.current();
+        if (selected?.id === this.binding?.id && selected?.path === this.binding?.path
+            && (!this.binding || this.binding.plan.storageId === this.host.workspace.storageId()))
+            return;
+        await this.stopRuntime();
+        this.binding = undefined;
+        this.enabled = false;
+        this.restoredClock = false;
+        this.pauses = undefined;
+        this.fault = undefined;
+        const current = this.current();
+        if (!current || this.closed)
+            return;
+        const directory = this.directory(current.path);
+        for (const name of ['home.json', 'life.json'])
+            safeLifeFile(join(directory, name));
+        const settings = readLifeSettings(current.path);
+        this.enabled = settings?.enabled ?? false;
+        this.restoredClock = this.enabled;
+        this.pauses = settings?.pauses;
+        this.preferences = settings?.preferences ?? { ...defaultLifePreferences };
+        const storageId = this.host.workspace.storageId();
+        this.binding = { id: current.id, path: current.path, directory, library: this.host.records.getLibrary(current.id),
+            plan: new PersistentLifePlan(directory, this.host.workspace.runtime.identity().companionId, storageId, this.timeZone, () => {
+                const selected = this.current();
+                return selected?.id === current.id && selected.path === current.path && this.host.workspace.storageId() === storageId;
+            }) };
+    }
+    async startRuntime(resumed = false) {
+        if (this.runtime || !this.binding || !this.enabled || this.closed)
+            return;
+        const bound = this.binding, native = this.native(), host = this.host;
+        const active = () => {
+            const current = this.current();
+            return !this.closed && this.enabled && current?.id === bound.id && current.path === bound.path && this.binding === bound
+                && host.workspace.storageId() === bound.plan.storageId && host.workspace.runtime.identity().companionId === bound.plan.companionId;
+        };
+        const member = (id) => active() && this.current()?.sessionIds.includes(id) === true
+            && !native.get('workspaceRegistry')?.archivedSessionIds.includes(id) && !host.native.isGuest(id);
+        this.ctx.get('petDesktop')?.features?.pause();
+        await this.ctx.get('petTranscripts')?.restore();
+        const selected = this.current();
+        if (selected?.id !== bound.id || selected.path !== bound.path || this.closed || !this.enabled)
+            return;
+        // Foreground Room and Life share Core's single-flight opener. Its moveIn
+        // records World's pending arrival, so reusing this home does not skip it.
+        await resolveCompanionHome(this.ctx, this.host, this.preset);
+        const store = createLifeStore(bound.directory, this.timeZone);
+        const runtime = createLifeRuntime({
+            ctx: this.ctx, store,
+            config: { worldId: this.host.workspace.storageId(), agentPreset: this.preset, timeZone: this.timeZone, companionName: this.host.workspace.runtime.identity().displayName },
+            names: { get companion() { return host.workspace.runtime.identity().displayName; }, partner: '伙伴' },
+            options: { worldDir: bound.directory, roomDir: bound.path, diaryDir: bound.library.paths.diaryDir, selfFile: bound.library.paths.selfFile, timeZone: this.timeZone,
+                schedule: () => this.preferences, alarmFile: REVIEW_ALARM_FILE },
+            dailyBudget: () => this.preferences.dailyBudget ?? undefined,
+            photos: () => bound.library.album(),
+            reviewDiaryStatus: (day, session, messageId) => {
+                if (!active() || !member(session.id))
+                    throw Error('Review workspace or home changed');
+                return reviewDiaryStatus(host, { id: bound.id, directory: bound.library.paths.directory, timeZone: this.timeZone,
+                    sessionIds: this.current().sessionIds, isHome: id => this.isHome(id) }, day, session, messageId);
+            },
+            afterReview: () => {
+                const id = store.read().homeSessionId;
+                if (id && this.preferences.compactAfterReview && this.running())
+                    this.ctx.emit('pet/life.review', id);
+            },
+            inWorkspace: id => this.current()?.id === bound.id && this.current()?.path === bound.path
+                && this.current()?.sessionIds.includes(id) === true && !host.native.isGuest(id),
+            alarmContext: () => [this.ctx.get('petBehavior')?.promptLine(bound.id), bound.plan.summary()].filter(Boolean).join('\n'),
+            hasCurrentPlan: () => !!bound.plan.read().plan,
+            requirePlanningDecision: true,
+            planningRepairAttempts: () => this.preferences.planningRepairAttempts ?? 1,
+            // Native alarm tools and failure retries must share the same intent
+            // queue as plan replacement, body controls and the execution tick.
+            // Keep the hooks below synchronous: the runtime queues the whole change.
+            serializePlanChange: work => this.enqueue(async () => {
+                if (!active() || this.runtime !== runtime)
+                    throw Error('生活工作区或执行通道已变化，请刷新当前计划');
+                return work();
+            }),
+            setNextConsideration: (at, note, reason) => bound.plan.setNextConsideration(at, note, reason),
+            onPlanningFailure: (at, reason) => bound.plan.retryAt(at, reason),
+            facts: {
+                pending: async () => (await this.pendingFacts(bound, active)).map(fact => ({ domain: fact.domain, id: fact.id })),
+                read: async (refs) => {
+                    const facts = await readFactReferences(bound.id, refs, domain => this.factSource(domain), () => {
+                        if (!active())
+                            throw Error('互动事实工作区已切换');
+                    });
+                    return { facts, text: presentFacts(facts) };
+                },
+                confirmAdmission: async (sessionId, messageId, sourceDigest) => {
+                    if (!active() || !this.current()?.sessionIds.includes(sessionId))
+                        throw Error('原互动事实会话已离开绑定工作区');
+                    const matches = (events) => events.some(event => event.type === 'user/message' && event.data.id === messageId
+                        && createHash('sha256').update(JSON.stringify(event.data.source)).digest('hex') === sourceDigest);
+                    const session = this.ctx.sessions.get(sessionId);
+                    if (session) {
+                        if (!await this.ctx.sessions.flush(session))
+                            throw Error('原互动事实的原生记录尚未持久化');
+                        if (!active())
+                            throw Error('原互动事实工作区已切换');
+                        return matches(session.snapshotEvents());
+                    }
+                    // An archived/disposed home need not be reactivated merely to finish
+                    // acknowledgement. Read its original native log without another agent.
+                    const reader = await native.get('sessionPersistence').open(sessionId, 'read');
+                    try {
+                        const events = (await reader.read()).events;
+                        if (!active())
+                            throw Error('原互动事实工作区已切换');
+                        return matches(events);
+                    }
+                    finally {
+                        await reader.close();
+                    }
+                },
+                acknowledge: async (refs) => {
+                    for (const domain of ['body', 'economy']) {
+                        const ids = refs.filter(ref => ref.domain === domain).map(ref => ref.id);
+                        if (!ids.length)
+                            continue;
+                        if (!active())
+                            throw Error('互动事实工作区已切换');
+                        const source = this.factSource(domain);
+                        if (!source)
+                            throw Error('互动事实所属组件暂不可用');
+                        await source.acknowledgeFacts(bound.id, ids);
+                        if (!active() || this.factSource(domain) !== source)
+                            throw Error('互动事实所属组件已变化');
+                    }
+                },
+            },
+            host: {
+                workspace: async () => {
+                    const current = this.current();
+                    if (current?.id !== bound.id || current.path !== bound.path)
+                        throw Error('生活工作区已切换');
+                    return current;
+                },
+                createSession: async (_cwd, agentPreset, workspaceId) => {
+                    if (!active() || workspaceId !== bound.id)
+                        throw Error('生活工作区已切换');
+                    const created = await native.get('sessionController').create({ workspaceId: bound.id, agentPreset });
+                    if (!member(created.sessionId))
+                        throw Error('生活会话不属于当前工作区');
+                    return created.sessionId;
+                },
+                resolveAgent: async (id) => {
+                    if (!member(id))
+                        throw Error('生活会话不属于当前工作区');
+                    const result = await native.get('sessionController').resolveAgent(id);
+                    if (!member(id))
+                        throw Error('生活工作区已切换');
+                    if (result.error)
+                        throw Error(result.error.message);
+                    return result.agent;
+                },
+                isArchived: id => native.get('workspaceRegistry')?.archivedSessionIds.includes(id) ?? false,
+                rename: async (sessionId, title) => {
+                    if (!member(sessionId))
+                        throw Error('生活会话不属于当前工作区');
+                    await native.get('sessionController').rename({ sessionId, title });
+                    if (!active())
+                        throw Error('生活工作区已切换');
+                },
+                origin: () => native.get('webServer')?.getOrigin() ?? '',
+            },
+            notifier: { outlets: [{ get name() { return host.workspace.runtime.identity().displayName || '伙伴'; }, kinds: ['reach'], send: async (push) => {
+                            if (!this.running())
+                                throw Error('生活已停止');
+                            if (this.host.workspace.runtime.policy().quiet)
+                                throw Error('安静模式中，主动消息未发送');
+                            const desktop = this.ctx.get('petDesktop');
+                            let delivered = false;
+                            if (desktop && (desktop.presentationAvailable?.() ?? desktop.status().running)) {
+                                try {
+                                    desktop.presentLife(push.text, push.image);
+                                    delivered = true;
+                                }
+                                catch (error) {
+                                    this.ctx.logger.warn('Life presentation delivery failed', error);
+                                }
+                            }
+                            const results = await this.ctx.get('petChannels')?.reach(bound.id, push) ?? [];
+                            if (!delivered && !results.some(result => result.status === 'fulfilled'))
+                                throw Error('当前没有送达主动消息的渠道');
+                        } }] },
+        });
+        this.runtime = runtime;
+        try {
+            await runtime.start({ resumed });
+        }
+        catch (error) {
+            runtime.stop();
+            this.runtime = undefined;
+            throw error;
+        }
+        this.ctx.emit('pet/life.changed');
+    }
+    async stopRuntime(pauseIntent = false) {
+        const runtime = this.runtime;
+        let bodyError;
+        try {
+            const current = this.current();
+            if (pauseIntent && this.binding && current?.id === this.binding.id && current.path === this.binding.path) {
+                const saved = this.binding.plan.read();
+                if (saved.plan && ['active', 'waiting'].includes(saved.plan.status)) {
+                    await this.binding.plan.control(saved.revision, 'pause', 'Autonomous life paused', this.ctx.get('petBehavior'), current.id);
+                    this.binding.plan.markAutoResume(true);
+                }
+                await this.ctx.get('petBehavior')?.setAutonomy(this.binding.id, false);
+            }
+        }
+        catch (error) {
+            bodyError = error;
+        }
+        this.runtime = undefined;
+        // A stale or unavailable optional body must never prevent cancellation of
+        // the old native home after rebinding or during component disposal.
+        if (runtime) {
+            this.ctx.emit('pet/life.changed');
+            const id = runtime.snapshot().homeSessionId;
+            runtime.stop();
+            if (id)
+                this.native().get('sessionController').cancel({ sessionId: id });
+            await runtime.settled();
+        }
+        if (bodyError)
+            throw bodyError;
+    }
+    async tick() {
+        if (this.closed)
+            return;
+        await this.synchronize();
+        if (!this.enabled || !this.binding)
+            return;
+        const bound = this.binding;
+        const behavior = this.ctx.get('petBehavior');
+        let advanced = false;
+        let continueAccepted = false;
+        if (bound && behavior) {
+            await this.resumeAcceptedPlan(bound);
+            const before = bound.plan.read().plan;
+            advanced = await bound.plan.advance(bound.id, behavior);
+            const after = bound.plan.read().plan;
+            // A consumed completion transition must schedule the next accepted step
+            // itself. No new model consideration or unrelated domain event is needed.
+            continueAccepted = !!before && after?.id === before.id && after.cursor > before.cursor
+                && after.status === 'active' && after.cursor < after.steps.length && !after.replanReason;
+            // Body work already committed. Optional native startup/observer failures
+            // must not consume the only continuation of this accepted queue.
+            if (continueAccepted)
+                this.scheduleTick();
+            await behavior.setReconsiderConditions(bound.id, bound.plan.read().plan?.reconsiderWhen ?? []);
+        }
+        await this.startRuntime();
+        if (advanced)
+            this.runtime?.reschedulePlan();
+        this.runtime?.notifyFacts();
+    }
+    async resumeAcceptedPlan(bound) {
+        const current = this.current();
+        if (!this.enabled || this.closed || this.binding !== bound || current?.id !== bound.id || current.path !== bound.path)
+            return;
+        const saved = bound.plan.read();
+        if (saved.plan?.resumeOnEnable && saved.plan.status === 'paused') {
+            await bound.plan.control(saved.revision, 'resume', 'Autonomous life resumed', this.ctx.get('petBehavior'), bound.id);
+            bound.plan.markAutoResume(false);
+        }
+    }
+    factSource(domain) {
+        return this.ctx.get(domain === 'body' ? 'petBehavior' : 'petEconomy');
+    }
+    async pendingFacts(bound, active) {
+        if (!active())
+            throw Error('互动事实工作区已切换');
+        const sources = ['body', 'economy'].map(domain => ({ domain, source: this.factSource(domain) }));
+        const results = await Promise.all(sources.map(async ({ domain, source }) => {
+            if (!source?.pendingFacts)
+                return [];
+            const facts = await source.pendingFacts(bound.id);
+            if (!active() || this.factSource(domain) !== source)
+                throw Error('互动事实所属组件已变化');
+            return facts;
+        }));
+        return results.flat().sort((a, b) => a.occurredAt.localeCompare(b.occurredAt) || a.id.localeCompare(b.id));
+    }
+    snapshot(workspaceId) {
+        return this.enqueue(async () => {
+            await this.synchronize();
+            if (this.binding?.id !== workspaceId)
+                throw Error('生活工作区已切换');
+            const store = createLifeStore(this.binding.directory, this.timeZone);
+            return { workspaceId, enabled: this.enabled, running: this.running(), timeZone: this.timeZone, preferences: { ...this.preferences },
+                home: await this.ctx.get('petBehavior')?.roomState(workspaceId) ?? null, life: this.runtime?.snapshot() ?? store.read(),
+                activity: store.activityDays().slice(0, 2).reverse().flatMap(day => store.activity(day)).slice(-20),
+                fault: this.fault ?? null };
+        });
+    }
+    /** Synchronous, read-only prompt projection; no implicit scheduling or model calls. */
+    currentPlanSummary(workspaceId) {
+        const current = this.current(), bound = this.binding;
+        if (current?.id !== workspaceId)
+            return '';
+        let summary;
+        if (bound?.id === workspaceId && bound.path === current.path)
+            summary = bound.plan.summary();
+        else {
+            // Prompt assembly may occur inside native Life startup. Do not enqueue
+            // behind startup or create files: read the already persisted record only.
+            const file = join(current.path, '.chatpet', 'data', 'life', 'life.json');
+            safeLifeFile(file);
+            if (!existsSync(file))
+                summary = JSON.stringify({ revision: 0, plan: null });
+            else {
+                if (lstatSync(file).size > 64 * 1024)
+                    throw Error('生活状态超出可读取范围，原文件已保留');
+                const state = JSON.parse(readFileSync(file, 'utf8'));
+                summary = PersistentLifePlan.describe(PersistentLifePlan.decode(state, this.host.workspace.runtime.identity().companionId, this.host.workspace.storageId()));
+            }
+        }
+        return `【当前生活计划】自主生活${this.running() ? '运行中' : '未运行'}。以下是持久计划与实际执行回执；意图不等于完成。\n${summary}`;
+    }
+    async checkedPlan(workspaceId) {
+        await this.synchronize();
+        if (!this.binding || this.binding.id !== workspaceId)
+            throw Error('生活工作区已切换');
+        return this.binding;
+    }
+    readPlan(workspaceId, validate = () => { }) {
+        return this.enqueue(async () => {
+            const bound = await this.checkedPlan(workspaceId);
+            validate();
+            return { enabled: this.enabled, running: this.running(), ...bound.plan.read() };
+        });
+    }
+    updatePlan(workspaceId, expectedRevision, raw, validate = () => { }) {
+        const draft = parsePlanDraft(raw);
+        return this.enqueue(async () => {
+            const bound = await this.checkedPlan(workspaceId);
+            validate();
+            const result = await bound.plan.commit(expectedRevision, draft, this.ctx.get('petBehavior'), workspaceId, validate);
+            this.runtime?.reschedulePlan();
+            this.ctx.emit('pet/life.changed');
+            return { enabled: this.enabled, running: this.running(), ...result };
+        });
+    }
+    keepPlan(workspaceId, expectedRevision, reason, nextConsiderAt, validate = () => { }) {
+        return this.enqueue(async () => {
+            const bound = await this.checkedPlan(workspaceId);
+            validate();
+            const result = bound.plan.keep(expectedRevision, reason, nextConsiderAt);
+            this.runtime?.reschedulePlan();
+            this.ctx.emit('pet/life.changed');
+            return result;
+        });
+    }
+    checkReadingPlan(bound, expectedRevision, operationId, allowCompleted = false) {
+        const current = bound.plan.read(), plan = current.plan;
+        const active = plan?.operationId === operationId && plan.steps[plan.cursor]?.kind === 'read';
+        const completed = allowCompleted && plan?.steps.slice(0, plan.cursor).some(step => step.kind === 'read' && operationId === `life:${plan.id}:${step.id}`);
+        if (current.revision !== expectedRevision || !plan || !(active || completed)
+            || !['active', 'waiting'].includes(plan.status))
+            throw Error('Reading requires the current plan revision and its active original reading operation');
+        if (!this.running())
+            throw Error('Resume autonomous Life before progressing a planned reading activity');
+        return plan;
+    }
+    readPlannedSegment(workspaceId, expectedRevision, operationId, validate = () => { }) {
+        return this.enqueue(async () => {
+            const bound = await this.checkedPlan(workspaceId);
+            const guard = () => { validate(); this.checkReadingPlan(bound, expectedRevision, operationId); };
+            guard();
+            const segment = await this.behavior().readPlannedSegment(workspaceId, operationId, guard);
+            guard();
+            return { ...segment, operationId, confirmation: 'Read this actual text before calling life_read_confirm with the returned receiptToken. Receiving an animation or owning the item does not advance the bookmark or establish understanding.' };
+        });
+    }
+    confirmPlannedReading(workspaceId, expectedRevision, operationId, receiptToken, validate = () => { }) {
+        return this.enqueue(async () => {
+            const bound = await this.checkedPlan(workspaceId);
+            const guard = () => { validate(); this.checkReadingPlan(bound, expectedRevision, operationId, true); };
+            guard();
+            const execution = await this.behavior().confirmPlannedReading(workspaceId, operationId, receiptToken, guard);
+            guard();
+            // Completion is still accounted by the same persistent-plan executor.
+            // The tool's confirmation records actual text receipt, never comprehension.
+            await bound.plan.advance(workspaceId, this.behavior());
+            validate();
+            this.runtime?.reschedulePlan();
+            this.ctx.emit('pet/life.changed');
+            return { execution, ...bound.plan.read() };
+        });
+    }
+    controlPlan(workspaceId, expectedRevision, action, reason, validate = () => { }) {
+        if (!['pause', 'resume', 'cancel'].includes(action) || typeof reason !== 'string' || !reason.trim())
+            throw Error('Invalid life activity control');
+        return this.enqueue(async () => {
+            const bound = await this.checkedPlan(workspaceId);
+            validate();
+            if (action === 'resume' && !this.running())
+                throw Error('Enable autonomous Life before resuming; this tool does not change that setting');
+            const result = await bound.plan.control(expectedRevision, action, reason, this.ctx.get('petBehavior'), workspaceId, validate);
+            this.runtime?.reschedulePlan();
+            this.ctx.emit('pet/life.changed');
+            return result;
+        });
+    }
+    writeControl(bound, enabled, preferences, pauses) {
+        const file = join(bound.directory, 'control.json');
+        safeLifeFile(file);
+        if (pauses?.some(pause => pause.to !== null)) {
+            let committedAt;
+            try {
+                committedAt = this.ctx.get('petEconomy')?.committedGardenAt(bound.id);
+            }
+            catch { /* An unavailable Economy leaves the interval history intact. */ }
+            const at = committedAt;
+            if (at !== undefined)
+                pauses = pauses.filter(({ to }) => to === null || to > at);
+        }
+        durableWrite(file, JSON.stringify({ version: 1, enabled, preferences, pauses }, null, 2));
+        this.pauses = pauses;
+    }
+    control(workspaceId, enabled) {
+        return this.enqueue(async () => {
+            await this.synchronize();
+            if (this.binding?.id !== workspaceId)
+                throw Error('生活工作区已切换');
+            const pauses = enabled === this.enabled ? this.pauses : recordGardenPause(this.pauses, enabled, Date.now());
+            this.writeControl(this.binding, enabled, this.preferences, pauses);
+            this.enabled = enabled;
+            this.restoredClock = false;
+            this.fault = undefined;
+            // Body observes committed intent now, before native home/model startup.
+            this.ctx.emit('pet/life.changed');
+            if (enabled) {
+                await this.resumeAcceptedPlan(this.binding);
+                await this.startRuntime(true);
+            }
+            else {
+                this.publishRest();
+                await this.stopRuntime(true);
+            }
+            return { enabled, running: this.running() };
+        });
+    }
+    act(workspaceId, action, requestId, channel = 'settings') {
+        if (!actions.includes(action))
+            return Promise.reject(Error('未知的生活动作'));
+        return this.behavior().act(workspaceId, action, requestId, channel);
+    }
+    /** Compatibility methods delegate; Behavior remains available after Life unload. */
+    desktopRest(workspaceId, action) {
+        return this.behavior().act(workspaceId, action);
+    }
+    behavior() {
+        const behavior = this.ctx.get('petBehavior');
+        if (!behavior)
+            throw Error('共享身体组件尚未启用');
+        return behavior;
+    }
+    roomAction(workspaceId, input, by = '伙伴') {
+        return this.behavior().roomAction(workspaceId, input, by);
+    }
+    roomState(workspaceId) { return this.behavior().roomState(workspaceId); }
+    garden(workspaceId, operation, input) {
+        return this.behavior().garden(workspaceId, operation, input);
+    }
+    settings(workspaceId, expected, next) {
+        return this.enqueue(async () => {
+            await this.synchronize();
+            const bound = this.binding;
+            if (!bound || bound.id !== workspaceId)
+                throw { code: 'STALE_BINDING' };
+            const preferences = parseLifePreferences(next);
+            if (JSON.stringify(parseLifePreferences(expected)) !== JSON.stringify(this.preferences))
+                throw { code: 'STALE_REVISION' };
+            const before = this.preferences;
+            this.writeControl(bound, this.enabled, preferences, this.pauses);
+            this.preferences = preferences;
+            if (before.wake !== preferences.wake || before.review !== preferences.review)
+                this.runtime?.reschedule();
+            return { preferences };
+        });
+    }
+    library(workspaceId, operation, input) {
+        return this.host.records.library(workspaceId, operation, input);
+    }
+    async close() {
+        this.closed = true;
+        clearTimeout(this.timer);
+        this.timer = undefined;
+        const revoked = this.sourceRegistration?.revoke();
+        for (const stop of this.subscriptions.splice(0))
+            stop();
+        this.publishRest();
+        await revoked;
+        await this.enqueue(async () => {
+            try {
+                await this.stopRuntime();
+            }
+            finally {
+                this.binding = undefined;
+            }
+        });
+    }
+}
+export const name = '40-Life';
+export const inject = ['petCore', 'petWorld', 'agents', 'sessions', 'tools', 'systemPrompt'];
+export function apply(ctx, config = {}) {
+    const host = ctx.petCore;
+    const life = new CompanionLife(ctx, host, config.agentPreset ?? 'standard');
+    ctx.provide('petLife', life);
+    ctx.effect(() => () => life.close());
+    life.registerSource();
+    ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+        id: 'life.pursuits', owner: 'life', contractVersion: CONTRACT_VERSION, order: 3,
+        status: () => {
+            const bound = host.workspace.status().state === 'ready';
+            const running = bound && life.running();
+            return {
+                state: bound ? running ? 'ready' : 'disabled' : 'unavailable',
+                reason: bound ? running ? null : 'Life is paused' : 'Bind a workspace to start Life',
+                supportedOperations: ['start', 'stop', 'inspect', 'interact'],
+            };
+        },
+    }).revoke);
+}
+//# sourceMappingURL=plugin.js.map

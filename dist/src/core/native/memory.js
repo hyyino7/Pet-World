@@ -1,7 +1,7 @@
 import { MemoryConnection } from '../../memory/client.js';
 import { canonical, check, digest, reject } from '../storage.js';
 import { finalReply } from '../upstream/messages.js';
-import { readReviewDialogue } from '../../life/review-dialogue.js';
+import { readReviewDialogue } from '../../living/plan/review-dialogue.js';
 import { preferences } from '../preferences.js';
 /** Core-owned durable acknowledgement/source join. Provider owns all decisions. */
 export class NativeMemory {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFactReferences} from '../../src/life/facts.js';
+import {readFactReferences} from '../../src/living/plan/facts.js';
 import type {CompanionFact,CompanionFactSource} from '../../src/contracts/interaction.js';
 
 const fact=(id:string,domain:CompanionFact['domain']):CompanionFact=>({version:1,id,requestId:id,domain,type:'fixture',

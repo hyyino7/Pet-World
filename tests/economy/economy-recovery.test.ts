@@ -9,8 +9,8 @@ import {DatabaseSync} from 'node:sqlite';
 import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
 import type {CompanionFactActor} from '../../src/contracts/interaction.js';
-import {EconomyStore} from '../../src/economy/store.js';
-import {CompanionEconomy} from '../../src/economy/plugin.js';
+import {EconomyStore} from '../../src/living/economy/store.js';
+import {CompanionEconomy} from '../../src/living/economy/plugin.js';
 
 const owner:CompanionFactActor={kind:'owner',id:'fixture-owner',channel:'settings',sessionId:'fixture-settings'};
 const meal='food:improved-meal';
