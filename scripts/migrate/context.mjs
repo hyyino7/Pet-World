@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { dirname, join } from 'node:path';
-import { isDeepStrictEqual } from 'node:util';
+import { storageManifestIndex } from '../../dist/src/core/storage-migration.js';
 import { backupPlan, assertDshStopped } from '../lib/offline-backup.mjs';
 import { inspectRepoBinding, assertStopped } from '../lib/repo-storage.mjs';
 import { inspectTree, json, regular } from './io.mjs';
@@ -28,7 +28,7 @@ export function expectedManifest(context) {
 export function manifestVersion(context, contract) {
   if (!regular(context.manifestFile)) return 0;
   const manifest = checked('manifest-mismatch', () => json(context.manifestFile));
-  const index = contract.findIndex(step => isDeepStrictEqual(manifest, storageManifest(context, step.to)));
+  const index = storageManifestIndex(manifest, context.plan.companionId, contract);
   requireMigration(index >= 0, 'manifest-mismatch');
   return index + 1;
 }
