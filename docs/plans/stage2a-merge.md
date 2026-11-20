@@ -874,6 +874,11 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - `pnpm run check:types` 通过。`pnpm run test:life-integration` 通过 171/171、940/940。`pnpm run build && pnpm run test:behavior-list` 通过索引 11/11、行为 93/93。
 - 桌宠探测或呈现抛错时保留原告警并继续尝试 Channels，原先探测抛错会中断送达。其余按细则执行。文件数和行数均排除 `dist/src/**` 和基线。
 - 三补丁在 `/tmp/her-world-3d-patches/`，按序应用到 `aed7f27` 后与工作区版本文件逐字节一致。门禁由 Claude 在沙箱外运行。
+- 返工一轮：`scripts/checks/check-native-life.mjs:70-82` 改动 14 行（+13 / −1）。3D 将 `reach_out` 切到生活出口，因此原名单外的这份原生夹具也需要登记。用 `scope.effect` 登记合成桌宠，呈现时记录气泡并返回成功，卸载时撤销。Life 已经通过登记查找桌宠，移除了无调用方的 `petDesktop` 替身。原有断言逐字保留。验证在临时副本执行。
+  - `pnpm run build && pnpm run check:arch` 两条命令通过，0 失败。架构规则 37 条、词表 1053 条，均无增减。
+  - 指定的 `node --test` 快测 163 通过、0 失败、0 跳过。
+  - `pnpm run test:behavior-list` 索引 11 通过、0 失败，自动行为 93 通过、0 失败。3 条 L3 手工验收未运行。
+  - `pnpm run test:native-life` 试跑 1 次，前置构建通过，Electron 启动后命令以 1 退出。原生断言未运行，原因：临时 `DSH_HOME` 缺少桌面 profile，`mountInstalledStandard` 报 `ENOENT: no such file or directory, open '<临时 DSH_HOME>/profiles/desktop/package.json'`。原生断言 0 通过、0 失败，`bubbles` 未验证。
 
 ## 审查结论
 
@@ -1021,3 +1026,32 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 **合并时由 Claude 同步的文档**：分支已经改了 `docs/architecture.md` 第 4 节、5.8.3、5.9 里受影响的说法，合并时再核对一遍，同时把必须修 1 的结论写进去（三区缺席时两段在旧快照里也退休）。`docs/product.md` 2a 完成标准里「第一层只剩 5 条」一项在合并时勾选。
 
 **复查（返工一轮后）**：必须修 1 已修好。`retireDynamicContext`（`src/core/native/prompt.ts:27-41`）默认把 `chatpet.environment`、`chatpet.interactions` 按空值算进退休范围，当前登记的值覆盖默认值，仍走原来的按位置替换：原生日志不动，其他生产方的段保留。环境段名改成 Core 导出的常量 `ENVIRONMENT_CONTEXT`，Living 引用它（`src/living/prompt-context.ts:8,43`）。这次改了 `src/core/native/prompt.ts`，不在 3C 原允许清单里，只动了动态段退休这一处，「执行结果 · 返工一轮」写明了。新用例 2A1A-19 走的是重启夹具后从磁盘重开原会话。我把修复前编译出的 `prompt.js` 临时放回去单跑，0/1 失败（模型历史里仍有旧生活快照）；恢复后 1/1 通过。夹具只新增了 `history` 字段和 `restart` 的 `order` 选项，没有改已有断言。建议修第 2 条（条件断言改成确定断言）、第 3 条（执行结果写明两处有意变化）已做。1A 契约测试没改，2A1A-17 和返工前一致。`pnpm run build` 后产物与源码一致；`check:arch` 42 / 1053 无增减；`check:types` 通过；沙箱外 `pnpm run verify` 1530/1530；`test:behavior-list` 行为 89 条全部通过。
+
+### 3D 第一轮验收（Codex 审查 + Claude 核实）
+
+**必须修**
+
+1. **原生 Life 冒烟检查没有接到新出口，`pnpm run test:native-life` 会失败**（Codex P2，已核实）。`scripts/checks/check-native-life.mjs:70` 只 `provide('petDesktop', {status, presentLife})` 一个替身，既没有登记 Desktop 出口，也没有挂 Channels。3D 之后 `reach_out` 只经 `lookupLifeOutlet`（`src/living/plan/plugin.ts:319-321`）找呈现方，不再读这个服务，所以 `bubbles` 一直是空的：`:81` 的 `bubbles.length === 1` 失败，`:93` 安静模式后的同一断言也随之失败。仓库里只有这一处替身（`grep presentLife scripts tests`），`verify` 不跑原生检查，所以驱动会话的门禁没拦住。第 6 批要用这三条原生检查做发布前验证，这张网不能断。
+   - 要求：在同一个夹具插件里用 `dist/src/living/outlets.js` 的 `registerLifeOutlet(scope, host, 'desktop', {pause(){}, restore(){}, present: text => { bubbles.push(text); return true; }})` 登记合成呈现方，`scope.effect` 返回它的 `revoke`；可以保留原 `petDesktop` 替身，也可以删掉（Life 已不读它）。原有的送达、安静模式和其余断言一字不改。
+   - 范围：`scripts/checks/check-native-life.mjs` 不在 3D 的允许修改名单里，本条把它补进来，只改这一处夹具。
+   - 验收：`pnpm run build && pnpm run check:arch` 通过；在装有 DSH 的本机（沙箱外）跑 `pnpm run test:native-life`，输出的 JSON 里 `bubbles` 为 1。这条检查会以 `ELECTRON_RUN_AS_NODE` 启动已安装的 DSH 二进制、只用临时目录和脚本模型，不动主人在用的 DSH；本机跑不了就如实写「未运行」，留到第 6 批。
+
+**建议修（不影响合并，返工时可以一起做）**
+
+- **隔离配置热更新不会让生活出口和启用意图读口跟着变**（Codex P2 两条：`src/living/outlets.ts:30-33`、`src/living/index.ts:67-69`）。已核实 Cordis Loader 只改 `isolate` 时不重挂入口、原地迁移服务（loader `config/isolate.ts` 的 `swap` 和第 5 步改 `impl.isolate`；`config/entry.ts:105` 只在 `config` 变化时 `fiber.update`）。出口按提供方挂载时的标签登记，Plan 槽也是挂载时定的标签，之后 Desktop、Channels 或 Life 单改隔离配置，Life 和 Desktop 的互相可见性就和 `ctx.get` 不一致了。查找一侧每次现取标签，没有问题。main 上 Life 现取 `ctx.get('petDesktop'/'petChannels')`、Desktop 现取 `ctx.get('petLife')`，没有这个问题。不列为必须修：细则写的就是「复用 `RegistrationTable` 和 `LivingWorld` 的划分方式」，和 3B 的 `LivingWorld`、3C 的五个登记口是同一类已接受的限制（3C 验收建议修第 1 条），`docs/architecture.md:644` 已写明「改入口的 `isolate` 配置要重挂该入口」。合并时由 Claude 把这句的范围扩到 Desktop、Channels 和 Desktop 读 Life 启用意图；彻底解决，和 3B、3C 的标签一起留到 2b。
+- 「概念与扩展检查」表的「生活出口登记」一行没提 Desktop 读 Life 持久启用意图的读口（`readLifeEnabled`，`src/living/outlets.ts:48-52`）。它和出口在同一文件里、由第二层提供，合并时由 Claude 在这一行补一句即可。
+
+**核实结果**
+
+1. **时机和顺序**：`startRuntime` 仍在启动条件检查之后、`petTranscripts.restore()` 之前暂停桌宠（`src/living/plan/plugin.ts:194`）；显式暂停仍在发 `pet/life.changed` 之后、`stopRuntime` 之前恢复（`:562`）；`close()` 里的恢复仍在订阅撤销之后（`:622`）。`mountLivingArea` 的清理同步先撤 Plan 租约再调 `close`（`src/living/index.ts:196-201`），所以恢复时 `readLifeEnabled` 读到 `false`，桌宠重新排程。出口缺席时三处都是 `?.` 跳过，渠道缺席算 `[]`，和原来一致。唯一的行为变化是 `present` 整体放进 `try`：可用性探测抛错也记原告警、继续尝试 Channels（2A3D-03 覆盖）。`presentationAvailable()` 在 `Desktop` 上一直存在（`src/desktop/index.ts:61`），原来的 `?? status().running` 回退没有意义，去掉不影响行为。
+2. **登记方式**：`outlets.ts` 用 `RegistrationTable`，按 Cordis 根、Core 实例、`petDesktop`/`petChannels` 的可见标签划分，查找时核租约和提供方 fiber 为 `ACTIVE`，和 `LivingWorld.lookup` 抽出的同一个 `currentArea` 判法一致。同一标签下重复登记会抛错，但 Cordis 的 `provide` 在同一标签下重复提供本来就先抛（cordis `reflect.ts:303-305`），走不到这里。Desktop、Channels 都在 `provide` 之后用 `ctx.effect` 登记、返回 `revoke`；Cordis 按倒序清理，出口先于服务和 `features.close()` 撤销。2A3D-01/02 覆盖了同名旧租约不再接收恢复、隔离 `petDesktop` 的 Life 看不到桌宠。
+3. **启用意图**：`readLifeEnabled` 直接调 Plan 的 `bodyClockState(workspaceId)?.enabled ?? running()`，`bodyClockState` 在绑定未装入时读 `readLifeControl()`（`src/living/plan/plugin.ts:142-153`），没有另造读取。Plan 只按 `petLife` 标签查，Body、Economy 标签不同也能读到（2A3D-02 的晚装分支就是这样装的）。三区全退后桌宠重新排程、`control.json` 字节不变，重挂 Life 后重新接管，都有断言。
+4. **测试**：Desktop 先装、晚装、单独重载（2A3D-01/02）；三区全退后恢复；呈现期间桌宠消失和探测抛错都仍送 QQ（2A3D-03/04）；桌宠不可用且 QQ 静音、两出口都卸载、只有未登记的同名 `petChannels` 服务，三种情况都报「当前没有送达主动消息的渠道」。三个改动过的旧测试只把 Life 替身换成真实 Cordis 租约，原断言都在；`entries-lifecycle` 的默认装载顺序仍是三个生活入口；1A 契约测试没改。
+5. **R5「无法静态判定」**：`build-animation-map.mjs:8,21,30,55` 四行在 main（`aed7f27`）的 `--report` 里就有，不是这次新出现的。这次只是把 `webm-metadata.mjs` 加进生成源，清掉了 `:6` 的 R1。
+6. **架构**：`check:arch` 规则 42 → 37（1 条 R1、4 条 R2），词表 1053 不变；`--report` 与 main 比，R8 只有行号漂移，没有新增；`living` 的 R1–R4 为 0（剩下的 `core/initialization.ts:5 → living/plan/library.js` 属于第一层）。
+7. **运行**：`pnpm run build` 后工作区干净；细则三组快测合跑 163/163；`check:types` 通过；`test:life-integration` 171/171、940/940；`test:behavior-list` 索引 11/11、行为 93/93。`pnpm run verify` 本轮没有重跑，沿用驱动会话的 1534/1534，返工后合并前重跑。Codex 审查没有改动任何文件。
+8. **未手动验证**：没有在主人的 DSH 里实际装卸 Desktop、Channels 和 Life，也没有跑 `test:native-life`（必须修 1 是读代码得出的，没有实际跑失败）。真实入口链路由 `cordisFixture` 的真实 Cordis 装载覆盖。
+
+**合并时由 Claude 同步的文档**：`docs/architecture.md` 6.2 和层间接口里「Life 直接读 Desktop、Channels」的说法改成第二层生活出口；`:644` 的隔离限制扩到出口和启用意图读口；「概念与扩展检查」补启用意图读口；`docs/product.md` 2a 完成标准里「第二层基线 0 条」一项勾选。
+
+**复查（返工一轮后）**：必须修 1 已修好。`scripts/checks/check-native-life.mjs:70-82` 改为用 `dist/src/living/outlets.js` 的 `registerLifeOutlet` 登记合成桌宠，`present` 记气泡并返回 `true`，`scope.effect` 返回 `revoke`，卸载时撤销；原 `petDesktop` 替身删掉了。核对过 Life、Body、Core、Memory 和 `check-life-history`、`check-life-review` 都不再读 `petDesktop`，删掉不影响别处。`:81`、`:93` 和其余断言逐字未改，`node --check` 通过。改动和 2A3D-04 的真实出口路径一致（那条用例经同一个 `lookupLifeOutlet` 断言呈现成功）。`pnpm run test:native-life` **没有运行**：它通过 `mountInstalledStandard`（`scripts/checks/lib/native-standard-preset.mjs:12-17`）读主人真实的 DSH home 里的 `profiles/desktop` 配置，Codex 在临时 `DSH_HOME` 下跑报 `ENOENT`。按约定不碰主人的 DSH 环境，这条留给主人在本机跑，或在第 6 批的隔离环境里跑。两条建议修都是合并时由 Claude 改文档，返工不涉及。`src/` 没有改动；`pnpm run build` 后工作区只有这两处改动；`check:arch` 37 / 1053 无增减；细则快测 163/163；`test:behavior-list` 行为 93/93；沙箱外 `pnpm run verify` 1534/1534，包检查通过。
