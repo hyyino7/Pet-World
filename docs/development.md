@@ -116,6 +116,19 @@ node scripts/migrate/companion-migrate.mjs run --installation /tmp/her-world-syn
 node scripts/companion-backup.mjs restore --installation /tmp/her-world-synthetic/installation.json --backup /tmp/her-world-rollback-backup --before /tmp/her-world-before-restore
 ```
 
+<a id="upgrade-0-3-0"></a>
+### 从 0.2.0 升级到 0.3.0
+
+顺序按 [decisions.md](decisions.md)「0.3.0 换包后先进入『需要迁移』」。`$RECEIPT` 是安装回执，命令都在与要装版本同标签的源码检出里跑，而且已经构建：
+
+1. **在 0.2.0 下做回退备份。** 完全退出 DSH，运行 `node scripts/companion-backup.mjs create --installation "$RECEIPT" --output "$ROLLBACK"`，再用 `verify --installation "$RECEIPT" --backup "$ROLLBACK"` 核对。旧 setup 装的机器先按已知问题 8 跑一次 `migrate-core-config --apply`。
+2. **换包。** 启动 DSH，在版本页换到 0.3.0。看到设置页「需要迁移」、只有普通聊天可用，是预期。显示 `binding-not-migratable` 时换回 0.2.0，按提示理顺工作区选择和初始化再来。
+3. **离线迁移。** 完全退出 DSH 和所有写入者，依次跑 `plan`、`run --backup "$RESUME_BACKUP"`、`status`（命令见上）。三步都 `complete` 且 `segment` 为 `settled` 才算完成；`unfinished` 用 `--resume` 续做。
+4. **启动核对。** 启动 DSH，确认工作区就绪，聊天、记忆召回、home 和钱包都正常。
+5. **回退（需要时）。** 版本页换回 0.2.0，退出 DSH，用本检出的 `companion-backup.mjs restore` 恢复第 1 步的回退备份（命令见上）。
+
+**换了设备的钱包**：Repo 搬到新设备、新路径后，0.2.0 的 Core 里那条 `economy.initialized` 标记还记着旧路径，`0003` 会报 `economy-marker-binding-mismatch` 停下。换包前先用 0.2.0 在新设备上绑定新路径并打开一次钱包，旧版本打开钱包时会把标记改成新路径，再做第 1 步。
+
 原有恢复 CLI 的输出不属于迁移/盘点的固定原因与隐私输出契约；真实数据检查点不能把其原始输出交给 Agent。开发演练只用合成副本。
 
 真实副本检查点（阶段 2、阶段 3 还会再做）在独立设备上跑：源机退出 DSH 后，打包伙伴 Repo、安装包和源码 bundle，用隔空投送或移动硬盘传过去，不经云端；新设备按 [portability.md](portability.md)「Move to another device」安装绑定，再盘点、迁移、回退、续做。设备 profile 里的语音、附件不随 Repo 走，新设备上为空属于预期。盘点只给出未登记 kind 的个数；要查是哪几种，只按冒号前的前缀聚合计数，不输出完整 kind 和字段值。恢复命令的输出重定向到本机日志，只取退出码和 `restored` 字段。

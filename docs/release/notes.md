@@ -1,30 +1,23 @@
-# Her World 0.2.0
+# Her World 0.3.0
 
-在 DSH 里聊天、跨会话召回记忆、使用桌宠和 Room，以及通过 QQ 与伙伴互动，仍按原来的方式使用。
+在 DSH 里聊天、跨会话召回记忆、使用桌宠和 Room、通过 QQ 与伙伴互动，仍按原来的方式使用。这一版把身体、计划与回顾、钱包背包合并成一个「生活世界」，并迁移两项伙伴数据，所以**升级要多一步离线迁移**。
 
 ## 你会看到的变化
 
-- 某个模块没有加载时，设置页中缺少的能力状态会显示「不可用」。工作区已绑定就绪而桌宠模块没加载时，设置页不再因此显示「已停用」，房间仍按自己的状态显示。长期记忆和哔哩哔哩保留各自原有的状态提示。
-- 历史瘦身时，如果一轮对话里有已保存的输入无法归类，整轮都会保留。Life（自主生活）模块没加载时，已有的 Life 轮次也会保留原样。
+- 从 0.2.0 换到 0.3.0 后，设置页先显示「需要迁移」：这时只有普通聊天可用，伙伴的设置、记忆和生活世界都不写入，直到你完成离线迁移并重启 DSH。
+- 伙伴的 home 会话身份改由 Core 记录；钱包的「已采用」标记搬进钱包自己的数据库，另有一份独立证据。钱包数据缺失或损坏时，伙伴照样拒绝重建钱包，免费的喂食和饮水不受影响。
+- 首次初始化钱包中途失败时，设置页「工作区 → 资料与会话」会显示证据文件位置和处理办法。
+- 三个生活入口都卸载时，普通聊天、记忆、相册和日记照常；生活世界提供的环境和互动提示一起消失。
 
-## 如果你有插件或脚本直接调用 Core
+## 如果你有插件或脚本直接调用 Her World
 
-`her-world/core` 的导入路径照旧。使用 `createCore()` 返回的 `PetCoreHost` 时，按下面的方式更新旧调用。
-
-| 原来的写法 | 0.2.0 的写法 |
-| --- | --- |
-| 赋值 `host.native.lifeAdmission`、`roomAdmission` 或 `channelBoundary` | 用 `host.native.sourceTable.register(adapter)` 登记输入来源及准入规则，卸载时调用登记结果的 `revoke()`。判断会话是否为访客用 `host.native.isGuest(sessionId)`。 |
-| 赋值 `host.native.playbackEvidence` | 用 `host.native.registerPlaybackEvidence(resolve)` 登记查询回调，卸载时调用登记结果的 `revoke()`。固定键 `playback` 只允许一个提供者。内置 Emotion 已登记该键时，再登记会抛错。 |
-| 读写 `host.native.memoryEnabledForNewSessions` | 读取用 `host.native.memoryEnabledForNewSessions()`，设置用 `host.native.setMemoryEnabledForNewSessions(enabled)`。旧的 `if` 判断会把函数当作真值，记得加括号。 |
-| `host.native.scopeFor(sessionId)` 或设置 `host.native.resolveScope` | 改用 `host.native.nativeScopeFor(sessionId)` 或设置 `host.native.resolveNativeScope`。 |
-| 用 `host.workspace.runtime.baseCapabilities()` 读取能力行 | 用 `host.workspace.runtime.capabilities()` 读取当前状态。 |
-| 覆盖 `capabilities` 提供状态 | 用 `host.workspace.runtime.capabilityTable.register(row)` 登记自己模块提供且尚未登记的能力行，卸载时调用登记结果的 `revoke()`。`core.conversation` 和 `memory.lifecycle` 已由 Core 预先登记，重复登记会抛错。 |
-| 直接启动 Memory 连接时，在 `host.native.memory.connection.start()` 的范围对象里传 `workspaceId` | 改传 `bankId`，值仍是伙伴的便携存储 ID。 |
-
-工具的适用来源和历史概览可以用 `host.native.toolTable.register(declaration)` 登记。`her-world/contracts` 提供来源、工具和能力登记所需的 TypeScript 类型。
+旧服务名 `petBehavior`、`petLife`、`petEconomy` 和三个旧事件照旧可用。新增第二层对外契约（类型在 `her-world/contracts`）：世界快照、命令、事实流和 `world.changed` 事件，挂在这三个旧服务上，不新增服务名。已删除的无用成员：`petLife.desktopRest()`，改用 `petBehavior` 的照料和房间操作。[接口说明](https://github.com/hyyino7/her-world/blob/main/docs/architecture.md#52-第二层对外)
 
 ## 升级、迁移和回退
 
-- **直接升级**。先保留 0.1.8 安装包，并用已完成的安装回执做离线备份。备份成功后再升级，跳过迁移。通过 GitHub 安装的，先按说明切换到 npm，保留已绑定的伙伴工作区和 Core 私有配置。日常机器等正式版发布后，在 DSH 的 **Her World → 版本**页选择 `0.2.0` 更新。预发布版 `0.2.0-rc.1` 仅用于隔离环境验证，在版本页勾选「预发布」后即可看到并选择该版本。[离线备份说明](https://github.com/hyyino7/her-world/blob/main/docs/portability.md#offline-file-backup-and-same-machine-recovery) · [安装和更新说明](https://github.com/hyyino7/her-world/blob/main/docs/github-updates.md#dsh-installation-and-updates)
-- **迁移演练**。只在隔离副本上做。仍使用 0.1.8 时先退出 DSH 并确认所有写入者已停止，再从新版对应的源码检出查看迁移计划、指定新目录执行带备份的迁移，成功后升级。迁移只补存储清单和迁移日志。[迁移步骤](https://github.com/hyyino7/her-world/blob/main/docs/development.md#migration-inventory)
-- **回退**。在同一台设备、同一路径先换回与备份匹配的 0.1.8 安装包。完全退出 DSH 并确认停写后，用恢复工具先备份当前状态，再恢复升级前的备份，最后启动旧版。升级后新增的聊天在恢复后的旧版里看不到，已送达消息和已消耗额度也不会撤销。[安装和更新说明](https://github.com/hyyino7/her-world/blob/main/docs/github-updates.md#dsh-installation-and-updates)、[备份恢复步骤](https://github.com/hyyino7/her-world/blob/main/docs/development.md#migration-inventory)
+完整步骤见[从 0.2.0 升级到 0.3.0](https://github.com/hyyino7/her-world/blob/main/docs/development.md#upgrade-0-3-0)。要点：
+
+- **换包前**：在 0.2.0 下退出 DSH，做一份回退备份。
+- **换包后**：看到「需要迁移」时，退出 DSH，用与 0.3.0 同标签的源码检出跑离线迁移，完成后重启。
+- **回退**：版本页换回 0.2.0，退出 DSH，用回退备份恢复。升级后新增的聊天在恢复后的旧版里看不到，已送达消息、已消耗额度和花费不会撤销。
+- **换了设备的钱包**：换包前先用 0.2.0 在新设备上打开一次钱包，否则迁移会因路径对不上停下。
