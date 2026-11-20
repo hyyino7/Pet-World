@@ -7,6 +7,7 @@ const messages = {
     CONFLICT: '设置已被其他操作修改，请刷新后重新编辑。',
     INVALID_ARGUMENT: '设置值无效，请检查填写内容。', UNAUTHORIZED: '当前连接没有修改设置的权限。',
     DISABLED: 'Core 当前不可用，请检查核心模块状态。',
+    'migration-required': '伙伴资料需要离线迁移。请刷新设置查看原因和操作提示。',
     UNAVAILABLE: '00-Core 尚未就绪，请检查核心模块是否启用。',
     WORLD_UNAVAILABLE: '大肥鱼的 World 组件尚未加载。',
     PROFILE_UNAVAILABLE: '人设预览无法加载。请检查角色、用户资料和上下文字符上限。',
@@ -52,6 +53,8 @@ export function settingsHandler(getHost, getWorkspaces, getDesktop, getWorldModu
             const body = object(payload, ['requestId', 'input']);
             if (typeof body.requestId !== 'string' || body.requestId.length < 1 || body.requestId.length > 160)
                 fail('INVALID_ARGUMENT');
+            if (endpoint !== 'snapshot' && host.workspace.status().state === 'migration-required')
+                fail('migration-required');
             const context = () => host.operator.request(`settings:${endpoint}:${body.requestId}`);
             const options = { signal };
             if (['economyView', 'economyAction', 'economySettings'].includes(endpoint)) {
@@ -272,6 +275,7 @@ export function settingsHandler(getHost, getWorkspaces, getDesktop, getWorldModu
                 const policy = unwrap(await host.services.core.getPolicy(context(), {}, options));
                 const prefs = unwrap(await host.services.preferences.read(context(), {}, options));
                 const workspace = unwrap(await host.services.workspace.inspect(context(), {}, options));
+                const migrating = workspace.state === 'migration-required';
                 const profile = unwrap(await host.services.workspace.readProfile(context(), {}, options));
                 const capabilities = unwrap(await host.services.core.listCapabilities(context(), {}, options));
                 const registry = getWorkspaces();
@@ -284,10 +288,10 @@ export function settingsHandler(getHost, getWorkspaces, getDesktop, getWorldModu
                 return { ok: true, value: { identity: { revision: identity.revision, displayName: identity.displayName, character: identity.character },
                         policy, preferences: prefs, capabilities, workspaces, workspaceAvailable: Boolean(registry), workspace, profile, editorScope,
                         storage: host.workspace.storageStatus(),
-                        desktop: getDesktop?.(host)?.status() ?? null,
-                        platformAvailable: Boolean(getPlatform?.()),
-                        presentation: getPlatform?.()?.status?.() ?? null,
-                        memory: { enabled: Boolean(host.native.memory && host.native.memoryEnabledForNewSessions()),
+                        desktop: migrating ? null : getDesktop?.(host)?.status() ?? null,
+                        platformAvailable: !migrating && Boolean(getPlatform?.()),
+                        presentation: migrating ? null : getPlatform?.()?.status?.() ?? null,
+                        memory: { enabled: !migrating && Boolean(host.native.memory && host.native.memoryEnabledForNewSessions()),
                             provider: host.native.memory?.connection.lifecycle ?? null,
                             error: host.native.memory?.lastError ?? null },
                         worldModules: getWorldModules?.() ?? [],

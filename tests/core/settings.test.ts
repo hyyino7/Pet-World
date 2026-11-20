@@ -16,6 +16,41 @@ const fixture = () => {
   return { directory, config };
 };
 
+test('migration-required exposes the settings snapshot and rejects companion endpoints before dispatch', async () => {
+  const f = fixture(), host = createCore(f.config);
+  const target = {id:'old-repo', title:'Synthetic Repo', path:f.directory};
+  const request = () => host.operator.request('migration-settings');
+  const signal = new AbortController().signal;
+  try {
+    const prefs = unwrap(await host.services.preferences.read(request(), {}));
+    const saved = unwrap(await host.services.preferences.save(request(), {
+      expectedRevision:prefs.revision, workspace:target, conversation:prefs.conversation,
+    }));
+    unwrap(await host.services.workspace.initialize(request(), {expectedPreferencesRevision:saved.revision}));
+    rmSync(join(f.directory, '.chatpet/data/storage-manifest.json'));
+    const route = settingsHandler(() => host, () => undefined);
+    const call = (endpoint:string, input:object, kind='owner') =>
+      route(endpoint, {requestId:endpoint,input}, signal, {principal:{kind},signal});
+    const snapshot = await call('snapshot', {});
+    assert.ok(snapshot.ok);
+    assert.equal((snapshot.value as {workspace:{state:string}}).workspace.state, 'migration-required');
+    for (const [endpoint, input] of [
+      ['initialize', {expectedPreferencesRevision:saved.revision}],
+      ['preferences', {expectedRevision:saved.revision,workspaceId:null,conversation:saved.conversation}],
+      ['lifeControl', {workspaceId:target.id, enabled:true}],
+      ['economyView', {workspaceId:target.id}],
+      ['archiveFind', {workspaceId:target.id,query:'synthetic'}],
+    ] as const) {
+      const result = await call(endpoint, input);
+      assert.ok(!result.ok);
+      assert.equal(result.error.code, 'migration-required');
+    }
+    const guest = await call('snapshot', {}, 'guest');
+    assert.ok(!guest.ok);
+    assert.equal(guest.error.code, 'UNAUTHORIZED');
+  } finally { await host.close(); rmSync(f.directory, {recursive:true,force:true}); }
+});
+
 /** Scope tests switch between complete disposable workspaces. Their inactive
  * schemas are prepared through the public initializer, not blank DB files. */
 async function prepareTarget(config:CoreConfig,target:{id:string;path:string;title:string}) {
