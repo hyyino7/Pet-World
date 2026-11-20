@@ -1,7 +1,9 @@
+import { type RecordCommandEffect } from '../index.js';
 import { type LifeStore } from '#dsh-world/life/lifeStore';
 import type { CompanionBehavior } from '../body/plugin.js';
 import { type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
 export type PlanStatus = 'active' | 'paused' | 'waiting' | 'completed' | 'cancelled';
+export declare const expiredDispatchDeadline = "The activity absolute deadline elapsed before Body admission; revise the original plan explicitly";
 export interface LifeStep {
     id: string;
     kind: PlannedActivity['kind'];
@@ -65,8 +67,9 @@ export declare class PersistentLifePlan {
     readonly companionId: string;
     readonly storageId: string;
     private readonly isCurrent;
+    private readonly changed?;
     readonly store: LifeStore;
-    constructor(directory: string, companionId: string, storageId: string, timeZone: string, isCurrent?: () => boolean);
+    constructor(directory: string, companionId: string, storageId: string, timeZone: string, isCurrent?: () => boolean, changed?: (() => void) | undefined);
     read(): {
         revision: number;
         plan: CurrentLifePlan | null;
@@ -78,6 +81,7 @@ export declare class PersistentLifePlan {
         revision: number;
         plan: CurrentLifePlan | null;
     };
+    private projection;
     private change;
     commit(expectedRevision: number, draft: PlanDraft, behavior?: CompanionBehavior, workspaceId?: string, validate?: () => void): Promise<{
         revision: number;
@@ -97,9 +101,9 @@ export declare class PersistentLifePlan {
         plan: CurrentLifePlan | null;
     }>;
     /** Only explicit events create a wake. Repeated ticks cannot create a polling loop. */
-    reconsider(reason: string, condition?: number): boolean;
+    reconsider(reason: string, condition?: number, recordEffect?: RecordCommandEffect): boolean;
     /** Serialized by CompanionLife; no model is called here. */
-    advance(workspaceId: string, behavior: CompanionBehavior, validate?: () => void): Promise<boolean>;
+    advance(workspaceId: string, behavior: CompanionBehavior, validate?: () => void, recordEffect?: RecordCommandEffect): Promise<boolean>;
     summary(): string;
     static describe({ revision, plan }: {
         revision: number;

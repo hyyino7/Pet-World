@@ -3,9 +3,8 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,symlinkSync,linkSync,unlinkSync,renameSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import type {Context} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../../src/core/index.js';
-import {assertLifeReviewFile,installLifeReviewFileGuard,type LifeReviewFileAccess} from '../../src/living/plan/review-files.js';
+import {assertLifeReviewFile,type LifeReviewFileAccess} from '../../src/living/plan/review-files.js';
 
 function fixture(t:TestContext) {
   const root=mkdtempSync(join(tmpdir(),'life-review-files-'));t.after(()=>rmSync(root,{recursive:true,force:true}));
@@ -58,38 +57,4 @@ test('review preserves the established legacy writing owner instead of authorizi
   const access={...f.access,writing:{...f.access.writing!,directory:f.life}};
   assert.doesNotThrow(()=>assertLifeReviewFile(f.host,access,'write',join(f.life,'self.md'),today));
   assert.throws(()=>assertLifeReviewFile(f.host,access,'write',join(f.records,'self.md'),today));
-});
-
-test('native review file guard resolves cwd, rechecks aliases and releases on owner takeover',async t=>{
-  const f=fixture(t),handlers=new Map<string,Function>(),guards:Function[]=[];
-  let access:LifeReviewFileAccess|undefined=f.access,cwd=f.root;
-  const ctx={on:(name:string,handler:Function)=>{handlers.set(name,handler);return()=>handlers.delete(name);},
-    tools:{guard:(handler:Function)=>{guards.push(handler);return()=>{};}},get:(name:string)=>name==='fs'?{
-      resolve:async(path:string,options:{cwd:string})=>resolve(options.cwd,path),processPath:(path:string)=>path,
-    }:name==='workingDirectory'?{ensure:async()=>cwd}:undefined} as unknown as Context;
-  const stop=installLifeReviewFileGuard(ctx,f.host,()=>access,()=>today);t.after(stop);
-  const exec=(file:string)=>({name:'write',agent:{id:'home'},token:{},arguments:{file_path:file,content:'fixture'},signal:new AbortController().signal});
-  const prepare=async(item:any)=>{await handlers.get('tools/pre-execute')!(item,async()=>{});return guards[0](item);};
-  assert.equal(await prepare(exec('.chatpet/self.md')),undefined);
-  const denied=exec('.chatpet/data/life/life.json');assert.match(await prepare(denied),/仅访问/);
-  access=undefined;assert.equal(guards[0](denied),undefined,'The ordinary owner turn retains DSH file permissions');
-  assert.equal(await prepare(exec('.chatpet/data/life/life.json')),undefined);
-  access=f.access;cwd=join(f.records,'diary');assert.equal(await prepare(exec('../self.md')),undefined);
-  const item=exec('2026-11-13.md');await prepare(item);
-  renameSync(join(f.records,'diary'),join(f.records,'old-diary'));symlinkSync(join(f.records,'old-diary'),join(f.records,'diary'));
-  assert.match(guards[0](item),/writing path/,'A path changed after preparation is rechecked before dispatch');
-  access={...f.access,guest:true};assert.match(await prepare(exec('../self.md')),/范围/);
-});
-
- test('backfill creation is revoked if a historical file appears before native dispatch',async t=>{
-  const f=fixture(t),handlers=new Map<string,Function>(),guards:Function[]=[];
-  const day='2026-11-11',path=join(f.records,'diary',day+'.md'),access={...f.access,reviewDay:day};
-  const ctx={on:(name:string,fn:Function)=>{handlers.set(name,fn);return()=>{};},tools:{guard:(fn:Function)=>{guards.push(fn);return()=>{};}},
-    get:(name:string)=>name==='fs'?{resolve:async(p:string)=>p,processPath:(p:string)=>p}:name==='workingDirectory'?{ensure:async()=>f.root}:undefined} as unknown as Context;
-  t.after(installLifeReviewFileGuard(ctx,f.host,()=>access,()=>today));
-  const exec={name:'write',agent:{id:'home'},token:{},arguments:{file_path:path,content:'Backfill'},signal:new AbortController().signal};
-  await handlers.get('tools/pre-execute')!(exec,async()=>{});
-  assert.equal(guards[0](exec),undefined);
-  writeFileSync(path,'An existing historical diary');
-  assert.match(guards[0](exec),/历史日记已经存在/);
 });

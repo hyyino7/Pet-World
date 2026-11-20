@@ -229,7 +229,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | --- | --- | --- |
 | 图片准入（`DesktopImages`，Room 在用） | `desktop/images.ts` | 抽成第三层的共用小包（目录在阶段 3 方案里定），Desktop 和 Room 都依赖它，彼此不依赖 |
 | **语音**（Desktop、Room、Channels 都用） | 多处直接读 `petVoice` | **第一层的 contracts 声明一个「语音接口」**（说、听、取消、可用性），Voice 登记为实现，使用者通过第一层取得这个接口；接口撤销时，在途调用按 2.2 的契约失效。不用能力状态行，因为它不能被调用，也没有取消和失效约定 |
-| 房间模型 `CompanionRoom` | `living/plan/room.ts` 再导出 `living/body/room.ts` | 并入第二层·身体区，Room 只读快照 |
+| 房间模型 `CompanionRoom` | `living/body/room.ts`，属第二层·身体区 | Room 只读快照 |
 
 ### 5.5 控制台
 

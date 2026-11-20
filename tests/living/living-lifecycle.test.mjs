@@ -1,14 +1,20 @@
 import assert from 'node:assert/strict';
-import {createHash} from 'node:crypto';
-import {existsSync, readFileSync, writeFileSync} from 'node:fs';
+import {createHash, randomUUID} from 'node:crypto';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {setTimeout as delay} from 'node:timers/promises';
 import test from 'node:test';
 import {Context} from '@deepseek-ai/cordis';
 import {createAssistantMessage} from '@deepseek-ai/dsh-llm';
+import Sessions from '@deepseek-ai/dsh-session';
 import {renderContextSections} from '@deepseek-ai/dsh-system-prompt';
 import {createLifeStore} from '#dsh-world/life/lifeStore';
+import {presentFact} from '../../dist/src/core/interaction-presentation.js';
+import {behaviorPlugin, corePlugin, economyPlugin} from '../../dist/tests/behavior-list/entries.js';
 import {cordisFixture, eventually, submitPlan} from '../behavior-list/entries-lifecycle.test.mjs';
+import {value} from '../behavior-list/fixture.mjs';
+import {policyHost} from '../behavior-list/policy-host.mjs';
 
 const zones = {body: 'body', life: 'plan', economy: 'economy'};
 const services = {body: 'petBehavior', life: 'petLife', economy: 'petEconomy'};
@@ -23,6 +29,468 @@ const readArea = {
   life: (life, id) => life.readPlan(id),
   economy: (economy, id) => economy.snapshot(id),
 };
+
+const readingItem = 'reading:window-and-rain';
+
+test('3E 世界快照支持单挂钱包，并隔离整个身体投影的返回副本', async t => {
+  const f = await cordisFixture(t, {order: ['economy']});
+  await f.ownerAction({kind:'grant',amount:100}, 'snapshot-funding');
+  const purchase = await f.ownerAction({kind:'buy',itemId:readingItem}, 'snapshot-book');
+  const version = purchase.catalog.find(item => item.id === readingItem).contentVersion;
+  const read = () => f.economy.worldSnapshot(f.id);
+  const initial = await read();
+  assert.equal(initial.workspaceId, f.id);
+  assert.equal(initial.storageId, f.core.workspace.storageId());
+  assert.deepEqual(initial.body, {available:false});
+  assert.equal(initial.wallet.balance, purchase.balance);
+  assert.deepEqual(initial.wallet.inventory, purchase.inventory);
+  assert.deepEqual(initial.wallet.reading, [{itemId:readingItem,version,bookmark:null}]);
+  const reading = f.economy.gardenPort(f.id);
+  const offer = reading.readSegment('snapshot-reading', {itemId:readingItem,segment:0}, Date.now());
+  reading.confirmRead('snapshot-reading', offer.receiptToken, Date.now());
+  const bookmark = {itemId:readingItem,version,offset:offer.endOffset,updatedAt:Date.now()};
+  assert.deepEqual((await read()).wallet.reading, [{itemId:readingItem,version,bookmark}]);
+
+  await f.load('body');
+  const snapshot = await f.body.worldSnapshot(f.id);
+  assert.equal(snapshot.body.available, true);
+  assert.deepEqual(snapshot.body.snapshot, await f.body.snapshot(f.id));
+  const pristine = structuredClone(snapshot);
+  snapshot.body.snapshot.home.layout.size.w = -1;
+  snapshot.body.snapshot.needs.thirst = -1;
+  snapshot.wallet.reading[0].bookmark.offset = -1;
+  assert.deepEqual(await read(), pristine);
+  await assert.rejects(f.body.worldSnapshot('other-workspace'));
+});
+
+test('3E 事实流按原编号跨区回读，缺区保留确认，原生日志落盘后可确认', async t => {
+  const f = await cordisFixture(t, {order:['economy','body']});
+  const {worldFacts} = f.body;
+  await f.body.act(f.id, 'water', 'world-facts-water');
+  await f.ownerAction({kind:'grant',amount:10}, 'world-facts-grant');
+  t.mock.timers.tick(1);
+  await f.ownerAction({kind:'buy',itemId:'seed:radish'}, 'world-facts-buy');
+  const facts = await worldFacts.pendingFacts(f.id);
+  assert.deepEqual(facts.map(row => row.requestId), ['world-facts-water','world-facts-grant','world-facts-buy']);
+  const [body, grant, purchase] = facts, reordered = [purchase,body,grant,purchase];
+  const ids = reordered.map(fact => fact.id);
+  assert.deepEqual(await worldFacts.readFacts(f.id, ids), reordered);
+  await f.unload('economy');
+  await assert.rejects(worldFacts.acknowledgeFacts(f.id, [body.id,purchase.id]));
+  assert.deepEqual(await worldFacts.pendingFacts(f.id), [body]);
+  await f.load('economy');
+
+  const agent = await f.agent();
+  const sessions = f.ctx.sessions, flush = sessions.flush.bind(sessions);
+  const entered = Promise.withResolvers(), release = Promise.withResolvers();
+  const probe = t.mock.method(sessions, 'flush', async session => {
+    if (session !== agent.session) return flush(session);
+    entered.resolve();
+    await release.promise;
+    const flushed = await flush(session);
+    assert.equal(flushed, true);
+    await worldFacts.acknowledgeFacts(f.id, ids);
+    return flushed;
+  });
+  const turn = f.input('Read the original facts.');
+  try {
+    await entered.promise;
+    assert.deepEqual(await worldFacts.pendingFacts(f.id), facts);
+  } finally { release.resolve(); }
+  const call = await turn;
+  probe.mock.restore();
+  const logged = JSON.parse(call.sections.find(row => row.name === 'chatpet.interactions').text).facts;
+  assert.deepEqual(logged, facts.map(presentFact));
+  assert.ok(f.saved(agent.id).events.some(row => row.type === 'user/message' &&
+    row.data.source.sections?.some(section => section.name === 'chatpet.interactions')));
+  assert.deepEqual(await worldFacts.pendingFacts(f.id), []);
+  assert.deepEqual(await worldFacts.readFacts(f.id, ids), reordered);
+});
+
+test('3E 世界通知覆盖三区，合并同批交易，读快照和旧租约不产生回声', async t => {
+  const f = await cordisFixture(t);
+  const changes = [], read = () => f.economy.worldSnapshot(f.id);
+  await read();
+  await delay(15);
+  const off = f.ctx.on('world.changed', change => changes.push(change));
+  t.after(off);
+  const expected = {workspaceId:f.id,storageId:f.core.workspace.storageId()};
+  const before = await read();
+  await Promise.all([f.ownerAction({kind:'grant',amount:7}, 'world-notice-7'),
+    f.ownerAction({kind:'grant',amount:3}, 'world-notice-3')]);
+  assert.deepEqual(changes.splice(0), [expected]);
+  assert.equal((await read()).wallet.balance, before.wallet.balance + 10);
+  await f.ownerAction({kind:'grant',amount:3}, 'world-notice-3');
+  await assert.rejects(f.ownerAction({kind:'buy',itemId:'seed:radish',quantity:1_000_000}, 'world-notice-refused'));
+  assert.deepEqual(changes, []);
+
+  await f.body.act(f.id, 'water', 'world-notice-water');
+  assert.deepEqual(changes.splice(0), [expected]);
+  assert.ok((await read()).body.snapshot.needs.thirst < before.body.snapshot.needs.thirst);
+  const {revision} = await f.life.readPlan(f.id);
+  await f.life.updatePlan(f.id, revision, {goal:'Rest',reason:'Fixture',steps:[],nextConsiderAt:null});
+  assert.deepEqual(changes.splice(0), [expected]);
+  await read();
+  await delay(10);
+  assert.deepEqual(changes, []);
+
+  const entered = Promise.withResolvers(), release = Promise.withResolvers();
+  const emotion = await f.ctx.plugin({apply(ctx) {
+    ctx.provide('petEmotion', {roomSnapshot() {}, async read() { entered.resolve(); await release.promise; }});
+  }});
+  const retired = assert.rejects(f.body.act(f.id, 'feed', 'world-notice-retired'));
+  let unloading;
+  try {
+    await entered.promise;
+    unloading = f.unload('body');
+    await eventually(() => changes.length > 0, '卸载通知没有等待旧身体操作');
+    assert.deepEqual(changes.splice(0), [expected]);
+    assert.deepEqual((await read()).body, {available:false});
+  } finally { release.resolve(); await unloading; await emotion.dispose(); }
+  await retired;
+  assert.deepEqual(changes, []);
+  await f.load('body');
+  assert.deepEqual(changes.splice(0), [expected]);
+  assert.equal((await read()).body.available, true);
+});
+
+async function bindingFixture(t) {
+  t.mock.timers.enable({apis:['Date'],now:new Date(2026,10,15,22,59)});
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'her-world-binding-')));
+  const repo = join(root, 'workspace'), effects = [], workspaces = new Map();
+  const {ctx:{root:ctx}} = await policyHost(repo, effects);
+  t.after(async () => {
+    try {
+      await ctx.fiber.dispose();
+      for (const dispose of effects.reverse()) await dispose();
+    }
+    finally { rmSync(root, {recursive:true,force:true}); }
+  });
+  await ctx.plugin(Sessions);
+  await ctx.plugin({apply(scope) {
+    scope.provide('agents', {get:() => undefined,list:() => []});
+    scope.provide('agentLoop', {});
+    scope.provide('sessionPersistence', {});
+    scope.provide('workspaceRegistry', {get:id => workspaces.get(id),archivedSessionIds:[]});
+  }});
+  await ctx.plugin(corePlugin, {dataDir:join(repo,'.chatpet/data/core'),companionId:'fish',scopeId:'owner',
+    ownerActorId:'owner',displayName:'Fixture',character:'Synthetic companion'});
+  return {ctx,core:ctx.petCore,repo,workspace(id,path=repo) {
+    const target = {id,path,title:'Synthetic workspace'};
+    workspaces.set(id, {...target,sessionIds:[]});
+    return target;
+  }};
+}
+
+async function selectWorkspace(core, workspace) {
+  const request = () => core.operator.request(randomUUID());
+  const preferences = value(await core.services.preferences.read(request(), {}));
+  const saved = value(await core.services.preferences.save(request(), {
+    workspace, expectedRevision:preferences.revision, conversation:preferences.conversation,
+  }));
+  const initialized = value(await core.services.workspace.initialize(request(), {
+    expectedPreferencesRevision:saved.revision,
+  }));
+  assert.equal(initialized.state, 'ready');
+}
+
+test('3E 生活区先装载后绑定，首次就绪只通知一次', async t => {
+  const {ctx,core,workspace} = await bindingFixture(t);
+  const target = workspace('initial');
+  const changes = [];
+  t.after(ctx.on('world.changed', change => changes.push(change)));
+  await ctx.plugin(behaviorPlugin);
+  const read = () => ctx.petBehavior.worldSnapshot(target.id);
+  await assert.rejects(read());
+  assert.deepEqual(changes, []);
+
+  await selectWorkspace(core, target);
+  await delay(0);
+  assert.deepEqual(changes.splice(0), [{workspaceId:target.id,storageId:core.workspace.storageId()}]);
+  const snapshot = await read();
+  assert.equal(snapshot.body.available, true);
+  assert.equal((await read()).body.snapshot.revision, snapshot.body.snapshot.revision);
+  assert.deepEqual(changes, []);
+});
+
+test('3E 生活区运行中切换绑定，只通知新工作区一次', async t => {
+  const {ctx,core,repo,workspace} = await bindingFixture(t);
+  const first = workspace('initial');
+  await selectWorkspace(core, first);
+  await ctx.plugin(behaviorPlugin);
+  const read = id => ctx.petBehavior.worldSnapshot(id);
+  const prior = await read(first.id);
+  const changes = [];
+  t.after(ctx.on('world.changed', change => changes.push(change)));
+  const path = join(repo, 'another-workspace');
+  mkdirSync(path);
+  const target = workspace('second',path);
+  await selectWorkspace(core, target);
+  await delay(0);
+  const storageId = core.workspace.storageId();
+  assert.notEqual(storageId, prior.storageId);
+  assert.deepEqual(changes.splice(0), [{workspaceId:target.id,storageId}]);
+  await assert.rejects(read(first.id));
+  const next = await read(target.id);
+  assert.equal(next.workspaceId, target.id);
+  assert.equal(next.storageId, storageId);
+  assert.equal(next.body.available, true);
+  assert.equal((await read(target.id)).body.snapshot.revision, next.body.snapshot.revision);
+  assert.deepEqual(changes, []);
+});
+
+test('3E 同一 Repo 换 DSH 工作区 ID 后，复用钱包的提交通知新绑定', async t => {
+  const {ctx,core,workspace} = await bindingFixture(t);
+  const first = workspace('portable-first'), next = workspace('portable-rebound');
+  await selectWorkspace(core, first);
+  const storageId = core.workspace.storageId();
+  await ctx.plugin(economyPlugin);
+  const economy = ctx.petEconomy, store = economy.prepare(first);
+  const funded = await economy.ownerAction(first.id, {kind:'grant',amount:100}, 'portable-funding', new AbortController().signal);
+  const price = funded.catalog.find(row => row.id === readingItem).purchasePrice;
+  await selectWorkspace(core, next);
+  assert.equal(core.workspace.storageId(), storageId);
+  await delay(0);
+
+  const changes = [];
+  t.after(ctx.on('world.changed', change => changes.push(change)));
+  const buy = economy.worldCommands.buy;
+  const request = {requestId:'portable-book',itemId:readingItem};
+  const stale = await buy({...request,workspaceId:first.id});
+  assert.equal(stale.error.code, 'STALE_BINDING');
+  assert.deepEqual(changes, []);
+  const purchased = value(await buy({...request,workspaceId:next.id}));
+  assert.equal(purchased.balance, funded.balance - price);
+  assert.equal(economy.prepare(next), store);
+  assert.deepEqual((await economy.worldSnapshot(next.id)).wallet, purchased);
+  assert.deepEqual(changes, [{workspaceId:next.id,storageId}]);
+});
+
+test('3E 仅确认事实投递时，世界通知无回声且旧身体事件照常推进修订', async t => {
+  const f = await cordisFixture(t, {order:['body']});
+  await f.body.act(f.id, 'water', 'acknowledgement-water');
+  const before = await f.body.snapshot(f.id);
+  const facts = await f.body.worldFacts.pendingFacts(f.id);
+  assert.equal(facts.length, 1);
+  const changes = [], behaviorChanges = [];
+  t.after(f.ctx.on('world.changed', event => changes.push(event)));
+  t.after(f.ctx.on('pet/behavior.changed', event => behaviorChanges.push(event)));
+  await f.body.worldFacts.acknowledgeFacts(f.id, [facts[0].id]);
+  const after = await f.body.snapshot(f.id);
+  assert.deepEqual(await f.body.worldFacts.pendingFacts(f.id), []);
+  assert.equal(after.revision, before.revision + 1);
+  assert.deepEqual(behaviorChanges, [{workspaceId:f.id,bootId:after.bootId,revision:after.revision,reason:'observation'}]);
+  assert.deepEqual(changes, []);
+});
+
+async function saveCommandStep(f, step, reconsiderWhen = []) {
+  const {revision} = await f.life.readPlan(f.id);
+  const saved = await f.life.updatePlan(f.id, revision, {
+    goal:'Fixture activity',reason:'Test the original step',steps:[step],nextConsiderAt:null,reconsiderWhen,
+  });
+  assert.equal(saved.enabled, true);
+  return {workspaceId:f.id,requestId:'execute-'+step.id,expectedRevision:saved.revision,planId:saved.plan.id,stepId:step.id};
+}
+
+const holdStep = {id:'rest',kind:'hold',activity:'Rest'};
+const operationFor = ({planId,stepId}) => `life:${planId}:${stepId}`;
+
+test('3E 派工后回执交接失败，命令要求核对原执行编号', async t => {
+  const f = await cordisFixture(t);
+  await f.enable();
+  const step = await saveCommandStep(f, {...holdStep,durationMinutes:5});
+  const operationId = operationFor(step);
+  const dispatch = f.body.startPlanned.bind(f.body);
+  const failed = t.mock.method(f.body, 'startPlanned', async (...args) => {
+    await dispatch(...args);
+    throw Error('Synthetic dispatch response lost');
+  });
+  const execute = f.life.worldCommands.executePlanStep;
+  const result = await execute(step);
+  failed.mock.restore();
+
+  const {plan,revision} = await f.life.readPlan(f.id);
+  assert.equal(plan.status, 'waiting');
+  assert.equal(plan.cursor, 0);
+  assert.equal(plan.operationId, operationId);
+  assert.match(plan.replanReason, /Synthetic dispatch response lost/);
+  assert.equal((await f.body.inspectPlanned(f.id, operationId)).status, 'running');
+  assert.equal(result.ok, false, JSON.stringify(result));
+  assert.deepEqual([result.error.code,result.error.effect,result.error.retry,result.error.operationId],
+    ['OUTCOME_UNKNOWN','unknown','reconcile',operationId]);
+  assert.equal(value(await execute({...step,expectedRevision:revision})).execution.operationId, operationId);
+});
+
+test('3E 绝对截止已过且 Body 无回执，命令确定拒绝派工', async t => {
+  const f = await cordisFixture(t);
+  await f.enable();
+  const step = await saveCommandStep(f, {...holdStep,until:new Date(Date.now()+1_000).toISOString()});
+  t.mock.timers.tick(1_001);
+  const execute = f.life.worldCommands.executePlanStep;
+  const result = await execute(step);
+  const operationId = operationFor(step), {plan,revision} = await f.life.readPlan(f.id);
+  assert.equal(plan.status, 'waiting');
+  assert.equal(plan.operationId, operationId);
+  assert.match(plan.replanReason, /absolute deadline elapsed/);
+  assert.equal(await f.body.inspectPlanned(f.id, operationId), undefined);
+  assert.equal(result.ok, false, JSON.stringify(result));
+  assert.deepEqual([result.error.code,result.error.effect,result.error.retry,result.error.operationId],
+    ['INELIGIBLE','none','never',operationId]);
+  assert.deepEqual(await execute({...step,expectedRevision:revision}), result);
+});
+
+test('3E 身体条件触发重考虑时，命令要求刷新计划', async t => {
+  const f = await cordisFixture(t);
+  await f.enable();
+  const step = await saveCommandStep(f, holdStep, [{metric:'thirst',comparison:'lte',value:.1}]);
+  await f.body.act(f.id, 'water', 'trigger-reconsideration');
+  const result = await f.life.worldCommands.executePlanStep(step);
+  const {plan} = await f.life.readPlan(f.id);
+  assert.deepEqual(plan.triggeredConditions, [0]);
+  assert.match(plan.replanReason, /Body condition changed: thirst/);
+  assert.equal(plan.operationId, undefined);
+  assert.equal(await f.body.inspectPlanned(f.id, operationFor(step)), undefined);
+  assert.equal(result.ok, false, JSON.stringify(result));
+  assert.deepEqual([result.error.code,result.error.effect,result.error.retry], ['STALE_REVISION','none','refresh']);
+});
+
+test('3E 等待重考虑快照时取消，原计划没有写入或派工', async t => {
+  const f = await cordisFixture(t);
+  await f.enable();
+  const step = await saveCommandStep(f, holdStep, [{metric:'thirst',comparison:'lte',value:.1}]);
+  const before = await f.life.readPlan(f.id);
+  const cancellation = new AbortController(), snapshot = f.body.snapshot.bind(f.body);
+  const reading = t.mock.method(f.body, 'snapshot', async id => {
+    const projection = await snapshot(id);
+    cancellation.abort();
+    return projection;
+  });
+  const result = await f.life.worldCommands.executePlanStep(step, {signal:cancellation.signal});
+  reading.mock.restore();
+  assert.deepEqual(await f.life.readPlan(f.id), before);
+  assert.equal(await f.body.inspectPlanned(f.id, operationFor(step)), undefined);
+  assert.equal(result.ok, false, JSON.stringify(result));
+  assert.deepEqual([result.error.code,result.error.effect,result.error.retry], ['CANCELLED','none','same_request']);
+});
+
+test('3E 原阅读被暂停时，确认命令未推进书签', async t => {
+  const f = await cordisFixture(t);
+  await f.ownerAction({kind:'grant',amount:100}, 'paused-reading-funding');
+  await f.ownerAction({kind:'buy',itemId:readingItem}, 'paused-reading-book');
+  await f.enable();
+  const step = await saveCommandStep(f, {id:'read',kind:'read',activity:'Read',reading:{itemId:readingItem,segment:0}});
+  const {operationId,execution} = value(await f.life.worldCommands.executePlanStep(step));
+  assert.equal(execution.status, 'running');
+  const offer = await f.life.readPlannedSegment(f.id, step.expectedRevision, operationId);
+  assert.equal((await f.body.pausePlanned(f.id, operationId)).status, 'paused');
+  const result = await f.life.worldCommands.confirmReading({
+    workspaceId:f.id,requestId:'paused-reading-confirm',expectedRevision:step.expectedRevision,
+    operationId,receiptToken:offer.receiptToken,
+  });
+  assert.equal((await f.economy.worldSnapshot(f.id)).wallet.reading[0].bookmark, null);
+  assert.equal(result.ok, false, JSON.stringify(result));
+  assert.deepEqual([result.error.effect,result.error.retry], ['none','same_request']);
+});
+
+test('3E 三区命令使用实际回执，原步骤重放不施效或推进下一步', async t => {
+  const f = await cordisFixture(t);
+  const request = requestId => ({workspaceId:f.id,requestId});
+  const {care} = f.body.worldCommands, {buy,sell} = f.economy.worldCommands;
+  const {executePlanStep,confirmReading} = f.life.worldCommands;
+  const water = {...request('world-care'),action:'water'};
+  assert.deepEqual(await care(water), {ok:true,value:{changed:true}});
+  assert.deepEqual(await care(water), {ok:true,value:{changed:true}});
+  const careConflict = await care({...water,action:'feed'});
+  assert.deepEqual([careConflict.error.code,careConflict.error.effect,careConflict.error.retry], ['CONFLICT','none','never']);
+  assert.equal((await f.body.pendingFacts(f.id)).filter(row => row.requestId === water.requestId).length, 1);
+  const seeds = 'seed:radish', stock = wallet => wallet.inventory.find(row => row.itemId === seeds).quantity;
+  await f.ownerAction({kind:'grant',amount:100}, 'world-command-funding');
+  const before = (await f.economy.worldSnapshot(f.id)).wallet;
+  const catalog = (await f.economy.snapshot(f.id)).catalog.find(row => row.id === seeds);
+  const purchase = {...request('world-buy'),itemId:seeds};
+  const bought = await buy(purchase);
+  assert.equal(bought.ok, true);
+  assert.equal(bought.value.balance, before.balance - catalog.purchasePrice);
+  assert.equal(stock(bought.value), stock(before) + 1);
+  assert.deepEqual(await buy(purchase), bought);
+  const tradeConflict = await buy({...purchase,quantity:2});
+  assert.deepEqual([tradeConflict.error.code,tradeConflict.error.effect,tradeConflict.error.retry], ['CONFLICT','none','never']);
+  const saleItem = 'harvest:radish';
+  const stocked = await f.ownerAction({kind:'gift',itemId:saleItem,quantity:2}, 'world-sell-stock');
+  const sale = {...request('world-sell'),itemId:saleItem};
+  const sold = await sell(sale);
+  assert.equal(sold.ok, true);
+  assert.equal(sold.value.balance, stocked.balance + stocked.catalog.find(row => row.id === saleItem).sellPrice);
+  assert.equal(sold.value.inventory.find(row => row.itemId === saleItem).quantity, 1);
+  assert.deepEqual(await sell(sale), sold);
+
+  const compost = {...request('world-compost'),itemId:'compost'};
+  const cancelled = await buy(compost,{signal:AbortSignal.abort()});
+  assert.deepEqual([cancelled.error.code,cancelled.error.effect,cancelled.error.retry], ['CANCELLED','none','same_request']);
+  const {Rejection} = await import('../../dist/src/core/storage.js');
+  const failedRead = t.mock.method(f.economy,'snapshot',async () => {
+    throw new Rejection({code:'UNAVAILABLE',message:'Synthetic projection failure',effect:'none',retry:'same_request'});
+  });
+  const partial = await buy(compost);
+  failedRead.mock.restore();
+  assert.deepEqual([partial.error.effect,partial.error.retry], ['partial','reconcile']);
+  const paid = (await f.economy.worldSnapshot(f.id)).wallet;
+  assert.equal(paid.inventory.find(row=>row.itemId==='compost').quantity, 1);
+  assert.deepEqual(await buy(compost), {ok:true,value:paid});
+
+  assert.equal((await buy({...request('world-book'),itemId:readingItem})).ok, true);
+  let completed = false;
+  f.model = async call => {
+    if (call.messages.some(message => message.source.kind === 'user')) {
+      const {plan,revision} = await submitPlan(call, [
+        {id:'read',kind:'read',activity:'Read',reading:{itemId:readingItem,segment:0}},
+        {id:'seeds',kind:'economy',activity:'Buy seeds',economy:{type:'buy',itemId:seeds,quantity:1}},
+      ]);
+      const step = {...request('world-step'),expectedRevision:revision,planId:plan.id,stepId:'read'};
+      const operationId = `life:${plan.id}:read`;
+      const executed = await executePlanStep(step);
+      assert.equal(executed.ok, true);
+      assert.equal(executed.value.operationId, operationId);
+      assert.equal(executed.value.execution.status, 'running');
+      assert.deepEqual(await executePlanStep(step), executed);
+      const offer = JSON.parse(await call.tool('life_read_segment',{expectedRevision:revision,operationId}));
+      assert.ok(offer.text.length > 0);
+      const confirmation = {...request('world-confirm'),expectedRevision:revision,operationId,receiptToken:offer.receiptToken};
+      const invalidToken = await confirmReading({...confirmation,receiptToken:'wrong-token'});
+      assert.deepEqual([invalidToken.error.code,invalidToken.error.effect,invalidToken.error.retry], ['CONFLICT','none','never']);
+      const confirmed = await confirmReading(confirmation);
+      assert.equal(confirmed.ok, true);
+      assert.equal(confirmed.value.status, 'completed');
+      assert.equal((await f.life.readPlan(f.id)).plan.cursor, 1);
+      assert.deepEqual(await confirmReading(confirmation), confirmed);
+      assert.equal((await f.life.readPlan(f.id)).plan.cursor, 1);
+      assert.equal(stock((await f.economy.worldSnapshot(f.id)).wallet), stock(before) + 1);
+      const stale = await executePlanStep({...step,expectedRevision:revision-1});
+      assert.deepEqual([stale.ok,stale.error.effect,stale.error.retry], [false,'none','refresh']);
+      const retired = await executePlanStep(step);
+      assert.deepEqual([retired.ok,retired.error.effect,retired.error.retry], [false,'none','refresh']);
+      const bookmark = (await f.economy.worldSnapshot(f.id)).wallet.reading[0].bookmark;
+      assert.equal(bookmark.version, offer.version);
+      assert.equal(bookmark.offset, offer.endOffset);
+      await call.tool('life_plan_keep',{expectedRevision:revision,reason:'Keep the remaining step',
+        nextConsiderAt:new Date(Date.now() + 3_600_000).toISOString()});
+      completed = true;
+    }
+    return 'Synthetic reply';
+  };
+  await f.enable();
+  const home = await f.agent(f.life.homeSessionId());
+  await home.whenIdle();
+  try {
+    t.mock.timers.tick(15_000);
+    await f.input('Read and confirm the original fragment.',home.id);
+    assert.equal(completed, true);
+    await home.whenIdle();
+  } finally {
+    await f.life.control(f.id,false);
+    await home.whenIdle();
+  }
+});
 
 test('3C 事实准备期间 Economy 重挂会作废两段，下一轮仍能读到并确认', async t => {
   const f = await cordisFixture(t);

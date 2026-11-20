@@ -15,6 +15,17 @@ const atTime = (value) => { integer(value, 'time'); return value; };
 const safeSum = (a, b) => { const value = a + b; integer(value, 'resulting amount'); return value; };
 const safeProduct = (a, b) => { const value = a * b; integer(value, 'total amount'); return value; };
 function token(value, label) { text(value, label, 160); check(!/[\u0000-\u001f\u007f]/.test(value), `Invalid ${label}`); }
+export function projectWallet({ balance, inventory, catalog, bookmarks }) {
+    const held = new Set(inventory.filter(item => item.quantity > 0).map(item => item.itemId));
+    const reading = catalog.flatMap(item => {
+        const version = item.contentVersion;
+        if (!version || !held.has(item.id))
+            return [];
+        const bookmark = bookmarks.find(row => row.itemId === item.id && row.version === version) ?? null;
+        return [{ itemId: item.id, version, bookmark }];
+    });
+    return { balance, inventory, reading };
+}
 /** One bound SQLite aggregate owns money, every item, garden jobs and their receipts.
  * No CoreStore or assistant is constructed here. The existing Core binding guard
  * and Core JSON/error helpers are reused at this synchronous persistence boundary. */
@@ -28,6 +39,7 @@ export class EconomyStore {
     db;
     databaseFile;
     closed = false;
+    walletDirty = false;
     constructor(options) {
         this.options = options;
         check(isAbsolute(options.workspacePath), 'Economy workspace path must be absolute');
@@ -176,15 +188,22 @@ export class EconomyStore {
     transaction(fn) {
         this.ensure();
         this.db.exec('BEGIN IMMEDIATE');
+        this.walletDirty = false;
+        let result;
         try {
-            const result = fn();
+            result = fn();
             this.db.exec('COMMIT');
-            return result;
         }
         catch (error) {
             this.db.exec('ROLLBACK');
             throw error;
         }
+        if (this.walletDirty)
+            try {
+                this.options.walletChanged?.();
+            }
+            catch { /* The wallet has committed. */ }
+        return result;
     }
     meta(key) { const row = this.db.prepare('SELECT value FROM meta WHERE key=?').get(key); return row ? json(row.value) : undefined; }
     requiredMeta(key) { const value = this.meta(key); if (value === undefined)
@@ -200,7 +219,16 @@ export class EconomyStore {
     reserved(itemId) { return this.allUses().filter(row => row.itemId === itemId && row.status === 'reserved').reduce((sum, row) => safeSum(sum, row.quantity), 0); }
     available(itemId) { const amount = this.quantity(itemId) - this.reserved(itemId); integer(amount, 'available inventory'); return amount; }
     readings() { return this.db.prepare('SELECT value FROM readings ORDER BY id').all().map(row => json(row.value)); }
-    putReading(content) { this.db.prepare('INSERT INTO readings VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value').run(content.itemId, canonical(content)); }
+    readingVersion(itemId) {
+        return this.db.prepare("SELECT json_extract(value,'$.version') AS version FROM readings WHERE id=?").get(itemId)?.version;
+    }
+    putReading(content) {
+        if (this.options.walletChanged && !this.walletDirty) {
+            const version = this.readingVersion(content.itemId);
+            this.walletDirty = version === undefined || version !== content.version && this.quantity(content.itemId) > 0;
+        }
+        this.db.prepare('INSERT INTO readings VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value').run(content.itemId, canonical(content));
+    }
     catalogRows() { return economyCatalog(this.configuration(), this.readings()); }
     item(itemId) { token(itemId, 'item id'); return this.catalogRows().find(row => row.id === itemId) ?? reject('NOT_FOUND', 'Item does not exist'); }
     allBookmarks() { return this.db.prepare('SELECT value FROM bookmarks ORDER BY id').all().map(row => json(row.value)); }
@@ -227,6 +255,7 @@ export class EconomyStore {
             check(Number.isSafeInteger(delta), 'Invalid inventory change');
         this.db.prepare('INSERT INTO ledger(id,request_id,kind,at,money_delta,balance,item_deltas,note) VALUES(?,?,?,?,?,?,?,?)')
             .run(`entry_${randomUUID()}`, requestId, kind, now, moneyDelta, this.balance(), canonical(itemDeltas), note);
+        this.walletDirty ||= moneyDelta !== 0 || Object.values(itemDeltas).some(delta => delta !== 0);
     }
     /** Called only inside the existing request transaction, beside its actual result.
      * Historical requests are not replayed or turned into new experiences. */
@@ -482,19 +511,12 @@ export class EconomyStore {
         const startOffset = segment * size, endOffset = Math.min(startOffset + size, reading.text.length);
         return { itemId, title: reading.title, version: reading.version, segment, totalSegments, text: reading.text.slice(startOffset, endOffset), startOffset, endOffset, nextSegment: segment + 1 < totalSegments ? segment + 1 : null, source: reading.source, bookmark: this.allBookmarks().find(row => row.itemId === itemId && row.version === reading.version) ?? null };
     }
-    bookmark(requestId, itemId, input) {
-        token(input.version, 'content version');
-        integer(input.offset, 'bookmark offset');
-        return this.mutate(requestId, 'bookmark', { itemId, ...input }, () => {
-            const reading = this.ownedReading(itemId);
-            if (reading.version !== input.version)
-                reject('STALE_REVISION', 'Reading content changed; open its current version');
-            integer(input.offset, 'bookmark offset', 0, reading.text.length);
-            const row = { itemId, version: input.version, offset: input.offset, updatedAt: Date.now() };
-            this.db.prepare('INSERT INTO bookmarks VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value').run(`${itemId}:${input.version}`, canonical(row));
-            this.bump();
-            return row;
-        });
+    putBookmark(bookmark) {
+        const { itemId, version } = bookmark;
+        const saved = this.db.prepare('INSERT INTO bookmarks VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE value<>excluded.value')
+            .run(`${itemId}:${version}`, canonical(bookmark));
+        if (this.options.walletChanged && saved.changes && this.readingVersion(itemId) === version)
+            this.walletDirty = true;
     }
     readingOperation(operationId) {
         const row = this.db.prepare('SELECT value FROM reading_operations WHERE id=?').get(operationId);
@@ -535,7 +557,7 @@ export class EconomyStore {
                 const old = this.db.prepare('SELECT value FROM bookmarks WHERE id=?').get(key);
                 const offset = Math.max(old ? json(old.value).offset : 0, row.offer.endOffset);
                 const bookmark = { itemId: row.offer.itemId, version: row.offer.version, offset, updatedAt: Date.now() };
-                this.db.prepare('INSERT INTO bookmarks VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value').run(key, canonical(bookmark));
+                this.putBookmark(bookmark);
                 row.status = 'confirmed';
                 this.db.prepare('UPDATE reading_operations SET value=? WHERE id=?').run(canonical(row), operationId);
                 this.bump();
@@ -564,6 +586,7 @@ export class EconomyStore {
                 reject('INELIGIBLE', 'No available food item');
             const now = Date.now();
             const use = { opId: requestId, requestId, itemId, quantity: 1, status: 'reserved', createdAt: now, updatedAt: now, effects: clone(item.effects ?? {}) };
+            this.walletDirty = true;
             this.db.prepare('INSERT INTO uses VALUES(?,?)').run(use.opId, canonical(use));
             this.bump();
             this.recordLedger(requestId, 'use-reserve', 0, {}, `Reserved ${item.name} for its body operation`);
@@ -594,6 +617,7 @@ export class EconomyStore {
             use.bodyReceiptId = proof.bodyReceiptId;
             this.db.prepare('UPDATE uses SET value=? WHERE id=?').run(canonical(use), opId);
             this.bump();
+            this.walletDirty = true;
             this.recordLedger(use.requestId, applied ? 'use-consume' : 'use-cancel', 0, applied ? { [use.itemId]: -1 } : {}, applied ? 'Body effect receipt verified; reserved food consumed' : 'Body receipt proves no effect; reservation released');
             return use;
         });

@@ -18,7 +18,7 @@ async function until(read) {
   throw Error('Timed out waiting for '+read.toString().slice(0,180));
 }
 async function main() {
-  const {CompanionRoom}=await import('../../dist/src/living/plan/room.js'), {roomAsset}=await import('../../dist/src/room/assets.js');
+  const {CompanionRoom}=await import('../../dist/src/living/body/room.js'), {roomAsset}=await import('../../dist/src/room/assets.js');
   const {loadHomeState,saveHomeState}=await import('#feiyu-home');
   const started=Date.now(), baseline=new Date(started), evening=process.argv.includes('--evening');
   baseline.setHours(evening?20:12,0,0,0);
@@ -47,7 +47,7 @@ async function main() {
       const {endpoint,data:input}=await req.json();
       let value;
       if (endpoint==='roomState') value={...view(),lifeEnabled:true};
-      if (endpoint==='roomGarden') value=room.garden('state',{},false,now());
+      if (endpoint==='roomGarden') value=room.garden('state',{},now());
       if (endpoint==='roomHistory') value={messages:[]};
       if (endpoint==='roomAction') {commands.push(input);value=room.act(input,'伙伴',now());}
       return Response.json({ok:!!value,value});

@@ -631,8 +631,8 @@
       "id": "M2A-28",
       "categories": [],
       "level": "L2",
-      "file": "dist/tests/life/life-review-files.test.js",
-      "name": "native review file guard resolves cwd, rechecks aliases and releases on owner takeover",
+      "file": "tests/behavior-list/policy-life.test.mjs",
+      "name": "回顾文件守卫按 cwd 解析，以原 token 复核软链并在主人接管后释放权限",
       "l1Stage": "阶段 1",
       "families": [],
       "policyCells": [

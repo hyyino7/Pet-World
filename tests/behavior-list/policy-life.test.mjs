@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {join} from 'node:path';
+import {mkdirSync,symlinkSync,unlinkSync,writeFileSync} from 'node:fs';
+import {join,resolve} from 'node:path';
 import {createUserMessage} from '@deepseek-ai/dsh-llm';
 import {fixture,until,value} from './fixture.mjs';
 import {assertEmotion,footer,nextReview,prepareMemory} from './policy-evidence.mjs';
@@ -82,6 +83,86 @@ test('主人原生 steering 在 Life 后续步解除工具和自主限额',async
   await f.step(active);
   assert.equal(await f.tool(active,'bash',{}),'bash');
   await f.end(active);
+});
+
+async function reviewFiles(t, now = new Date(2026,10,13,12).toISOString()) {
+  let cwd;
+  const f = await fixture(t, {policy:true,economy:false,now,configure(services) {
+    services.set('workingDirectory',{ensure:async agent=>cwd ?? agent.session.header.cwd});
+    services.set('fs',{resolve:async (path,options)=>resolve(options.cwd,path),processPath:path=>path});
+  }});
+  await f.enable();
+  const home = await f.home(), diary = join(f.repo,'.chatpet/diary');
+  mkdirSync(diary,{recursive:true});
+  return {f,home,diary,setCwd:value=>{cwd=value;},
+    begin:day=>f.begin(home.id,createUserMessage({source:{kind:'dsh-world-life',purpose:'review',reviewDay:day},
+      content:[{type:'text',text:'Synthetic review'}]})),
+    prepare:(turn,path)=>f.prepareTool(turn,'write',{file_path:path,content:'Fixture diary'}),
+  };
+}
+
+test('回顾文件守卫按 cwd 解析，以原 token 复核软链并在主人接管后释放权限',async t=>{
+  const {f,home,diary,setCwd,begin,prepare} = await reviewFiles(t);
+  let active = await begin('2026-11-12');
+  const self = await prepare(active,'.chatpet/self.md');
+  assert.equal(self.check(),undefined);
+  await self.finish();
+  const denied = await prepare(active,'.chatpet/data/life/life.json');
+  assert.match(denied.check(),/仅访问/);
+  const owner = input('user');
+  home.steer(owner);
+  await f.step(active,[owner]);
+  assert.equal(denied.check(),undefined,'The ordinary owner turn retains DSH file permissions');
+  await denied.finish();
+  const allowed = await prepare(active,'.chatpet/data/life/life.json');
+  assert.equal(allowed.check(),undefined);
+  await allowed.finish();
+  await f.end(active);
+
+  active = await begin('2026-11-12');
+  setCwd(diary);
+  const relative = await prepare(active,'../self.md');
+  assert.equal(relative.check(),undefined);
+  await relative.finish();
+  const item = await prepare(active,'2026-11-13.md');
+  assert.equal(item.check(),undefined);
+  const diaryFile = join(diary,'2026-11-13.md'), otherFile = join(f.root,'fixture.txt');
+  writeFileSync(otherFile,'Synthetic file');
+  symlinkSync(otherFile,diaryFile);
+  try {assert.match(item.check(),/writing path/,'A path changed after preparation is rechecked before dispatch');}
+  finally {unlinkSync(diaryFile);await item.finish();}
+
+  const guest = f.host.native.sourceTable.register({id:'fixture-review-guest',order:0,sources:[],branches:{},
+    isGuest:id=>id===home.id,admit:()=>({kind:'unclaimed'})});
+  try {
+    const refused = await prepare(active,'../self.md');
+    assert.match(refused.check(),/范围/);
+    await refused.finish();
+  } finally {await guest.revoke();}
+  await f.end(active,'aborted');
+});
+
+test('历史补写在原生分发前出现已有日记时复核拒绝覆盖',async t=>{
+  const {f,diary,setCwd,prepare} = await reviewFiles(t,beforeReview);
+  const {home,message} = await nextReview(f,t), day = message.source.reviewDay;
+  await f.end(await f.begin(home.id,message),'aborted');
+  t.mock.timers.tick(24*3_600_000);
+  await f.restart();
+  const reopened = await f.home();
+  const pending = () => reopened.inbox.nextStep.find(row=>row.source?.purpose==='review' && row.source.reviewDay===day);
+  await until(pending,'补写原回顾日期');
+  const retry = pending();
+  assert.ok(retry);
+  const active = await f.begin(reopened.id,retry), filename = day+'.md';
+  assert.equal(f.host.native.isAutonomous(reopened.id),true);
+  // Resolve in the current tool cwd so the Core guard must recheck its prepared path.
+  setCwd(diary);
+  const item = await prepare(active,filename);
+  assert.equal(item.check(),undefined);
+  writeFileSync(join(diary,filename),'An existing historical diary');
+  assert.match(item.check(),/历史日记已经存在/);
+  await item.finish();
+  await f.end(active,'aborted');
 });
 
 test('3C 主人接管运行中的 Life 后仍使用 Life 相册，暂停后恢复 Core 相册',async t=>{

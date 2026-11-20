@@ -15,17 +15,20 @@ import type { CompanionRecordLibrary, RecordOperation } from '../../core/records
 import { companionRecordPaths } from '../../core/record-paths.js';
 import { installLifeReview, REVIEW_ALARM_FILE } from './review.js';
 import type {CompanionBehavior} from '../body/plugin.js';
-import { PersistentLifePlan, parsePlanDraft } from './plan.js';
+import { PersistentLifePlan, expiredDispatchDeadline, parsePlanDraft, type CurrentLifePlan } from './plan.js';
 import { registerPlanTools } from './plan-tools.js';
 import {presentFacts} from '../../core/interaction-presentation.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
+import type { PlannedExecution } from '../../contracts/behavior.js';
+import type { WorldCommands } from '../../contracts/living.js';
+import {integer, reject, text, unavailable} from '../../core/storage.js';
 import { CONTRACT_VERSION } from '../../contracts/version.js';
 import {readFactReferences} from './facts.js';
 import {createLifeSourceAdapter} from './tool-policy.js';
 import type {TableRegistration} from '../../contracts/tables.js';
 import {recordGardenPause, type GardenClock, type GardenPause} from '../economy/garden-clock.js';
 import {lifeDirectories, readLifeControl, readLifeSettings, safeLifeFile} from './control-file.js';
-import {InFlight, LivingView, mountLivingArea, settleCleanup, withLivingCaller, type AreaReference, type LivingPorts} from '../index.js';
+import {InFlight, LivingView, mountLivingArea, settleCleanup, withLivingCaller, type AreaReference, type CommandAdmission, type LivingPorts} from '../index.js';
 import {lookupLifeOutlet} from '../outlets.js';
 
 type Runtime = ReturnType<typeof createLifeRuntime>;
@@ -184,8 +187,11 @@ export class CompanionLife {
     const storageId=this.host.workspace.storageId();
     const bound: Bound = {id: current.id, path: current.path, directory, library: this.host.records.getLibrary(current.id),
       plan:new PersistentLifePlan(directory,this.host.workspace.runtime.identity().companionId,storageId,this.timeZone,
-        ()=>this.isCurrentBinding(bound))};
+        ()=>this.isCurrentBinding(bound),()=>this.notifyWorld(bound))};
     this.binding = bound;
+  }
+  private notifyWorld(bound: Bound) {
+    this.living.changed({workspaceId:bound.id,path:bound.path,storageId:bound.plan.storageId});
   }
   private async startRuntime(resumed = false) {
     if (this.runtime || !this.binding || !this.enabled || !this.isOpen()) return;
@@ -379,20 +385,12 @@ export class CompanionLife {
     const bound=this.binding;
     const body=this.living.lookup('body'), validate=this.guardArea(body);
     let advanced=false;
-    let continueAccepted=false;
     if(body) {
       const behavior=body.value;
       await this.resumeAcceptedPlan(bound,body);validate();
       const before=bound.plan.read().plan;
       advanced=await bound.plan.advance(bound.id,behavior,validate);validate();
-      const after=bound.plan.read().plan;
-      // A consumed completion transition must schedule the next accepted step
-      // itself. No new model consideration or unrelated domain event is needed.
-      continueAccepted=!!before && after?.id===before.id && after.cursor>before.cursor
-        && after.status==='active' && after.cursor<after.steps.length && !after.replanReason;
-      // Body work already committed. Optional native startup/observer failures
-      // must not consume the only continuation of this accepted queue.
-      if(continueAccepted)this.scheduleTick();
+      this.scheduleContinuation(before,bound.plan.read().plan);
       await withLivingCaller(validate,()=>behavior.setReconsiderConditions(bound.id,bound.plan.read().plan?.reconsiderWhen ?? []));
       validate();
     }
@@ -400,6 +398,12 @@ export class CompanionLife {
     this.assertOpen();
     if(advanced)this.runtime?.reschedulePlan();
     this.runtime?.notifyFacts();
+  }
+  private scheduleContinuation(before: CurrentLifePlan | null, after: CurrentLifePlan | null) {
+    // A committed completion schedules the next accepted step even if a
+    // later native startup or observer fails.
+    if(before && after?.id===before.id && after.cursor>before.cursor && after.status==='active' &&
+      after.cursor<after.steps.length && !after.replanReason)this.scheduleTick();
   }
   private async resumeAcceptedPlan(bound:Bound,body=this.living.lookup('body')) {
     const current=this.current();
@@ -472,6 +476,56 @@ export class CompanionLife {
       return {enabled:this.enabled,running:this.running(),...bound.plan.read()};
     });
   }
+  readonly worldCommands: Pick<WorldCommands, 'executePlanStep' | 'confirmReading'> = {
+    executePlanStep: ({expectedRevision,planId,stepId,...request}, options) =>
+      this.living.command(this.host, request, options, ({validate,effect}) => {
+        integer(expectedRevision,'plan revision');text(planId,'plan id');text(stepId,'step id');
+        return this.enqueue(async () => {
+          validate();
+          const bound=await this.checkedPlan(request.workspaceId);validate();
+          const {revision,plan}=bound.plan.read();
+          if(revision!==expectedRevision || plan?.id!==planId || plan.steps[plan.cursor]?.id!==stepId)
+            reject('STALE_REVISION','生活计划或当前步骤已变化，请重新读取');
+          if(!this.enabled)reject('DISABLED','自主生活已暂停');
+          if(plan.status!=='active' && plan.status!=='waiting')reject('INELIGIBLE','当前计划不能执行步骤');
+          const body=this.living.lookup('body');
+          if(!body)unavailable('共享身体组件尚未启用');
+          const admit=()=>{validate();if(!body.isCurrent())reject('STALE_BINDING','共享身体组件已变化');};
+          const operationId=`life:${plan.id}:${stepId}`;
+          effect('none',operationId);
+          const advanced=await bound.plan.advance(bound.id,body.value,admit,effect);
+          admit();
+          const after=bound.plan.read().plan;
+          const receipt=after?.execution as PlannedExecution | undefined;
+          const execution=receipt?.operationId===operationId ? receipt : null;
+          this.scheduleContinuation(plan,after);
+          if(advanced)this.runtime?.reschedulePlan();
+          const awaitingReceipt=after?.status==='waiting' && after.operationId===operationId &&
+            (!execution || execution.status==='running');
+          if(after?.replanReason && (!awaitingReceipt && !execution ||
+            after.triggeredConditions.some(condition=>!plan.triggeredConditions.includes(condition)))) {
+            effect('none');
+            reject('STALE_REVISION',after.replanReason);
+          }
+          if(awaitingReceipt) {
+            // The existing recovery record preserves this specific refusal before dispatch.
+            if(after.pauseReason===`Error: ${expiredDispatchDeadline}`) {
+              effect('none');
+              reject('INELIGIBLE',expiredDispatchDeadline);
+            }
+            effect('unknown');
+            throw Error(after.replanReason ?? '原步骤的派工结果待核对');
+          }
+          return {operationId,execution};
+        });
+      }),
+    confirmReading: ({expectedRevision,operationId,receiptToken,...request}, options) =>
+      this.living.command(this.host, request, options, async admission => {
+        integer(expectedRevision,'plan revision');text(operationId,'reading operation',160);text(receiptToken,'reading receipt token',160);
+        const {execution}=await this.confirmPlannedReading(request.workspaceId,expectedRevision,operationId,receiptToken,admission.validate,admission);
+        return execution;
+      }),
+  };
   updatePlan(workspaceId:string,expectedRevision:number,raw:unknown,validate:()=>void=()=>{}) {
     const draft=parsePlanDraft(raw);
     return this.enqueue(async()=>{
@@ -489,13 +543,20 @@ export class CompanionLife {
       this.runtime?.reschedulePlan();this.ctx.emit('pet/life.changed');return result;
     });
   }
-  private checkReadingPlan(bound:Bound,expectedRevision:number,operationId:string,allowCompleted=false) {
+  private checkReadingPlan(bound:Bound,expectedRevision:number,operationId:string,allowCompleted=false,contract=false) {
     const current=bound.plan.read(),plan=current.plan;
     const active=plan?.operationId===operationId && plan.steps[plan.cursor]?.kind==='read';
     const completed=allowCompleted && plan?.steps.slice(0,plan.cursor).some(step=>step.kind==='read' && operationId===`life:${plan.id}:${step.id}`);
-    if(current.revision!==expectedRevision || !plan || !(active || completed)
-      || !['active','waiting'].includes(plan.status))throw Error('Reading requires the current plan revision and its active original reading operation');
-    if(!this.running())throw Error('Resume autonomous Life before progressing a planned reading activity');
+    if(current.revision!==expectedRevision || !plan || !(active || completed) || !['active','waiting'].includes(plan.status)) {
+      const message='Reading requires the current plan revision and its active original reading operation';
+      if(contract)reject('STALE_REVISION',message);
+      throw Error(message);
+    }
+    if(!this.running()) {
+      const message='Resume autonomous Life before progressing a planned reading activity';
+      if(contract)reject('DISABLED',message);
+      throw Error(message);
+    }
     return plan;
   }
   readPlannedSegment(workspaceId:string,expectedRevision:number,operationId:string,validate:()=>void=()=>{}) {
@@ -507,12 +568,16 @@ export class CompanionLife {
       return {...segment,operationId,confirmation:'Read this actual text before calling life_read_confirm with the returned receiptToken. Receiving an animation or owning the item does not advance the bookmark or establish understanding.'};
     });
   }
-  confirmPlannedReading(workspaceId:string,expectedRevision:number,operationId:string,receiptToken:string,validate:()=>void=()=>{}) {
+  confirmPlannedReading(workspaceId:string,expectedRevision:number,operationId:string,receiptToken:string,validate:()=>void=()=>{},
+    command?: CommandAdmission) {
     return this.enqueue(async()=>{
+      command?.validate();
       const bound=await this.checkedPlan(workspaceId);
-      const guard=()=>{validate();this.checkReadingPlan(bound,expectedRevision,operationId,true);};guard();
+      const guard=()=>{validate();return this.checkReadingPlan(bound,expectedRevision,operationId,true,!!command);};
+      const original=guard();
       const body=this.behavior(), admit=this.guardArea(body,validate);
-      const execution=await withLivingCaller(admit,()=>body.value.confirmPlannedReading(workspaceId,operationId,receiptToken,guard));admit();guard();
+      const execution=await withLivingCaller(admit,()=>body.value.confirmPlannedReading(workspaceId,operationId,receiptToken,guard,command?.effect));admit();guard();
+      if(command && original.operationId!==operationId)return {execution,...bound.plan.read()};
       // Completion is still accounted by the same persistent-plan executor.
       // The tool's confirmation records actual text receipt, never comprehension.
       await bound.plan.advance(workspaceId,body.value,admit);admit();
@@ -549,9 +614,11 @@ export class CompanionLife {
       if (enabled) this.assertOpen();
       const bound = this.binding;
       if (bound?.id !== workspaceId) throw Error('生活工作区已切换');
-      const pauses=enabled===this.enabled ? this.pauses : recordGardenPause(this.pauses,enabled,Date.now());
+      const changed=enabled!==this.enabled;
+      const pauses=changed ? recordGardenPause(this.pauses,enabled,Date.now()) : this.pauses;
       this.writeControl(bound,enabled,this.preferences,pauses);
       this.enabled = enabled;this.restoredClock=false;this.fault = undefined;
+      if(changed)this.notifyWorld(bound);
       // Body observes committed intent now, before native home/model startup.
       if (this.isOpen()) this.ctx.emit('pet/life.changed');
       if (enabled) {
@@ -569,10 +636,6 @@ export class CompanionLife {
     if (!actions.includes(action as typeof actions[number])) return Promise.reject(Error('未知的生活动作'));
     return this.forwardToBody(body=>body.act(workspaceId,action,requestId,channel));
   }
-  /** Compatibility methods delegate; Behavior remains available after Life unload. */
-  desktopRest(workspaceId: string, action: 'sleep' | 'wake') {
-    return this.forwardToBody(body=>body.act(workspaceId, action));
-  }
   private behavior() {
     this.assertOpen();
     const behavior = this.living.lookup('body');
@@ -586,6 +649,7 @@ export class CompanionLife {
       validate();return result;
     });
   }
+  /** Compatibility methods delegate; Behavior remains available after Life unload. */
   roomAction(workspaceId: string, input: unknown, by = '伙伴') {
     return this.forwardToBody(body=>body.roomAction(workspaceId,input,by));
   }

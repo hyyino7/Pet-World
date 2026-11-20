@@ -2,7 +2,7 @@ import { existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { buildHomePromptLine } from '#feiyu-home';
-import { digest } from '../../core/storage.js';
+import { check, digest, reject, text } from '../../core/storage.js';
 import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
@@ -25,16 +25,19 @@ export class CompanionBehavior {
     publicationFault;
     revision = 0;
     expression;
+    readingConfirmationEffect;
     subscriptions = [];
     bootId = randomUUID();
     timer;
     deadlineAt;
     awaitingRecovery = false;
     conditions = [];
+    worldFacts;
     constructor(ctx, host, ports = {}) {
         this.ctx = ctx;
         this.host = host;
         this.living = ports instanceof LivingView ? ports : new LivingView(ports);
+        this.worldFacts = this.living.factSource(host);
         if (!(ports instanceof LivingView))
             this.activate();
     }
@@ -56,11 +59,11 @@ export class CompanionBehavior {
                 if (!isObserved() || this.currentBound(bound.id) !== bound)
                     return;
                 if (!living.get('plan') && !this.autonomous) {
-                    this.publish('observation');
+                    this.publish('observation', false);
                     return;
                 }
                 this.advanceRoom(bound);
-                this.publish();
+                this.publish('transition', false);
             }, isObserved).catch(error => { this.fault = String(error); });
         };
         this.subscriptions.push(ctx.on('pet/core.changed', () => refreshBinding()));
@@ -133,7 +136,7 @@ export class CompanionBehavior {
                         bound.room.setAutonomy(this.autonomous, Date.now(), admission?.restoreElapsed);
                     else
                         bound.room.suspendAutonomy();
-                    this.publish();
+                    this.publish('transition', false);
                 }, current).catch(error => { this.fault = String(error); });
             };
             stopLife = ctx.on('pet/life.changed', synchronize);
@@ -258,7 +261,7 @@ export class CompanionBehavior {
                 const economy = this.living.get('economy');
                 if (!economy && (this.host.workspace.runtime.store.meta(`economy.initialized:${storageId}`) || existsSync(join(target.path, '.chatpet', 'data', 'economy', 'economy.sqlite'))))
                     throw Error('权威经济组件暂不可用；原钱包、库存与菜园已保留，等待恢复');
-                return economy?.gardenPort(id, legacyFile);
+                return economy?.gardenPort(id, legacyFile, this.readingConfirmationEffect);
             }, () => {
                 const settings = this.host.workspace.companionSettings?.();
                 return {
@@ -314,7 +317,7 @@ export class CompanionBehavior {
         const projected = { ...home, behavior: { ...activity, revision: this.revision, bootId: this.bootId } };
         return { ...projected, playback: resolveActivityPlayback(projected) };
     }
-    publish(reason = 'transition') {
+    publish(reason = 'transition', notifyFirst = reason === 'transition') {
         const bound = this.binding;
         if (!bound || this.closed || !this.living.isCurrent())
             return;
@@ -330,17 +333,37 @@ export class CompanionBehavior {
             // program-owned JSON save directly without admitting it as a new request
             // or deleting operation/fact receipts needed for replay protection.
             const home = bound.room.view(), activity = this.activity();
-            const persisted = JSON.stringify([semantic, activity, this.autonomous, home.emotion ?? null, this.expression ?? null]);
+            const details = [activity, this.autonomous, home.emotion ?? null, this.expression ?? null];
+            const persisted = JSON.stringify([semantic, ...details]);
             // Reuse the existing public Body projection; saved metrics stay full precision.
-            const presentationFingerprint = createHash('sha256').update(JSON.stringify([{ ...semantic, needs: home.body }, activity, this.autonomous, home.emotion ?? null, this.expression ?? null])).digest('hex');
+            const visibleState = { ...semantic, needs: home.body };
+            const presentation = [visibleState, ...details];
+            const presentationFingerprint = createHash('sha256').update(JSON.stringify(presentation)).digest('hex');
             const fingerprint = 'sha256:' + createHash('sha256').update(persisted).digest('hex');
             const changed = fingerprint !== bound.fingerprint;
             const visibleChanged = presentationFingerprint !== bound.presentationFingerprint;
+            const hadProjection = bound.presentationFingerprint !== undefined;
             if (changed) {
                 bound.fingerprint = fingerprint;
                 this.revision++;
             }
-            bound.presentationFingerprint = presentationFingerprint;
+            if (visibleChanged) {
+                bound.presentationFingerprint = presentationFingerprint;
+                const receipts = new Set(Object.values(semantic.interactionReceipts ?? {}));
+                // A first read may lazily create the empty execution table.
+                const emptyExecutions = semantic.plannedExecutions && Object.keys(semantic.plannedExecutions).length === 0;
+                const worldFingerprint = receipts.size || emptyExecutions ? createHash('sha256').update(JSON.stringify(presentation, function (key, value) {
+                    if (key === 'acknowledged' && receipts.has(this))
+                        return undefined;
+                    if (key === 'plannedExecutions' && this === visibleState && emptyExecutions)
+                        return undefined;
+                    return value;
+                })).digest('hex') : presentationFingerprint;
+                const worldChanged = worldFingerprint !== bound.worldFingerprint;
+                bound.worldFingerprint = worldFingerprint;
+                if (worldChanged && (hadProjection || notifyFirst))
+                    this.living.changed({ workspaceId: bound.id, path: bound.path, storageId: bound.storageId });
+            }
             if (!this.publicationFault && (!changed || reason === 'observation' && !visibleChanged))
                 return;
             this.ctx.emit('pet/behavior.changed', { workspaceId: bound.id, bootId: this.bootId, revision: this.revision, reason });
@@ -402,13 +425,32 @@ export class CompanionBehavior {
                 ...(bound.room.plannedState() ? { planned: bound.room.plannedState() } : {}) };
         });
     }
+    worldSnapshot(workspaceId) { return this.living.worldSnapshot(this.host, workspaceId); }
+    worldCommands = {
+        care: ({ action, ...request }, options) => this.living.command(this.host, request, options, async ({ effect }) => {
+            check(actions.includes(action), '未知的身体动作');
+            text(request.requestId, 'request id', 256);
+            try {
+                const { changed } = await this.act(request.workspaceId, action, request.requestId, undefined, effect);
+                return { changed };
+            }
+            catch (error) {
+                // The legacy Body receipt reports fingerprint conflict before applying anything.
+                if (error instanceof Error && error.message === '同一互动请求不能用于不同内容') {
+                    effect('none');
+                    reject('CONFLICT', error.message);
+                }
+                throw error;
+            }
+        }),
+    };
     roomState(workspaceId) {
         return this.snapshot(workspaceId).then(value => ({ ...value.home, lifeEnabled: value.autonomyEnabled,
             identity: { displayName: this.host.workspace.runtime.identity().displayName },
             autonomyEnabled: value.autonomyEnabled, presentation: value.presentation,
             behavior: { ...value.behavior, revision: value.revision, bootId: value.bootId } }));
     }
-    roomAction(workspaceId, input, by = '伙伴', interaction) {
+    roomAction(workspaceId, input, by = '伙伴', interaction, recordEffect) {
         return this.enqueue(async (validate) => {
             const before = this.checked(workspaceId);
             await this.refreshEmotion(workspaceId);
@@ -421,16 +463,18 @@ export class CompanionBehavior {
             const config = this.host.workspace.runtime?.config;
             const source = interaction ?? { requestId: randomUUID(), actor: { kind: by === '大肥鱼' ? 'companion' : 'owner',
                     id: by === '大肥鱼' ? (config?.companionId ?? 'companion') : (config?.ownerActorId ?? 'owner'), channel: 'room' } };
+            recordEffect?.('unknown');
             const result = bound.room.act(input, by, Date.now(), source);
+            recordEffect?.('partial');
             this.publish();
             const behavior = { ...this.activity(), revision: this.revision, bootId: this.bootId };
             return { ...result, home: { ...this.presentHome(result.home), presentation: behaviorPresentation(result.home, this.expression) }, behavior };
         });
     }
-    act(workspaceId, action, requestId = randomUUID(), channel = 'desktop') {
+    act(workspaceId, action, requestId = randomUUID(), channel = 'desktop', recordEffect) {
         if (!actions.includes(action))
             return Promise.reject(Error('未知的身体动作'));
-        return this.roomAction(workspaceId, { action }, '主人', { requestId, actor: { kind: 'owner', id: this.host.workspace.runtime?.config?.ownerActorId ?? 'owner', channel } });
+        return this.roomAction(workspaceId, { action }, '主人', { requestId, actor: { kind: 'owner', id: this.host.workspace.runtime?.config?.ownerActorId ?? 'owner', channel } }, recordEffect);
     }
     pendingFacts(workspaceId) { return this.enqueue(() => this.checked(workspaceId).room.pendingFacts()); }
     readFacts(workspaceId, ids) { return this.enqueue(() => this.checked(workspaceId).room.readFacts(ids)); }
@@ -490,8 +534,17 @@ export class CompanionBehavior {
     readPlannedSegment(workspaceId, operationId, validate = () => { }) {
         return this.plannedCall(workspaceId, room => room.readPlannedSegment(operationId), validate);
     }
-    confirmPlannedReading(workspaceId, operationId, receiptToken, validate = () => { }) {
-        return this.plannedCall(workspaceId, room => room.confirmPlannedReading(operationId, receiptToken), validate);
+    confirmPlannedReading(workspaceId, operationId, receiptToken, validate = () => { }, recordEffect) {
+        return this.plannedCall(workspaceId, room => {
+            // The room reaches the Economy port synchronously, after checking the original reading.
+            this.readingConfirmationEffect = recordEffect;
+            try {
+                return room.confirmPlannedReading(operationId, receiptToken);
+            }
+            finally {
+                this.readingConfirmationEffect = undefined;
+            }
+        }, validate);
     }
     startPlanned(workspaceId, input) {
         return this.plannedCall(workspaceId, room => room.startPlanned(input));

@@ -199,7 +199,7 @@ export declare class CompanionRoom {
         room?: any;
         fact?: CompanionFact;
     };
-    garden(operation: 'state' | 'act' | 'control', input: unknown, _legacyLifeEnabled?: boolean, now?: number): {
+    garden(operation: 'state' | 'act' | 'control', input: unknown, now?: number): {
         ok: boolean;
         accepted?: boolean;
         status?: string;

@@ -4,11 +4,11 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 import { lstatSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { bytesDigest, canonical, check, digest, integer } from '../../core/storage.js';
+import { bytesDigest, canonical, check, digest, integer, Rejection } from '../../core/storage.js';
 import { registerWorldContext } from '../../core/native/prompt.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
-import { EconomyStore } from './store.js';
+import { EconomyStore, projectWallet } from './store.js';
 import { installEconomyAccessGuard } from './access.js';
 import { readLifeControl } from '../plan/control-file.js';
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];
@@ -92,6 +92,7 @@ export class CompanionEconomy {
                 else
                     this.host.workspace.runtime.store.transaction(remember);
             }
+            this.current.binding.target = target;
             return this.current.store;
         }
         this.current?.store.close();
@@ -100,8 +101,13 @@ export class CompanionEconomy {
         // Inspect this independent authority evidence BEFORE SQLite can create a
         // new empty file. A partial Core/marker restore cannot revive old money.
         const expectedInitialized = !!metadata.meta(`economy.initialized:${storageId}`) || this.bodyRequiresDatabase(target);
+        const binding = { target };
         const store = new EconomyStore({ workspacePath: target.path, storageId, companionId, expectedInitialized,
             loadLegacyGarden: () => this.retainedGarden(target, legacyFile),
+            walletChanged: () => {
+                const { id, path } = binding.target;
+                this.living.changed({ workspaceId: id, path, storageId });
+            },
             guard: () => {
                 this.assertOpen();
                 check(metadata.persisted(), 'Core database is absent or moved');
@@ -118,7 +124,7 @@ export class CompanionEconomy {
             store.close();
             throw error;
         }
-        this.current = { key, target, store };
+        this.current = { key, binding, store };
         return store;
     }
     bound(workspaceId) {
@@ -148,13 +154,13 @@ export class CompanionEconomy {
     committedGardenAt(workspaceId) {
         const status = this.host.workspace.status(), current = this.current;
         if (!this.closed && this.living.isCurrent() && status.state === 'ready' && status.target?.id === workspaceId
-            && current?.target.id === workspaceId && current.target.path === status.target.path)
+            && current?.binding.target.id === workspaceId && current.binding.target.path === status.target.path)
             return current.store.committedGardenAt();
     }
-    gardenPort(workspaceId, legacyFile) {
+    gardenPort(workspaceId, legacyFile, recordReadingEffect) {
         const store = this.bound(workspaceId);
         if (legacyFile) {
-            const root = join(this.current.target.path, '.chatpet', 'data');
+            const root = join(this.current.binding.target.path, '.chatpet', 'data');
             check([join(root, 'life', 'garden.json'), join(root, 'behavior', 'garden.json')].includes(resolve(legacyFile)), 'Garden authority path is outside the bound Body');
         }
         const checked = () => { check(this.bound(workspaceId) === store, 'Economy binding changed'); return store; };
@@ -193,7 +199,21 @@ export class CompanionEconomy {
             // cancellation proof through its own no-effect receipt, not this shortcut.
             cancelUse: (operationId, proof) => { const s = checked(), row = s.itemUse(operationId); return row && this.use(s, s.cancelUse(operationId, proof)); },
             readSegment: (operationId, input) => checked().readOffer(operationId, input),
-            confirmRead: (operationId, token) => checked().confirmReading(operationId, token),
+            confirmRead: (operationId, token) => {
+                const current = checked();
+                recordReadingEffect?.('unknown', operationId);
+                try {
+                    const receipt = current.confirmReading(operationId, token);
+                    recordReadingEffect?.('partial');
+                    return receipt;
+                }
+                catch (error) {
+                    // The Store rejects missing offers and mismatched tokens before writing a bookmark.
+                    if (error instanceof Rejection && (error.detail.code === 'NOT_FOUND' || error.detail.code === 'CONFLICT'))
+                        recordReadingEffect?.('none');
+                    throw error;
+                }
+            },
             readingStatus: (operationId, input) => checked().readingStatus(operationId, input),
         };
     }
@@ -202,6 +222,16 @@ export class CompanionEconomy {
         const store = this.bound(workspaceId), snapshot = store.snapshot();
         validate();
         return { ...snapshot, workspaceId, ledger: store.ledger({ limit: 80 }).items, configurationVersion: String(snapshot.configuration.revision), access };
+    }
+    walletView(workspaceId) { return projectWallet(this.bound(workspaceId).snapshot()); }
+    worldSnapshot(workspaceId) { return this.living.worldSnapshot(this.host, workspaceId); }
+    worldCommands = {
+        buy: (input, options) => this.worldTrade('buy', input, options),
+        sell: (input, options) => this.worldTrade('sell', input, options),
+    };
+    worldTrade(kind, { itemId, quantity, ...request }, options) {
+        const signal = options?.signal ?? new AbortController().signal;
+        return this.living.command(this.host, request, options, async ({ validate, effect }) => projectWallet(await this.ownerAction(request.workspaceId, { kind, itemId, quantity }, request.requestId, signal, validate, undefined, effect)));
     }
     async pendingFacts(workspaceId) { return this.bound(workspaceId).pendingFacts(); }
     async readFacts(workspaceId, ids) {
@@ -227,7 +257,7 @@ export class CompanionEconomy {
             catch { }
         }
     }
-    async ownerAction(workspaceId, action, requestId, signal, validate = () => { }, trustedActor) {
+    async ownerAction(workspaceId, action, requestId, signal, validate = () => { }, trustedActor, recordEffect) {
         const guard = () => { this.assertOpen(); signal.throwIfAborted(); validate(); };
         guard();
         const store = this.bound(workspaceId);
@@ -249,11 +279,22 @@ export class CompanionEconomy {
                 store.giftItem(requestId, action.itemId, quantity, typeof action.note === 'string' && action.note.trim() ? action.note : undefined, actor);
                 break;
             case 'buy':
-                store.purchase(requestId, action.itemId, quantity, actor);
+            case 'sell': {
+                recordEffect?.('unknown');
+                try {
+                    if (action.kind === 'buy')
+                        store.purchase(requestId, action.itemId, quantity, actor);
+                    else
+                        store.sell(requestId, action.itemId, quantity, actor);
+                }
+                catch (error) {
+                    if (error instanceof Rejection)
+                        recordEffect?.('none');
+                    throw error;
+                }
+                recordEffect?.('partial');
                 break;
-            case 'sell':
-                store.sell(requestId, action.itemId, quantity, actor);
-                break;
+            }
             case 'importReading': {
                 const sourceName = action.source?.name;
                 check(typeof sourceName === 'string' && sourceName.length > 0 && sourceName.length <= 200, 'Invalid reading source');

@@ -1,5 +1,5 @@
 import {economyOverview,economyPage} from './tool-context.js';
-import {InFlight, LivingView, mountLivingArea, settleCleanup, withLivingCaller, type LivingPorts} from '../index.js';
+import {InFlight, LivingView, mountLivingArea, settleCleanup, withLivingCaller, type LivingPorts, type RecordCommandEffect} from '../index.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import { defineTool } from '@deepseek-ai/dsh-tools';
@@ -7,18 +7,22 @@ import { lstatSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { PetCoreHost, WorkspaceTarget } from '../../core/index.js';
-import { bytesDigest, canonical, check, digest, integer } from '../../core/storage.js';
+import { bytesDigest, canonical, check, digest, integer, Rejection } from '../../core/storage.js';
 import { registerWorldContext } from '../../core/native/prompt.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
 import type { CompanionToolDeclaration } from '../../contracts/tables.js';
+import type { PlannedActivity } from '../../contracts/behavior.js';
+import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomEconomyPort, RoomFoodReservation } from '../body/room.js';
-import { EconomyStore } from './store.js';
+import { EconomyStore, projectWallet } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
 import { installEconomyAccessGuard } from './access.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
 import type { GardenClock } from './garden-clock.js';
 import { readLifeControl } from '../plan/control-file.js';
+
+type TradeKind = Exclude<NonNullable<PlannedActivity['economy']>['type'], 'consume'>;
 
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];
 const access = {mode:'bounded',detail:'余额与物品由程序结算。原生文件工具防误改；同一系统账户的命令和其他插件仍可访问文件。'} as const;
@@ -38,7 +42,7 @@ function localFile(path:string) {
 /** One synchronous ledger per active Core binding. Body owns effect receipts;
  * this service owns money/items and never creates another assistant runtime. */
 export class CompanionEconomy {
-  private current?: {key:string;target:WorkspaceTarget;store:EconomyStore};
+  private current?: {key:string;binding:{target:WorkspaceTarget};store:EconomyStore};
   private closed=false;
   private readonly living: LivingView;
   private readonly inFlight = new InFlight();
@@ -88,6 +92,7 @@ export class CompanionEconomy {
         const remember=()=>this.host.workspace.runtime.store.setMeta(`economy.initialized:${storageId}`,{companionId,path:target.path});
         if(initializing)remember();else this.host.workspace.runtime.store.transaction(remember);
       }
+      this.current.binding.target=target;
       return this.current.store;
     }
     this.current?.store.close();this.current=undefined;
@@ -95,14 +100,19 @@ export class CompanionEconomy {
     // Inspect this independent authority evidence BEFORE SQLite can create a
     // new empty file. A partial Core/marker restore cannot revive old money.
     const expectedInitialized=!!metadata.meta(`economy.initialized:${storageId}`)||this.bodyRequiresDatabase(target);
+    const binding={target};
     const store=new EconomyStore({workspacePath:target.path,storageId,companionId,expectedInitialized,
       loadLegacyGarden:()=>this.retainedGarden(target,legacyFile),
+      walletChanged:()=>{
+        const {id,path}=binding.target;
+        this.living.changed({workspaceId:id,path,storageId});
+      },
       guard:()=>{this.assertOpen();check(metadata.persisted(),'Core database is absent or moved');
         check(this.host.workspace.storageId()===storageId,'Economy binding changed');}});
     const remember=()=>metadata.setMeta(`economy.initialized:${storageId}`,{companionId,path:target.path});
     try {if(initializing)remember();else metadata.transaction(remember);}
     catch(error){store.close();throw error;}
-    this.current={key,target,store};return store;
+    this.current={key,binding,store};return store;
   }
   private bound(workspaceId:string):EconomyStore {
     this.assertOpen();
@@ -129,13 +139,13 @@ export class CompanionEconomy {
   committedGardenAt(workspaceId:string):number|undefined {
     const status=this.host.workspace.status(),current=this.current;
     if (!this.closed && this.living.isCurrent() && status.state==='ready' && status.target?.id===workspaceId
-      && current?.target.id===workspaceId && current.target.path===status.target.path)
+      && current?.binding.target.id===workspaceId && current.binding.target.path===status.target.path)
       return current.store.committedGardenAt();
   }
-  gardenPort(workspaceId:string, legacyFile?:string):RoomEconomyPort {
+  gardenPort(workspaceId:string, legacyFile?:string, recordReadingEffect?:RecordCommandEffect):RoomEconomyPort {
     const store=this.bound(workspaceId);
     if(legacyFile) {
-      const root=join(this.current!.target.path,'.chatpet','data');
+      const root=join(this.current!.binding.target.path,'.chatpet','data');
       check([join(root,'life','garden.json'),join(root,'behavior','garden.json')].includes(resolve(legacyFile)),'Garden authority path is outside the bound Body');
     }
     const checked=()=>{check(this.bound(workspaceId)===store,'Economy binding changed');return store;};
@@ -169,13 +179,38 @@ export class CompanionEconomy {
       // cancellation proof through its own no-effect receipt, not this shortcut.
       cancelUse:(operationId,proof)=>{const s=checked(),row=s.itemUse(operationId);return row&&this.use(s,s.cancelUse(operationId,proof));},
       readSegment:(operationId,input)=>checked().readOffer(operationId,input),
-      confirmRead:(operationId,token)=>checked().confirmReading(operationId,token),
+      confirmRead:(operationId,token)=>{
+        const current=checked();
+        recordReadingEffect?.('unknown',operationId);
+        try {
+          const receipt=current.confirmReading(operationId,token);
+          recordReadingEffect?.('partial');
+          return receipt;
+        } catch(error) {
+          // The Store rejects missing offers and mismatched tokens before writing a bookmark.
+          if(error instanceof Rejection && (error.detail.code==='NOT_FOUND' || error.detail.code==='CONFLICT'))
+            recordReadingEffect?.('none');
+          throw error;
+        }
+      },
       readingStatus:(operationId,input)=>checked().readingStatus(operationId,input),
     };
   }
   async snapshot(workspaceId:string,validate:()=>void=()=>{}) {
     validate();const store=this.bound(workspaceId),snapshot=store.snapshot();validate();
     return {...snapshot,workspaceId,ledger:store.ledger({limit:80}).items,configurationVersion:String(snapshot.configuration.revision),access};
+  }
+  walletView(workspaceId: string) { return projectWallet(this.bound(workspaceId).snapshot()); }
+  worldSnapshot(workspaceId: string) { return this.living.worldSnapshot(this.host, workspaceId); }
+  readonly worldCommands: Pick<WorldCommands, TradeKind> = {
+    buy: (input, options) => this.worldTrade('buy', input, options),
+    sell: (input, options) => this.worldTrade('sell', input, options),
+  };
+  private worldTrade(kind: TradeKind, {itemId, quantity, ...request}: Parameters<WorldCommands['buy']>[0],
+    options: Parameters<WorldCommands['buy']>[1]) {
+    const signal = options?.signal ?? new AbortController().signal;
+    return this.living.command(this.host, request, options, async ({validate, effect}) =>
+      projectWallet(await this.ownerAction(request.workspaceId, {kind,itemId,quantity}, request.requestId, signal, validate, undefined, effect)));
   }
   async pendingFacts(workspaceId:string):Promise<CompanionFact[]> {return this.bound(workspaceId).pendingFacts();}
   async readFacts(workspaceId:string,ids:readonly string[]):Promise<CompanionFact[]> {
@@ -190,7 +225,8 @@ export class CompanionEconomy {
     try {this.ctx.emit('pet/economy.fact',workspaceId);}
     catch(error){try {this.ctx.logger('chatpet-economy').warn('Committed economic facts await delivery',error);}catch {}}
   }
-  async ownerAction(workspaceId:string,action:any,requestId:string,signal:AbortSignal,validate:()=>void=()=>{},trustedActor?:CompanionFactActor) {
+  async ownerAction(workspaceId:string,action:any,requestId:string,signal:AbortSignal,validate:()=>void=()=>{},trustedActor?:CompanionFactActor,
+    recordEffect?: RecordCommandEffect) {
     const guard=()=>{this.assertOpen();signal.throwIfAborted();validate();};guard();const store=this.bound(workspaceId);
     check(action&&typeof action==='object'&&!Array.isArray(action),'Invalid economic action');
     const actor:CompanionFactActor=trustedActor??{kind:'owner',id:this.host.workspace.runtime.config.ownerActorId,channel:'settings'};
@@ -203,8 +239,18 @@ export class CompanionEconomy {
     switch(action.kind) {
       case 'grant':store.grantMoney(requestId,action.amount,typeof action.note==='string'&&action.note.trim()?action.note:undefined,actor);break;
       case 'gift':store.giftItem(requestId,action.itemId,quantity,typeof action.note==='string'&&action.note.trim()?action.note:undefined,actor);break;
-      case 'buy':store.purchase(requestId,action.itemId,quantity,actor);break;
-      case 'sell':store.sell(requestId,action.itemId,quantity,actor);break;
+      case 'buy': case 'sell': {
+        recordEffect?.('unknown');
+        try {
+          if(action.kind==='buy')store.purchase(requestId,action.itemId,quantity,actor);
+          else store.sell(requestId,action.itemId,quantity,actor);
+        } catch(error) {
+          if(error instanceof Rejection)recordEffect?.('none');
+          throw error;
+        }
+        recordEffect?.('partial');
+        break;
+      }
       case 'importReading': {
         const sourceName=action.source?.name;
         check(typeof sourceName==='string'&&sourceName.length>0&&sourceName.length<=200,'Invalid reading source');

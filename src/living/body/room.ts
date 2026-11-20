@@ -1060,7 +1060,7 @@ export class CompanionRoom {
     const home = this.view(now);
     return {ok: true, changed: result.changed, event: fact?{...result.event,type:action,text:fact.result.summary}:result.event, home, room: home.room,...(fact?{fact}: {})};
   }
-  garden(operation: 'state' | 'act' | 'control', input: unknown, _legacyLifeEnabled = true, now = Date.now()) {
+  garden(operation: 'state' | 'act' | 'control', input: unknown, now = Date.now()) {
     if (operation === 'state') {
       const garden=this.tick(now);return {ok:garden?.unavailable!==true,garden};
     }

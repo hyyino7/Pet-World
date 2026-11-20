@@ -1,10 +1,23 @@
 import { Context } from '@deepseek-ai/cordis';
 import { RegistrationTable } from '../core/tables/registry.js';
+import { Rejection, reject, text } from '../core/storage.js';
 import { activityReader } from './plan/activity-reader.js';
+import { readFactReferences } from './plan/facts.js';
 import { installLivingPrompt } from './prompt-context.js';
 const bodyService = 'petBehavior', lifeService = 'petLife', economyService = 'petEconomy';
 const services = { body: bodyService, plan: lifeService, economy: economyService };
 const domains = new WeakMap();
+function currentBinding(host) {
+    const { state, target } = host.workspace.status();
+    if (state !== 'ready' || !target)
+        return;
+    const storageId = host.workspace.storageId();
+    if (storageId)
+        return { workspaceId: target.id, path: target.path, storageId };
+}
+function sameBinding(current, captured) {
+    return current?.workspaceId === captured.workspaceId && current.path === captured.path && current.storageId === captured.storageId;
+}
 export function serviceLabel(contextScope, name) {
     const defaults = contextScope.root[Context.isolate];
     defaults[name] ??= Symbol(name);
@@ -50,7 +63,7 @@ export class LivingWorld {
             domains.set(root, hosts = new WeakMap());
         let domain = hosts.get(host);
         if (!domain) {
-            domain = { worlds: new Set(), slots: { body: new Map(), plan: new Map(), economy: new Map() } };
+            domain = { worlds: new Set(), slots: { body: new Map(), plan: new Map(), economy: new Map() }, changes: new Map() };
             hosts.set(host, domain);
         }
         const labels = labelsOf(ctx);
@@ -118,17 +131,59 @@ export class LivingWorld {
     lookup(area) {
         return currentArea(this.domain.slots[area].get(this.labels[area]), area);
     }
+    bindingChanged(ctx, host, valid) {
+        if (!valid())
+            return;
+        try {
+            const binding = currentBinding(host);
+            if (!binding)
+                this.domain.lastNotifiedBinding = undefined;
+            else if (!sameBinding(this.domain.lastNotifiedBinding, binding))
+                this.changed(ctx, host, valid, binding);
+        }
+        catch { /* Binding may already be unavailable during teardown. */ }
+    }
+    changed(ctx, host, valid, expected) {
+        // Notification failures cannot invalidate completed domain work.
+        try {
+            const binding = expected ?? currentBinding(host);
+            if (!binding)
+                return;
+            const { workspaceId, path, storageId } = binding;
+            const key = JSON.stringify([workspaceId, path, storageId]);
+            const pending = this.domain.changes.get(key);
+            if (pending) {
+                pending.push(valid);
+                return;
+            }
+            const guards = [valid];
+            this.domain.changes.set(key, guards);
+            queueMicrotask(() => {
+                this.domain.changes.delete(key);
+                try {
+                    if (sameBinding(currentBinding(host), binding) && guards.some(guard => guard())) {
+                        this.domain.lastNotifiedBinding = binding;
+                        ctx.emit('world.changed', { workspaceId, storageId });
+                    }
+                }
+                catch { /* A failed observer has no effect on the committed result. */ }
+            });
+        }
+        catch { /* Binding may already be unavailable during teardown. */ }
+    }
 }
 export class LivingView {
     ports;
     isCurrent;
     world;
     isLatestGeneration;
-    constructor(ports = {}, isCurrent = () => true, world, isLatestGeneration = isCurrent) {
+    changed;
+    constructor(ports = {}, isCurrent = () => true, world, isLatestGeneration = isCurrent, changed = () => { }) {
         this.ports = ports;
         this.isCurrent = isCurrent;
         this.world = world;
         this.isLatestGeneration = isLatestGeneration;
+        this.changed = changed;
     }
     lookup(area) {
         if (this.world)
@@ -139,6 +194,116 @@ export class LivingView {
             return { value, isCurrent: () => read?.() === value };
     }
     get(area) { return this.lookup(area)?.value; }
+    boundScope(host, workspaceId) {
+        const binding = currentBinding(host);
+        if (!this.isCurrent() || binding?.workspaceId !== workspaceId)
+            reject('STALE_BINDING', '生活工作区已切换或组件已停止');
+        const validate = () => {
+            if (!this.isCurrent() || !sameBinding(currentBinding(host), binding))
+                reject('STALE_BINDING', '生活工作区或组件已切换');
+        };
+        return { binding, validate };
+    }
+    async command(host, { workspaceId, requestId }, options, execute) {
+        const signal = options?.signal;
+        const outcome = { effect: 'none' };
+        let validateBinding;
+        const validate = () => {
+            signal?.throwIfAborted();
+            validateBinding?.();
+        };
+        try {
+            text(requestId, 'request id');
+            outcome.operationId = requestId;
+            validateBinding = this.boundScope(host, workspaceId).validate;
+            const value = await withLivingCaller(validate, () => execute({ validate, effect(effect, operationId) {
+                    outcome.effect = effect;
+                    if (operationId !== undefined)
+                        outcome.operationId = operationId;
+                } }));
+            validate();
+            return { ok: true, value };
+        }
+        catch (error) {
+            const { effect, operationId } = outcome;
+            if (effect === 'none') {
+                if (signal?.aborted)
+                    return { ok: false, error: { code: 'CANCELLED', message: '生活命令已取消', operationId, effect, retry: 'same_request' } };
+                // Queue failures may use the old facade's untyped binding/cancellation error.
+                if (!(error instanceof Rejection))
+                    try {
+                        validate();
+                    }
+                    catch (denial) {
+                        error = denial;
+                    }
+                if (error instanceof Rejection)
+                    return { ok: false, error: { operationId, ...error.detail } };
+                return { ok: false, error: { code: 'INTERNAL', message: String(error), operationId, effect, retry: 'same_request' } };
+            }
+            const message = error instanceof Error ? error.message : String(error);
+            if (effect === 'unknown')
+                return { ok: false, error: { code: 'OUTCOME_UNKNOWN', message, operationId, effect, retry: 'reconcile' } };
+            return { ok: false, error: { code: signal?.aborted ? 'CANCELLED' : 'INTERNAL', message, operationId, effect, retry: 'reconcile' } };
+        }
+    }
+    readFrame(host, workspaceId, includePlan = false) {
+        const scope = this.boundScope(host, workspaceId);
+        const body = this.lookup('body'), economy = this.lookup('economy');
+        const plan = includePlan ? this.lookup('plan') : undefined;
+        const sameArea = (area, ref) => this.lookup(area)?.value === ref?.value && (!ref || ref.isCurrent());
+        const validate = () => {
+            scope.validate();
+            if (!sameArea('body', body) || !sameArea('economy', economy) || (includePlan && !sameArea('plan', plan)))
+                reject('STALE_BINDING', '生活工作区或组件已切换');
+        };
+        return { ...scope, body, economy, validate };
+    }
+    async worldSnapshot(host, workspaceId) {
+        const { binding, body, economy, validate } = this.readFrame(host, workspaceId, true);
+        const snapshot = body && await withLivingCaller(validate, () => body.value.snapshot(workspaceId));
+        validate();
+        const wallet = economy?.value.walletView(workspaceId) ?? null;
+        validate();
+        return { workspaceId, storageId: binding.storageId, wallet,
+            body: snapshot ? { available: true, snapshot: structuredClone(snapshot) } : { available: false } };
+    }
+    factSource(host) {
+        const domains = ['body', 'economy'];
+        const references = (ids) => ids.map(id => {
+            const domain = domains.find(candidate => id.startsWith(`${candidate}:`));
+            if (!domain)
+                reject('INVALID_ARGUMENT', '未知互动事实所属区');
+            return { domain, id };
+        });
+        return {
+            pendingFacts: async (workspaceId) => {
+                const frame = this.readFrame(host, workspaceId);
+                const facts = await Promise.all(domains.map(domain => withLivingCaller(frame.validate, () => frame[domain]?.value.pendingFacts(workspaceId) ?? [])));
+                frame.validate();
+                return facts.flat().sort((a, b) => a.occurredAt.localeCompare(b.occurredAt) || a.id.localeCompare(b.id));
+            },
+            readFacts: async (workspaceId, ids) => {
+                const frame = this.readFrame(host, workspaceId);
+                return withLivingCaller(frame.validate, () => readFactReferences(workspaceId, references(ids), (domain) => frame[domain]?.value, frame.validate));
+            },
+            acknowledgeFacts: async (workspaceId, ids) => {
+                const frame = this.readFrame(host, workspaceId), refs = references(ids);
+                const batches = domains.flatMap(domain => {
+                    const batch = refs.filter(ref => ref.domain === domain).map(ref => ref.id);
+                    if (!batch.length)
+                        return [];
+                    const source = frame[domain]?.value;
+                    if (!source)
+                        throw Error('原互动事实所属组件暂不可用，保留原编号等待恢复');
+                    return [{ source, batch }];
+                });
+                for (const { source, batch } of batches)
+                    await withLivingCaller(frame.validate, () => source.acknowledgeFacts(workspaceId, batch));
+                frame.validate();
+            },
+        };
+    }
     watch(ctx, area, notify) {
         if (!this.world && !this.ports.observe)
             return () => { };
@@ -181,15 +346,25 @@ export function mountLivingArea(ctx, host, area, create, start, close = value =>
     const { world, release } = LivingWorld.retain(ctx, host, area);
     let registration;
     let stopPort, stopCore;
-    let value, cleanup;
+    let value, cleanup, stopStatus;
     const dispose = () => cleanup ??= settleCleanup(() => registration?.revoke(), () => stopPort?.(), () => stopCore?.(), () => { if (value)
-        return close(value); }).finally(() => release(registration?.lease.generation));
+        return close(value); }).finally(() => { stopStatus?.(); release(registration?.lease.generation); });
     try {
         ctx.effect(() => dispose);
+        const active = () => world.lookup(area)?.lease === registration?.lease && registration !== undefined;
         const view = new LivingView({}, () => registration?.lease.isCurrent() === true &&
-            (ctx.fiber.state === 1 /* FiberState.LOADING */ || ctx.fiber.state === 2 /* FiberState.ACTIVE */), world, () => registration?.isLatestGeneration() === true);
+            (ctx.fiber.state === 1 /* FiberState.LOADING */ || ctx.fiber.state === 2 /* FiberState.ACTIVE */), world, () => registration?.isLatestGeneration() === true, binding => world.changed(ctx, host, active, binding));
         value = create(view);
         registration = world.register(area, value, ctx.fiber);
+        ctx.on('pet/core.changed', () => world.bindingChanged(ctx, host, active));
+        stopStatus = ctx.root.on('internal/status', (fiber, previous) => {
+            if (fiber !== ctx.fiber)
+                return;
+            if (fiber.state === 2 /* FiberState.ACTIVE */)
+                world.changed(ctx, host, active);
+            else if (previous === 2 /* FiberState.ACTIVE */)
+                world.changed(ctx, host, () => registration?.isLatestGeneration() === true && !world.lookup(area));
+        });
         stopPort = start(value, view);
         stopCore = world.retainCore(ctx, host, area);
     }

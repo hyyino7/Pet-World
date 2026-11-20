@@ -283,8 +283,8 @@ test('a cancelled return activity stays cancelled after food settlement and cros
 
 test('accepted queued garden work has its own next deadline while paused passive time has none',t=>{
   const f=fixture(t);assert.equal(f.room.nextWakeAt(f.now),null);
-  f.room.garden('control',{type:'till',plotId:0,requestId:'plot-zero'},true,f.now);
-  f.room.garden('control',{type:'till',plotId:1,requestId:'plot-one'},true,f.now);
+  f.room.garden('control',{type:'till',plotId:0,requestId:'plot-zero'},f.now);
+  f.room.garden('control',{type:'till',plotId:1,requestId:'plot-one'},f.now);
   f.room.tick(f.room.state.route.arriveAt);const done=f.room.state.dwell.until;f.room.tick(done+1);
   const garden=JSON.parse(readFileSync(join(f.root,'garden.json'),'utf8'));
   assert.equal(garden.care.queue.length,1);assert.equal(garden.care.task,null);

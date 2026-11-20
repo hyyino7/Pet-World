@@ -243,14 +243,20 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
     if(policy)agent.status='idle';
     await pause(3);
   }
+  const execution=(agent,name,args)=>({agent,name,arguments:args,signal:signal(),token:Symbol(name),callId:'tool-'+sequence++});
+  const prepare=exec=>middleware('tools/pre-execute',[exec]);
+  async function prepareTool(active,name,args){
+    const exec=execution(active.agent,name,args);
+    await prepare(exec);
+    return {check:()=>ctx.tools.checkGuards(exec),finish:()=>emit('tools/result',exec)};
+  }
   async function tool(active,name,args){
     const {agent,turn}=active,info=agentInfo.get(agent.id);
-    const callId='tool-'+sequence++;
-    const exec={agent,name,arguments:args,signal:signal(),token:Symbol(name),callId};
+    const exec=execution(agent,name,args), {callId}=exec;
     await emit('session/event',agent.session,agent.session.append('tool/call',{turn,name,callId,arguments:JSON.stringify(args)}));
     let output,error;
     try {
-      await middleware('tools/pre-execute',[exec]);
+      await prepare(exec);
       if(dsh){
         const denial=ctx.tools.checkGuards(exec);
         if(denial)throw Error(denial);
@@ -272,7 +278,7 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
     await emit('tools/result',exec);
     if(error)throw error;return typeof output==='string'&&output.startsWith('{')?JSON.parse(output):output;
   }
-  return {root,repo,config,workspace,warnings,sent,flushes,cancellations,archives,registry,bind,begin,step,end,tool,emit,middleware,
+  return {root,repo,config,workspace,warnings,sent,flushes,cancellations,archives,registry,bind,begin,step,end,tool,prepareTool,emit,middleware,
     home:()=>resolveCompanionHome(ctx,service('petCore')),
     create:async sessionId=>(await service('sessionController').create({workspaceId:'world',sessionId})).sessionId,
     schemas:({agent,toolSet})=>ctx.tools.schemas(agent,toolSet).map(schema=>schema.name),
