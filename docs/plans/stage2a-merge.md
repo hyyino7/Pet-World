@@ -678,6 +678,81 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 
 **回退**：同第 4 批，用换包前的回退备份恢复，里面有 Core 的标记。
 
+#### 第 5 批开工细则
+
+（Codex 只读起草、Claude 核对行号后定稿，主人 2026-11-20 过目同意。）
+
+从 `main` 的 `c7ac894` 开 `codex/2a-5-economy-marker`。下文行号取自该提交。已只读核对源码和 R5 报告，实施及演练待开工。高风险改动以下文「提交、允许文件与旧断言」的清单为界，版本切换、离线步骤和删源三者一起验收。`docs/plans/stage2a-merge.md:49,656-679,863-870`
+
+**开工前两项与拍板**
+
+- **独立证据**　推荐按拍板 10 用 `.chatpet/data/living/economy-adoption.json`，只存 `{storageId, companionId}`，随 Repo 搬迁。`data/living/` 可承载以后逐项登记、需要独立于各区目录的小文件。本批只建这一项，钱包目录和 Body 检查点的生命周期各自独立。`docs/plans/stage2a-merge.md:660-666,810,840`、`arch/storage.json:39-42`
+- **存储登记**　推荐新增 `economy-adoption`，`paths` 和 `container` 指向该文件，`owner/containerOwner` 为 `living`、`writers` 为 `["living"]`，省略 `selector`，按精确路径匹配。原 `economy-initialized` 改指 `.chatpet/data/economy/economy.sqlite#meta`，同属 `living`，`selector` 为 `{"table":"meta","key":"economy.initialized"}`。`evidence` 分别填首次落盘、库内写标记和 `0003.apply` 的实现行，协议注明钱包区写入及离线迁移次序。现有备份已覆盖整个 `.chatpet/`。`arch/storage.json:5,34,41`、`scripts/arch/lib/storage.mjs:4-19,53-63`、`scripts/lib/offline-backup.mjs:110-113`
+- **需主人拍板**
+  1. **独立证据已落盘、钱包库还没提交时**　推荐拒绝自动补建，按拍板点 10「先写证据再建库」的顺序保持安全优先。仅凭这份文件，分不清是首次初始化中断，还是后来丢了库。拒绝信息写明证据文件路径，并说明：如果这是从未成功过的首次初始化，由主人确认后删掉这个文件再重试；否则按回退备份恢复。备选是先建库、后写证据，可以自动重试，但改了拍板点 10 定的顺序，而且两次落盘之间整个钱包目录丢失时会建出新库。 `docs/plans/stage2a-merge.md:665-677,831-840`、`src/core/storage-migration.ts:79-114`、`AGENTS.md:55-59` 决定：按推荐（主人 2026-11-20 过目同意）。
+  2. **迁移日志记「曾经采用过」**　推荐在含 `0003` 的日志段头加布尔值 `economyAdopted`。删掉源键后，就算钱包目录和独立证据都丢了，续做和复查也能分清「从未采用」和「源已删、目标缺失」，已收尾的段随 Repo 搬迁。代价是日志段头多一个字段：旧段没有这个字段，按「未记录」处理，`decodeMigrationJournal` 要兼容。 决定：按推荐（主人 2026-11-20 过目同意）。
+
+**运行时采用与初始化**
+
+- 新建 `src/living/economy/adoption.ts`。`readEconomyFileEvidence(path, identity)` 只读独立文件、`storage.json` 和库文件形状，核对绑定、目录及普通单链接文件，坏 JSON 或异身份拒绝。`readBodyEconomyAuthority(path)` 沿用 `life` 优先、`behavior` 次之的检查点选择和 32 MiB 上限。`EconomyStore` 在已有库上先验 `meta.schema/identity`，再读 `meta['economy.initialized']`，标记值同为 `{storageId, companionId}`。四份证据任一有效即视为已采用，旧 `garden.json` 只作为首次导入来源。`src/living/economy/plugin.ts:36-80,103-116`、`src/living/economy/store.ts:48-67,81-123`
+- `CompanionEconomy.prepare` 沿用绑定和租约检查，移除两处 Core 标记读写。首次建库或导入先验旧菜园，持钱包租约复核后原子落独立文件，再建库。建表、旧菜园导入和库内标记同一 `synchronous=FULL` 事务提交，随后原子落 `storage.json`。文件按临时文件 `fsync`、`rename`、目录 `fsync` 落盘，新建 `living/` 时同步其父目录。库提交后才交出端口。`src/living/economy/plugin.ts:82-126`、`src/living/economy/store.ts:68-124`、`src/core/workspace.ts:292-300`、`vendor/dsh-world/lib/life/lifeStore.js:61-100`
+- 独立文件落盘前失败可重试。落盘后缺库或只剩空壳，分别用现有 `UNAVAILABLE` 拒绝，保留 `database is missing` 或 `without its initialized database` 提示，校验先于建表。库与标记已提交时，同进程或重启后的初始化重试复用原库，可补齐缺失的 `storage.json`，旧菜园和账本保持原值。`src/core/storage.ts:7-17`、`src/core/workspace.ts:404-411,435-465`、`src/living/economy/store.ts:48-66,92-124`
+- Body 无经济端口时，改查只读文件证据或已存在的库，交 `CompanionRoom` 原有 `economyGardenAuthority/economyBlocked` 门控，免费照料照常。初始化清单由 Economy 的 `registerInitializer` 回调按同一绑定的文件证据或已验证库列出原三项和独立文件。回调只读文件，库内检查归 Store，`data/living/` 按需创建。沿用原生文件守卫保护钱包目录和独立文件。`src/living/body/plugin.ts:163-189`、`src/living/body/room.ts:139-167,178-185`、`src/living/economy/plugin.ts:27,315-325`、`src/living/economy/access.ts:62-108`、`src/core/initialization.ts:8-10,41-46`、`src/core/workspace.ts:340-373`
+
+**离线迁移 `0003-economy-marker`**
+
+- 新建 `scripts/migrate/steps/0003-economy-marker.mjs`。共用冻结 `ECONOMY_STORAGE_STEP`，`from` 为 `HOME_STORAGE_STEP.to`，`to` 将 `core/living` 一起升为 `3`，其余键及清单 `schemaVersion:1` 照旧。Core 删除旧键，Living 增加两个持久目标，两个版本都需推进。运行时和离线脚本共用构建后的步骤契约，保留 `0001/0002` 原契约。`src/core/storage-migration.ts:13-33,40-52`、`scripts/migrate/context.mjs:24-33`、`scripts/migrate/steps/0001-storage-manifest.mjs:12-18`、`arch/storage.json:2-4`
+- 复用已验证备份、停写检查、Repo 互斥和迁移租约。`complete` 在 SQLite 私有副本上观察目标。`apply` 只用 `file:` URI `mode=rw` 打开已存在的 Core 和钱包库，校验文件及 sidecar、`meta.schema='1'`、钱包 `identity` 和所需表，写事务内复核。禁用 `EconomyStore` 初始化入口。缺库报 `economy-database-missing`，空壳、坏库和错 schema 报 `economy-database-invalid`。`.node-version:1`、`scripts/migrate/{context.mjs:11-22,35-45,runner.mjs:87-110}`、`scripts/lib/repo-storage.mjs:14-29`、`src/living/economy/store.ts:79-118`
+- 精确枚举 `economy.initialized:` 前缀。多条报 `economy-marker-multiple`，坏值报 `economy-marker-invalid`，唯一条的键后缀、`companionId` 或 `path` 与当前绑定不符，以及新证据异身份，报 `economy-marker-binding-mismatch`。失败保留原键。盘点复用匹配规则，在 Core 库项只报 `economyInitialized: {rows, matchesCurrentBinding}`，后一项仅在唯一一条且完全匹配时为真。诊断只出固定原因码和说明。`src/living/economy/plugin.ts:89-118`、`scripts/migrate/inventory.mjs:13-31,58-68`、`scripts/migrate/errors.mjs:22-32`
+- 新段在备份校验后、动数据前记录 `economyAdopted`，有旧键或已采用证据即置真。`complete` 要求源键为零，且两份新证据同绑定并有有效钱包库，或从未采用。零源、无证据、无库且日志未记已采用才算从未采用，空目录和旧菜园可以存在。日志记过已采用而源已删、目标有缺失，报 `migration-inconsistent`，不从残件重建。新装 v3 无日志时也可按这两种合法形状通过。`docs/plans/stage2a-merge.md:670,789-792,837,1334`、`scripts/migrate/runner.mjs:32-79,102-126`、`src/core/storage-migration.ts:79-114`
+- `apply` 按三步写。① 钱包库事务写同绑定标记，`FULL COMMIT` 后关库并同步目录。② `atomicWrite` 独立证据，确认文件和目录已同步。③ 再复核两个目标及唯一源，Core 事务按键和值删除，`FULL COMMIT` 后关库。重试复核并复用已耐久的同值目标。runner 在三件事均通过 `complete` 后写 v3 清单，再写 `done/skip`。`scripts/migrate/io.mjs:22-40`、`scripts/migrate/steps/0002-home-identity.mjs:63-80`、`scripts/migrate/runner.mjs:115-134`
+- `CoreWorkspace` 用三步表判定旧版，显式新装和同版本初始化标记直接用 v3。可迁移的 v2 报 `storage-version-outdated`，离线准入接不住的仍报 `binding-not-migratable`。在途段仍需原路径、原备份和匹配步骤集，完成后重启。已收尾前缀复查继续按步骤判定，`0002` 保留有效 Core 身份口径，真正开始过的当轮步骤保留严格口径。`0003` 目标丢失时 `status` 为 `inconsistent`，续做及开新段拒绝且保留原完成记录。`src/core/workspace.ts:188-266,284-290,455-461`、`scripts/migrate/runner.mjs:38-79,115-126`、`scripts/migrate/steps/0002-home-identity.mjs:47-59`、`src/console/settings.ts:245-257`
+
+**Store 去重**
+
+- 新建 `src/core/sqlite.ts`，提供 `setSqliteMeta(db: DatabaseSync, key: string, jsonText: string): void` 和 `closeSqliteLease(db: DatabaseSync, lockPath: string, lockToken: string): void`。两边 `setMeta` 保留原可见性，传 `canonical(value)` 执行同一 UPSERT，事务仍由调用者管理。两边 `close` 保留已关闭短路和先置 `closed`，再由函数关库、仅删除本实例 token 的锁。`src/core/storage.ts` 只改这两个方法体及必要 import。`src/core/storage.ts:31-44,165-167,182-186,201-206`、`src/living/economy/store.ts:124-146,498`
+- `tests/core/sqlite.test.ts` 新增实际双 Store 回归，核对标记原始 JSON、覆盖及事务回滚、重复关闭、锁释放和不同 token 保留。用已有钱包提交、事实确认及卸载重挂测试验证调用链。构造失败清理与 Core 恢复各走原入口。`src/core/storage.ts:109,121-159`、`tests/economy/economy-recovery.test.ts:17-39,137-160`、`tests/living/living-lifecycle.test.mjs:863-899`
+
+**提交、允许文件与旧断言**
+
+每提交可构建并过相关快测，最多 15 个手写文件、600 行加删。`dist/src/**`、工具收紧的基线随提交且不计数。高风险为 `src/core/{storage,workspace}.ts` 和 `scripts/migrate/**`。`scripts/lib/**` 计划只读，需改就停下对齐。`AGENTS.md:49-64`、`docs/plans/stage2a-merge.md:677,848`
+
+1. 去重。`src/core/{sqlite,storage}.ts`、`src/living/economy/store.ts`、`tests/core/sqlite.test.ts`。`src/core/storage.ts:165-167,201-206`、`src/living/economy/store.ts:146,498`
+2. 实现离线步骤，用显式三步集先验。`src/core/storage-migration.ts`、`src/living/economy/adoption.ts`、`scripts/migrate/{runner,errors}.mjs`、`scripts/migrate/steps/0003-economy-marker.mjs`、`tests/migrate/{offline-helpers.mjs,economy-marker.test.mjs}`。`scripts/migrate/runner.mjs:13-16,87-98`、`tests/migrate/offline-helpers.mjs:11-28`
+3. 准备历史步骤夹具和盘点。`scripts/migrate/inventory.mjs`、`tests/migrate/{helpers,migration-child}.mjs`、`tests/migrate/{compatibility,crash,home-flow,inventory,inventory-paths,metadata-normal}.test.mjs`、`tests/arch/known-violations.test.mjs`。`tests/migrate/helpers.mjs:22-27`、`tests/migrate/migration-child.mjs:12-21,50-55`、`tests/arch/known-violations.test.mjs:53-62`
+4. 原子切换版本、登记和运行时。`src/core/workspace.ts`、`src/living/economy/{adoption,store,types,plugin,access}.ts`、`src/living/body/plugin.ts`、`scripts/migrate/runner.mjs`、`arch/storage.json`、`tests/core/workspace.test.ts`、`tests/migrate/{compatibility,settlement}.test.mjs`、`tests/behavior-list/families.test.mjs`、`tests/manual/room-refresh-window.mjs`。`src/core/workspace.ts:40,188-190,459`、`tests/migrate/settlement.test.mjs:19-21,54-60`、`tests/behavior-list/families.test.mjs:126-151`
+5. 联跑和回退。`tests/behavior-list/{domains.test.mjs,index.json}`、`tests/migrate/{binding,crash,home-flow}.test.mjs`、`tests/migrate/home-rollback.mjs`、`tests/{infrastructure/first-install,living/living-lifecycle,arch/storage-locations}.test.mjs`。`tests/migrate/crash.test.mjs:236-284`、`tests/migrate/home-rollback.mjs:54-120`、`tests/behavior-list/index.json:195-204`
+6. 本批止于采用证据、迁移和两方法去重。旧菜园原件、Body 检查点格式、钱包结算、home 协议及公开服务沿用现有实现。历史键只由离线工具处理。发布、真实数据、第三层切换和词表统一归后续批次。`docs/plans/stage2a-merge.md:656-679,758-782,792,816`、`AGENTS.md:54-63`
+
+- **预先声明的断言调整**　1B 专测仍显式选 `0001`，第 4 批专测显式选前两步或按 `id` 取 `0002`，保留已收尾、在途、镜像字节和拒绝续做断言。全步骤入口断言三个步骤及 v3。门禁测试把「当前」改为 v3，增加 v2 待迁移，保留旧包回退后当前 Core 拒写、完整迁移后实际召回和 Bank 逻辑相等。`tests/migrate/{normal.test.mjs:16-43,59-61,metadata-normal.test.mjs:38-52,crash.test.mjs:140-168,236-283,home-flow.test.mjs:76-117,rollback.test.mjs:93-103}`、`tests/core/workspace.test.ts:21-74`
+- **盘点断言**　旧形状夹具在停写后只置回原 Core 键、移除两份新证据。`inventory` 的布尔断言换为精确条数和匹配断言。`compatibility` 的登记数 `52→53`，旧副本精确少 `economy-adoption`，迁移后覆盖齐全。路径测试用原生最新副本，保留零差异和原树字节不变。R5 旧违规样例在测试自己的声明里保留旧 selector 和原断言。`tests/migrate/{helpers.mjs:22-27,inventory.test.mjs:12-32,inventory-paths.test.mjs:11-36,compatibility.test.mjs:22-32}`、`tests/arch/{helpers.mjs:13-19,known-violations.test.mjs:53-62}`
+
+**手写 host / workspace 替身**
+
+沿用现有 `status/storageId/runtime.config` 接点，无新增 CoreWorkspace 方法。手动 Room 夹具补 `companionId`，其余按下列接点核对并用门禁收齐，保留断言。第 4 批漏测的 `homeScope/readCompanionHome/retainedWritesAllowed` 夹具纳入快测。`src/living/economy/plugin.ts:85-90`、`docs/plans/stage2a-merge.md:1073,1349`
+
+- Body / Economy：`tests/behavior/activity-playback.test.ts:76`、`tests/behavior/behavior-scheduling.test.ts:33`、`tests/behavior/garden-clock-continuity.test.ts:30`、`tests/behavior/room-garden-json.test.ts:48`、`tests/economy/economy-recovery.test.ts:140`、`tests/manual/room-refresh-window.mjs:22`
+- Life：`tests/life/life-body.test.ts:80,168`、`tests/life/life-clock-intent.test.ts:19`、`tests/life/life-desktop-integration.test.ts:30`、`tests/life/life-domain-integration.test.ts:33`、`tests/life/life-sleep-continuity.test.ts:26`
+- Life 其余：`tests/life/autonomous-life.test.ts:207`、`tests/life/context-overview.test.ts:26`、`tests/life/life-fact-runtime.test.mjs:35`、`tests/life/life-media.test.mjs:75,101`、`tests/life/life-memory-integration.test.ts:29`、`tests/life/life-review-files.test.ts:17`、`tests/life/life-review-runtime.test.mjs:25,33`、`tests/life/review-continuation.test.ts:20`、`tests/life/voice-and-life-library.test.ts:35,57`
+- 回归：`tests/regressions/audit-garden-ui.test.ts:60`、`tests/regressions/audit-r3-body-voice.test.mjs:28,63`、`tests/regressions/audit-r4-wake-route.test.mjs:59`、`tests/regressions/audit-r5-garden-clock.test.mjs:29`、`tests/regressions/mapped-playback-context.test.ts:31,54`、`tests/regressions/mapped-refresh-convergence.test.mjs:47`
+- 其余回归：`tests/regressions/audit-desktop.test.ts:27`、`tests/regressions/audit-r2-desktop-policy.test.ts:20`、`tests/regressions/audit-r6-memory-scope.test.mjs:34,168`、`tests/regressions/audit-r7-channel-nudge.test.ts:21,169`、`tests/regressions/audit-transcripts.test.ts:25`、`tests/regressions/mapped-platform-admission.test.mjs:27`、`tests/regressions/mapped-playback-tap.test.mjs:149`、`tests/regressions/room-refresh.test.mjs:17`
+- Core、Desktop、Room：`tests/core/history-maintenance.test.ts:31,104,160`、`tests/core/capabilities.test.mjs:120`、`tests/desktop/desktop-features.test.ts:106`、`tests/desktop/pet-platform.test.mjs:24`、`tests/room/room-voice.test.ts:33`
+
+**验收、声明与文档**
+
+- `domains.test.mjs` 复用真实 Cordis 夹具，索引登记五种拒绝复活：仅挂 Economy 已交易且 Body 从未加载后丢库、整个 `data/economy/` 丢失、换成空壳、旧菜园仍有资源、换成异绑定库或证据。断言原文件和旧菜园字节保留、没有替代库或旧钱包写入。现有两条缺库断言原样保留。`first-install` 复用失败初始化夹具，分别验库未提交时拒写、库已提交时同进程及重启重试只复用一次。`tests/behavior-list/domains.test.mjs:98-103`、`tests/behavior-list/entries-lifecycle.test.mjs:37-57,243-260`、`tests/economy/economy-recovery.test.ts:130-135`、`tests/infrastructure/first-install.test.mjs:63-82`
+- `economy-marker.test.mjs` 用 `offlineFixture` 验迁移前后源条数、两份目标、只读检查及坏库、错绑定、多源拒绝。`crash.test.mjs` 复用 `migration-child` 跑真实 `0003`，四点为备份校验后段头前、删源提交后清单前、清单落盘后 `done` 前、`done` 落盘后。另在两次目标写之间及删源前各杀一次。核对原备份哈希、目标与源、无重复结算，并删两目标验证连续两次拒绝且日志不变。`tests/migrate/migration-child.mjs:50-76`、`tests/migrate/crash.test.mjs:15-25,140-168,236-284`、`scripts/migrate/runner.mjs:102-134`
+- `home-flow.test.mjs` 用 `keepStorageManifest` 交叉覆盖新装从未采用与仅挂 Economy 已采用、home 镜像缺 ID 与滞后 ID。三步 `status` 完成、`plan` 空、`run` 跳过已完成目标，重启 `ready` 且原 home、钱包不变。`binding.test.mjs` 加 v2 就绪形状与 `inspectRepoBinding` 同口径，保留原拒写和旧步骤集提示。`tests/migrate/home-flow.test.mjs:94-118`、`tests/migrate/binding.test.mjs:131-172`
+- `settlement.test.mjs` 在 v3 准备待结算并留备份，跑原基线恢复，再还原待结算副本、转换为真实旧标记形状跑完整迁移。保留 `recover()` 的原操作号、饥饿值、库存、单次扣账及 `deepEqual`。`families.test.mjs` 在同一合成绑定上复跑 G9 原断言，并核对源键已删。`tests/migrate/settlement.test.mjs:14-60`、`tests/behavior-list/families.test.mjs:126-151,155-229`
+- `home-rollback.mjs` 复用隔离检出的 `/tmp/her-world-v020` 和两份备份。用真实旧包生成及备份，迁移后换回旧包再恢复，核对 Core 旧键恢复、两份新证据消失，用旧 Economy 读出原余额、库存和流水，保留聊天、召回、home、绑定及送达额度花费断言。Claude 合并前单跑，结果给主人过目。`tests/migrate/home-rollback.mjs:16-35,45-120`、`docs/plans/stage2a-merge.md:638,831-837,870`
+- R5 当前实查 2 写、4 读。切换后筛 `src/living/`、`core.sqlite#meta` 和 `economy.initialized:*`，这六处全部消失。R5 对 `this.setMeta` 和动态路径识别有限，另核对 Store 实际提交与迁移后的 SQL 行数。R1–R4、R8 基线只减。`src/living/economy/plugin.ts:95-117,322`、`src/living/body/plugin.ts:183`、`scripts/arch/check.mjs:16-17,44-52`、`scripts/arch/lib/storage.mjs:28-39,53-64`
+- 本批更新 `arch/storage.json`、行为索引和方案执行结果。Claude 合并时更新 `docs/architecture.md:178,184-185` 的归属和顺序、`docs/development.md:70,80,99-109` 的第三步和诊断及 `docs/product.md:390` 的合成验收状态。完整升级回退、决定归档和正式包验收归第 6 批。演练或相关行为两轮失败按阶段停止条件处理。`docs/plans/stage2a-merge.md:758-782`、`docs/product.md:389-397`
+
+**快测**
+
+- `pnpm run build && pnpm run check:arch -- --report`。按提交跑 `node --test tests/migrate/*.test.mjs tests/arch/{known-violations,storage-locations}.test.mjs tests/behavior-list/{domains,entries-lifecycle,families,index}.test.mjs tests/infrastructure/first-install.test.mjs tests/living/living-lifecycle.test.mjs dist/tests/{core/{sqlite,workspace},economy/economy-recovery}.test.js`。`AGENTS.md:49-54`、`package.json:91-92,125-127`、`docs/plans/stage2a-merge.md:852-868`
+- 切换后加 `node --test dist/tests/{behavior/{activity-playback,behavior-scheduling,garden-clock-continuity,room-garden-json},life/{life-body,life-clock-intent,life-desktop-integration,life-domain-integration,life-sleep-continuity},regressions/{audit-transcripts,audit-garden-ui,mapped-playback-context}}.test.js tests/regressions/{audit-r3-body-voice,audit-r4-wake-route,audit-r5-garden-clock,mapped-refresh-convergence}.test.mjs`。回退用 `HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs`。合并前在允许本机回环的环境跑 `pnpm run verify` 和 `pnpm run test:behavior-list`。`docs/plans/stage2a-merge.md:1073,1375`、`scripts/checks/verify.mjs:13-23`、`AGENTS.md:49-54`
+
 ---
 
 ## 第 6 批：收尾
