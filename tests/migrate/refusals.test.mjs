@@ -7,10 +7,12 @@ import { runMigration } from '../../scripts/migrate/runner.mjs';
 import { expectedManifest, loadInstallation } from '../../scripts/migrate/context.mjs';
 import { fileHashes } from '../../scripts/lib/repo-storage.mjs';
 import { variants, fixture, mockDsh, read, refusedCli } from './helpers.mjs';
+import { bootstrapSteps, selectBootstrapCli } from './migration-child.mjs';
 
 for (const variant of [...variants,'offline-metadata']) test(`${variant}: refusals retain all live bytes before data writes`, {timeout:60000}, async t => {
+  selectBootstrapCli(t);
   mockDsh(t); const f = await (variant === 'offline-metadata' ? offlineFixture(t) : fixture(t,variant)), backup = join(f.out,'backup');
-  const run = options => runMigration({installation:f.installation,backup,...options});
+  const run = options => runMigration({installation:f.installation,backup,...options},bootstrapSteps);
   async function refuses(code, options) {
     const before = fileHashes(f.managed);
     await assert.rejects(run());

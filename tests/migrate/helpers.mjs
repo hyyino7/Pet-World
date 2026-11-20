@@ -46,6 +46,9 @@ export async function recall(f) {
     assert.ok(!(await host.native.memory.findForOwner(f.target.id, 'SYNTHETIC_WITHDRAWN_817')).items.some(row => row.id === f.withdrawnId));
   } finally { await host.close(); }
 }
+export async function coreAtLegacyVersion(f) {
+  await coreReady(f); await recall(f);
+}
 export function memoryLogical(f) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'migrate-memory-')));
   const source = join(f.data, 'memory/data/memory.db'), copy = join(root, 'memory.db');

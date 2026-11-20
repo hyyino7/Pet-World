@@ -7,13 +7,15 @@ import { DatabaseSync } from 'node:sqlite';
 import { runMigration, migrationStatus } from '../../scripts/migrate/runner.mjs';
 import { verifyOfflineBackup, restoreOfflineBackup } from '../../scripts/lib/offline-backup.mjs';
 import { hash } from '../../scripts/migrate/io.mjs';
-import { variants, fixture, planFor, mockDsh, coreReady, recall, memoryLogical, read } from './helpers.mjs';
+import { variants, fixture, planFor, mockDsh, coreAtLegacyVersion, coreReady, recall, memoryLogical, read } from './helpers.mjs';
+import { bootstrapSteps, selectBootstrapCli } from './migration-child.mjs';
 
 for (const variant of variants) test(`${variant}: migration, actual recall and protected-journal rollback`, {timeout:60000}, async t => {
+  selectBootstrapCli(t);
   mockDsh(t); const f = await fixture(t, variant), backup = join(f.out, 'backup');
-  await recall(f); const before = memoryLogical(f);
+  await coreAtLegacyVersion(f); const before = memoryLogical(f);
   const manifestBefore = readFileSync(join(f.managed, 'manifest.json'));
-  assert.deepEqual(migrationStatus(f.installation), {
+  assert.deepEqual(migrationStatus(f.installation, bootstrapSteps), {
     steps:[{id:'0001-storage-manifest',state:'pending'}], truncated:false, segment:'none',
   });
   const cli = ['--import',resolve('tests/migrate/dsh-probe.mjs'),resolve('scripts/migrate/companion-migrate.mjs')];
@@ -34,10 +36,10 @@ for (const variant of variants) test(`${variant}: migration, actual recall and p
   assert.equal(header.backup, backup); assert.equal(header.backupHash, hash(readFileSync(join(backup,'manifest.json'))));
   verifyOfflineBackup(backup, planFor(f));
   assert.deepEqual(memoryLogical(f), before, 'Migration never changes Bank logical content');
-  await coreReady(f); await recall(f);
+  await coreAtLegacyVersion(f);
   assert.deepEqual(readFileSync(join(f.managed,'manifest.json')), manifestBefore, 'Identity fingerprint is untouched');
-  assert.equal(migrationStatus(f.installation).steps[0].state, 'complete');
-  await runMigration({installation:f.installation,resume:true});
+  assert.equal(migrationStatus(f.installation, bootstrapSteps).steps[0].state, 'complete');
+  await runMigration({installation:f.installation,resume:true}, bootstrapSteps);
   assert.equal(readFileSync(journalFile,'utf8'),journal);
   // Actual restore keeps latest delivery/quota receipts and spend, and treats
   // profile configuration as a reference rather than a replacement root.
@@ -54,5 +56,7 @@ for (const variant of variants) test(`${variant}: migration, actual recall and p
   assert.equal(read(join(f.data,'life/life.json')).spend.yuan,2);
   assert.match(readFileSync(join(f.profile,'cordis.patch.yml'),'utf8'),/Later/);
   assert.deepEqual(memoryLogical(f),before);
+  await coreAtLegacyVersion(f);
+  await runMigration({installation:f.installation,backup:join(f.out,'full-migration')});
   await coreReady(f); await recall(f);
 });

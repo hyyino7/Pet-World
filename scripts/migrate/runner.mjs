@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
+import { isStepSettled } from '../../dist/src/core/storage-migration.js';
 import { acquireMigrationMutex } from '../companion-backup.mjs';
 import { createOfflineBackup, verifyOfflineBackup } from '../lib/offline-backup.mjs';
 import { loadInstallation, manifestVersion, assertOffline } from './context.mjs';
@@ -10,8 +11,9 @@ import { acquireLock, appendJournal, hash, regular } from './io.mjs';
 import { checked, MigrationError, requireMigration } from './errors.mjs';
 import { contractFor, journalBinding, settled, validateJournal } from './journal.mjs';
 import manifestStep, { writeManifest } from './steps/0001-storage-manifest.mjs';
+import homeIdentityStep from './steps/0002-home-identity.mjs';
 
-export const steps = [manifestStep];
+export const steps = [manifestStep, homeIdentityStep];
 
 function verifySaved(context, header) {
   checked('backup-invalid', () => {
@@ -21,8 +23,8 @@ function verifySaved(context, header) {
   });
 }
 
-function targetComplete(step, context) {
-  const complete = step.complete(context);
+function targetComplete(step, context, recorded = false) {
+  const complete = step.complete(context, {recorded});
   assert.equal(typeof complete, 'boolean', 'Step completion must synchronously observe its persisted target');
   return complete;
 }
@@ -35,8 +37,8 @@ export function migrationStatus(installation, selected = steps, { plan = false }
   const result = {steps:reported.map((step, index) => {
     const event = previous?.states.get(step.id);
     if (!isDeepStrictEqual(step, contract[index])) return { id:step.id, state:'unverified' };
-    const complete = version > index && targetComplete(selected[index], context);
-    const recordedComplete = index < journal.settledStepCount || ['done','skip'].includes(event);
+    const recordedComplete = index < journal.settledStepCount || isStepSettled(event);
+    const complete = version > index && targetComplete(selected[index], context, recordedComplete);
     const state = complete ? 'complete' : recordedComplete ? 'inconsistent' : event ?? 'pending';
     return { id:step.id, state };
   }), truncated:journal.truncated};
@@ -72,7 +74,7 @@ function checkAdmission(context, journal, selected, contract, { resume, backup }
 }
 
 function assertPreviousTargets(context, selected, count, version) {
-  requireMigration(version >= count && selected.slice(0, count).every(step => targetComplete(step, context)), 'migration-inconsistent');
+  requireMigration(version >= count && selected.slice(0, count).every(step => targetComplete(step, context, true)), 'migration-inconsistent');
 }
 
 function acquireMutex(repo) {
@@ -111,7 +113,9 @@ export async function runMigration(options, selected = steps) {
       const alreadySettled = resume && journal.settledStepCount === selected.length;
       for (const [index, step] of (alreadySettled ? [] : selected).entries()) {
         try {
-          const complete = index < journal.settledStepCount || targetComplete(step, context);
+          const recorded = resume && isStepSettled(journal.last?.states.get(step.id));
+          const complete = index < journal.settledStepCount || targetComplete(step, context, recorded);
+          requireMigration(!recorded || complete, 'migration-inconsistent');
           if (!complete) {
             record({event:'start', step:step.id});
             await step.apply(context);

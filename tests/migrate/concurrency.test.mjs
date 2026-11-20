@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createOfflineBackup } from '../../scripts/lib/offline-backup.mjs';
 import { variants, fixture, cli, planFor } from './helpers.mjs';
+import { selectBootstrapCli } from './migration-child.mjs';
 
 const restoreCommand = (f, backup) => ['--import',resolve('tests/migrate/dsh-probe.mjs'),
   resolve('scripts/companion-backup.mjs'),'restore','--installation',f.installation,'--backup',backup,'--before',join(f.out,'before-restore')];
@@ -36,6 +37,7 @@ for (const variant of [...variants,'offline-metadata']) test(`${variant}: concur
 });
 
 for (const variant of [...variants,'offline-metadata','restored-stale-lock']) test(`${variant}: two concurrent runs pass preflight and only one acquires the lease`, {timeout:60000}, async t => {
+  selectBootstrapCli(t);
   const f = await (variants.includes(variant) ? fixture(t,variant) : offlineFixture(t)), gate = join(f.out,'lock-gate');
   if (variant === 'restored-stale-lock') {
     const dead = spawn(process.execPath,['-e','']);
