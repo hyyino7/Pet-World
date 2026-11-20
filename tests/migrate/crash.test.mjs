@@ -10,7 +10,7 @@ import { hash } from '../../scripts/migrate/io.mjs';
 import { migrationStatus, runMigration } from '../../scripts/migrate/runner.mjs';
 import { variants, fixture, mockDsh, read, cli, refusedCli } from './helpers.mjs';
 import { offlineFixture } from './offline-helpers.mjs';
-import { bootstrapSteps, selectBootstrapCli } from './migration-child.mjs';
+import { bootstrapSteps, homeSteps, selectBootstrapCli } from './migration-child.mjs';
 
 const child = async (f, backup, point, mode = '', suite = '') => {
   const processChild = spawn(process.execPath,
@@ -149,8 +149,8 @@ test('resume keeps a completed step recorded when its target is lost mid-segment
   const before = events();
   assert.equal(before.at(-1).event, 'done');
   for (let attempt = 0; attempt < 2; attempt++) {
-    await assert.rejects(runMigration({installation:f.installation, resume:true}), {code:'migration-inconsistent'});
-    assert.equal(migrationStatus(f.installation).steps[0].state, 'inconsistent');
+    await assert.rejects(runMigration({installation:f.installation, resume:true}, homeSteps), {code:'migration-inconsistent'});
+    assert.equal(migrationStatus(f.installation, homeSteps).steps[0].state, 'inconsistent');
     assert.deepEqual(events(), before);
     assert.equal(existsSync(manifest), false);
   }
@@ -163,8 +163,8 @@ test('an interrupted 0002 still requires the original mirror after the manifest 
   const interrupted = await child(f, join(f.out, 'backup'), 'manifest', '', 'home');
   assert.equal(interrupted.signal, 'SIGKILL', interrupted.stderr);
   writeFileSync(mirror, '{"version":1,"homeSessionId":"stale-session"}\n');
-  assert.deepEqual(migrationStatus(f.installation).steps.at(-1), {id:'0002-home-identity', state:'start'});
-  await assert.rejects(runMigration({installation:f.installation, resume:true}), {code:'home-identity-conflict'});
+  assert.deepEqual(migrationStatus(f.installation, homeSteps).steps.at(-1), {id:'0002-home-identity', state:'start'});
+  await assert.rejects(runMigration({installation:f.installation, resume:true}, homeSteps), {code:'home-identity-conflict'});
 });
 
 async function copyAndBind(f, name) {
@@ -247,14 +247,14 @@ for (const point of ['backup','after','manifest','complete']) test(`0002 survive
   const backupHash = hash(readFileSync(join(backup, 'manifest.json')));
   assert.equal(existsSync(join(f.data, 'migration.lock')), true);
   assert.equal(hash(readFileSync(life)), lifeHash);
-  const status = migrationStatus(f.installation);
+  const status = migrationStatus(f.installation, homeSteps);
   const during = readFileSync(log, 'utf8');
   if (point === 'backup') {
     assert.equal(during, originalLog);
     assert.equal(read(manifest).modules.core, 1);
     assert.equal(status.segment, 'settled');
     const next = join(f.out, 'new-backup');
-    await runMigration({installation:f.installation, backup:next});
+    await runMigration({installation:f.installation, backup:next}, homeSteps);
     assert.equal(header(log).backup, next);
   } else {
     assert.equal(header(log).backupHash, backupHash);
@@ -269,16 +269,16 @@ for (const point of ['backup','after','manifest','complete']) test(`0002 survive
   assert.equal(hash(readFileSync(join(backup, 'manifest.json'))), backupHash);
   assert.equal(hash(readFileSync(life)), lifeHash);
   assert.equal(existsSync(join(f.data, 'migration.lock')), false);
-  assert.deepEqual(migrationStatus(f.installation).steps.at(-1), {id:'0002-home-identity', state:'complete'});
+  assert.deepEqual(migrationStatus(f.installation, homeSteps).steps.at(-1), {id:'0002-home-identity', state:'complete'});
   const db = new DatabaseSync(dbFile);
   try {
     assert.equal(db.prepare("SELECT count(*) AS n FROM records WHERE kind='companion-home'").get().n, 1);
     if (point === 'complete') db.prepare("DELETE FROM records WHERE kind='companion-home' AND id=?").run(f.storageId);
   } finally { db.close(); }
   if (point === 'complete') {
-    assert.deepEqual(migrationStatus(f.installation).steps.at(-1), {id:'0002-home-identity', state:'inconsistent'});
-    await assert.rejects(runMigration({installation:f.installation, resume:true}), {code:'migration-inconsistent'});
-    await assert.rejects(runMigration({installation:f.installation, backup:join(f.out, 'refused')}), {code:'migration-inconsistent'});
+    assert.deepEqual(migrationStatus(f.installation, homeSteps).steps.at(-1), {id:'0002-home-identity', state:'inconsistent'});
+    await assert.rejects(runMigration({installation:f.installation, resume:true}, homeSteps), {code:'migration-inconsistent'});
+    await assert.rejects(runMigration({installation:f.installation, backup:join(f.out, 'refused')}, homeSteps), {code:'migration-inconsistent'});
     assert.equal(existsSync(join(f.out, 'refused')), false);
   }
 });

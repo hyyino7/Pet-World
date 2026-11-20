@@ -9,7 +9,7 @@ import { fileHashes } from '../../scripts/lib/repo-storage.mjs';
 import { fixture, planFor, variants } from './helpers.mjs';
 
 for (const variant of variants) test(`${variant}: symlinked temporary parent preserves inventory paths and all source files`, {timeout:60000}, async t => {
-  const f = await fixture(t, variant);
+  const f = await fixture(t, variant, {keepStorageManifest:true});
   const temporary = realpathSync(mkdtempSync(join(tmpdir(), 'inventory-paths-')));
   t.after(() => rmSync(temporary, {recursive:true, force:true}));
   const physical = join(temporary, 'physical'), alias = join(temporary, 'alias');

@@ -8,9 +8,10 @@ import { DatabaseSync } from 'node:sqlite';
 import { storage } from './context.mjs';
 import { assertStopped, copyDatabase } from '../lib/repo-storage.mjs';
 import { inventoryPlan } from './inventory-plan.mjs';
+import { legacyEconomyMarkerProblem, legacyEconomyRows } from './steps/0003-economy-marker.mjs';
 
 const quote = name => '"' + name.replaceAll('"', '""') + '"';
-function sqliteMetadata(file, core) {
+function sqliteMetadata(file, binding) {
   // Even read-only SQLite can create SHM files. Only open a disposable copy,
   // including WAL, so inventory never checkpoints or changes the source tree.
   const scratch = mkdtempSync(join(tmpdir(), 'companion-inventory-'));
@@ -21,11 +22,13 @@ function sqliteMetadata(file, core) {
     try {
       const names = db.prepare("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name").all().map(row => row.name);
       const result = {tables:names.map(name => ({name, rows:db.prepare(`SELECT count(*) AS n FROM ${quote(name)}`).get().n}))};
-      if (core) {
+      if (binding) {
         const kinds = storage.entries.flatMap(row => row.selector?.kind ? [row.selector.kind] : []);
         result.kinds = kinds.map(kind => ({kind, rows:db.prepare('SELECT count(*) AS n FROM records WHERE kind=?').get(kind).n}));
         result.unknownKinds = db.prepare(`SELECT count(DISTINCT kind) AS n FROM records WHERE kind NOT IN (${kinds.map(() => '?').join(',')})`).get(...kinds).n;
-        result.economyInitialized = db.prepare("SELECT count(*) AS n FROM meta WHERE key LIKE 'economy.initialized:%'").get().n > 0;
+        const rows = legacyEconomyRows(db);
+        result.economyInitialized = {rows:rows.length,
+          matchesCurrentBinding:rows.length === 1 && !legacyEconomyMarkerProblem(rows[0], binding)};
       }
       return result;
     } finally { db.close(); }
@@ -64,7 +67,8 @@ export function inventory(installation) {
       directories.push(name);
       for (const child of readdirSync(path).sort()) visit(root, join(path, child));
     } else {
-      const metadata = /\.(?:sqlite|db)$/.test(path) ? sqliteMetadata(path, path === join(context.plan.coreDirectory, 'core.sqlite')) : {};
+      const binding = path === join(context.plan.coreDirectory, 'core.sqlite') ? context.plan : undefined;
+      const metadata = /\.(?:sqlite|db)$/.test(path) ? sqliteMetadata(path, binding) : {};
       files.push({path:name, bytes:stat.size, ...metadata});
     }
   }

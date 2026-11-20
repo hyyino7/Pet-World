@@ -4,10 +4,9 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { restoreOfflineBackup } from '../../scripts/lib/offline-backup.mjs';
-import { storage } from '../../scripts/migrate/context.mjs';
 import { offlineFixture } from './offline-helpers.mjs';
 import { cli, mockDsh, planFor, refusedCli } from './helpers.mjs';
-import { selectBootstrapCli } from './migration-child.mjs';
+import { homeSteps, selectBootstrapCli, selectHomeCli } from './migration-child.mjs';
 
 test('metadata migration: pending plan, completed status and retained rollback lease',async t => {
   selectBootstrapCli(t);
@@ -25,6 +24,7 @@ test('metadata migration: pending plan, completed status and retained rollback l
 });
 
 test('0002 copies the home identity and preserves the Life file byte for byte', async t => {
+  selectHomeCli(t);
   mockDsh(t);
   const f = await offlineFixture(t, false), backup = join(f.out, 'home-backup');
   const life = join(f.data, 'life/life.json');
@@ -39,7 +39,7 @@ test('0002 copies the home identity and preserves the Life file byte for byte', 
   assert.deepEqual(execute('plan').steps.at(-1), {id:step,state:'pending'});
   assert.deepEqual(execute('run', '--backup', backup).steps.at(-1), {id:step,state:'complete'});
   assert.deepEqual(JSON.parse(readFileSync(join(f.data, 'storage-manifest.json'), 'utf8')), {
-    schemaVersion:1, companionId:f.config.companionId, modules:storage.dataVersions,
+    schemaVersion:1, companionId:f.config.companionId, modules:homeSteps.at(-1).to,
   });
   assert.equal(readFileSync(life, 'utf8'), original);
   const db = new DatabaseSync(join(f.config.dataDir, 'core.sqlite'), {readOnly:true});
@@ -53,6 +53,7 @@ test('0002 copies the home identity and preserves the Life file byte for byte', 
 });
 
 test('0002 refuses to overwrite a conflicting Core record', async t => {
+  selectHomeCli(t);
   mockDsh(t);
   const f = await offlineFixture(t, false), life = join(f.data, 'life/life.json');
   const original = '{"version":1,"homeSessionId":"fixture-session"}\n';

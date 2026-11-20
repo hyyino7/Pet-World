@@ -5,6 +5,7 @@ import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {fileHashes} from '../../scripts/lib/repo-storage.mjs';
 import {loadInstallation} from '../../scripts/migrate/context.mjs';
+import {steps} from '../../scripts/migrate/runner.mjs';
 import homeStep from '../../scripts/migrate/steps/0002-home-identity.mjs';
 import {content} from '../../scripts/fixtures/synthetic-companion.mjs';
 import {settingsHandler} from '../../dist/src/console/settings.js';
@@ -76,7 +77,7 @@ test('旧存档只开普通 DSH 聊天，离线迁移后恢复原 home、聊天�
   await running.restart(() => {
     const migrated = cli(f,['run','--installation',f.installation,'--backup',join(f.out,'upgrade-backup')]);
     assert.equal(migrated.status,0,migrated.stderr);
-    assert.deepEqual(JSON.parse(migrated.stdout).steps.map(step => step.state),['complete','complete']);
+    assert.deepEqual(JSON.parse(migrated.stdout).steps,steps.map(({id}) => ({id,state:'complete'})));
     assert.deepEqual(readFileSync(life),mirror);
   });
   assert.equal(running.core.workspace.status().state,'ready');
@@ -107,10 +108,10 @@ for (const [label, mirror] of [['没有镜像 ID', {version:1}], ['镜像 ID 滞
         return JSON.parse(result.stdout).steps;
       };
       const step = {id:'0002-home-identity', state:'complete'};
-      assert.deepEqual(execute('status').at(-1), step);
+      assert.deepEqual(execute('status').find(row => row.id === step.id), step);
       assert.deepEqual(execute('plan'), []);
-      assert.deepEqual(execute('run', '--backup', join(f.out, 'new-init-backup')).at(-1), step);
-      assert.deepEqual(execute('status').at(-1), step);
+      assert.deepEqual(execute('run', '--backup', join(f.out, 'new-init-backup')).find(row => row.id === step.id), step);
+      assert.deepEqual(execute('status').find(row => row.id === step.id), step);
       assert.equal(readFileSync(mirrorPath, 'utf8'), body);
     });
     assert.equal(running.core.workspace.status().state, 'ready');
