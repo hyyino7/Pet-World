@@ -19,8 +19,9 @@ export declare class EconomyStore {
     private walletDirty;
     constructor(options: EconomyStoreOptions);
     private safeFile;
-    /** Cheap lease/inode validation for the hot Body adapter path. */
-    validate(): void;
+    private writeStorageMarker;
+    /** Validate wallet admission, including retained evidence, when reusing the open Store. */
+    validate(initializing?: boolean): void;
     private ensure;
     private transaction;
     private meta;

@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import type { ContractError } from '../contracts/common.js';
+import { closeSqliteLease, setSqliteMeta } from './sqlite.js';
 
 export class Rejection extends Error {
   constructor(readonly detail: ContractError) { super(detail.message); }
@@ -163,7 +164,7 @@ export class CoreStore {
     return row ? JSON.parse(row.value as string) as T : undefined;
   }
   setMeta(key: string, value: unknown): void {
-    this.db.prepare('INSERT INTO meta VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key, canonical(value));
+    setSqliteMeta(this.db, key, canonical(value));
   }
   get<T>(kind: string, key: string): T | undefined {
     const row = this.db.prepare('SELECT value FROM records WHERE kind=? AND id=?').get(kind, key);
@@ -201,7 +202,6 @@ export class CoreStore {
   close(): void {
     if (this.closed) return;
     this.closed = true;
-    this.db.close();
-    if (existsSync(this.lockPath) && readFileSync(this.lockPath, 'utf8') === this.lockToken) unlinkSync(this.lockPath);
+    closeSqliteLease(this.db, this.lockPath, this.lockToken);
   }
 }

@@ -1,6 +1,7 @@
 import { LivingView, type LivingPorts, type RecordCommandEffect } from '../index.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost, WorkspaceTarget } from '../../core/index.js';
+import type { CapabilityRegistration } from '../../contracts/tables.js';
 import type { PlannedActivity } from '../../contracts/behavior.js';
 import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomEconomyPort } from '../body/room.js';
@@ -13,7 +14,7 @@ export declare const economyStateToolDeclaration: {
     sources: readonly ("life" | "owner" | "review")[];
     historyOverview(_args: unknown, value: unknown): (Omit<import("./types.js").EconomySnapshot & {
         ledger: import("./types.js").LedgerEntry[];
-    }, "migration" | "configuration" | "ledger" | "inventory"> & {
+    }, "migration" | "ledger" | "configuration" | "inventory"> & {
         view: string;
         configurationRevision: number;
         inventory: import("./types.js").InventoryItem[];
@@ -31,16 +32,18 @@ export declare class CompanionEconomy {
     private readonly ctx;
     readonly host: PetCoreHost;
     private current?;
+    private preparationFailure?;
     private closed;
     private readonly living;
     private readonly inFlight;
     constructor(ctx: Context, host: PetCoreHost, ports?: LivingPorts | LivingView);
     private assertOpen;
     protectedDirectory(): string | undefined;
+    initializationFiles(target: WorkspaceTarget): readonly string[];
     private retainedGarden;
-    private bodyRequiresDatabase;
     /** Initialization is schema preparation only: no allowance, gifts or goals. */
     prepare(target: WorkspaceTarget, legacyFile?: string, initializing?: boolean): EconomyStore;
+    capabilityStatus(): ReturnType<CapabilityRegistration['status']>;
     private bound;
     private use;
     private gardenClock;

@@ -4,11 +4,27 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { DatabaseSync } from 'node:sqlite';
 import { createCore } from '../../dist/src/core/index.js';
+import { EconomyStore } from '../../dist/src/living/economy/store.js';
 import { value } from '../../scripts/fixtures/synthetic-companion.mjs';
 import { backupPlan } from '../../scripts/lib/offline-backup.mjs';
 
-export async function offlineFixture(t, memory = true, {keepStorageManifest = false} = {}) {
+export const economyPaths = f => ({core:join(f.config.dataDir, 'core.sqlite'),
+  database:join(f.data, 'economy/economy.sqlite'), adoption:join(f.data, 'living/economy-adoption.json')});
+
+export function legacyEconomy(f) {
+  const {core, database, adoption} = economyPaths(f), key = `economy.initialized:${f.storageId}`;
+  {
+    using db = new DatabaseSync(database);
+    db.prepare('DELETE FROM meta WHERE key=?').run('economy.initialized');
+  }
+  rmSync(adoption, {force:true});
+  using db = new DatabaseSync(core);
+  db.prepare('INSERT OR REPLACE INTO meta VALUES (?,?)').run(key, JSON.stringify({companionId:f.config.companionId, path:f.repo}));
+}
+
+export async function offlineFixture(t, memory = true, {keepStorageManifest = false, withLegacyEconomy = false} = {}) {
   const out = realpathSync(mkdtempSync(join(tmpdir(),'migration-metadata-')));
   t.after(() => rmSync(out,{recursive:true,force:true}));
   const repo = join(out,'repo'), home = join(out,'dsh'), profile = join(home,'profiles','fixture');
@@ -37,5 +53,11 @@ export async function offlineFixture(t, memory = true, {keepStorageManifest = fa
   write(join(plan.cacheDirectory,'fixture-session.json'),'{}');
   const installation = join(out,'installation.json');
   write(installation,JSON.stringify({status:'installed',packageInstalled:true,profileDir:profile,config}));
-  return {out,repo,home,profile,managed,data,config,target,installation,storageId};
+  const f = {out,repo,home,profile,managed,data,config,target,installation,storageId};
+  if (withLegacyEconomy) {
+    const wallet = new EconomyStore({workspacePath:repo, storageId, companionId:config.companionId});
+    try { wallet.grantMoney('fixture-grant', 17); } finally { wallet.close(); }
+    legacyEconomy(f);
+  }
+  return f;
 }

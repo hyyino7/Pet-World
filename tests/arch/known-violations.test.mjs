@@ -51,7 +51,13 @@ test('R4 直接写入、对象别名、解构别名和解构赋值都被抓到',
   assert.deepEqual(rows.map(r=>r.target),['host.native.lifeAdmission','host.native.roomAdmission','host.native.channelBoundary','host.native.lifeAdmission']);
 });
 test('R5 常量 kind 定位读写调用，区分拥有者和 Core 物理容器',t=>{
-  const result=workspace(t,{},'known-violations').scan();
+  const work=workspace(t,{},'known-violations');
+  const path='arch/storage.json', storage=JSON.parse(readFileSync(join(work.root,path),'utf8'));
+  Object.assign(storage.entries.find(entry=>entry.id==='economy-initialized'),{
+    paths:['.chatpet/data/core/core.sqlite'],container:'.chatpet/data/core/core.sqlite#meta',containerOwner:'core',selector:{table:'meta',key:'economy.initialized:*'},
+  });
+  work.write(path,JSON.stringify(storage));
+  const result=work.scan();
   const rows=result.writers;
   assert.deepEqual(rows.filter(r=>r.file.includes('channels/')).map(r=>[r.line,r.target,r.access,r.owner,r.containerOwner,r.violation]),[
     [4,'channel-received','读','channels','core',true],[5,'channel-received','写','channels','core',true],[6,'channel-usage','写','channels','core',true],

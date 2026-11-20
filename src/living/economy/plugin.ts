@@ -11,7 +11,8 @@ import { bytesDigest, canonical, check, digest, integer, Rejection } from '../..
 import { registerWorldContext } from '../../core/native/prompt.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
-import type { CompanionToolDeclaration } from '../../contracts/tables.js';
+import type { CapabilityRegistration, CompanionToolDeclaration } from '../../contracts/tables.js';
+import { CONTRACT_VERSION } from '../../contracts/version.js';
 import type { PlannedActivity } from '../../contracts/behavior.js';
 import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomEconomyPort, RoomFoodReservation } from '../body/room.js';
@@ -21,10 +22,11 @@ import { installEconomyAccessGuard } from './access.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
 import type { GardenClock } from './garden-clock.js';
 import { readLifeControl } from '../plan/control-file.js';
+import { bodyCheckpointDirectory, ECONOMY_ADOPTION_FILE, economyAdoptionPath, economyFile, inspectEconomyAdoption } from './adoption.js';
 
 type TradeKind = Exclude<NonNullable<PlannedActivity['economy']>['type'], 'consume'>;
 
-const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];
+const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json', ECONOMY_ADOPTION_FILE];
 const access = {mode:'bounded',detail:'余额与物品由程序结算。原生文件工具防误改；同一系统账户的命令和其他插件仍可访问文件。'} as const;
 export const economyStateToolDeclaration = {
   name:'pet_economy_state',sources:OWNER_LIFE_TOOL_SOURCES,
@@ -33,16 +35,11 @@ export const economyStateToolDeclaration = {
       &&Array.isArray(value.ledger)&&Array.isArray(value.catalog))return economyOverview(value as unknown as Parameters<typeof economyOverview>[0]);
   },
 } satisfies CompanionToolDeclaration;
-function localFile(path:string) {
-  const stat=lstatSync(path,{throwIfNoEntry:false});
-  check(!stat || stat.isFile()&&!stat.isSymbolicLink()&&stat.nlink===1,'Invalid retained garden file');
-  return stat;
-}
-
 /** One synchronous ledger per active Core binding. Body owns effect receipts;
  * this service owns money/items and never creates another assistant runtime. */
 export class CompanionEconomy {
   private current?: {key:string;binding:{target:WorkspaceTarget};store:EconomyStore};
+  private preparationFailure?: {key:string;error:unknown};
   private closed=false;
   private readonly living: LivingView;
   private readonly inFlight = new InFlight();
@@ -54,30 +51,21 @@ export class CompanionEconomy {
     const status=this.host.workspace.status();
     return status.target ? join(status.target.path,'.chatpet','data','economy') : undefined;
   }
+  initializationFiles(target:WorkspaceTarget):readonly string[] {
+    const root=join(target.path,'.chatpet'), data=join(root,'data');
+    try {
+      if ([root,data,join(data,'economy'),join(data,'living')].every(path=>lstatSync(path,{throwIfNoEntry:false})?.isDirectory())
+        && inventoryFiles.slice(1).every(path=>economyFile(join(root,path)))) return inventoryFiles;
+    } catch { /* Wallet admission reports invalid wallet files. */ }
+    return [];
+  }
   private retainedGarden(target:WorkspaceTarget, file?:string) {
-    const managed=join(target.path,'.chatpet','data');
-    const life=join(managed,'life'),behavior=join(managed,'behavior');
-    const owner=localFile(join(life,'home.json')) || localFile(join(life,'garden.json')) ? life : behavior;
-    const sourcePath=join(owner,'garden.json');
+    const sourcePath=join(bodyCheckpointDirectory(target.path),'garden.json');
     if(file)check(resolve(file)===sourcePath,'Garden authority path does not match the current Body owner');
-    const home=join(owner,'home.json'), database=join(managed,'economy','economy.sqlite');
-    const stat=localFile(home);
-    if(stat) {
-      check(stat.size<=32*1024*1024,'Body checkpoint is too large');
-      const saved=JSON.parse(readFileSync(home,'utf8'));
-      if(saved.economyGardenAuthority===true)check(localFile(database),'The authoritative economy database is missing; restore it before continuing');
-    }
-    const old=localFile(sourcePath);if(!old)return;
+    const old=economyFile(sourcePath);if(!old)return;
     check(old.size<=32*1024*1024,'Retained garden file is too large');
     const bytes=readFileSync(sourcePath);
     return {state:JSON.parse(bytes.toString('utf8')),sourcePath,sourceHash:bytesDigest(bytes)};
-  }
-  private bodyRequiresDatabase(target:WorkspaceTarget):boolean {
-    const data=join(target.path,'.chatpet','data'),life=join(data,'life');
-    const owner=localFile(join(life,'home.json'))||localFile(join(life,'garden.json'))?life:join(data,'behavior');
-    const home=join(owner,'home.json'),stat=localFile(home);if(!stat)return false;
-    check(stat.size<=32*1024*1024,'Body checkpoint is too large');
-    return JSON.parse(readFileSync(home,'utf8')).economyGardenAuthority===true;
   }
   /** Initialization is schema preparation only: no allowance, gifts or goals. */
   prepare(target:WorkspaceTarget, legacyFile?:string, initializing=false):EconomyStore {
@@ -88,36 +76,48 @@ export class CompanionEconomy {
       'Economy requires the current bound workspace');
     const storageId=this.host.workspace.storageId(), companionId=this.host.workspace.runtime.config.companionId;
     const key=canonical({path:target.path,storageId,companionId});
+    this.preparationFailure=undefined;
     if(this.current?.key===key) {
-      this.current.store.validate();
-      // Core initialization can roll back after this separate schema committed.
-      // A same-process retry must restore the Core inventory/authority marker.
-      if(!this.host.workspace.runtime.store.meta(`economy.initialized:${storageId}`)) {
-        const remember=()=>this.host.workspace.runtime.store.setMeta(`economy.initialized:${storageId}`,{companionId,path:target.path});
-        if(initializing)remember();else this.host.workspace.runtime.store.transaction(remember);
-      }
+      this.current.store.validate(initializing);
       this.current.binding.target=target;
       return this.current.store;
     }
     this.current?.store.close();this.current=undefined;
     const metadata=this.host.workspace.runtime.store;
-    // Inspect this independent authority evidence BEFORE SQLite can create a
-    // new empty file. A partial Core/marker restore cannot revive old money.
-    const expectedInitialized=!!metadata.meta(`economy.initialized:${storageId}`)||this.bodyRequiresDatabase(target);
     const binding={target};
-    const store=new EconomyStore({workspacePath:target.path,storageId,companionId,expectedInitialized,
-      loadLegacyGarden:()=>this.retainedGarden(target,legacyFile),
-      walletChanged:()=>{
-        const {id,path}=binding.target;
-        this.living.changed({workspaceId:id,path,storageId});
-      },
-      guard:()=>{this.assertOpen();check(this.host.workspace.status().state!=='migration-required','migration-required');
-        check(metadata.persisted(),'Core database is absent or moved');
-        check(this.host.workspace.storageId()===storageId,'Economy binding changed');}});
-    const remember=()=>metadata.setMeta(`economy.initialized:${storageId}`,{companionId,path:target.path});
-    try {if(initializing)remember();else metadata.transaction(remember);}
-    catch(error){store.close();throw error;}
-    this.current={key,binding,store};return store;
+    try {
+      const store=new EconomyStore({workspacePath:target.path,storageId,companionId,
+        loadLegacyGarden:()=>this.retainedGarden(target,legacyFile),
+        walletChanged:()=>{
+          const {id,path}=binding.target;
+          this.living.changed({workspaceId:id,path,storageId});
+        },
+        guard:()=>{this.assertOpen();check(this.host.workspace.status().state!=='migration-required','migration-required');
+          check(metadata.persisted(),'Core database is absent or moved');
+          check(this.host.workspace.storageId()===storageId,'Economy binding changed');}});
+      this.current={key,binding,store};return store;
+    } catch(error) {
+      this.preparationFailure={key,error};
+      throw error;
+    }
+  }
+  capabilityStatus(): ReturnType<CapabilityRegistration['status']> {
+    const {state,target}=this.host.workspace.status();
+    if(!target || state==='migration-required') return {state:'unavailable',reason:null,supportedOperations:[]};
+    try {
+      const storageId=this.host.workspace.storageId(), companionId=this.host.workspace.runtime.config.companionId;
+      const key=canonical({path:target.path,storageId,companionId});
+      if(state==='ready' && this.current?.key===key) {
+        this.current.store.validate();
+        return {state:'ready',reason:null,supportedOperations:['snapshot','ownerAction','settings']};
+      }
+      const evidence=inspectEconomyAdoption(target.path,{storageId,companionId});
+      if(evidence.database && this.preparationFailure?.key===key) throw this.preparationFailure.error;
+      return {state:'initializing',reason:null,supportedOperations:[]};
+    } catch(error) {
+      return {state:'unavailable',reason:error instanceof Rejection ? error.message : 'Economy storage could not be verified',
+        supportedOperations:[]};
+    }
   }
   private bound(workspaceId:string):EconomyStore {
     this.assertOpen();
@@ -317,12 +317,16 @@ export function apply(ctx:Context) {
     // Failed adoption leaves the original JSON and all unrelated records intact.
     const status=host.workspace.status();
     if(status.state==='ready'&&status.target)try {service.prepare(status.target);}catch(error){ctx.logger('chatpet-economy').warn('Economy is unavailable; retained files were not replaced',error);}
-    stopInitializer=host.workspace.registerInitializer('economy',target=>{service.prepare(target,undefined,true);},target=>{
-      const path=join(target.path,'.chatpet','data/economy/storage.json');
-      return localFile(path)||host.workspace.runtime.store.meta(`economy.initialized:${host.workspace.storageId()}`)?inventoryFiles:[];
-    });
+    stopInitializer=host.workspace.registerInitializer('economy',target=>{service.prepare(target,undefined,true);},target=>service.initializationFiles(target));
+    ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+      id:'life.economy',owner:'life',contractVersion:CONTRACT_VERSION,order:11,
+      status:()=>service.capabilityStatus(),
+    }).revoke);
     ctx.provide('petEconomy',service);
-    installEconomyAccessGuard(ctx,()=>service.protectedDirectory(),stop=>{stopAccess=stop;});
+    installEconomyAccessGuard(ctx,()=>{
+      const directory=service.protectedDirectory();
+      return directory ? [directory, economyAdoptionPath(resolve(directory, '../../..'))] : undefined;
+    },stop=>{stopAccess=stop;});
     const scope=(agent?:Agent)=>{
       if(!agent || agent.session.header.agentPreset==='chatpet-channel-guest' || host.native.isGuest(agent.id) || !host.native.manages(agent.id))return;
       const bound=ctx.petWorld.sessionStatus(agent.session),current=host.workspace.status();

@@ -8,6 +8,7 @@ import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
 import { gardenHomeProjection } from './garden-receipt.js';
 import { LifeControlFileError, readLifeControl } from '../plan/control-file.js';
+import { readEconomyFileEvidence, readEconomyJournalEvidence } from '../economy/adoption.js';
 import { LivingView, livingCaller, mountLivingArea, settleCleanup } from '../index.js';
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
 const owners = new WeakMap();
@@ -261,8 +262,12 @@ export class CompanionBehavior {
         this.binding = { id, path: target.path, storageId,
             room: new CompanionRoom(directory, () => this.ctx.get('petEmotion')?.roomSnapshot(id), legacyFile => {
                 const economy = this.living.get('economy');
-                if (!economy && (this.host.workspace.runtime.store.meta(`economy.initialized:${storageId}`) || existsSync(join(target.path, '.chatpet', 'data', 'economy', 'economy.sqlite'))))
-                    throw Error('权威经济组件暂不可用；原钱包、库存与菜园已保留，等待恢复');
+                if (!economy) {
+                    const { companionId } = this.host.workspace.runtime.config;
+                    const evidence = readEconomyFileEvidence(target.path, { storageId, companionId });
+                    if (evidence.adoption || evidence.storage || evidence.database || readEconomyJournalEvidence(target.path, storageId))
+                        throw Error('权威经济组件暂不可用；原钱包、库存与菜园已保留，等待恢复');
+                }
                 return economy?.gardenPort(id, legacyFile, this.readingConfirmationEffect);
             }, () => {
                 const settings = this.host.workspace.companionSettings?.();

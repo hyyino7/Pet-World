@@ -9,6 +9,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { generateSynthetic, value } from '../../scripts/fixtures/synthetic-companion.mjs';
 import { createCore } from '../../dist/src/core/index.js';
 import { backupPlan } from '../../scripts/lib/offline-backup.mjs';
+import { legacyEconomy } from './offline-helpers.mjs';
 
 export const variants = ['current','legacy'];
 export function mockDsh(t, running = false) {
@@ -19,11 +20,14 @@ export function mockDsh(t, running = false) {
   syncBuiltinESMExports();
   t.after(() => { mocked.mock.restore(); syncBuiltinESMExports(); });
 }
-export async function fixture(t, variant) {
+export async function fixture(t, variant, {keepStorageManifest = false} = {}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'migrate-synthetic-')));
   t.after(() => rmSync(root, {recursive:true, force:true}));
   const result = await generateSynthetic(join(root, 'installed'), variant);
-  rmSync(join(result.data, 'storage-manifest.json'));
+  if (!keepStorageManifest) {
+    rmSync(join(result.data, 'storage-manifest.json'));
+    legacyEconomy(result);
+  }
   return result;
 }
 export function planFor(f) {

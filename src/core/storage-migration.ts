@@ -23,6 +23,8 @@ export interface MigrationStepContract {
 }
 export const INITIAL_STORAGE_STEP = Object.freeze({id:'0001-storage-manifest', from:null, to:INITIAL_STORAGE_VERSIONS});
 export const HOME_STORAGE_STEP = Object.freeze({id:'0002-home-identity', from:INITIAL_STORAGE_VERSIONS, to:HOME_STORAGE_VERSIONS});
+export const ECONOMY_STORAGE_STEP = Object.freeze({id:'0003-economy-marker', from:HOME_STORAGE_STEP.to,
+  to:Object.freeze({...HOME_STORAGE_STEP.to, core:3, living:3})});
 
 export function storageManifest(companionId: string, modules: StorageVersions) {
   return {schemaVersion:1, companionId, modules};
@@ -61,6 +63,7 @@ interface JournalHeader {
   backup: string;
   backupHash: string;
   binding?: {storageId: string; repoHash: string};
+  economyAdopted?: boolean;
   steps: MigrationStepContract[];
 }
 interface JournalSegment { header: JournalHeader; states: Map<string, string> }
@@ -83,15 +86,16 @@ export function decodeMigrationJournal(journal: ReturnType<typeof parseMigration
     assert.ok(value && typeof value === 'object' && !Array.isArray(value));
     const row = value as Partial<JournalHeader> & {event?: string; schema?: number; manifestHash?: string; migrationId?: string; step?: string};
     if (row.event === 'migration') {
-      const {id, backup, schema, steps, binding, backupHash, manifestHash} = row;
+      const {id, backup, schema, steps, binding, backupHash, manifestHash, economyAdopted} = row;
       assert.ok(typeof id === 'string' && id && !ids.has(id) && typeof backup === 'string' && isAbsolute(backup));
       let header: JournalHeader;
       if (schema === undefined && steps === undefined && binding === undefined && backupHash === undefined) {
-        assert.ok(!last && digest(manifestHash));
+        assert.ok(!last && digest(manifestHash) && economyAdopted === undefined);
         header = {...row, id, backup, steps:[INITIAL_STORAGE_STEP], backupHash:manifestHash};
       } else {
         assert.ok(schema === 2 && digest(backupHash) && digest(binding?.repoHash));
         validateMigrationContract(steps);
+        assert.ok(economyAdopted === undefined || typeof economyAdopted === 'boolean' && steps.some(step => step.id === ECONOMY_STORAGE_STEP.id));
         if (binding.storageId !== storageId) throw new MigrationBindingChanged();
         if (last) {
           const prior = last.header.steps;

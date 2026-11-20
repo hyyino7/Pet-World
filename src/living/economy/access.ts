@@ -3,6 +3,7 @@ import type { ToolExecution } from '@deepseek-ai/dsh-tools';
 import type {} from '@deepseek-ai/dsh-tools';
 import { realpathSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import {InFlight, settleCleanup} from '../index.js';
 
 /** This is a native file-tool guard, not an operating-system security boundary.
@@ -10,7 +11,7 @@ import {InFlight, settleCleanup} from '../index.js';
  * Arbitrary process execution and other plugin capabilities can bypass it. */
 export const economyAccessBoundary = {
   mode: 'bounded' as const,
-  detail: '原生文件工具会保护账本目录；通用命令和其他插件仍沿用 DSH 权限，不能保证账本与这些能力隔离。',
+  detail: '原生文件工具会保护账本目录和采用证据。通用命令和其他插件仍沿用 DSH 权限。',
 };
 interface FileSystem {
   resolve(path: string, options: {cwd?: string; signal: AbortSignal}): Promise<unknown>;
@@ -59,10 +60,10 @@ const within = (directory: string, path: string): boolean => {
 /** Reuse DSH's own filesystem and current-directory resolution before its
  * monotonic guard. No replacement filesystem, assistant runtime or exec policy.
  * The owner RPC writes through the Economy owner and never calls file tools. */
-export function installEconomyAccessGuard(ctx: Context, directory: () => string | undefined,
+export function installEconomyAccessGuard(ctx: Context, protectedPaths: () => readonly string[] | undefined,
   onCleanup: (stop: () => Promise<void>) => void) {
   const native = ctx as unknown as NativeServices;
-  const prepared = new Map<ToolExecution['token'], {directory: string; denial?: string}>();
+  const prepared = new Map<ToolExecution['token'], {paths: readonly string[]; denial?: string}>();
   const abort = new AbortController(), inFlight = new InFlight();
   const stops: (() => void)[] = [];
   onCleanup(async () => {
@@ -73,8 +74,8 @@ export function installEconomyAccessGuard(ctx: Context, directory: () => string 
   stops.push(ctx.on('tools/pre-execute', async (exec, next) => {
     if (!knownFiles.has(exec.name)) return next();
     if (abort.signal.aborted) return {kind: 'cancel'};
-    const protectedPath = directory(); if (!protectedPath) return next();
-    const entry: {directory: string; denial?: string} = {directory: protectedPath}; prepared.set(exec.token, entry);
+    const paths = protectedPaths(); if (!paths) return next();
+    const entry: {paths: readonly string[]; denial?: string} = {paths}; prepared.set(exec.token, entry);
     const signal = AbortSignal.any([exec.signal, abort.signal]);
     await inFlight.run(async () => {
       try {
@@ -84,14 +85,14 @@ export function installEconomyAccessGuard(ctx: Context, directory: () => string 
         if (exec.agent && !working) throw Error('Native working directory is unavailable');
         const cwd = exec.agent ? await working!.ensure(exec.agent, signal) : undefined;
         abort.signal.throwIfAborted();
-        const protectedDirectory = canonicalCandidate(protectedPath);
+        const protectedFiles = paths.map(canonicalCandidate);
         for (const path of requestedPaths(exec)) {
           const target = await fs.resolve(path, {...(cwd === undefined ? {} : {cwd}), signal});
           abort.signal.throwIfAborted();
           const resolvedPath = canonicalCandidate(fs.processPath(target));
           const mutating = ['write', 'edit', 'apply_patch'].includes(exec.name)
             || (exec.name === 'str_replace_editor' && (exec.arguments as Record<string, unknown>).command !== 'view');
-          if (within(protectedDirectory, resolvedPath) || (mutating && within(resolvedPath, protectedDirectory))) {
+          if (protectedFiles.some(file => within(file, resolvedPath) || mutating && within(resolvedPath, file))) {
             entry.denial = '经济账本由程序结算，请使用经济查询、商店和库存接口。'; break;
           }
         }
@@ -102,9 +103,9 @@ export function installEconomyAccessGuard(ctx: Context, directory: () => string 
   }));
   stops.push(ctx.tools.guard(exec => {
     if (!knownFiles.has(exec.name)) return;
-    const current = directory(), saved = prepared.get(exec.token);
+    const current = protectedPaths(), saved = prepared.get(exec.token);
     if (!current && !saved) return;
-    if (!saved || current !== saved.directory) return '经济工作区已改变，请重新发起文件操作。';
+    if (!saved || !isDeepStrictEqual(current, saved.paths)) return '经济工作区已改变，请重新发起文件操作。';
     return saved.denial;
   }));
   stops.push(ctx.on('tools/result', exec => {prepared.delete(exec.token);}));

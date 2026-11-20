@@ -67,7 +67,7 @@ L1 是插件入口的完整流程，L2 是公开面行为，L3 是保留在全�
 <a id="migration-inventory"></a>
 ## 合成副本、迁移与盘点
 
-这些也是源码检出命令，需要已经构建。输入是完成安装的 `installation.json` 回执。开发使用生成器产出的合成副本；真实副本由主人提供且只在另行授权的隔离检查点使用。已登记两步：`0001-storage-manifest` 写存储清单，`0002-home-identity` 把 `life.json` 的 home 会话 ID 复制到 Core 的 `companion-home` 记录（只复制，`life.json` 原字节保留；两边 ID 不同时报 `home-identity-conflict`），清单换成 `core:2`、`living:2`。这不宣告跨库搬迁或已安装环境验收完成。
+这些也是源码检出命令，需要已经构建。输入是完成安装的 `installation.json` 回执。开发使用生成器产出的合成副本；真实副本由主人提供且只在另行授权的隔离检查点使用。已登记三步：`0001-storage-manifest` 写存储清单；`0002-home-identity` 把 `life.json` 的 home 会话 ID 复制到 Core 的 `companion-home` 记录（只复制，`life.json` 原字节保留；两边 ID 不同时报 `home-identity-conflict`），清单换成 `core:2`、`living:2`；`0003-economy-marker` 把 Core `meta` 里属于当前绑定的那一条 `economy.initialized:<storageId>` 搬进钱包库，并写独立证据 `.chatpet/data/living/economy-adoption.json`，两者都落盘后删掉 Core 旧键，清单换成 `core:3`、`living:3`。`0003` 只打开已存在、身份和 schema 都对的钱包库，不建库、不导入旧菜园；含 `0003` 的日志段头记 `economyAdopted`，用来区分「从未采用」和「源已删、目标缺失」。它的原因码：`economy-database-missing`（已采用而钱包库缺失）、`economy-database-invalid`（钱包库无效或 schema 不完整）、`economy-marker-multiple`（Core 有多条标记）、`economy-marker-invalid`（标记无效）、`economy-marker-binding-mismatch`（标记、钱包库或独立证据属于另一个绑定）；失败时 Core 旧键保留。盘点在 Core 库那一项报 `economyInitialized: {rows, matchesCurrentBinding}`。迁移后钱包目录和独立证据同时丢失时，离线 `status` 报 `binding-changed`，续做和开新一轮都拒绝。这不宣告真实数据副本或已安装环境验收完成。
 
 存储清单落后于代码时，运行时进入「需要迁移」：对外状态和拒写码都是 `migration-required`，DSH 普通聊天照常，伙伴的设置、身份、策略、生活世界和记忆写入全部拒绝，设置页显示细因和操作提示。细因有 `storage-version-outdated`、`manifest-mismatch`、`migration-incomplete`、`journal-invalid`、`journal-step-mismatch`、`binding-changed`，以及 `binding-not-migratable`：绑定的形状离线迁移器接不了（例如选中的工作区和已初始化的绑定不一致），这时要在版本页换回 0.2.0，把工作区选择和初始化理顺后再升级。一旦判定需要迁移，本进程就锁定，迁移完成后要重启 DSH。新装由主人显式初始化时直接写最新清单，不需要迁移。
 

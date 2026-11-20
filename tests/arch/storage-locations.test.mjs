@@ -62,3 +62,18 @@ test('存储登记逐 kind 对上真实 store.put 写入模块，旧情绪只读
     assert.deepEqual(writers,[...row.writers].sort(),row.id);
   }
 });
+
+test('钱包采用证据和库内标记均由 Living 持有，运行时不再读写 Core 旧键',()=>{
+  const storage=JSON.parse(readFileSync(join(repository,'arch/storage.json'),'utf8'));
+  const adoption=storage.entries.find(row=>row.id==='economy-adoption');
+  const marker=storage.entries.find(row=>row.id==='economy-initialized');
+  assert.equal(adoption.container,'.chatpet/data/living/economy-adoption.json');
+  assert.deepEqual(adoption.paths,[adoption.container]);
+  assert.equal(adoption.selector,undefined);
+  assert.equal(marker.container,'.chatpet/data/economy/economy.sqlite#meta');
+  assert.deepEqual(marker.selector,{table:'meta',key:'economy.initialized'});
+  for(const row of [adoption,marker])assert.deepEqual([row.owner,row.containerOwner,row.writers],['living','living',['living']]);
+  const old=scan(repository).writers.filter(row=>row.file.startsWith('src/living/')
+    && row.container.endsWith('/core.sqlite#meta') && row.target.startsWith('economy.initialized:'));
+  assert.deepEqual(old,[]);
+});

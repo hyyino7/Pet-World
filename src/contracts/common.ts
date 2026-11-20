@@ -4,7 +4,7 @@ export type Timestamp = string;
 export type Revision = number;
 export type ModuleId = 'core' | 'emotion' | 'memory' | 'life' | 'desktop' | 'qq' | 'bilibili' | 'voice' | 'console';
 export type CapabilityId =
-  | 'core.conversation' | 'memory.lifecycle' | 'life.pursuits'
+  | 'core.conversation' | 'memory.lifecycle' | 'life.pursuits' | 'life.economy'
   | 'emotion.expression' | 'desktop.presentation' | 'desktop.body' | 'desktop.room'
   | 'channel.qq' | 'content.bilibili' | 'voice.speech' | 'console.operations';
 

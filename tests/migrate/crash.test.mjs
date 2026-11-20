@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileHashes, inspectRepoBinding } from '../../scripts/lib/repo-storage.mjs';
 import { hash } from '../../scripts/migrate/io.mjs';
-import { migrationStatus, runMigration } from '../../scripts/migrate/runner.mjs';
+import { migrationStatus, runMigration, steps } from '../../scripts/migrate/runner.mjs';
 import { variants, fixture, mockDsh, read, cli, refusedCli } from './helpers.mjs';
-import { offlineFixture } from './offline-helpers.mjs';
-import { bootstrapSteps, selectBootstrapCli } from './migration-child.mjs';
+import { economyPaths, offlineFixture } from './offline-helpers.mjs';
+import { bootstrapSteps, homeSteps, selectBootstrapCli } from './migration-child.mjs';
 
 const child = async (f, backup, point, mode = '', suite = '') => {
   const processChild = spawn(process.execPath,
@@ -149,8 +149,8 @@ test('resume keeps a completed step recorded when its target is lost mid-segment
   const before = events();
   assert.equal(before.at(-1).event, 'done');
   for (let attempt = 0; attempt < 2; attempt++) {
-    await assert.rejects(runMigration({installation:f.installation, resume:true}), {code:'migration-inconsistent'});
-    assert.equal(migrationStatus(f.installation).steps[0].state, 'inconsistent');
+    await assert.rejects(runMigration({installation:f.installation, resume:true}, homeSteps), {code:'migration-inconsistent'});
+    assert.equal(migrationStatus(f.installation, homeSteps).steps[0].state, 'inconsistent');
     assert.deepEqual(events(), before);
     assert.equal(existsSync(manifest), false);
   }
@@ -163,8 +163,8 @@ test('an interrupted 0002 still requires the original mirror after the manifest 
   const interrupted = await child(f, join(f.out, 'backup'), 'manifest', '', 'home');
   assert.equal(interrupted.signal, 'SIGKILL', interrupted.stderr);
   writeFileSync(mirror, '{"version":1,"homeSessionId":"stale-session"}\n');
-  assert.deepEqual(migrationStatus(f.installation).steps.at(-1), {id:'0002-home-identity', state:'start'});
-  await assert.rejects(runMigration({installation:f.installation, resume:true}), {code:'home-identity-conflict'});
+  assert.deepEqual(migrationStatus(f.installation, homeSteps).steps.at(-1), {id:'0002-home-identity', state:'start'});
+  await assert.rejects(runMigration({installation:f.installation, resume:true}, homeSteps), {code:'home-identity-conflict'});
 });
 
 async function copyAndBind(f, name) {
@@ -247,14 +247,14 @@ for (const point of ['backup','after','manifest','complete']) test(`0002 survive
   const backupHash = hash(readFileSync(join(backup, 'manifest.json')));
   assert.equal(existsSync(join(f.data, 'migration.lock')), true);
   assert.equal(hash(readFileSync(life)), lifeHash);
-  const status = migrationStatus(f.installation);
+  const status = migrationStatus(f.installation, homeSteps);
   const during = readFileSync(log, 'utf8');
   if (point === 'backup') {
     assert.equal(during, originalLog);
     assert.equal(read(manifest).modules.core, 1);
     assert.equal(status.segment, 'settled');
     const next = join(f.out, 'new-backup');
-    await runMigration({installation:f.installation, backup:next});
+    await runMigration({installation:f.installation, backup:next}, homeSteps);
     assert.equal(header(log).backup, next);
   } else {
     assert.equal(header(log).backupHash, backupHash);
@@ -269,16 +269,96 @@ for (const point of ['backup','after','manifest','complete']) test(`0002 survive
   assert.equal(hash(readFileSync(join(backup, 'manifest.json'))), backupHash);
   assert.equal(hash(readFileSync(life)), lifeHash);
   assert.equal(existsSync(join(f.data, 'migration.lock')), false);
-  assert.deepEqual(migrationStatus(f.installation).steps.at(-1), {id:'0002-home-identity', state:'complete'});
+  assert.deepEqual(migrationStatus(f.installation, homeSteps).steps.at(-1), {id:'0002-home-identity', state:'complete'});
   const db = new DatabaseSync(dbFile);
   try {
     assert.equal(db.prepare("SELECT count(*) AS n FROM records WHERE kind='companion-home'").get().n, 1);
     if (point === 'complete') db.prepare("DELETE FROM records WHERE kind='companion-home' AND id=?").run(f.storageId);
   } finally { db.close(); }
   if (point === 'complete') {
-    assert.deepEqual(migrationStatus(f.installation).steps.at(-1), {id:'0002-home-identity', state:'inconsistent'});
-    await assert.rejects(runMigration({installation:f.installation, resume:true}), {code:'migration-inconsistent'});
-    await assert.rejects(runMigration({installation:f.installation, backup:join(f.out, 'refused')}), {code:'migration-inconsistent'});
+    assert.deepEqual(migrationStatus(f.installation, homeSteps).steps.at(-1), {id:'0002-home-identity', state:'inconsistent'});
+    await assert.rejects(runMigration({installation:f.installation, resume:true}, homeSteps), {code:'migration-inconsistent'});
+    await assert.rejects(runMigration({installation:f.installation, backup:join(f.out, 'refused')}, homeSteps), {code:'migration-inconsistent'});
     assert.equal(existsSync(join(f.out, 'refused')), false);
+  }
+});
+
+for (const point of ['backup','wallet','proof','after','manifest','complete']) test(`0003 survives SIGKILL at ${point}`, {timeout:60000}, async t => {
+  mockDsh(t);
+  const f = await offlineFixture(t, false, {withLegacyEconomy:true}), backup = join(f.out, 'backup-0003');
+  const {core,database,adoption} = economyPaths(f), log = join(f.data,'migrations.jsonl'), manifest = join(f.data,'storage-manifest.json');
+  const state = () => {
+    using source = new DatabaseSync(core,{readOnly:true});
+    using wallet = new DatabaseSync(database,{readOnly:true});
+    return {source:source.prepare("SELECT count(*) AS n FROM meta WHERE key GLOB 'economy.initialized:*'").get().n,
+      marker:wallet.prepare("SELECT value FROM meta WHERE key='economy.initialized'").get()?.value,
+      ledger:wallet.prepare('SELECT * FROM ledger ORDER BY sequence').all()};
+  };
+  const identity = {companionId:f.config.companionId,storageId:f.storageId}, before = state();
+  assert.equal(before.source,1);
+  await runMigration({installation:f.installation,backup:join(f.out,'backup-0002')}, homeSteps);
+  const previous = readFileSync(log,'utf8');
+  const interrupted = await child(f,backup,point,'','economy');
+  assert.equal(interrupted.signal,'SIGKILL',interrupted.stderr);
+  assert.equal(existsSync(join(f.data,'migration.lock')),true);
+  const backupManifest = join(backup,'manifest.json'), backupHash = hash(readFileSync(backupManifest));
+  const halfway = state();
+  assert.deepEqual(halfway.ledger,before.ledger);
+  assert.equal(halfway.source,['backup','wallet','proof'].includes(point) ? 1 : 0);
+  assert.deepEqual(halfway.marker && JSON.parse(halfway.marker),point === 'backup' ? undefined : identity);
+  assert.equal(existsSync(adoption),!['backup','wallet'].includes(point));
+  const version = ['manifest','complete'].includes(point) ? 3 : 2;
+  assert.equal(read(manifest).modules.core,version);
+  assert.equal(read(manifest).modules.living,version);
+  if (point === 'backup') {
+    assert.equal(readFileSync(log,'utf8'), previous);
+    await runMigration({installation:f.installation,backup:join(f.out,'backup-retry')},steps);
+  } else {
+    assert.equal(header(log).economyAdopted,true);
+    assert.equal(header(log).backupHash,backupHash);
+    const during = readFileSync(log,'utf8');
+    const resumed = await child(f,backup,'','resume','economy');
+    assert.equal(resumed.code,0,resumed.stderr);
+    assert.ok(readFileSync(log,'utf8').startsWith(during));
+  }
+  assert.equal(hash(readFileSync(backupManifest)),backupHash);
+  assert.ok(readFileSync(log,'utf8').startsWith(previous));
+  assert.equal(existsSync(join(f.data,'migration.lock')),false);
+  assert.deepEqual(state(),{source:0,marker:JSON.stringify(identity),ledger:before.ledger});
+  assert.deepEqual(read(adoption),identity);
+  assert.deepEqual(migrationStatus(f.installation).steps.at(-1),{id:'0003-economy-marker',state:'complete'});
+  if (point === 'complete') {
+    const settled = readFileSync(log);
+    rmSync(dirname(database),{recursive:true}); rmSync(adoption);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      assert.deepEqual(migrationStatus(f.installation).steps.at(-1),{id:'0003-economy-marker',state:'inconsistent'});
+      await assert.rejects(runMigration({installation:f.installation,resume:true}),{code:'migration-inconsistent'});
+      await assert.rejects(runMigration({installation:f.installation,backup:join(f.out,'refused')}),{code:'migration-inconsistent'});
+      assert.deepEqual(readFileSync(log),settled);
+      assert.equal(existsSync(database) || existsSync(adoption) || existsSync(join(f.out,'refused')),false);
+    }
+  }
+});
+
+test('offline commands refuse a migrated Repo that lost its declared wallet and adoption evidence', async t => {
+  mockDsh(t);
+  const f = await offlineFixture(t, false, {withLegacyEconomy:true});
+  const manifestFile = join(f.managed, 'manifest.json'), manifest = read(manifestFile);
+  manifest.files.push('data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json');
+  writeFileSync(manifestFile, JSON.stringify(manifest));
+  await runMigration({installation:f.installation, backup:join(f.out, 'backup')});
+  assert.deepEqual(migrationStatus(f.installation).steps.at(-1), {id:'0003-economy-marker', state:'complete'});
+
+  const {database, adoption} = economyPaths(f), log = join(f.data, 'migrations.jsonl');
+  const settled = readFileSync(log), refusedBackup = join(f.out, 'refused');
+  rmSync(dirname(database), {recursive:true});
+  rmSync(adoption);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const args = ['--installation', f.installation];
+    refusedCli(f, ['status', ...args], 'binding-changed');
+    refusedCli(f, ['run', ...args, '--resume'], 'binding-changed');
+    refusedCli(f, ['run', ...args, '--backup', refusedBackup], 'binding-changed');
+    assert.deepEqual(readFileSync(log), settled);
+    assert.equal(existsSync(dirname(database)) || existsSync(adoption) || existsSync(refusedBackup), false);
   }
 });

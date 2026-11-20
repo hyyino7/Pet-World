@@ -727,6 +727,8 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 - **预先声明的断言调整**　1B 专测仍显式选 `0001`，第 4 批专测显式选前两步或按 `id` 取 `0002`，保留已收尾、在途、镜像字节和拒绝续做断言。全步骤入口断言三个步骤及 v3。门禁测试把「当前」改为 v3，增加 v2 待迁移，保留旧包回退后当前 Core 拒写、完整迁移后实际召回和 Bank 逻辑相等。`tests/migrate/{normal.test.mjs:16-43,59-61,metadata-normal.test.mjs:38-52,crash.test.mjs:140-168,236-283,home-flow.test.mjs:76-117,rollback.test.mjs:93-103}`、`tests/core/workspace.test.ts:21-74`
 - **盘点断言**　旧形状夹具在停写后只置回原 Core 键、移除两份新证据。`inventory` 的布尔断言换为精确条数和匹配断言。`compatibility` 的登记数 `52→53`，旧副本精确少 `economy-adoption`，迁移后覆盖齐全。路径测试用原生最新副本，保留零差异和原树字节不变。R5 旧违规样例在测试自己的声明里保留旧 selector 和原断言。`tests/migrate/{helpers.mjs:22-27,inventory.test.mjs:12-32,inventory-paths.test.mjs:11-36,compatibility.test.mjs:22-32}`、`tests/arch/{helpers.mjs:13-19,known-violations.test.mjs:53-62}`
 
+- **执行中补充（主人 2026-11-20 拍板「都按推荐」）**　① 首次初始化中断时的处理办法不改 `src/core/runtime.ts`：Core 在文件已变动时仍统一报 `OUTCOME_UNKNOWN`，钱包区改为经自己的能力状态行（`capabilityTable`）显示证据路径和处理办法，设置页从能力状态读到；原测试改为断言能力状态行里的指引。② 迁移后钱包目录和独立证据同时丢失时，离线 `status` 由 `scripts/lib/repo-storage.mjs` 先判「声明的文件不全」，报 `binding-changed`，续做和开新段照样拒绝；接受这个原因码，不改高风险的 `repo-storage.mjs`，细则原写的 `inconsistent` 只适用于离线准入通过后的目标缺失。为实现 ①，Claude 按拍板意图另批三处：`src/contracts/common.ts` 的 `CapabilityId` 和 `src/core/tables/capabilities.ts` 的运行时清单各加一个钱包能力 ID（只加一项，不改已有 ID）；`src/console/client.js`（及重新生成的 `src/desktop/platform/client.js`）渲染能力状态行的 `reason`。
+
 **手写 host / workspace 替身**
 
 沿用现有 `status/storageId/runtime.config` 接点，无新增 CoreWorkspace 方法。手动 Room 夹具补 `companionId`，其余按下列接点核对并用门禁收齐，保留断言。第 4 批漏测的 `homeScope/readCompanionHome/retainedWritesAllowed` 夹具纳入快测。`src/living/economy/plugin.ts:85-90`、`docs/plans/stage2a-merge.md:1073,1349`
@@ -1082,6 +1084,32 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - 修前确认回归失败。修后 `pnpm run build && pnpm run check:arch`、`pnpm run check:types`、客户端语法及细则快测通过（存储 5/5、迁移 167/167、入口 123/123、日志回归 11/11）。`HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs` 通过 1/1。
 - 按 `verify` 收集全量 Node 测试，154 个文件、1,594 项通过，Memory P2 因 `/bin/ps` 返回 `EPERM` 记「环境未运行」。仅用合成数据，设置提示经真实 RPC 验证，真实 DSH 设置页待人工验收。改动在允许范围及阈值内，留在工作区，合并门禁由 Claude 执行。
 
+### 第 5 批
+
+- 01 去重两个 Store 的 metadata 与租约关闭，02 加 `0003`、两份采用证据和日志段头的 `economyAdopted`，03 固定历史步骤夹具并精确盘点，04 切到 v3，05 补入口、崩溃、回退和钱包能力状态行。
+- 文件数／增删行数（排除构建产物和基线）为 01 4／67、02 7／370、03 9／115、04 14／269、05 14／458。
+- 先确认 `0003` 缺失、新装仍写 v2、v2 未拦截、缺钱包状态行的回归失败。五组临时副本的 `pnpm run build`、`pnpm run check:arch -- --report` 和工作区 `pnpm run check:types` 通过，R5 的 2 写、4 读清零，R8 新增 0。01–05 快测各通过 67、178、197、515、553 项。按 `verify` 收集全量 Node 测试，各通过 1596、1607、1607、1608、1639 项，每组 0 项非环境失败。各组 Memory P2 因 `/bin/ps` 返回 `EPERM` 记「环境未运行」。
+- 六处 SIGKILL、四种新装组合、v2 与离线准入口径一致、G9 结算和五种拒绝复活通过。`HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs` 通过 1/1，核对旧键、余额、库存、流水、聊天、召回、home 和不可回退记录。
+- `tests/core/workspace.test.ts:34,43,52` 当前和异身份清单用 v3，原为 v2。增加 v2 待迁移，保留旧版拒写和重启解锁断言。
+- `tests/migrate/metadata-normal.test.mjs:42` 由 `storage.dataVersions` 改为明确的 `0002` 版本，`:27,56` 固定 CLI 为前两步。`tests/migrate/crash.test.mjs:152–153,166–167,250,257,272,279–281` 由默认步骤改为明确的前两步，保留原状态和拒绝续做断言。
+- `tests/migrate/home-flow.test.mjs:83–84` 由两项完成改为精确三步并检查 v3，`:117,119–120` 由末项 `0002` 完成改为精确三步。保留原 home 和镜像字节断言。
+- `tests/migrate/inventory.test.mjs:18` 由 `true` 改为 `{rows:1,matchesCurrentBinding:true}`。`tests/migrate/compatibility.test.mjs:23,25,31` 由 52 项且无缺失改为 53 项、旧副本仅缺 `economy-adoption`、迁移后零差异。`tests/migrate/inventory-paths.test.mjs:12` 换当前形状夹具，保留零差异和原树字节断言。
+- `tests/behavior-list/families.test.mjs:150–155`、`tests/migrate/home-rollback.mjs:82–83` 由末项 `0002` 完成改为三步完成，增加源键删除检查。`tests/arch/known-violations.test.mjs:53–68` 用本地旧 selector 保留 R5 原断言。1A 契约和 `recover()` 断言保留。
+- 按拍板，`tests/infrastructure/first-install.test.mjs:144–151` 由 RPC 报 `UNAVAILABLE` 且带指引改为 RPC 报 `OUTCOME_UNKNOWN`，`life.economy` 状态行报 `unavailable` 且带同一指引。Economy 卸载时撤销登记，两个设置客户端在「资料与会话」中显示 `reason`，临时渲染验证通过 1/1。
+- 按拍板，`tests/migrate/crash.test.mjs:343–364` 中声明过的钱包目录与独立证据同时丢失，离线 `status`、续做和开新段两轮均报 `binding-changed`，核对日志原字节且无新库或备份。离线准入通过的目标缺失形状保留 `inconsistent` 断言。仅使用合成数据。
+- 五个补丁在 `/tmp/her-world-5-patches`，依次应用到 `77b2df3` 后，1568 个交付文件字节及可执行权限与工作区一致。合并门禁由 Claude 在沙箱外运行。
+
+#### 返工一轮
+
+- 主人拍板加第五种证据。Economy 和 Body 复用 Core 的日志解析及解码，只读确认同一 `storageId` 下含 `0003` 的段是否记有 `economyAdopted:true`。缺失、损坏或异绑定的日志视为无此证据。
+- 必须修 1。清单回调只查四项钱包路径的存在性和文件形状，内容与身份在 Store 和 Body 的经济准入处校验。两份证据遇到坏 JSON 或异绑定时，钱包拒绝，工作区仍 `ready`，免费喂食和饮水可用。
+- 必须修 2。空壳库提示先确认首次初始化从未成功，移存 `economy.sqlite` 及 `-wal/-shm/-journal`，再删采用证据重试。无法确认时恢复回退备份。缺库沿用原指引。
+- 建议修 1–3。能力行仅在缺库或库未初始化被拒时显示首次初始化指引，锁冲突显示实际原因。`0003.adopted()` 的 Body 检查包 `checked()`，runner 注释说明 `0003` 的在途检查。建议 4 的换设备路径规则留第 6 批说明。
+- 新增回归先复现后修复，覆盖坏证据隔离、双目录丢失后拒绝重建或导入、空壳库按指引恢复且只新建一库、锁冲突、坏 Body 检查点和迁移日志的绑定与完整性。前两个用例登记行为清单。
+- `pnpm run build && pnpm run check:arch`、架构 `--report`、`pnpm run check:types` 均通过。细则两组快测 373/373、183/183。首组首次有一条 Memory 盘点 422，原命令两次复跑通过。`HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs` 通过 1/1。
+- 按 `verify` 收集全量 Node 测试，156 个文件、1649 项通过、0 项非环境失败。Memory P2 因 `/bin/ps` 返回 `EPERM` 记「环境未运行」。
+- 仅用合成数据，保留原有断言，按批准范围交付到工作区。沙箱外门禁由 Claude 执行。
+
 ## 审查结论
 
 ### 1A 第一轮验收（Codex 审查 + Claude 核实）
@@ -1375,3 +1403,43 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - 我在 worktree 里重跑：`pnpm run build`（跑完工作区干净，`dist` 和生成客户端都和源码一致）、`check:arch`（37 / 1031，新增 0、消失 0）、`check:types`、`node --check src/console/client.js`；快测 15 个文件 306/306；`HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs` 1/1。门禁和行为清单以驱动会话在沙箱外跑的结果为准（1595/1595、97/97），我没有重跑。
 - **未手动验证**：真实 DSH 设置页的「需要迁移」和「换回 0.2.0」两张卡片，留给主人体验验收。
 - 结论：可以合并，前提是主人明确同意。合并时按细则改 `docs/architecture.md:182,186` 两句（身份归第一层，镜像和待迎接归计划区），并更新 `docs/development.md` 里迁移能力的描述。`docs/plans/stage2a-merge.md` 是全阶段方案，合并时不删。
+
+### 第 5 批第一轮验收（Codex 审查 + Claude 核实）
+
+**必须修**
+
+1. **采用证据或 `storage.json` 的内容一坏，整个工作区就变成 `unavailable`。** `CoreWorkspace.status()` 在 ready 判定里调用 `verifyInventory()` → `inventory()`，会执行每个初始化器的文件清单回调（`src/core/workspace.ts:361-364,369,602`）。本批把 Economy 的回调换成 `service.initializationFiles()`（`src/living/economy/plugin.ts:53-58`），里面的 `readEconomyFileEvidence()` 会 `JSON.parse` 并核对身份（`src/living/economy/adoption.ts:33-43`）。所以 `economy-adoption.json` 或 `storage.json` 内容损坏、身份对不上（比如复制来的 Repo）时，回调抛错，`status()` 的 catch 把整个工作区判成 `unavailable`（`src/core/workspace.ts:604`），Body 的免费喂食和饮水、以及其他靠 `ready` 准入的功能都会一起停。本批之前，这个回调只 `lstat` 一下 `storage.json`、读 Core 标记，不解析内容。为什么必须修：一个钱包区自己的小文件坏了，影响范围不能从「钱包不可用」扩大到「整个工作区不可用」；细则（`:700`）也写明库内检查归 Store，免费照料照常。改法：清单回调只按文件是否存在、是不是普通单链接文件来决定列不列出钱包的四项，身份和内容的校验留在 `EconomyStore` 和 Body 的经济准入路径。补一条测试：Economy 保持挂载，把采用证据改成坏 JSON 或异身份，工作区仍是 `ready`，钱包被拒，免费照料可用。
+2. **首次初始化中断后留下空壳库时，恢复指引照着做也恢复不了。** 首次建库的顺序是：落采用证据 → `new DatabaseSync()` 建出库文件 → 设 WAL → 建表事务（`src/living/economy/store.ts:449-460`）。在库文件已经建出、事务还没提交时中断，磁盘上会同时有采用证据和空壳库。这时能力状态行和拒绝信息给的指引是「如果首次初始化从未成功，确认后删掉这份证据再重试」（`src/living/economy/adoption.ts:98-100`、`src/living/economy/plugin.ts:333-337`）。但删掉证据后，`EconomyStore` 看到库文件存在，就用 `mode=rw` 打开并要求库内标记（`src/living/economy/store.ts:447,453-457`），空壳库永远被拒，主人照着指引做也卡死。为什么必须修：拍板 1 的本意是「首次初始化中断时给主人一条能走通的出路」，现在这条出路在空壳库的情况下走不通。（「已存在的空壳库拒绝初始化」是细则定的，本身不改。）改法：库文件存在的情况给另一段指引：确认这个钱包从未成功初始化后，把 `economy.sqlite` 和它的 `-wal/-shm/-journal` 一起移到别处保留（不删），再删采用证据重试；不能确认就按回退备份恢复。库文件不存在的情况沿用原指引。这是拍板 1 文案在空壳情况下的补充，没有改变顺序和安全取舍，Claude 按拍板意图批准。在 `tests/infrastructure/first-install.test.mjs` 补一条：在库文件建出后、事务提交前注入中断，断言指引里有「移开库文件」这一步，照指引操作后重试成功，而且只建出一个库。
+
+**需要主人定方向**
+
+- **迁移后，钱包目录和 `data/living/` 同时丢失，普通启动会重建空钱包或再导入旧菜园。**（Codex P1，读代码确认。）运行时只认四种证据：采用证据、库内标记、`storage.json`、Body 的 `economyGardenAuthority`（`src/living/economy/store.ts:57-61`）。迁移删掉 Core 旧键之后，如果 `data/economy/` 和 `data/living/` 一起丢了，而且 Body 从没接过经济端口、`.chatpet/manifest.json` 也没登记钱包文件（Economy 是在上次初始化之后才启用的），四种证据都没了，就会走新建路径。离线工具这时靠日志段头的 `economyAdopted:true` 报不一致（执行中补充 ②），运行时不看日志。本批之前，Core 旧键放在另一个容器里，正好挡住这种双重丢失。按拍板 10 定的规则，这属于两处同时丢失，不在设计范围内。**推荐**：在运行时的采用判定里加第五种证据：同一绑定的迁移日志里，含 `0003` 的段记了 `economyAdopted:true`，复用第一层的 `decodeMigrationJournal`，改动很小，可以随必须修一起做，补一条用例：迁移后删掉两个目录，断言拒绝。备选：接受现状，在 `docs/architecture.md` 写明这是已知边界。
+
+**建议修（不影响合并，返工时可以一起做）**
+
+- `src/living/economy/plugin.ts:333-337`：只要当前绑定没有已打开的 Store（比如启动时预打开因为锁被占而失败），能力状态行就显示带「否则按回退备份恢复」的首次初始化指引，可钱包本身可能是好的。建议只在 `prepare` 确实因为「缺库」或「库未初始化」被拒时才显示这段指引，其他情况显示原因或 `initializing`。必须修 2 改到这里时可以一起做。
+- `scripts/migrate/steps/0003-economy-marker.mjs:87-91`：`adopted()` 里 `readBodyEconomyAuthority()` 没有包 `checked()`，Body 目录类型不对时会抛 `Rejection`，最终报 `unknown`，不是固定原因码。`complete()` 里已经包了，这里照做即可。
+- `scripts/migrate/runner.mjs:44`：用 `selected[index].adopted` 当作「这是 0003」的判断，读起来很绕。建议给步骤加一个明确的标志，或者在注释里写清楚。
+- 记录在案（不改）：钱包标记的 `path` 必须等于当前绑定路径（细则这么定的）。如果 Repo 换了设备、换包前没在旧版本上启动过一次，旧 Core 标记的路径还是旧的，`0003` 会报 `economy-marker-binding-mismatch` 停下。旧运行时每次新开 Store 都会重写这个路径，所以只要换设备后用旧版本启动过一次就没事。第 6 批写升级说明时提一句。
+
+**核实结果**
+
+- 范围：5 个提交只改了细则第 1–5 组和「执行中补充」列出的文件。`src/core/storage.ts` 只改了 `setMeta`、`close` 两个方法体，加了一行 import。`src/core/workspace.ts` 只改了步骤表、初始化标记和新装清单的版本，三处都换成 `ECONOMY_STORAGE_STEP`。`scripts/migrate/**` 只改了 `runner/errors/inventory`，新增 `0003`。补充 ① 的三处都对上了：`CapabilityId` 加一项 `life.economy`，运行时能力清单加一项，`src/console/client.js` 渲染 `reason`（`src/desktop/platform/client.js` 构建后和源码逐字节一致）；`src/core/runtime.ts` 没动。`scripts/lib/**`、`package.json`、`vendor/**`、`cordis.patch.yml`、`.github/` 都没动。
+- 旧断言：逐处对照了执行结果列出的调整，都在「预先声明」和「盘点断言」的范围内。`crash` 和 `metadata-normal` 只是显式选前两步，原状态和拒绝续做断言都在；`home-flow`、`families`、`home-rollback` 从「最后一项是 0002」改成精确三步，还加了源键已删的检查，比原来更严；`inventory` 从布尔值改成精确条数，并加了不匹配的反例；`compatibility` 改成 53 项，迁移前只少 `economy-adoption`、迁移后零差异；R5 旧断言在测试自己的声明里保留。`domains.test.mjs:98-104` 两条缺库断言原样保留，`settlement` 的 `recover()` 和 `deepEqual` 没动，1A 契约测试没动。`first-install` 从 `UNAVAILABLE` 改成 `OUTCOME_UNKNOWN` 加能力状态行，是补充 ① 定的。
+- `0003`：只用 `mode=rw` 打开已存在的库，先核 sidecar、`schema`、身份和表，不会 mkdir、建表或导入；三步顺序是库内标记 `FULL COMMIT` → 同步目录 → 原子写采用证据（同步文件和目录）→ 复核 → Core 按键和值删除，每步都落盘。多条、坏值、键、`companionId` 或 `path` 对不上，以及新证据身份不对，都会停下并保留原键。`path` 和 `plan.repo` 的比较是同一个规范路径（`scripts/lib/repo-storage.mjs:77,103`）。`economyAdopted` 只允许出现在含 `0003` 的新段，旧格式段禁止带这个字段。新装从未采用和新装已采用两种 v3 形状跑完整三步集，都是三个 `skip`（`home-flow` 四种组合）。`migrationStatus` 的 `inFlight` 改成「这一步记过 `start/failed`」，和 `run` 的 `versioned` 口径一致，「真正开始过的当轮步骤」仍按严格口径判，这正是第 4 批必须修 2 那类问题的统一修法。运行时的「需要迁移」仍用 `offlineBindingReady`，v2 加 `inspectRepoBinding` 的同口径测试已经覆盖。
+- 运行时采用判定：四种证据任一成立而库缺失就拒绝；首次建库先验旧菜园，再在钱包租约下落采用证据，再建库，建表、导入和库内标记在同一个事务里提交，之后补 `storage.json`。库已提交时重试会复用原库，只补 `storage.json`（两条测试）。五种拒绝复活的情况都在 `domains`，含 Body 从未加载。Body 和初始化清单都不再读 Core meta。`src/living/` 里已经没有 `economy.initialized:` 的读写，`storage-locations` 有测试断言 R5 为零。
+- 我在 worktree 里重跑：`pnpm run build`（跑完工作区干净）、`check:arch -- --report`（37 / 1031，新增 0、消失 0）；细则快测 19 个文件 363/363。门禁、行为清单和 v0.2.0 回退演练以驱动会话在沙箱外跑的结果为准（1640/1640、102/102、1/1），我没有重跑。
+- **未手动验证**：没有在真实 DSH 里看设置页「资料与会话」的钱包状态行。
+
+**剔除**：无。Codex 的 3 条都读代码核实了：P2 两条归入必须修 1、2；P1 是拍板 10 规则没覆盖的双重丢失，归入「需要主人定方向」。
+
+**复查（返工一轮后，480c23a）**：两条必须修都修好了，「需要主人定方向」一条按主人拍板加了第五种证据，建议修前三条也已做。
+
+1. 必须修 1：`initializationFiles()`（`src/living/economy/plugin.ts:54-61`）现在只 `lstat` 目录和三份文件，不解析内容，出错就返回空清单。`status()` 不会再因为钱包证据抛错。身份校验挪到 `EconomyStore.validate()`（`src/living/economy/store.ts:136-140`），只拒绝钱包。2A5-06 覆盖了 Economy 和 Body 都挂载时，两份文件分别改成坏 JSON 和异身份的情况：工作区 `ready`、钱包被拒、菜园端口被拒、免费喂食饮水照常，文件内容不变，恢复后余额对得上。代价是 `validate()` 在热路径上每次多读两份小文件，量级可以接受，「热路径同步 I/O」那条建议已经记在第 4 批。
+2. 必须修 2：库文件存在时，指引改成「移存 `economy.sqlite` 和 `-wal/-shm/-journal`，再删证据重试，不能确认就按回退备份恢复」（`src/living/economy/adoption.ts:128-130`）。能力状态行改为只在本绑定的 `prepare` 确实失败过时才报那次失败的原因（`src/living/economy/plugin.ts:79,88-103,107-120`），锁冲突等情况报真实原因，不再带恢复指引（建议修 1 一起做了）。新用例在钱包库的 `COMMIT` 处注入中断，库里没有任何表，照指引操作后重试 `ready`，只建出一个库，被移走的空壳字节不变。
+3. 第五种证据：`readEconomyJournalEvidence()`（`src/living/economy/adoption.ts:47-65`）用 `O_NOFOLLOW` 只读打开日志，核对普通单链接文件和读前读后大小一致，复用第一层的 `parseMigrationJournal/decodeMigrationJournal`。任一段头 `economyAdopted:true` 而且全部绑定都是同一 storageId 才算证据；日志缺失、损坏、截断或属于别的绑定都按没有证据处理，任何异常都不外抛。它只在库缺失时才读（`inspectEconomyAdoption`，`:67-74`），Body 的旧菜园回退也认它（`src/living/body/plugin.ts:187`）。2A5-07 用的是 manifest 没有登记钱包文件的迁移形状，删掉两个目录后，Body 单独挂载、再挂上 Economy，钱包都被拒，不建库，旧菜园和日志字节不变，免费照料照常；`economy-marker.test.mjs` 覆盖了后续段记 `false` 时仍认前段、四种坏日志或缺日志按没有证据。按拍板，日志损坏和双目录丢失同时发生时仍会新建钱包，这是三处同时出错，记在案。
+4. 建议修 2、3：`0003.adopted()` 的 Body 检查包了 `checked()`，有用例断言报 `economy-marker-invalid` 而且不写日志；`runner.mjs:44` 加了注释。建议修 4 按原结论记在案。
+
+**范围与验证**：返工提交改了 11 个手写文件，都在本批已有的文件范围内。`src/core/**`、`scripts/lib/**`、`package.json`、`vendor/**`、`cordis.patch.yml` 都没动；测试 diff 只新增，没有删断言、没有 skip。我在 worktree 里重跑：`pnpm run build`（跑完工作区干净）、`check:arch`（37 / 1031，新增 0、消失 0）、`check:types`；细则快测 19 个文件 373/373。门禁、行为清单和回退演练以驱动会话在沙箱外跑的结果为准（1650/1650、104/104、通过），我没有重跑。**未手动验证**：真实 DSH 设置页的钱包状态行，留给主人体验验收。
+
+结论：可以合并，前提是主人明确同意。合并时按细则更新 `docs/architecture.md:178,184-185`（归属和写入顺序；第五种证据也写进去）、`docs/development.md:70,80,99-109`（第三步、诊断码）和 `docs/product.md:390`（合成验收状态）。`docs/plans/stage2a-merge.md` 是全阶段方案，合并时不删。

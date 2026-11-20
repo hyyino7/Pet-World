@@ -12,7 +12,7 @@ import { conversationOptions } from './options.js';
 import type { CompanionIdentity, AttentionPolicy, WorkspaceEditScope } from '../contracts/core.js';
 import type { ServiceCall } from '../contracts/common.js';
 import { bytesDigest, canonical, check, reject, Rejection, revision, now } from './storage.js';
-import { decodeMigrationJournal, HOME_STORAGE_STEP, INITIAL_STORAGE_STEP, MIGRATION_REASON, MigrationBindingChanged,
+import { decodeMigrationJournal, ECONOMY_STORAGE_STEP, HOME_STORAGE_STEP, INITIAL_STORAGE_STEP, MIGRATION_REASON, MigrationBindingChanged,
   parseMigrationJournal, settled, storageManifest, storageManifestIndex, type MigrationReason } from './storage-migration.js';
 import type { CompanionBinding } from './tables/companion-ports.js';
 
@@ -37,7 +37,7 @@ existing workspace files and instructions.
 const MAX_BYTES = 64 * 1024;
 const STORAGE_MANIFEST = 'storage-manifest.json', MIGRATION_JOURNAL = 'migrations.jsonl', INITIALIZING = '.initialization-pending.json';
 const READABLE_FILES = new Set<string>([...REQUIRED, STORAGE_MANIFEST, MIGRATION_JOURNAL, INITIALIZING]);
-const STORAGE_STEPS = [INITIAL_STORAGE_STEP, HOME_STORAGE_STEP];
+const STORAGE_STEPS = [INITIAL_STORAGE_STEP, HOME_STORAGE_STEP, ECONOMY_STORAGE_STEP];
 const BOOTSTRAP_FILES = new Set(['core.sqlite', 'core.sqlite-wal', 'core.sqlite-shm', 'core.sqlite-journal', 'core.lock']);
 interface MigrationBlock { reason: MigrationReason; olderMigrationJournal?: true }
 interface Manifest { schemaVersion: 1 | 2 | 3; companionId: string; files: readonly string[] }
@@ -187,7 +187,7 @@ export class CoreWorkspace {
   }
   private initializationMarker(workspaceId: string) {
     const {companionId, scopeId} = this.runtime.config;
-    return {companionId, scopeId, workspaceId, modules:HOME_STORAGE_STEP.to};
+    return {companionId, scopeId, workspaceId, modules:ECONOMY_STORAGE_STEP.to};
   }
   private retainedFiles(directory: string, ignore?: string): boolean {
     return readdirSync(directory, {withFileTypes:true}).some(entry => {
@@ -456,7 +456,7 @@ export class CoreWorkspace {
       this.verifyInventory(target);
       const data = join(directory, 'data');
       if (!existsSync(join(data, STORAGE_MANIFEST)))
-        this.atomic(data, STORAGE_MANIFEST, JSON.stringify(storageManifest(identity.companionId, HOME_STORAGE_STEP.to)) + '\n');
+        this.atomic(data, STORAGE_MANIFEST, JSON.stringify(storageManifest(identity.companionId, ECONOMY_STORAGE_STEP.to)) + '\n');
       store.put('workspace-binding', 'current', binding); this.adopt(docs);
       rmSync(pending);
     } catch (error) {
