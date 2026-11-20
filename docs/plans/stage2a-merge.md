@@ -784,6 +784,90 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 3. 真实数据副本（独立设备）：直接升级被拒到需要迁移；迁移后可用；已撤回的记忆仍不可见，伙伴身份和便携存储 ID 不变；缺库、坏 JSON、软链接、异身份仍不建替代；结算守恒；用回退备份把旧包、旧数据、旧绑定一起恢复，0.2.0 聊天和召回正常，送达、额度和花费按 7.2 处理。崩溃续做的证据是合成副本上的测试加真实副本记录，边界写明。
 4. RC 冻结后的 `main` 发 `0.3.0`，隔离环境装一次正式包确认能激活，再升级日常机器。
 
+#### 第 6 批开工细则
+
+（Codex 只读起草、Claude 核对行号后定稿，主人 2026-11-20 过目同意。）
+
+以第 1–5 批已合并的 `main`（`04bff94`）为起点，文档走 `codex/2a-6-docs`，种地实验另开分支。以下行号以该提交为准。本次只做了只读核对和架构扫描，实机、合成演练和全量门禁待开工。`docs/plans/stage2a-merge.md:36-52,760-785,936-958`
+
+**文档（Claude 写，Codex 核对链接、锚点、源码行号和测试断言）**
+
+| 位置和现状 | 定稿改法 |
+| --- | --- |
+| `docs/architecture.md:5-7,50-58,99-109,226-232,587-593` 已换成 `living` 路径，3B 的实例创建和 3D 的出口已写入，`CompanionRoom` 已指身体区，仍混用旧版行数、未来目录和「对外三样」 | 写明 `src/living/{body,plan,economy}` 已合并，实例按 Cordis 根、Core 和隔离标签分组，首入口建、末入口释放，`CompanionRoom` 只指 `living/body/room.ts`，删掉 §2.3 的契约摘要并链 §5.2，区间事件改直调归 2b。`src/living/index.ts:51-94,354-384`、`docs/plans/stage2a-merge.md:1303-1305,1369,1410,932` |
+| `docs/architecture.md:178,182,184-186` 已同步 home 和钱包归属、五种证据及写入次序，`:178` 少了三处同时损坏的边界 | 保留 §4 为归属和写入协议的唯一正文，明确 Core 单飞写 `companion-home`、Plan 镜像及迎接落盘后清 `arrivalPending`，钱包证据以独立文件、库内标记、`storage.json`、Body 检查点、同绑定 `0003` 日志为准，并注明两目录丢失叠加坏日志时第五种证据失效。`docs/plans/stage2a-merge.md:1465,1489,1522-1529` |
+| `arch/storage.json:3,34,38,42-43,58-59` 已是 v3，home 归 Core、镜像和钱包证据归 `living`，旧 Memory 脚本引用已清理，home 仍标「搬出」，钱包证据行号已漂移 | 把 home 标为「已迁移」，核准绑定记录、首次落证据、库内提交和 `0003` 的 `evidence`，JSON 保留机器登记和简短协议，五种证据的解释链架构 §4。`src/core/workspace.ts:156-167`、`src/living/economy/store.ts:83-85,122`、`scripts/migrate/steps/0003-economy-marker.mjs:109-120`、`docs/plans/stage2a-merge.md:1236,1529` |
+| `docs/architecture.md:213-220` 已列四样及生活出口，快照定义和门面接点尚未定稿 | 将四样契约定在 §5.2，链 `src/contracts/living.ts`、`CompanionFactSource` 和三个门面，写清仅挂 Economy 也可读钱包、`world.changed` 按绑定合并并提示重读快照，旧服务和事件作为阶段性兼容入口，`registerLifeOutlet` 与 `readLifeEnabled` 留作接线说明。`src/contracts/living.ts:7-41`、`src/contracts/interaction.ts:24-30`、`src/living/index.ts:165-192,278`、`docs/plans/stage2a-merge.md:928,932,1401-1410` |
+| `docs/architecture.md:265-328` 概念细表大多已换 `living`，仍引用 `c057df9` 的取证行号，例 `:273` 指向现已挪动的照料词表 | 本轮只重核文件与行号，保留六组概念的取值、转换损失及统一结论，照料词表先校到 `src/living/body/plugin.ts:25`。`docs/plans/stage2a-merge.md:768` |
+| `docs/architecture.md:369-379,393-488` 登记者路径已换，正文仍依赖 `9a0d1dd → c057df9` 对照 | 将 5.8.1–5.8.4 和登记者表直接校到 `04bff94`，删除 5.8.6 的旧对照和导语里的转引，按 `policyCells` 核对覆盖。`tests/behavior-list/index.test.mjs`、`docs/plans/stage2a-merge.md:769,1340` |
+| `docs/architecture.md:492-530` 两段已指第二层并补了 1A 证据，仍用将来时和「原样」表述，`:514` 的生命周期测试行号已漂移，`:503,530` 重复取证入口 | 写成已落地的顺序与匹配条件，固定段名、正文含该段、事实投影逐条相等，键序和空白可变，保留三区缺席后旧快照退休，校准证据并删掉重复取证说明。`src/living/prompt-context.ts:43,86-110`、`tests/core/context-contracts.test.ts:38-138`、`tests/living/living-lifecycle.test.mjs:612,657`、`docs/plans/stage2a-merge.md:982,1340-1342` |
+| `docs/architecture.md:561-593` 已改依赖和实例，前两张表仍重复，含「待核／无测试」及旧夹具结论 | 合成一张入口矩阵，逐行列 Economy、Body、Life 卸载、显式暂停和三区全卸载的结果及测试，写明缺席跨暂停按区间扣时、暂停取消在途回顾但收尾前原授权可复核、全卸载后普通聊天、相册和日记保留。`tests/behavior-list/entries-lifecycle.test.mjs:549,598,908,941,967,1023`、`tests/living/living-lifecycle.test.mjs:1049,1102`、`docs/plans/stage2a-merge.md:979-981,1214,924-925` |
+| `docs/architecture.md:607-627,646,650-665` 已写分段日志、历史清单和重挂限制，仍把跨库验证写成未来、把回退次序写反，`:646` 未点明 LivingWorld 自身的分组 | §7.2 写清旧包回退备份与同包续做备份，§7.4 写成 `0001` 到 `0003` 的现行协议并把命令指向开发说明，§8 统一三类隔离登记的重挂要求，P3 标「2a 部分完成」并链产品验收与 2b。`docs/plans/stage2a-merge.md:917-923,1295,1322,1355,1176` |
+| `docs/product.md:83,98-102,130-147,200-218,231-234,329-343,370-397` 仍有 55／52、89 条、2a 准备中和相册移入第二层等说法 | 改为索引 107 项、执行 104 项，更新典型修改 1、G5、故障家族和勾选状态，违规表写实 18 条已清、相册留 Core、第一层剩 5 条，已知问题 5/7 保持移出，8 等实机、9 保留调查记录，计数口径和归属协议分别链原处。`tests/behavior-list/index.json:1`、`docs/plans/stage2a-merge.md:992-1009,1335,1527` |
+| `docs/decisions.md:27-47,100-104,174-185` 已记 setup 和目录迁入，仍推荐 `25-Behavior` 建实例 | 更正首挂建、末卸释放，归档相册与全卸载、需要迁移、两类备份、独立采用证据、home 镜像和仅搬家可改键的决定与理由，操作、字段、写入次序链开发说明及架构。`docs/plans/stage2a-merge.md:912-928,1524` |
+| `AGENTS.md:9-18,32-44,60-64` 一页入口和改键规则已更新，新增登记表仍缺第二层接点 | 保留 `living` 三个区，新增 `mountLivingArea`、Core 的生活判定登记口、生活出口及启用意图读口的指针，行为与隔离规则链架构。`src/living/index.ts:118,354`、`src/core/tables/companion-ports.ts:45-53`、`src/living/outlets.ts:24,48` |
+| `docs/development.md:68-121,123-134,146-159` 已有三步、拒写、日志和诊断，缺完整换包顺序、旧钱包换路径前置与两条原生入口 | 以此为操作正文补齐主人清单中的命令、恢复分支和隔离 profile 前提，修正搬设备链接，补 2a 度量起点，运行时五证据只链架构 §4。`docs/portability.md:21-37,87-112`、`package.json:102-107`、`docs/plans/stage2a-merge.md:1507` |
+| `docs/release/notes.md:1,10-30` 仍是 0.2.0 公告，写着直接升级可跳过迁移 | 换成 0.3.0 中文说明，给出换包后「需要迁移」、同标签迁移和回退入口，命令链开发说明，兼容变更链架构 §5.2、§6。`.github/workflows/release.yml:99-109`、`docs/plans/stage2a-merge.md:782-785` |
+
+**遗留事项**
+
+| 事项 | 处理与理由 |
+| --- | --- |
+| 3D `test:native-life` | **留给主人**。出口夹具已修，试跑停在隔离 `DSH_HOME` 缺 `profiles/desktop/package.json`，原生断言尚未执行，随下面三条原生检查一起跑。`docs/plans/stage2a-merge.md:1117-1121,1371` |
+| `test:native-services`、`test:native-room`、`test:native-channel-homes`，以及设置页「需要迁移」和 `life.economy` | **留给主人**。三条原生检查在隔离环境跑，迁移卡片和「资料与会话」的钱包行由主人实际打开，现有 RPC、临时渲染与合成入口证据可作对照。`docs/plans/stage2a-merge.md:783,1169,1182,1488,1523,1527` |
+| 换设备后报 `economy-marker-binding-mismatch` | **本批做**。写入升级说明，换设备后用 0.2.0 对新路径绑定并确认钱包成功打开，再备份和换包，旧版本新开 Store 会刷新 Core 标记路径。`docs/plans/stage2a-merge.md:1191,1507`、`v0.2.0:src/economy/plugin.ts:71-97`、`scripts/migrate/steps/0003-economy-marker.mjs:24-29,101-106` |
+| 第 4 批建议修 5、隔离热更新 | **缓存记入 `ideas/inbox.md`，隔离标签和跨 `await` 调用方校验归 2b**。缓存先用合成数据量 `homeScope → status` 的同步读，再评估按文件版本或绑定失效，保留拒写门禁即时性。现行隔离配置改后重挂写入文档。`docs/plans/stage2a-merge.md:1167,1285,1322,1355,1456,1522`、`src/core/workspace.ts:151-159,202-218,585-604` |
+| `world.changed`、仓库外 `desktopRest()` | **本批做**事件契约归档，运行时订阅接入归阶段 3，由订阅方处理异步错误。**留给主人**盘点隔离环境的外挂插件和配置，仓内删除证据已齐，发现外部调用则记录位置并确认替代调用后再放行。`docs/plans/stage2a-merge.md:459,502,783,1397,1405`、`tests/living/living-lifecycle.test.mjs:227-232` |
+| R5 旧快照、设备搬迁直接读库 | **本批做**文档勘误，R5 采用实时报告，旧 `writers.json` 的处置见拍板。`portable-repo.mjs` 的 SQLite 直读记入 `ideas/inbox.md`，按已定停写前提演练。`docs/plans/stage2a-merge.md:999,1250`、`arch/baseline/writers.json:58-59`、`scripts/arch/check.mjs:16-17,42-47`、`scripts/lib/portable-repo.mjs:40,64` |
+| Memory 两次偶发失败 | **本批做**首错取证。第 4 批 B10 确认送达后未召回，单项和整套复跑通过，第 5 批返工盘点首跑 422、原命令两次复跑通过。保留首次失败对应的入口、操作名、状态码和合成日志。`docs/plans/stage2a-merge.md:1156,1193`、`tests/behavior-list/native.test.mjs:21-36`、`tests/migrate/inventory.test.mjs:12-15,40-49` |
+
+- Memory 在允许回环和 `/bin/ps` 的环境，构建后先跑 `node --test --test-name-pattern='送达确认后另一个会话' tests/behavior-list/native.test.mjs`、`node --test tests/migrate/{inventory,compatibility}.test.mjs`，再按第 5 批原快测和行为清单复跑。B10 查 A 的落盘确认、provider 写入与 B 的真实召回／过滤，422 先取具体 operation 和合成错误详情，区分夹具写入或请求校验，`ValueError/TypeError/KeyError` 都会映射为 422。已知问题 9 的合成召回断言现位于 `:108`。`docs/plans/stage2a-merge.md:755,881,952`、`src/core/native/agent.ts:264-277,306-312`、`src/memory/{main.py:27-44,client.ts:65-81,provider.py:455-479}`、`scripts/fixtures/synthetic-companion.mjs:100-109`
+- **G3 判定**　现有证据不足以把 B10 和 422 计作同一不变量第二次失守。先比对已知问题 9 和第 4 批另一次合成 Bank 500，若复现证实同一个已确认写入后应可召回的不变量再次失守，立即提前复盘，第三个相关修复批前完成复盘。复跑通过和沙箱 `EPERM` 均单记。`docs/product.md:181,234`、`docs/plans/stage2a-merge.md:881,1156,1194`
+- **故障家族漏项**　1A 种地时钟、第 2 批换包配置、第 4 批迁移判定已记，拒写导出已记在第 4 批同一行，可独立列「保留原址待办」。补记 1B 历史段随 Repo 搬迁、目标丢失拒续做及 Memory 失联补账，3B 已接单暂停和收尾花费落盘，3C 三区缺席时旧快照退休，3E 派工回执与绑定后的变更通知，5 钱包坏证据只隔离钱包、空壳可恢复、双目录丢失仍拒绝复活。3A 搬家夹具和 3D 原生夹具返工单列验证修复。`docs/product.md:200-218`、`docs/plans/stage2a-merge.md:1006-1009,1069-1070,1093-1097,1117,1136-1139,1251,1478,1522-1524`
+
+**度量分支**
+
+1. 从 `04bff94` 开独立 worktree：`git worktree add -b codex/m4-measure-1-garden ~/.codex/worktrees/m4-measure-1-garden 04bff94`。从 M1 的 `6b7d0a4` 复用 `tests/economy/radish-rules.test.ts`，将导入改为第二层 Store，时钟参数改为 `{enabled: …}`。只在 `src/living/economy/catalog.ts` 改小萝卜默认生长 12 → 10 小时和售价 3 → 4，随提交带 `dist/src/living/economy/catalog.js`。`docs/plans/stage2a-merge.md:778`、`src/living/economy/catalog.ts:15-35`、`src/living/economy/store.ts:107,473,501`、`6b7d0a4:tests/economy/radish-rules.test.ts:8-34`
+2. `pnpm run build && node --test dist/tests/economy/radish-rules.test.js`，验 10 小时前未熟、到点收获 3 个、卖得 12、重开库同号重试只入账一次，其他作物默认值与已保存生长配置沿用。只提交到度量分支。用 `git diff --stat 04bff94..codex/m4-measure-1-garden` 计已提交差异，预期源码 1、测试 1、跟踪产物 1，最多 3 文件、1 层、1 模块，限第二层钱包区。`docs/development.md:123-134`、`docs/product.md:102,128`、`arch/layers.json:54-64`、`package.json:92`
+3. 历次口径沿用 M1 `bfe069f` 上三个 `codex/m1-baseline-*`，M2 从 `d865bff` 实做 4a/b/c、5a，开放词表后从 `754a0a5` 复测 5a，M3 沿用该结果选 B。源码、测试、产物分别计数，测试和产物归回源码模块。实验分支保留，结果进产品表。`docs/development.md:126-134`、`docs/product.md:98-111,126-128,305-313`
+4. 在收尾主线跑 `pnpm run check:arch -- --report`，只取「运行源码」的 kind/action AST 点，比较、包含、前后缀、`switch` 各按命中节点计，文件交集去重。只读实测 `2128d01` 为 **283 / 104**，`04bff94` 为 **287 / 105**（共 392 点、47 文件），超限 4 / 1。净增来自 Core 的偏好写门禁、Body 的菜园分支和照料入口。R1–R4 **37**、R8 **1031**，棘轮通过。G5 按原表七项补 2a 列，依赖边和修复轮次沿原口径计，词表点数判定见拍板。`docs/product.md:130-158`、`scripts/arch/check.mjs:7-27`、`scripts/arch/lib/vocabulary.mjs:35-51`、`src/core/workspace.ts:516`、`src/living/body/room.ts:628,863,930,958`、`src/living/body/plugin.ts:325`
+
+**主人清单（按拍板点 6）**
+
+1. **发 RC**。Agent 先备好合成门禁结果、中文升级说明和候选提交号。主人确认门禁及拍板结论后 `git push origin main`，在 GitHub Actions 的 **Publish Her World** 选 `main`，输入 `0.3.0-rc.1`。以冻结 tag、npm `next`、普通下载 URL 的 SHA-512 和 GitHub Release 都就绪为通过。处理或下载超时用同一 run 的 **Re-run failed jobs**，校验失败先查原因，源码改动用新 RC。`docs/github-updates.md:28-54`、`.github/workflows/release.yml:24-109`、`scripts/checks/check-release.mjs:8-24`
+2. **隔离升级与回退**。Agent 先用合成副本预演并备好路径占位符。主人用有完整 `profiles/desktop` 的隔离 DSH，退出后用候选检出的 `node scripts/install-dsh.mjs --dsh-home "$ISO_DSH_HOME" --version 0.2.0 --apply` 安装，按需带 `--resume-repo` 和 `--memory-python`。启动后绑定、验旧钱包可用，再完全退出。已装旧 setup 的先用同脚本 `migrate-core-config --dsh-home "$ISO_DSH_HOME" --apply` 搬配置或补回执。安装或回执失败停在旧包核对绑定。`scripts/install-dsh.mjs:30-36,53-76`、`docs/portability.md:23-37,71`、`docs/product.md:210,218,233`
+   - 旧包停写后运行 `node scripts/companion-backup.mjs create --installation "$RECEIPT" --output "$ROLLBACK"`，再用 `node scripts/companion-backup.mjs verify --installation "$RECEIPT" --backup "$ROLLBACK"`。通过后启动，从版本页勾预发布换到 RC，看到「需要迁移」、只有普通聊天可用、伙伴写入被拒。卡片或前置备份失败即停。`scripts/companion-backup.mjs:68-99`、`docs/github-updates.md:9-20`、`docs/plans/stage2a-merge.md:917-922,1464,1488`
+   - 退出 DSH 及所有写入者，从 `v0.3.0-rc.1` 检出依次运行 `node scripts/migrate/companion-migrate.mjs plan --installation "$RECEIPT"`、`node scripts/migrate/companion-migrate.mjs run --installation "$RECEIPT" --backup "$RESUME_BACKUP"`、`node scripts/migrate/companion-migrate.mjs status --installation "$RECEIPT"`。三步 `complete` 且 `segment: settled` 后启动，核对 `ready`、聊天、home、钱包与配置，再停写用 `node scripts/install-dsh.mjs migrate-core-config --dsh-home "$ISO_DSH_HOME"` 核对配置。停写拒绝先处理写入者，段头未落盘换新备份目录，`unfinished` 用同标签及原路径执行 `node scripts/migrate/companion-migrate.mjs run --installation "$RECEIPT" --resume`，旧步骤集换原包和源码续做或回退，绑定或目标不一致即停。`scripts/migrate/companion-migrate.mjs:5-24`、`scripts/migrate/runner.mjs:33-83`、`docs/development.md:86-111`、`docs/plans/stage2a-merge.md:1479` 
+   - 候选检出中为每条命令设 `DSH_HOME="$ISO_DSH_HOME"`，跑 `pnpm run test:native-services`、`pnpm run test:native-room`、`pnpm run test:native-channel-homes`、`pnpm run test:native-life`。都应退出 0、`ok:true`、`paidCalls:0`，依次确认跨会话及重启召回、照片及跨会话相册、分组与会话恢复、`bubbles:1` 且安静模式通过。缺 profile 先补隔离环境再跑。主人实际看钱包正常状态和合成缺库状态的 `reason`，用 `rg -l '\bdesktopRest\b' "$EXTERNAL_CODE"` 在选定的外挂代码和配置查调用。任一缺证据则停在隔离验收。`package.json:102-107`、`scripts/checks/lib/native-standard-preset.mjs:9-20`、`scripts/checks/check-native-services.mjs:194`、`scripts/checks/check-native-room.mjs:145`、`scripts/checks/check-native-channel-homes.mjs:140`、`scripts/checks/check-native-life.mjs:137`、`src/console/client.js:1005,1178`
+3. **独立设备真实副本**。Agent 先交合成崩溃续做及旧包回退结果和逐项记录表。主人停源机写入、本地传完整副本，按步骤 2 在新设备用 0.2.0 绑定并开钱包，在该设备原路径备份，随后做 RC 拒写、迁移和重启。停写时运行 `node scripts/migrate/inventory.mjs --installation "$RECEIPT"`，核对登记及数量，已采用钱包在旧包下应为一条匹配绑定的标记。验撤回记忆仍不可见、身份和便携存储 ID 一致、结算守恒，另用可丢弃副本验缺库、坏 JSON、软链接、异身份均拒绝建立替代。异常保留副本和备份，先查固定原因码。`docs/plans/stage2a-merge.md:784,397-397,1176,1507`、`docs/portability.md:21-37`、`docs/development.md:80-84,121`、`scripts/migrate/inventory.mjs:29-31`、`docs/architecture.md:629-635`
+   - 隔离合成和真实副本都回退一次。版本页先换回 0.2.0，退出后从候选检出用 `node scripts/companion-backup.mjs restore --installation "$RECEIPT" --backup "$ROLLBACK" --before "$BEFORE_RESTORE"`。同机同路径、旧包指纹一致、`restored:true` 后重启，验旧包、旧绑定、聊天、召回和钱包，新增聊天留在回退前安全备份，已送达、额度和花费保留。失败留住两份备份并核对包和绑定。崩溃续做由合成故障注入与真实副本的实际记录共同作证，写明各自覆盖的步骤。真实输出留本机，Agent 只收允许的元数据、原因码及通过与否。`scripts/lib/offline-backup.mjs:268-277,391-395,409-432,451`、`docs/plans/stage2a-merge.md:784,917-923,1148,1176`、`docs/development.md:113-121`
+4. **发正式版**。Agent 备好 RC 与待发布源码的差异核对。主人在 RC 冻结后的 `main` 用同一工作流发 `0.3.0`，安装运行时只差版本元数据。先在隔离环境从版本页装正式包，确认可激活、绑定和聊天召回正常，再按同一备份与迁移顺序升级日常机器。任一隔离项失败则停在隔离环境。推送、发布、真实数据和运行中的 DSH 均由主人操作。`docs/plans/stage2a-merge.md:785,956`、`docs/product.md:321,327`、`docs/github-updates.md:30-54`、`AGENTS.md:54,83-90`
+
+**提交与清理**
+
+- 文档提交按三组拆：架构与登记（`docs/architecture.md`、`arch/storage.json`、`AGENTS.md`），阶段与决定（`docs/product.md`、`docs/decisions.md`、本方案），升级操作（`docs/development.md`、`docs/release/notes.md`）。每提交最多 15 文件、增删共 600 行，预计无需超阈值。种地实验只允许上列三个文件。发布说明以外的发布流程文件 `.github/workflows/**`、`scripts/checks/check-release.mjs`、`docs/github-updates.md` 只读。`AGENTS.md:55-64`、`docs/plans/stage2a-merge.md:50,762-778,934`、`.github/workflows/release.yml:109`
+- `git branch --merged main --list 'codex/2a-*'` 和 `git worktree list --porcelain` 核实 `codex/2a-` 与 `~/.codex/worktrees/2a-` 的九个后缀为 `1a-evidence`、`1b-migration`、`2-setup`、`3a-move`、`3b-instance`、`3d-outlets`、`3e-contract`、`4-home`、`5-economy-marker`。3C 已由 `aed7f27` 合入，当前无该本地分支或 worktree。`4-home`、`5-economy-marker` 各有未提交的本方案改动，先核对并保留其有效内容。`docs/plans/stage2a-merge.md:40-49,1089,1489,1529`
+- 临时清理候选为 `/tmp/her-world-v020` 和 `/tmp/her-world-{3b,3c,3d,3e,4,5}-patches`，旧版检出留到回退演练完成。以上只盘点，删除等主人确认。`codex/m1-baseline-*`、`codex/m2-retest-*` 和本次度量分支保留。`docs/plans/stage2a-merge.md:749,1089,1116,1132,1158,1184`、`docs/product.md:98,126`
+
+**2a 完成标准**
+
+| `docs/product.md` | 当前及勾选条件 |
+| --- | --- |
+| `:383,386,388-391` 已勾 | 依次为安全网、常驻及 R6/R7、第一层 18 条清零、home 迁移、钱包迁移、四样契约及第二层清零。两个迁移勾选的证据是合成副本，真实验收留 `:395`。`docs/plans/stage2a-merge.md:992-1009,1055,1335,1365,1406,1466,1527` |
+| `:384,385,387` 本批可勾 | §6.2 每行落到入口测试并全绿，行为执行项按当前 104 条复核，R5 复核 Core 对 `life.json` 零读写及事实准备、复核、落盘后确认的顺序。`docs/plans/stage2a-merge.md:964,1082,1150,1527`、`tests/behavior-list/native.test.mjs:6-18` |
+| `:392,393` 本批可勾 | 种地独立分支实做达标后勾 `:392`，G9 经真实 Cordis 入口在合并状态复跑原版与迁移版通过后勾 `:393`。`docs/plans/stage2a-merge.md:778,954,1176`、`tests/behavior-list/families.test.mjs:234-235` |
+| `:394,395` 等主人 | `:394` 等隔离 setup → 版本页换包 → 配置核对，`:395` 等隔离升级回退、真实副本和正式包激活。对应证据到齐再勾，两轮迁移失败按停止条件处理。`docs/product.md:218,233,394-397`、`docs/plans/stage2a-merge.md:782-785` |
+
+**需要主人拍板**
+
+1. **词表点数超了设计约束**　方案定「kind/action 字符串判断第 6 批复测不应增加」（拍板记录前的「词表」一段），实测从 `2128d01` 的 283 / 104 涨到 `04bff94` 的 287 / 105，多出的点来自第 4 批 Core 的偏好写门禁、Body 的菜园分支和 3E 的照料入口。这条不在 `docs/product.md` 的 2a 完成标准里。**推荐**：接受偏差带进 2b，在产品表和 decisions.md 写明多出的 5 处位置和原因，2b「概念统一」完成标准加一条「kind/action 点数回到 283 / 104 以下」；理由是 2b 本来就是统一词表，现在为 5 个点再开一批改刚验收过的代码，风险和成本都不值。备选：RC 前另开一个只做行为等价收敛的小批，压回 283 / 104 再冻 RC。`src/core/workspace.ts:516`、`src/living/body/room.ts:628,863,930,958`、`src/living/body/plugin.ts:325`、`docs/product.md:139` 决定：按推荐（主人 2026-11-20 过目同意）。
+2. **R5 快照 `arch/baseline/writers.json` 和清理时机**　**推荐**：本批不删 `writers.json`（`arch/baseline/**` 只能用工具改，且它只作报告、不参与棘轮，`docs/architecture.md:139`），只把文档里「R5 看实时报告」写准，删不删记进 `~/Developer/project-design/ideas/inbox.md`；分支、worktree 和临时目录的删除放到回退演练完成之后，届时列清单请主人确认，两个带未提交改动的 worktree 先看差异再说。 决定：按推荐（主人 2026-11-20 过目同意）。
+
+**验收命令**
+
+- 文档提交跑 `git diff --check`、`git diff --stat`，逐项核对本地链接、锚点和行号。合并前在允许回环和进程探测的环境跑 `pnpm run verify`、`pnpm run test:behavior-list`（复用门禁构建）、`pnpm run check:arch -- --report`，并用 `node --test tests/behavior-list/{entries-lifecycle,families}.test.mjs` 核 §6.2 与 G9。`AGENTS.md:49-54,90`、`scripts/checks/verify.mjs:13-23`、`docs/plans/stage2a-merge.md:950-954`
+- 合成预演用 `node --test tests/migrate/{read-only,home-flow,crash,settlement}.test.mjs` 和 `HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs`。确认迁移前后原断言、崩溃点续做、回退保留项，主人验收再按上面的四条原生检查和实机清单记录。`docs/plans/stage2a-merge.md:745-756,1148,1176,1193`、`tests/migrate/home-rollback.mjs:25-38,74-119`
+
 ---
 
 ## 特殊情况
