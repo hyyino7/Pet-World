@@ -572,6 +572,84 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 
 **验收**：合成副本上正常迁移 → 聊天、记忆、home 可用 → 回退 → 0.2.0 可用（旧包、旧数据、旧绑定一起恢复）；四个落盘边界各崩溃一次都能续做；未迁移时三条写路径都被拒；1A 的「home 身份与 Life 在运行分开」契约测试通过；1A 的 G9 流程迁移后复跑通过。
 
+#### 第 4 批开工细则
+
+（Codex 只读起草、Claude 核对行号后定稿，主人 2026-11-20 过目同意。）
+
+3E 合并后从 `main` 开 `codex/2a-4-home`。下文行号取自 3D 合并后的 `6a76e50`。开工时重核 `src/living/plan/plugin.ts`、`src/living/index.ts` 和 `src/contracts/` 的接点。本节已核对源码，验收在实现后执行。`docs/plans/stage2a-merge.md:47-54,467-475,510-514,538-573`
+
+**需要主人拍板**
+
+- **实例代次**　推荐用 Core 的 `bootId` 加 `CoreWorkspace` 的进程内绑定代次。在实际绑定变更或初始化提交后、发 `pet/core.changed` 前换代。可拦住 A→B→A 和同名重挂，普通设置编辑也不会中断开 home。现有 `Binding.revision` 还会随文档保存推进，Plan 的租约只管 Plan 自己。`src/core/runtime.ts:25,96-98`、`src/core/workspace.ts:271-273,328-337`、`src/living/index.ts:127-135` 决定：按推荐（主人 2026-11-20 过目同意）。
+- **串行入口**　推荐放 `companion-foundation.ts`。这里已有原生会话控制器、成员判定和前台单飞，`workspace.ts` 负责绑定核验和原子读写。`src/core/companion-foundation.ts:16-34,61-129`、`src/core/workspace.ts:116-120,175-181` 决定：按推荐（主人 2026-11-20 过目同意）。
+- **恢复方式**　推荐退出 DSH 迁移，再重新启动。本进程一旦判为「需要迁移」就锁定该判定，设置页刷新可查看状态。迁移器本来就要求 Core、Economy 和 Memory 停写，重启也能让会话和各模块从新绑定重新准入。`scripts/migrate/context.mjs:35-45`、`docs/plans/stage2a-merge.md:755-761` 决定：按推荐（主人 2026-11-20 过目同意）。
+- **`arrivalPending` 清除**　推荐 Core 提交新 ID 时一并置 `true`，Plan 确认同一 ID 的迎接已落盘后，由 Core 按原记录比较并清除。已有同一 ID 的迎接直接确认。清除成功后才交给原生调度消费，避免写镜像与清标记之间崩溃导致重复迎接。`docs/plans/stage2a-merge.md:544-547,765`、`vendor/dsh-world/lib/life/{home.js:6-11,runtime.js:307-323,605}` 决定：按推荐（主人 2026-11-20 过目同意）。
+- **已收尾步骤的复查**　推荐严格相等仍是 `0002` 当轮完成条件。已记 `done/skip` 后复查以有效的 Core 记录为准，只有旧镜像而 Core 行缺失仍报 `migration-inconsistent`。否则一次合法的镜像滞后就会挡住第 5 批。`docs/plans/stage2a-merge.md:127,547-549`、`scripts/migrate/runner.mjs:38-40,63-75` 决定：按推荐（主人 2026-11-20 过目同意）。
+- **拒写验收口径**　推荐核验伙伴业务记录、请求回执和模块文件零写入。Core 启动现有的 `core.lock`、WAL 和 schema 同值写入另行核对。若要求原库文件字节级零写，须先停下对齐 Core 的打开方式。`src/core/storage.ts:77-109`、`src/core/runtime.ts:46-57,93-98`、`AGENTS.md:55-59` 决定：按推荐（主人 2026-11-20 过目同意）。
+- **迁移判定的共用代码**　推荐新建 `src/core/storage-migration.ts` 放冻结版本表和日志解码，运行时直接用，离线脚本 import 已提交的 `dist/src/core/storage-migration.js`。现在 `scripts/migrate/` 不读 `dist`（`grep -rn dist/ scripts/migrate` 为空），这是迁移脚本第一次依赖构建产物。好在 `dist/src/**` 随提交入库，按拍板点 6 迁移从与安装版本同标签的仓库跑，产物和源码一致。备选是两边各存一份版本表，会违反「每个事实只写一处」，运行时和迁移器的判定也可能漂移。`scripts/migrate/context.mjs:24-33`、`scripts/migrate/journal.mjs:14-75`、`docs/plans/stage2a-merge.md:755-761` 决定：按推荐（主人 2026-11-20 过目同意）。
+
+**共享 home**
+
+- `host.workspace` 的 `CoreWorkspace` 新增 `homeScope(): HomeBinding | undefined`、`readCompanionHome(scope: HomeBinding): Readonly<HomeRecord> | undefined`、`writeCompanionHome(scope: HomeBinding, expected: HomeRecord | undefined, next: HomeRecord): void`。`HomeBinding` 带 `workspaceId/path/storageId/bootId/generation`，每次核对 `ready` 和当前真实绑定。`HomeRecord` 为 `{sessionId: string, arrivalPending?: true}`，以 `storageId` 为键。写在 `CoreStore.transaction` 内复核并比较旧值，冲突拒绝。`src/core/index.ts:36-47`、`src/core/workspace.ts:116-126,175-181,417-433`、`src/core/storage.ts:99-101,168-186`
+- `ensureCompanionHomeSession(ctx: Context, host: PetCoreHost, scope: HomeBinding, preset: string): Promise<string>` 放 `companion-foundation.ts`。在原生 `create` 前按 Core 实例和绑定代次登记同一个 Promise，第二个调用等待同一结果。锁内重读 Core，复用可解析的非归档主人会话，归档或明确 `session/not-found` 才重建，其他解析错误或异域会话拒绝。跨 `await` 复核绑定、原生成员和归档状态。`src/core/companion-foundation.ts:16-34,61-129`、`vendor/dsh-world/lib/life/home.js:53-78`
+- 前台 `resolveCompanionHome` 保留日志恢复和上游 `open()` 的标题行为，`current` 改读 Core，`moveIn` 交给已提交后的登记回调，移除 Core 对 `life.json` 的读取、建目录和写入。前台 `host.createSession` 与 Plan 传给上游的 `host.createSession` 都接共享入口。创建者先提交 Core 再返回 ID，两侧各自复核调用租约并解析 Agent。`src/core/companion-foundation.ts:46-65,71-129,154-170`、`src/living/plan/plugin.ts:190-213,289-313`、`vendor/dsh-world/lib/life/home.js:38-44,65-84`
+- 创建失败时两路共享拒绝，旧记录保留，释放单飞供重试。原生会话已建而 Core 写失败时，两路都不返回 home，镜像也不写。本进程同代保留候选 ID，重试先核验该会话并补写记录。若进程已退出，未登记的会话仍归 DSH 原生会话。`src/core/storage.ts:182-186`、`src/core/companion-foundation.ts:111-123`、`vendor/dsh-world/lib/life/home.js:65-78`
+- Channels 的主人入口走共享身份，主动送达和整理仍要求运行中的 Life。Desktop 的 `isLifeHome` 继续用运行态。3C 的 `isRunningLifeHome` 仍用于回顾整理。`src/channels/plugin.ts:49-62,78-91`、`src/channels/messaging.ts:196-197`、`src/desktop/index.ts:270-282`、`src/living/plan/plugin.ts:152-153,654-659`、`src/memory/batch.ts:90-95`
+
+**Plan 镜像与待迎接**
+
+- 在 `CompanionPorts` 增加同步 `applyHomeArrival(scope: HomeBinding, sessionId: string): boolean`。`40-Life` 与 `isRunningLifeHome` 一起登记和撤销，复用 `scopeFor`、`RegistrationTable` 和 Plan 可见实例检查。Plan 装载取得 `ready` 绑定时即尝试交接，暂停也可落盘迎接。只有 Body 或 Economy 在场时，Core 保留标记。`src/core/tables/companion-ports.ts:17-53`、`src/core/tables/registry.ts:29-42,66-71`、`src/living/index.ts:44-50,189-210`、`src/living/plan/plugin.ts:169-199,636-660`
+- Plan 从原始磁盘状态调用 `markHomeArrival`，同次保存 ID 和 `greeting`，同步目录后再确认 Core 标记。包装 `read/refresh` 在原对象上叠 Core ID，保留上游字段基线，把异 ID 的迎接隔离在投影外。上游建会话返回前刷新原对象，使工具判定和 `moveIn` 看见同一 ID。保留上游对已确认迎接的删除。`vendor/dsh-world/lib/life/{home.js:6-11,lifeStore.js:60-92,lifeStore.js:153-183,runtime.js:46-47,runtime.js:605,runtime.js:982-1025,toolRegistry.js:37-41}`、`src/core/workspace.ts:138-146`
+- `write` 按当前绑定和运行代复核，将镜像归正后交原 store 合并。仅在持久镜像 ID 实际改变且提交成功后通知 `pet/life.changed`，预算或迎接消费不补发。收尾沿用同代花费写入规则。停机从本运行代保存的会话 ID 取消，镜像读写故障也要完成 `stop/cancel/settled`。`src/living/plan/plugin.ts:201-213,327-371,429-441`、`src/living/index.ts:183-187`、`vendor/dsh-world/lib/life/runtime.js:955-964`
+- **四个故障用例**放 `tests/living/living-lifecycle.test.mjs`，复用真实 Cordis 装卸和磁盘夹具。① Core 提交后使镜像写失败，断言前台仍取同一 ID、标记保留、卸载取消和收尾完成，重挂只交接一次。② 无 Life 时开 home，断言前台不写 `life.json`，挂 Plan 后先落盘再清标记。③ 注入冲突镜像，断言原生工具和运行态认 Core ID，下一次有效写修正镜像。④ 阻塞旧回调至重绑或同名重挂后放行，断言新记录、镜像和通知计数不受旧回调影响。`tests/living/living-lifecycle.test.mjs:206-239,372-414,499-539`、`tests/behavior-list/entries-lifecycle.test.mjs:160-181,230-254`
+
+**离线迁移**
+
+- 新建 `scripts/migrate/steps/0002-home-identity.mjs`，按 `{id, from, to, complete(context): boolean, apply(context): void}` 登记在 `0001` 后。`from` 取冻结的 v1，`to` 去掉 `behavior/economy/life`，设 `core:2`、`living:2`，其他键仍为 `1`，存储清单 `schemaVersion` 仍为 `1`。用测试核对 `arch/storage.json.dataVersions`、运行时要求和步骤目标一致。`scripts/migrate/steps/0001-storage-manifest.mjs:3-22`、`scripts/migrate/context.mjs:24-33`、`scripts/migrate/journal.mjs:14-32`、`scripts/migrate/runner.mjs:12-27`、`arch/storage.json:2-4`
+- 核对当前绑定、已存在的 Core 库及其 schema，按已有普通文件与停写检查读取 `life.json`，校验版本和 ID。`complete` 在 SQLite 私有副本上验证两边 ID 相等或两边都缺省。`apply` 在锁内用 SQLite 事务仅补缺失的 `{sessionId}`，异值报固定 `home-identity-conflict`。迁移保留 `life.json` 原字节，诊断只报原因码和通过与否。`scripts/migrate/context.mjs:11-22,35-45`、`scripts/lib/repo-storage.mjs:14-29,46-68`、`src/core/storage.ts:97-108,168-186`、`scripts/migrate/errors.mjs:20-30`
+- 四处用真实 `0002` 注入 `SIGKILL`，沿用 1B 子进程，复核日志、原备份哈希、记录数及镜像哈希。`tests/migrate/migration-child.mjs:8-53`、`tests/migrate/crash.test.mjs:15-25,44-115`
+  1. **备份已校验、段头未追加**　上一段仍有效，保留原备份目录，用新目录重开。`scripts/migrate/runner.mjs:97-106`
+  2. **Core 事务已提交、清单未推进**　`--resume` 用本段原备份，`complete` 命中，只补清单和 `skip`。`scripts/migrate/runner.mjs:48-59,112-126`
+  3. **清单已推进、`done` 未写**　`status` 仍报 `unfinished`，锁接管后续做只补 `skip`。`scripts/migrate/runner.mjs:38-45,108-125`、`scripts/migrate/io.mjs:21-42,44-56`
+  4. **`done` 已落盘**　原样续做幂等。另删已提交的 Core 行、保留源 ID，断言 `status` 为 `inconsistent`，续做和开新段均拒绝。`scripts/migrate/runner.mjs:38-45,48-75,111-125`、`tests/migrate/crash.test.mjs:78-87,118-137`
+
+**「需要迁移」与写入入口**
+
+- 在 `CoreWorkspace.status()` 的 `pending/ready` 分流前调用只读判定。新 `src/core/storage-migration.ts` 共享冻结版本及日志解码，离线脚本经构建产物复用。判定核对已保存绑定、可搬迁 Core 的实际目录和待绑定目标。搬过路径的当前版本用实际存储和 `storageId` 核验，已收尾日志允许换路径。`src/core/workspace.ts:116-126,175-181,417-433`、`scripts/migrate/journal.mjs:35-75`、`docs/development.md:105-109`、`tests/core/workspace.test.ts:96-108`、`package.json:41-46`
+- **旧存档**　有已初始化的绑定或伙伴数据，清单缺失或是已知旧版，报 `storage-version-outdated`。**真正新装**　无既有绑定及伙伴数据，可有空目录和本次 Core 引导库。显式初始化先记本版本的初始化中标记，验完各模块后原子写最新存储清单，再撤标记。凭匹配的标记续做本版本初始化。`src/core/workspace.ts:230-254,265-298`、`src/core/storage.ts:61-76`、`docs/plans/stage2a-merge.md:555-563,711-716`
+- **未知清单**　坏 JSON、未知完整版本表或异伙伴报 `manifest-mismatch`。**迁移一半**　有效末段未全部 `done/skip` 时，即使清单已推进也报 `migration-incomplete`，提示用匹配源码和原备份 `--resume`。损坏或不匹配的日志沿用 `journal-invalid`、`journal-step-mismatch`、`binding-changed`。对外状态和拒写码统一为 `migration-required`，细因单独返回。`scripts/migrate/context.mjs:28-33`、`scripts/migrate/journal.mjs:35-75`、`scripts/migrate/runner.mjs:48-67`、`docs/plans/stage2a-merge.md:557-563`
+- **初始化、重绑、设置、身份和策略**　`CoreRuntime.call` 在 `ensurePersisted()` 前拦全部配置写，`await` 后复核再进 `mutate`。覆盖初始化、`preferences.save` 的重绑/解绑/会话设置、伙伴设置、档案、底座文本、人设、安静模式。重绑在提交目标前再核目标。`CoreWorkspace.initialize/write` 入口复核，`synchronize` 在读取触发 `adopt` 前短路，旧库启动也跳过身份或策略补写。`src/core/runtime.ts:46-65,85-103`、`src/core/workspace.ts:64-98,230-235,301-351`、`src/core/preferences.ts:27-46`
+- **生活、记录与记忆**　沿用 Plan `current/isCurrentBinding`、Body `synchronize/checked` 和 Economy `bound` 的 `ready` 准入。在 Body 换绑及关闭的旧快照写前、Economy `prepare` 及库写守卫、Plan 控制及 store 写前复核。资料写走现有记录库门禁。Memory 在绑定、连接、工具和归档入口用现成准入，后台整理失败回写前再拦；便携日志在旧队列实际落盘前检查原 Repo。`src/living/plan/plugin.ts:120-134,203-212,532-542`、`src/living/body/plugin.ts:155-160,191-194,370-381`、`src/living/economy/plugin.ts:79-111,264-271`、`src/core/records.ts:57-64,77-85`、`src/core/native/memory.ts:31-63,135-178,189-214`、`src/core/native/conversation.ts:339-349,388-392`、`src/memory/batch.ts:15-27,90-115`、`src/core/native/transcripts.ts:205-239`
+- **设置与普通聊天**　在设置 RPC 分发前拒绝伙伴操作，保留 `snapshot`。设置页显示「需要迁移」、固定码及对应的离线操作提示，省去初始化、绑定和保存控件。Core 原生准入无作用域时保留 `next()`，伙伴提示词、召回、工具与完整日志副本停用，DSH 仍处理自己的会话和原始日志。`src/console/settings.ts:70-79,234-260,392-402`、`src/console/client.js:28,980-989,1114-1145,1176-1189`、`src/core/native/agent.ts:45-51,163-192,211-216`、`src/core/native/transcripts.ts:40-42,290-303`
+
+**提交和允许修改的文件**
+
+每提交可构建并通过相关快测，限 15 文件、600 行。`dist/src/**` 和工具收紧的基线随提交，不计阈值。`src/core/workspace.ts`、`scripts/migrate/**` 为高风险。若需要改 `src/core/storage.ts`，停下对齐。`AGENTS.md:49-64`、`docs/plans/stage2a-merge.md:569,772`
+
+1. 共用版本与日志校验。`src/core/storage-migration.ts`（新）、`scripts/migrate/{context,io,journal}.mjs`、`scripts/migrate/steps/0001-storage-manifest.mjs`。`scripts/migrate/context.mjs:24-33`、`scripts/migrate/journal.mjs:14-75`
+2. 离线 `0002` 与 CLI 回归。`scripts/migrate/{runner,errors}.mjs`、`scripts/migrate/steps/0002-home-identity.mjs`（新）、`arch/storage.json`、`tests/migrate/migration-child.mjs`、`tests/migrate/{normal,metadata-normal,compatibility,settlement,rollback,crash,concurrency,journal-exists,refusals}.test.mjs`。1B 专测用例显式选 `0001`，完整 CLI 按真实步骤集断言。`tests/migrate/migration-child.mjs:10-32`、`tests/migrate/normal.test.mjs:15-40`
+3. 工作区与模块门禁。`src/core/{index,plugin,runtime,preferences,workspace}.ts`、`src/core/native/transcripts.ts`、`src/contracts/common.ts`、`src/living/{body,economy}/plugin.ts`、`src/memory/batch.ts`、`tests/core/workspace.test.ts`、`scripts/fixtures/synthetic-companion.mjs`、`tests/migrate/{helpers,offline-helpers}.mjs`、`tests/behavior-list/entries-lifecycle.test.mjs`。先显式初始化真正空的合成工作区，再注入旧数据形状。`src/core/index.ts:13-25`、`scripts/fixtures/synthetic-companion.mjs:39-77`、`tests/behavior-list/entries-lifecycle.test.mjs:37-54,215-228`
+4. 设置入口与显示。`src/console/{settings.ts,client.js}`、`tests/core/settings.test.ts`。`src/console/settings.ts:337-388`、`tests/core/settings.test.ts:78-119`
+5. 共享 home 切换及镜像。`src/core/{workspace,companion-foundation}.ts`、`src/core/tables/companion-ports.ts`、`src/living/plan/{plugin,home-store}.ts`（`home-store.ts` 新）、`arch/storage.json`、`tests/core/companion-foundation.test.ts`、`tests/living/living-lifecycle.test.mjs`、`tests/behavior-list/index.json`。`docs/plans/stage2a-merge.md:544-547,565`、`tests/core/companion-foundation.test.ts:88-108`
+6. 入口联跑与回退证据。`tests/behavior-list/{entries-lifecycle,families}.test.mjs`、`tests/migrate/home-flow.test.mjs`、`tests/migrate/home-rollback.mjs`（后两者新）。`tests/behavior-list/entries-lifecycle.test.mjs:160-192,230-265`、`tests/behavior-list/families.test.mjs:125-194`、`tests/migrate/rollback.test.mjs:18-55,74-101`
+
+- 提交 2 改动的 1B 迁移测试只把步骤集显式选成 `0001`，原断言不放宽。提交 3 列了 14 个文件，执行中超过 15 文件或 600 行就停下拆分，不预先声明超阈值。
+- 回退演练用的 `v0.2.0` 检出由执行方在临时目录 `git worktree add --detach <临时目录> v0.2.0`，再按 `docs/development.md` 的恢复命令装依赖。这是本仓库自己的旧版本，不属于上游材料。`home-rollback.mjs` 不叫 `*.test.mjs`，`verify` 不会自动收集，合并前由 Claude 单独跑一次。
+
+本批范围到 home、迁移门禁和受影响入口。`economy.initialized`、`setMeta/close` 归第 5 批，第三层切新契约归阶段 3。vendor、备份器、包导出和发布流程只作取证。`docs/plans/stage2a-merge.md:446-465,655-676`、`AGENTS.md:55-63`
+
+**声明和文档**
+
+- `home-identity` 改指 `.chatpet/data/core/core.sqlite#records`，`owner/containerOwner/writers` 为 Core，`selector` 为 `table: records, kind: companion-home`，证据指向新读写方法。`life.writers` 去掉 `core`，移除 `life.json` 的 Core 证据，协议写明 Plan 独占镜像和待迎接。`control.json` 的显式初始化建空文件仍如实记在其位置说明。以 R5 报告核对 Core 对 `life.json` 读写清零，架构棘轮只减不增。`arch/storage.json:38,42`、`src/core/initialization.ts:74-76`、`scripts/arch/check.mjs:16-19,44-52`、`docs/architecture.md:139`
+- 推荐 Claude 合并本批时改两句，避免归属表晚于代码。「共享 home 身份和待交接标记归第一层，Core 按绑定写 `companion-home`，迁移从旧镜像复制 ID。」「计划区独占 `life.json` 的 ID 镜像与待迎接，交接以镜像落盘为准。」同时更新开发说明的迁移能力描述，完整升级和回退文档归第 6 批。`docs/architecture.md:182,186`、`docs/development.md:68-70`、`docs/plans/stage2a-merge.md:684-698,765`
+
+**入口验收与快测**
+
+- `tests/core/companion-foundation.test.ts:88-108` 将旧写盘断言改为 Core 记录和延后镜像。用真实 Cordis 夹具归档旧 home，阻塞上游唤醒的原生 `create`，让前台并发进入，检查只建一次、同一 ID，再注入创建和 Core 提交失败。`tests/behavior-list/entries-lifecycle.test.mjs:55-76,160-181`、`vendor/dsh-world/lib/life/runtime.js:556-571`
+- `home-flow.test.mjs` 复用 `fixture/offlineFixture`、真实设置 RPC 和 Cordis。自动验证未迁移时初始化、重绑、保存三路及绕行写入被拒，逻辑记录和文件保持原值，普通 DSH 会话可回复。退出合成宿主，迁移并重开，验证聊天、真实 Bank 召回及原 home。原样复跑 1A `2A1A-07`，在 G9 的同一合成绑定迁移后复跑 `2A1A-18`，保留原操作号、单次施效、单次结算和续行断言。`tests/migrate/helpers.mjs:22-47`、`tests/migrate/offline-helpers.mjs:11-39`、`tests/core/context-contracts.test.ts:173-190`、`tests/behavior-list/families.test.mjs:125-194`
+- `home-rollback.mjs` 自动演练两份备份，复用现有恢复夹具和隔离检出的 `v0.2.0` 实际代码。恢复旧包、旧数据和旧绑定后再跑聊天、召回和 home，核对送达、额度、花费保留。本批主人过目合成结果。第 6 批给主人做 RC 版本页换包、隔离 DSH 原生检查、真实副本升级回退和正式包激活。`tests/migrate/rollback.test.mjs:18-55,74-101`、`docs/development.md:91-117`、`docs/plans/stage2a-merge.md:702-707,787-794`
+- **快测**　`pnpm run build && pnpm run check:arch && node --test tests/arch/storage-locations.test.mjs`。按提交加 `node --test tests/migrate/*.test.mjs`、`node --check src/console/client.js`、`node --test dist/tests/core/{workspace,settings,companion-foundation,context-contracts}.test.js tests/living/living-lifecycle.test.mjs tests/behavior-list/{entries-lifecycle,families,index}.test.mjs`。回退演练用 `HER_WORLD_020_ROOT=/path/to/v0.2.0 node --test tests/migrate/home-rollback.mjs`。Memory 用允许本机回环的环境，合并前跑 `pnpm run verify` 和 `pnpm run test:behavior-list`。`AGENTS.md:49-54`、`package.json:91-92,125-127`、`docs/plans/stage2a-merge.md:776-794`
+
 ---
 
 ## 第 5 批：`economy.initialized` 迁移
