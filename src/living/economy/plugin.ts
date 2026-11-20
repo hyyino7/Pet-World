@@ -1,5 +1,5 @@
 import {economyOverview,economyPage} from './tool-context.js';
-import {InFlight, LivingView, mountLivingArea, settleCleanup, withLivingCaller, type LivingPorts} from '../index.js';
+import {InFlight, LivingView, mountLivingArea, settleCleanup, withLivingCaller, type LivingPorts, type RecordCommandEffect} from '../index.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import { defineTool } from '@deepseek-ai/dsh-tools';
@@ -7,11 +7,13 @@ import { lstatSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { PetCoreHost, WorkspaceTarget } from '../../core/index.js';
-import { bytesDigest, canonical, check, digest, integer } from '../../core/storage.js';
+import { bytesDigest, canonical, check, digest, integer, Rejection } from '../../core/storage.js';
 import { registerWorldContext } from '../../core/native/prompt.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
 import type { CompanionToolDeclaration } from '../../contracts/tables.js';
+import type { PlannedActivity } from '../../contracts/behavior.js';
+import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomEconomyPort, RoomFoodReservation } from '../body/room.js';
 import { EconomyStore, projectWallet } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
@@ -19,6 +21,8 @@ import { installEconomyAccessGuard } from './access.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
 import type { GardenClock } from './garden-clock.js';
 import { readLifeControl } from '../plan/control-file.js';
+
+type TradeKind = Exclude<NonNullable<PlannedActivity['economy']>['type'], 'consume'>;
 
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];
 const access = {mode:'bounded',detail:'余额与物品由程序结算。原生文件工具防误改；同一系统账户的命令和其他插件仍可访问文件。'} as const;
@@ -180,6 +184,16 @@ export class CompanionEconomy {
   }
   walletView(workspaceId: string) { return projectWallet(this.bound(workspaceId).snapshot()); }
   worldSnapshot(workspaceId: string) { return this.living.worldSnapshot(this.host, workspaceId); }
+  readonly worldCommands: Pick<WorldCommands, TradeKind> = {
+    buy: (input, options) => this.worldTrade('buy', input, options),
+    sell: (input, options) => this.worldTrade('sell', input, options),
+  };
+  private worldTrade(kind: TradeKind, {itemId, quantity, ...request}: Parameters<WorldCommands['buy']>[0],
+    options: Parameters<WorldCommands['buy']>[1]) {
+    const signal = options?.signal ?? new AbortController().signal;
+    return this.living.command(this.host, request, options, async ({validate, effect}) =>
+      projectWallet(await this.ownerAction(request.workspaceId, {kind,itemId,quantity}, request.requestId, signal, validate, undefined, effect)));
+  }
   async pendingFacts(workspaceId:string):Promise<CompanionFact[]> {return this.bound(workspaceId).pendingFacts();}
   async readFacts(workspaceId:string,ids:readonly string[]):Promise<CompanionFact[]> {
     const store=this.bound(workspaceId),facts=store.readFacts(ids);check(this.bound(workspaceId)===store,'Economy binding changed');return facts;
@@ -193,7 +207,8 @@ export class CompanionEconomy {
     try {this.ctx.emit('pet/economy.fact',workspaceId);}
     catch(error){try {this.ctx.logger('chatpet-economy').warn('Committed economic facts await delivery',error);}catch {}}
   }
-  async ownerAction(workspaceId:string,action:any,requestId:string,signal:AbortSignal,validate:()=>void=()=>{},trustedActor?:CompanionFactActor) {
+  async ownerAction(workspaceId:string,action:any,requestId:string,signal:AbortSignal,validate:()=>void=()=>{},trustedActor?:CompanionFactActor,
+    recordEffect?: RecordCommandEffect) {
     const guard=()=>{this.assertOpen();signal.throwIfAborted();validate();};guard();const store=this.bound(workspaceId);
     check(action&&typeof action==='object'&&!Array.isArray(action),'Invalid economic action');
     const actor:CompanionFactActor=trustedActor??{kind:'owner',id:this.host.workspace.runtime.config.ownerActorId,channel:'settings'};
@@ -206,8 +221,18 @@ export class CompanionEconomy {
     switch(action.kind) {
       case 'grant':store.grantMoney(requestId,action.amount,typeof action.note==='string'&&action.note.trim()?action.note:undefined,actor);break;
       case 'gift':store.giftItem(requestId,action.itemId,quantity,typeof action.note==='string'&&action.note.trim()?action.note:undefined,actor);break;
-      case 'buy':store.purchase(requestId,action.itemId,quantity,actor);break;
-      case 'sell':store.sell(requestId,action.itemId,quantity,actor);break;
+      case 'buy': case 'sell': {
+        recordEffect?.('unknown');
+        try {
+          if(action.kind==='buy')store.purchase(requestId,action.itemId,quantity,actor);
+          else store.sell(requestId,action.itemId,quantity,actor);
+        } catch(error) {
+          if(error instanceof Rejection)recordEffect?.('none');
+          throw error;
+        }
+        recordEffect?.('partial');
+        break;
+      }
       case 'importReading': {
         const sourceName=action.source?.name;
         check(typeof sourceName==='string'&&sourceName.length>0&&sourceName.length<=200,'Invalid reading source');

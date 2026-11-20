@@ -1,4 +1,5 @@
-import type { BehaviorSnapshot } from './behavior.js';
+import type { BehaviorSnapshot, PlannedActivity, PlannedExecution } from './behavior.js';
+import type { CallOptions, RequestContext, Result, Revision } from './common.js';
 export interface InventoryItem {
     itemId: string;
     quantity: number;
@@ -33,3 +34,35 @@ export interface WorldSnapshot {
 }
 /** Invalidate the previous snapshot. This signal is not a persistence receipt. */
 export type WorldChanged = Pick<WorldSnapshot, 'workspaceId' | 'storageId'>;
+export interface WorldCommandRequest {
+    workspaceId: string;
+    requestId: RequestContext['requestId'];
+}
+type CommandOptions = Pick<CallOptions, 'signal'>;
+type TradeRequest = WorldCommandRequest & {
+    itemId: string;
+    quantity?: number;
+};
+export interface WorldCommands {
+    care(input: WorldCommandRequest & {
+        action: NonNullable<PlannedActivity['action']> | 'pet';
+    }, options?: CommandOptions): Promise<Result<{
+        changed: boolean;
+    }>>;
+    executePlanStep(input: WorldCommandRequest & {
+        expectedRevision: Revision;
+        planId: string;
+        stepId: string;
+    }, options?: CommandOptions): Promise<Result<{
+        operationId: string;
+        execution: PlannedExecution | null;
+    }>>;
+    confirmReading(input: WorldCommandRequest & {
+        expectedRevision: Revision;
+        operationId: string;
+        receiptToken: string;
+    }, options?: CommandOptions): Promise<Result<PlannedExecution>>;
+    buy(input: TradeRequest, options?: CommandOptions): Promise<Result<WalletView>>;
+    sell(input: TradeRequest, options?: CommandOptions): Promise<Result<WalletView>>;
+}
+export {};

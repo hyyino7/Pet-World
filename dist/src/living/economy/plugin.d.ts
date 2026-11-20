@@ -1,10 +1,13 @@
-import { LivingView, type LivingPorts } from '../index.js';
+import { LivingView, type LivingPorts, type RecordCommandEffect } from '../index.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost, WorkspaceTarget } from '../../core/index.js';
+import type { PlannedActivity } from '../../contracts/behavior.js';
+import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomEconomyPort } from '../body/room.js';
 import { EconomyStore } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
+type TradeKind = Exclude<NonNullable<PlannedActivity['economy']>['type'], 'consume'>;
 export declare const economyStateToolDeclaration: {
     name: string;
     sources: readonly ("life" | "owner" | "review")[];
@@ -69,11 +72,13 @@ export declare class CompanionEconomy {
     }>;
     walletView(workspaceId: string): import("../../contracts/living.js").WalletView;
     worldSnapshot(workspaceId: string): Promise<import("../../contracts/living.js").WorldSnapshot>;
+    readonly worldCommands: Pick<WorldCommands, TradeKind>;
+    private worldTrade;
     pendingFacts(workspaceId: string): Promise<CompanionFact[]>;
     readFacts(workspaceId: string, ids: readonly string[]): Promise<CompanionFact[]>;
     acknowledgeFacts(workspaceId: string, ids: readonly string[]): Promise<void>;
     private notifyFacts;
-    ownerAction(workspaceId: string, action: any, requestId: string, signal: AbortSignal, validate?: () => void, trustedActor?: CompanionFactActor): Promise<{
+    ownerAction(workspaceId: string, action: any, requestId: string, signal: AbortSignal, validate?: () => void, trustedActor?: CompanionFactActor, recordEffect?: RecordCommandEffect): Promise<{
         execution?: import("../../contracts/behavior.js").PlannedExecution | undefined;
         workspaceId: string;
         ledger: import("./types.js").LedgerEntry[];
@@ -137,3 +142,4 @@ declare module '@deepseek-ai/cordis' {
     }
 }
 export declare function apply(ctx: Context): void;
+export {};

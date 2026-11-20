@@ -2,9 +2,10 @@ import {Context, FiberState, type Fiber} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../core/index.js';
 import {RegistrationTable} from '../core/tables/registry.js';
 import type {CompanionBinding} from '../core/tables/companion-ports.js';
-import {reject} from '../core/storage.js';
+import {Rejection, reject, text} from '../core/storage.js';
+import type {CallOptions, ContractError, Result} from '../contracts/common.js';
 import type {CompanionFact, CompanionFactSource} from '../contracts/interaction.js';
-import type {WorldChanged, WorldSnapshot} from '../contracts/living.js';
+import type {WorldChanged, WorldCommandRequest, WorldSnapshot} from '../contracts/living.js';
 import type {RegistrationLease, TableRegistration} from '../contracts/tables.js';
 import type {CompanionBehavior} from './body/plugin.js';
 import type {CompanionLife} from './plan/plugin.js';
@@ -184,6 +185,11 @@ export class LivingWorld {
 
 type AreaPorts = {[K in Area]?: () => Areas[K] | undefined};
 export type LivingPorts = AreaPorts & {observe?: boolean};
+export type RecordCommandEffect = (effect: ContractError['effect'], operationId?: string) => void;
+export interface CommandAdmission {
+  validate(): void;
+  effect: RecordCommandEffect;
+}
 
 export class LivingView {
   constructor(private readonly ports: LivingPorts = {}, readonly isCurrent = () => true,
@@ -199,19 +205,62 @@ export class LivingView {
 
   get<K extends Area>(area: K): Areas[K] | undefined { return this.lookup(area)?.value; }
 
-  private readFrame(host: PetCoreHost, workspaceId: string, includePlan = false) {
+  private boundScope(host: PetCoreHost, workspaceId: string) {
     const binding = currentBinding(host);
     if (!this.isCurrent() || binding?.workspaceId !== workspaceId) reject('STALE_BINDING', '生活工作区已切换或组件已停止');
+    const validate = () => {
+      if (!this.isCurrent() || !sameBinding(currentBinding(host), binding)) reject('STALE_BINDING', '生活工作区或组件已切换');
+    };
+    return {binding, validate};
+  }
+
+  async command<T>(host: PetCoreHost, {workspaceId, requestId}: WorldCommandRequest, options: Pick<CallOptions, 'signal'> | undefined,
+    execute: (admission: CommandAdmission) => Promise<T>): Promise<Result<T>> {
+    const signal = options?.signal;
+    const outcome: {effect: ContractError['effect']; operationId?: string} = {effect:'none'};
+    let validateBinding: (() => void) | undefined;
+    const validate = () => {
+      signal?.throwIfAborted();
+      validateBinding?.();
+    };
+    try {
+      text(requestId, 'request id');
+      outcome.operationId = requestId;
+      validateBinding = this.boundScope(host, workspaceId).validate;
+      const value = await withLivingCaller(validate, () => execute({validate, effect(effect, operationId) {
+        outcome.effect = effect;
+        if (operationId !== undefined) outcome.operationId = operationId;
+      }}));
+      validate();
+      return {ok:true,value};
+    } catch (error) {
+      const {effect,operationId} = outcome;
+      if (effect === 'none') {
+        if (signal?.aborted) return {ok:false,error:{code:'CANCELLED',message:'生活命令已取消',operationId,effect,retry:'same_request'}};
+        // Queue failures may use the old facade's untyped binding/cancellation error.
+        if (!(error instanceof Rejection)) try { validate(); } catch (denial) { error = denial; }
+        if (error instanceof Rejection) return {ok:false,error:{operationId,...error.detail}};
+        return {ok:false,error:{code:'INTERNAL',message:String(error),operationId,effect,retry:'same_request'}};
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      if (effect === 'unknown')
+        return {ok:false,error:{code:'OUTCOME_UNKNOWN',message,operationId,effect,retry:'reconcile'}};
+      return {ok:false,error:{code:signal?.aborted ? 'CANCELLED' : 'INTERNAL',message,operationId,effect,retry:'reconcile'}};
+    }
+  }
+
+  private readFrame(host: PetCoreHost, workspaceId: string, includePlan = false) {
+    const scope = this.boundScope(host, workspaceId);
     const body = this.lookup('body'), economy = this.lookup('economy');
     const plan = includePlan ? this.lookup('plan') : undefined;
     const sameArea = (area: Area, ref?: AreaReference<unknown>) =>
       this.lookup(area)?.value === ref?.value && (!ref || ref.isCurrent());
     const validate = () => {
-      if (!this.isCurrent() || !sameBinding(currentBinding(host), binding) || !sameArea('body', body) ||
-        !sameArea('economy', economy) || (includePlan && !sameArea('plan', plan)))
+      scope.validate();
+      if (!sameArea('body', body) || !sameArea('economy', economy) || (includePlan && !sameArea('plan', plan)))
         reject('STALE_BINDING', '生活工作区或组件已切换');
     };
-    return {binding, body, economy, validate};
+    return {...scope, body, economy, validate};
   }
 
   async worldSnapshot(host: PetCoreHost, workspaceId: string): Promise<WorldSnapshot> {

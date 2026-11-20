@@ -3,8 +3,9 @@ import type { PetCoreHost } from '../../core/index.js';
 import type { BehaviorChange, BehaviorSnapshot, PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 import { CompanionRoom } from './room.js';
 import type { CompanionFactSource } from '../../contracts/interaction.js';
+import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomInteractionContext } from './room.js';
-import { LivingView, type LivingPorts } from '../index.js';
+import { LivingView, type LivingPorts, type RecordCommandEffect } from '../index.js';
 export type { PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 /** The only home/garden runtime writer. It does not create agents or model turns. */
 export declare class CompanionBehavior {
@@ -56,8 +57,9 @@ export declare class CompanionBehavior {
     } | undefined;
     snapshot(workspaceId: string): Promise<BehaviorSnapshot>;
     worldSnapshot(workspaceId: string): Promise<import("../../contracts/living.js").WorldSnapshot>;
+    readonly worldCommands: Pick<WorldCommands, 'care'>;
     roomState(workspaceId: string): Promise<any>;
-    roomAction(workspaceId: string, input: unknown, by?: string, interaction?: RoomInteractionContext): Promise<{
+    roomAction(workspaceId: string, input: unknown, by?: string, interaction?: RoomInteractionContext, recordEffect?: RecordCommandEffect): Promise<{
         home: any;
         behavior: {
             revision: number;
@@ -76,7 +78,7 @@ export declare class CompanionBehavior {
         room?: any;
         fact?: import("../../contracts/interaction.js").CompanionFact;
     }>;
-    act(workspaceId: string, action: string, requestId?: string, channel?: string): Promise<{
+    act(workspaceId: string, action: string, requestId?: string, channel?: string, recordEffect?: RecordCommandEffect): Promise<{
         home: any;
         behavior: {
             revision: number;
@@ -110,7 +112,7 @@ export declare class CompanionBehavior {
         interaction?: RoomInteractionContext;
     }, validate?: () => void): Promise<PlannedExecution>;
     readPlannedSegment(workspaceId: string, operationId: string, validate?: () => void): Promise<import("./room.js").RoomReadingSegment>;
-    confirmPlannedReading(workspaceId: string, operationId: string, receiptToken: string, validate?: () => void): Promise<PlannedExecution>;
+    confirmPlannedReading(workspaceId: string, operationId: string, receiptToken: string, validate?: () => void, recordEffect?: RecordCommandEffect): Promise<PlannedExecution>;
     startPlanned(workspaceId: string, input: PlannedActivity): Promise<PlannedExecution>;
     inspectPlanned(workspaceId: string, operationId: string): Promise<PlannedExecution | undefined>;
     pausePlanned(workspaceId: string, operationId: string): Promise<PlannedExecution>;

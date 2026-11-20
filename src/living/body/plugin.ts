@@ -3,17 +3,18 @@ import { existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { buildHomePromptLine } from '#feiyu-home';
-import { digest } from '../../core/storage.js';
+import { check, digest, Rejection, reject, text } from '../../core/storage.js';
 import type { PetCoreHost } from '../../core/index.js';
 import type { BehaviorActivity, BehaviorChange, BehaviorSnapshot, CompanionExpression, PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
 import type { CompanionFactActor, CompanionFactSource } from '../../contracts/interaction.js';
+import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomInteractionContext } from './room.js';
 import {gardenHomeProjection} from './garden-receipt.js';
 import { LifeControlFileError, readLifeControl } from '../plan/control-file.js';
-import { LivingView, livingCaller, mountLivingArea, settleCleanup, type LivingPorts } from '../index.js';
+import { LivingView, livingCaller, mountLivingArea, settleCleanup, type LivingPorts, type RecordCommandEffect } from '../index.js';
 export type { PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 
 interface Binding {id: string; path: string; storageId: string; room: CompanionRoom; fingerprint?: string; presentationFingerprint?: string}
@@ -293,27 +294,47 @@ export class CompanionBehavior {
     });
   }
   worldSnapshot(workspaceId: string) { return this.living.worldSnapshot(this.host, workspaceId); }
+  readonly worldCommands: Pick<WorldCommands, 'care'> = {
+    care: ({action, ...request}, options) => this.living.command(this.host, request, options, async ({effect}) => {
+      check(actions.includes(action), '未知的身体动作');
+      text(request.requestId, 'request id', 256);
+      try {
+        const {changed} = await this.act(request.workspaceId, action, request.requestId, undefined, effect);
+        return {changed};
+      } catch (error) {
+        // The legacy Body receipt reports fingerprint conflict before applying anything.
+        if (error instanceof Error && error.message === '同一互动请求不能用于不同内容') {
+          effect('none');
+          reject('CONFLICT', error.message);
+        }
+        throw error;
+      }
+    }),
+  };
   roomState(workspaceId: string) {
     return this.snapshot(workspaceId).then(value => ({...value.home,lifeEnabled:value.autonomyEnabled,
       identity:{displayName:this.host.workspace.runtime.identity().displayName},
       autonomyEnabled:value.autonomyEnabled,presentation:value.presentation,
       behavior:{...value.behavior,revision:value.revision,bootId:value.bootId}}));
   }
-  roomAction(workspaceId: string, input: unknown, by = '伙伴', interaction?: RoomInteractionContext) {
+  roomAction(workspaceId: string, input: unknown, by = '伙伴', interaction?: RoomInteractionContext, recordEffect?: RecordCommandEffect) {
     return this.enqueue(async validate => {
       const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);validate();
       const bound=this.checked(workspaceId);if(bound!==before)throw Error('身体工作区已切换');this.expression=undefined;this.advanceRoom(bound);
       const config=this.host.workspace.runtime?.config;
       const source=interaction ?? {requestId:randomUUID(),actor:{kind:by==='大肥鱼'?'companion':'owner',
         id:by==='大肥鱼'?(config?.companionId ?? 'companion'):(config?.ownerActorId ?? 'owner'),channel:'room'} as CompanionFactActor};
-      const result = bound.room.act(input,by,Date.now(),source); this.publish();
+      recordEffect?.('unknown');
+      const result = bound.room.act(input,by,Date.now(),source);
+      recordEffect?.('partial');
+      this.publish();
       const behavior={...this.activity(),revision:this.revision,bootId:this.bootId};
       return {...result,home:{...this.presentHome(result.home),presentation:behaviorPresentation(result.home,this.expression)},behavior};
     });
   }
-  act(workspaceId: string, action: string, requestId:string = randomUUID(), channel = 'desktop') {
+  act(workspaceId: string, action: string, requestId:string = randomUUID(), channel = 'desktop', recordEffect?: RecordCommandEffect) {
     if (!actions.includes(action as typeof actions[number])) return Promise.reject(Error('未知的身体动作'));
-    return this.roomAction(workspaceId,{action},'主人',{requestId,actor:{kind:'owner',id:this.host.workspace.runtime?.config?.ownerActorId ?? 'owner',channel}});
+    return this.roomAction(workspaceId,{action},'主人',{requestId,actor:{kind:'owner',id:this.host.workspace.runtime?.config?.ownerActorId ?? 'owner',channel}},recordEffect);
   }
   pendingFacts(workspaceId: string) {return this.enqueue(()=>this.checked(workspaceId).room.pendingFacts());}
   readFacts(workspaceId:string,ids:readonly string[]) {return this.enqueue(()=>this.checked(workspaceId).room.readFacts(ids));}
@@ -356,8 +377,21 @@ export class CompanionBehavior {
   readPlannedSegment(workspaceId: string, operationId: string, validate:()=>void=()=>{}) {
     return this.plannedCall(workspaceId,room=>room.readPlannedSegment(operationId),validate);
   }
-  confirmPlannedReading(workspaceId: string, operationId: string, receiptToken: string, validate:()=>void=()=>{}) {
-    return this.plannedCall(workspaceId,room=>room.confirmPlannedReading(operationId,receiptToken),validate);
+  confirmPlannedReading(workspaceId: string, operationId: string, receiptToken: string, validate:()=>void=()=>{},
+    recordEffect?: RecordCommandEffect) {
+    return this.plannedCall(workspaceId,room=>{
+      recordEffect?.('unknown', operationId);
+      try {
+        const execution=room.confirmPlannedReading(operationId,receiptToken);
+        recordEffect?.('partial');
+        return execution;
+      } catch(error) {
+        // Economy rejects a missing offer or wrong token before writing the bookmark.
+        if(recordEffect && error instanceof Rejection && (error.detail.code==='NOT_FOUND' || error.detail.code==='CONFLICT'))
+          recordEffect('none');
+        throw error;
+      }
+    },validate);
   }
   startPlanned(workspaceId: string, input: PlannedActivity): Promise<PlannedExecution> {
     return this.plannedCall(workspaceId,room=>room.startPlanned(input));

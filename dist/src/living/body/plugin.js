@@ -2,7 +2,7 @@ import { existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { buildHomePromptLine } from '#feiyu-home';
-import { digest } from '../../core/storage.js';
+import { check, digest, Rejection, reject, text } from '../../core/storage.js';
 import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
@@ -409,13 +409,31 @@ export class CompanionBehavior {
         });
     }
     worldSnapshot(workspaceId) { return this.living.worldSnapshot(this.host, workspaceId); }
+    worldCommands = {
+        care: ({ action, ...request }, options) => this.living.command(this.host, request, options, async ({ effect }) => {
+            check(actions.includes(action), '未知的身体动作');
+            text(request.requestId, 'request id', 256);
+            try {
+                const { changed } = await this.act(request.workspaceId, action, request.requestId, undefined, effect);
+                return { changed };
+            }
+            catch (error) {
+                // The legacy Body receipt reports fingerprint conflict before applying anything.
+                if (error instanceof Error && error.message === '同一互动请求不能用于不同内容') {
+                    effect('none');
+                    reject('CONFLICT', error.message);
+                }
+                throw error;
+            }
+        }),
+    };
     roomState(workspaceId) {
         return this.snapshot(workspaceId).then(value => ({ ...value.home, lifeEnabled: value.autonomyEnabled,
             identity: { displayName: this.host.workspace.runtime.identity().displayName },
             autonomyEnabled: value.autonomyEnabled, presentation: value.presentation,
             behavior: { ...value.behavior, revision: value.revision, bootId: value.bootId } }));
     }
-    roomAction(workspaceId, input, by = '伙伴', interaction) {
+    roomAction(workspaceId, input, by = '伙伴', interaction, recordEffect) {
         return this.enqueue(async (validate) => {
             const before = this.checked(workspaceId);
             await this.refreshEmotion(workspaceId);
@@ -428,16 +446,18 @@ export class CompanionBehavior {
             const config = this.host.workspace.runtime?.config;
             const source = interaction ?? { requestId: randomUUID(), actor: { kind: by === '大肥鱼' ? 'companion' : 'owner',
                     id: by === '大肥鱼' ? (config?.companionId ?? 'companion') : (config?.ownerActorId ?? 'owner'), channel: 'room' } };
+            recordEffect?.('unknown');
             const result = bound.room.act(input, by, Date.now(), source);
+            recordEffect?.('partial');
             this.publish();
             const behavior = { ...this.activity(), revision: this.revision, bootId: this.bootId };
             return { ...result, home: { ...this.presentHome(result.home), presentation: behaviorPresentation(result.home, this.expression) }, behavior };
         });
     }
-    act(workspaceId, action, requestId = randomUUID(), channel = 'desktop') {
+    act(workspaceId, action, requestId = randomUUID(), channel = 'desktop', recordEffect) {
         if (!actions.includes(action))
             return Promise.reject(Error('未知的身体动作'));
-        return this.roomAction(workspaceId, { action }, '主人', { requestId, actor: { kind: 'owner', id: this.host.workspace.runtime?.config?.ownerActorId ?? 'owner', channel } });
+        return this.roomAction(workspaceId, { action }, '主人', { requestId, actor: { kind: 'owner', id: this.host.workspace.runtime?.config?.ownerActorId ?? 'owner', channel } }, recordEffect);
     }
     pendingFacts(workspaceId) { return this.enqueue(() => this.checked(workspaceId).room.pendingFacts()); }
     readFacts(workspaceId, ids) { return this.enqueue(() => this.checked(workspaceId).room.readFacts(ids)); }
@@ -497,8 +517,21 @@ export class CompanionBehavior {
     readPlannedSegment(workspaceId, operationId, validate = () => { }) {
         return this.plannedCall(workspaceId, room => room.readPlannedSegment(operationId), validate);
     }
-    confirmPlannedReading(workspaceId, operationId, receiptToken, validate = () => { }) {
-        return this.plannedCall(workspaceId, room => room.confirmPlannedReading(operationId, receiptToken), validate);
+    confirmPlannedReading(workspaceId, operationId, receiptToken, validate = () => { }, recordEffect) {
+        return this.plannedCall(workspaceId, room => {
+            recordEffect?.('unknown', operationId);
+            try {
+                const execution = room.confirmPlannedReading(operationId, receiptToken);
+                recordEffect?.('partial');
+                return execution;
+            }
+            catch (error) {
+                // Economy rejects a missing offer or wrong token before writing the bookmark.
+                if (recordEffect && error instanceof Rejection && (error.detail.code === 'NOT_FOUND' || error.detail.code === 'CONFLICT'))
+                    recordEffect('none');
+                throw error;
+            }
+        }, validate);
     }
     startPlanned(workspaceId, input) {
         return this.plannedCall(workspaceId, room => room.startPlanned(input));

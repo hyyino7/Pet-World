@@ -1,8 +1,9 @@
 import { Context, type Fiber } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../core/index.js';
 import type { CompanionBinding } from '../core/tables/companion-ports.js';
+import type { CallOptions, ContractError, Result } from '../contracts/common.js';
 import type { CompanionFactSource } from '../contracts/interaction.js';
-import type { WorldChanged, WorldSnapshot } from '../contracts/living.js';
+import type { WorldChanged, WorldCommandRequest, WorldSnapshot } from '../contracts/living.js';
 import type { RegistrationLease } from '../contracts/tables.js';
 import type { CompanionBehavior } from './body/plugin.js';
 import type { CompanionLife } from './plan/plugin.js';
@@ -53,6 +54,11 @@ type AreaPorts = {
 export type LivingPorts = AreaPorts & {
     observe?: boolean;
 };
+export type RecordCommandEffect = (effect: ContractError['effect'], operationId?: string) => void;
+export interface CommandAdmission {
+    validate(): void;
+    effect: RecordCommandEffect;
+}
 export declare class LivingView {
     private readonly ports;
     readonly isCurrent: () => boolean;
@@ -62,6 +68,8 @@ export declare class LivingView {
     constructor(ports?: LivingPorts, isCurrent?: () => boolean, world?: LivingWorld | undefined, isLatestGeneration?: () => boolean, changed?: (binding: CompanionBinding) => void);
     lookup<K extends Area>(area: K): AreaReference<Areas[K]> | undefined;
     get<K extends Area>(area: K): Areas[K] | undefined;
+    private boundScope;
+    command<T>(host: PetCoreHost, { workspaceId, requestId }: WorldCommandRequest, options: Pick<CallOptions, 'signal'> | undefined, execute: (admission: CommandAdmission) => Promise<T>): Promise<Result<T>>;
     private readFrame;
     worldSnapshot(host: PetCoreHost, workspaceId: string): Promise<WorldSnapshot>;
     factSource(host: PetCoreHost): CompanionFactSource;

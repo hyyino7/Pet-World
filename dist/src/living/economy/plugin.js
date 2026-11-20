@@ -4,7 +4,7 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 import { lstatSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { bytesDigest, canonical, check, digest, integer } from '../../core/storage.js';
+import { bytesDigest, canonical, check, digest, integer, Rejection } from '../../core/storage.js';
 import { registerWorldContext } from '../../core/native/prompt.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
@@ -206,6 +206,14 @@ export class CompanionEconomy {
     }
     walletView(workspaceId) { return projectWallet(this.bound(workspaceId).snapshot()); }
     worldSnapshot(workspaceId) { return this.living.worldSnapshot(this.host, workspaceId); }
+    worldCommands = {
+        buy: (input, options) => this.worldTrade('buy', input, options),
+        sell: (input, options) => this.worldTrade('sell', input, options),
+    };
+    worldTrade(kind, { itemId, quantity, ...request }, options) {
+        const signal = options?.signal ?? new AbortController().signal;
+        return this.living.command(this.host, request, options, async ({ validate, effect }) => projectWallet(await this.ownerAction(request.workspaceId, { kind, itemId, quantity }, request.requestId, signal, validate, undefined, effect)));
+    }
     async pendingFacts(workspaceId) { return this.bound(workspaceId).pendingFacts(); }
     async readFacts(workspaceId, ids) {
         const store = this.bound(workspaceId), facts = store.readFacts(ids);
@@ -230,7 +238,7 @@ export class CompanionEconomy {
             catch { }
         }
     }
-    async ownerAction(workspaceId, action, requestId, signal, validate = () => { }, trustedActor) {
+    async ownerAction(workspaceId, action, requestId, signal, validate = () => { }, trustedActor, recordEffect) {
         const guard = () => { this.assertOpen(); signal.throwIfAborted(); validate(); };
         guard();
         const store = this.bound(workspaceId);
@@ -252,11 +260,22 @@ export class CompanionEconomy {
                 store.giftItem(requestId, action.itemId, quantity, typeof action.note === 'string' && action.note.trim() ? action.note : undefined, actor);
                 break;
             case 'buy':
-                store.purchase(requestId, action.itemId, quantity, actor);
+            case 'sell': {
+                recordEffect?.('unknown');
+                try {
+                    if (action.kind === 'buy')
+                        store.purchase(requestId, action.itemId, quantity, actor);
+                    else
+                        store.sell(requestId, action.itemId, quantity, actor);
+                }
+                catch (error) {
+                    if (error instanceof Rejection)
+                        recordEffect?.('none');
+                    throw error;
+                }
+                recordEffect?.('partial');
                 break;
-            case 'sell':
-                store.sell(requestId, action.itemId, quantity, actor);
-                break;
+            }
             case 'importReading': {
                 const sourceName = action.source?.name;
                 check(typeof sourceName === 'string' && sourceName.length > 0 && sourceName.length <= 200, 'Invalid reading source');

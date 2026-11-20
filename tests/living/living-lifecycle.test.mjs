@@ -149,6 +149,106 @@ test('3E 世界通知覆盖三区，合并同批交易，读快照和旧租约�
   assert.equal((await read()).body.available, true);
 });
 
+test('3E 三区命令使用实际回执，原步骤重放不施效或推进下一步', async t => {
+  const f = await cordisFixture(t);
+  const request = requestId => ({workspaceId:f.id,requestId});
+  const {care} = f.body.worldCommands, {buy,sell} = f.economy.worldCommands;
+  const {executePlanStep,confirmReading} = f.life.worldCommands;
+  const water = {...request('world-care'),action:'water'};
+  assert.deepEqual(await care(water), {ok:true,value:{changed:true}});
+  assert.deepEqual(await care(water), {ok:true,value:{changed:true}});
+  const careConflict = await care({...water,action:'feed'});
+  assert.deepEqual([careConflict.error.code,careConflict.error.effect,careConflict.error.retry], ['CONFLICT','none','never']);
+  assert.equal((await f.body.pendingFacts(f.id)).filter(row => row.requestId === water.requestId).length, 1);
+  const seeds = 'seed:radish', stock = wallet => wallet.inventory.find(row => row.itemId === seeds).quantity;
+  await f.ownerAction({kind:'grant',amount:100}, 'world-command-funding');
+  const before = (await f.economy.worldSnapshot(f.id)).wallet;
+  const catalog = (await f.economy.snapshot(f.id)).catalog.find(row => row.id === seeds);
+  const purchase = {...request('world-buy'),itemId:seeds};
+  const bought = await buy(purchase);
+  assert.equal(bought.ok, true);
+  assert.equal(bought.value.balance, before.balance - catalog.purchasePrice);
+  assert.equal(stock(bought.value), stock(before) + 1);
+  assert.deepEqual(await buy(purchase), bought);
+  const tradeConflict = await buy({...purchase,quantity:2});
+  assert.deepEqual([tradeConflict.error.code,tradeConflict.error.effect,tradeConflict.error.retry], ['CONFLICT','none','never']);
+  const saleItem = 'harvest:radish';
+  const stocked = await f.ownerAction({kind:'gift',itemId:saleItem,quantity:2}, 'world-sell-stock');
+  const sale = {...request('world-sell'),itemId:saleItem};
+  const sold = await sell(sale);
+  assert.equal(sold.ok, true);
+  assert.equal(sold.value.balance, stocked.balance + stocked.catalog.find(row => row.id === saleItem).sellPrice);
+  assert.equal(sold.value.inventory.find(row => row.itemId === saleItem).quantity, 1);
+  assert.deepEqual(await sell(sale), sold);
+
+  const compost = {...request('world-compost'),itemId:'compost'};
+  const cancelled = await buy(compost,{signal:AbortSignal.abort()});
+  assert.deepEqual([cancelled.error.code,cancelled.error.effect,cancelled.error.retry], ['CANCELLED','none','same_request']);
+  const {Rejection} = await import('../../dist/src/core/storage.js');
+  const failedRead = t.mock.method(f.economy,'snapshot',async () => {
+    throw new Rejection({code:'UNAVAILABLE',message:'Synthetic projection failure',effect:'none',retry:'same_request'});
+  });
+  const partial = await buy(compost);
+  failedRead.mock.restore();
+  assert.deepEqual([partial.error.effect,partial.error.retry], ['partial','reconcile']);
+  const paid = (await f.economy.worldSnapshot(f.id)).wallet;
+  assert.equal(paid.inventory.find(row=>row.itemId==='compost').quantity, 1);
+  assert.deepEqual(await buy(compost), {ok:true,value:paid});
+
+  assert.equal((await buy({...request('world-book'),itemId:readingItem})).ok, true);
+  let completed = false;
+  f.model = async call => {
+    if (call.messages.some(message => message.source.kind === 'user')) {
+      const {plan,revision} = await submitPlan(call, [
+        {id:'read',kind:'read',activity:'Read',reading:{itemId:readingItem,segment:0}},
+        {id:'seeds',kind:'economy',activity:'Buy seeds',economy:{type:'buy',itemId:seeds,quantity:1}},
+      ]);
+      const step = {...request('world-step'),expectedRevision:revision,planId:plan.id,stepId:'read'};
+      const operationId = `life:${plan.id}:read`;
+      const executed = await executePlanStep(step);
+      assert.equal(executed.ok, true);
+      assert.equal(executed.value.operationId, operationId);
+      assert.equal(executed.value.execution.status, 'running');
+      assert.deepEqual(await executePlanStep(step), executed);
+      const offer = JSON.parse(await call.tool('life_read_segment',{expectedRevision:revision,operationId}));
+      assert.ok(offer.text.length > 0);
+      const confirmation = {...request('world-confirm'),expectedRevision:revision,operationId,receiptToken:offer.receiptToken};
+      const invalidToken = await confirmReading({...confirmation,receiptToken:'wrong-token'});
+      assert.deepEqual([invalidToken.error.code,invalidToken.error.effect,invalidToken.error.retry], ['CONFLICT','none','never']);
+      const confirmed = await confirmReading(confirmation);
+      assert.equal(confirmed.ok, true);
+      assert.equal(confirmed.value.status, 'completed');
+      assert.equal((await f.life.readPlan(f.id)).plan.cursor, 1);
+      assert.deepEqual(await confirmReading(confirmation), confirmed);
+      assert.equal((await f.life.readPlan(f.id)).plan.cursor, 1);
+      assert.equal(stock((await f.economy.worldSnapshot(f.id)).wallet), stock(before) + 1);
+      const stale = await executePlanStep({...step,expectedRevision:revision-1});
+      assert.deepEqual([stale.ok,stale.error.effect,stale.error.retry], [false,'none','refresh']);
+      const retired = await executePlanStep(step);
+      assert.deepEqual([retired.ok,retired.error.effect,retired.error.retry], [false,'none','refresh']);
+      const bookmark = (await f.economy.worldSnapshot(f.id)).wallet.reading[0].bookmark;
+      assert.equal(bookmark.version, offer.version);
+      assert.equal(bookmark.offset, offer.endOffset);
+      await call.tool('life_plan_keep',{expectedRevision:revision,reason:'Keep the remaining step',
+        nextConsiderAt:new Date(Date.now() + 3_600_000).toISOString()});
+      completed = true;
+    }
+    return 'Synthetic reply';
+  };
+  await f.enable();
+  const home = await f.agent(f.life.homeSessionId());
+  await home.whenIdle();
+  try {
+    t.mock.timers.tick(15_000);
+    await f.input('Read and confirm the original fragment.',home.id);
+    assert.equal(completed, true);
+    await home.whenIdle();
+  } finally {
+    await f.life.control(f.id,false);
+    await home.whenIdle();
+  }
+});
+
 test('3C 事实准备期间 Economy 重挂会作废两段，下一轮仍能读到并确认', async t => {
   const f = await cordisFixture(t);
   const agent = await f.agent();

@@ -2,9 +2,12 @@ import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../../core/index.js';
 import { type LifePreferences } from './library.js';
 import type { RecordOperation } from '../../core/records.js';
+import { type CurrentLifePlan } from './plan.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
+import type { PlannedExecution } from '../../contracts/behavior.js';
+import type { WorldCommands } from '../../contracts/living.js';
 import { type GardenClock } from '../economy/garden-clock.js';
-import { LivingView, type LivingPorts } from '../index.js';
+import { LivingView, type CommandAdmission, type LivingPorts } from '../index.js';
 /** The upstream fact layer is the only state writer. World owns scheduling,
  * journal and native home recovery; Core owns every model step and Memory. */
 export declare class CompanionLife {
@@ -62,6 +65,7 @@ export declare class CompanionLife {
     private startRuntime;
     private stopRuntime;
     private tick;
+    private scheduleContinuation;
     private resumeAcceptedPlan;
     private factSource;
     private pendingFacts;
@@ -97,19 +101,20 @@ export declare class CompanionLife {
     private checkedPlan;
     readPlan(workspaceId: string, validate?: () => void): Promise<{
         revision: number;
-        plan: import("./plan.js").CurrentLifePlan | null;
+        plan: CurrentLifePlan | null;
         enabled: boolean;
         running: boolean;
     }>;
+    readonly worldCommands: Pick<WorldCommands, 'executePlanStep' | 'confirmReading'>;
     updatePlan(workspaceId: string, expectedRevision: number, raw: unknown, validate?: () => void): Promise<{
         revision: number;
-        plan: import("./plan.js").CurrentLifePlan | null;
+        plan: CurrentLifePlan | null;
         enabled: boolean;
         running: boolean;
     }>;
     keepPlan(workspaceId: string, expectedRevision: number, reason: string, nextConsiderAt: string | null, validate?: () => void): Promise<{
         revision: number;
-        plan: import("./plan.js").CurrentLifePlan | null;
+        plan: CurrentLifePlan | null;
     }>;
     private checkReadingPlan;
     readPlannedSegment(workspaceId: string, expectedRevision: number, operationId: string, validate?: () => void): Promise<{
@@ -130,14 +135,14 @@ export declare class CompanionLife {
         itemId: string;
         segment: number;
     }>;
-    confirmPlannedReading(workspaceId: string, expectedRevision: number, operationId: string, receiptToken: string, validate?: () => void): Promise<{
+    confirmPlannedReading(workspaceId: string, expectedRevision: number, operationId: string, receiptToken: string, validate?: () => void, command?: CommandAdmission): Promise<{
         revision: number;
-        plan: import("./plan.js").CurrentLifePlan | null;
-        execution: import("../body/plugin.js").PlannedExecution;
+        plan: CurrentLifePlan | null;
+        execution: PlannedExecution;
     }>;
     controlPlan(workspaceId: string, expectedRevision: number, action: 'pause' | 'resume' | 'cancel', reason: string, validate?: () => void): Promise<{
         revision: number;
-        plan: import("./plan.js").CurrentLifePlan | null;
+        plan: CurrentLifePlan | null;
     }>;
     private writeControl;
     control(workspaceId: string, enabled: boolean): Promise<{
@@ -217,7 +222,7 @@ export declare class CompanionLife {
         garden: any;
     } | {
         message: string;
-        execution: import("../body/plugin.js").PlannedExecution;
+        execution: PlannedExecution;
         garden: any;
         home: any;
         ok: boolean;

@@ -1,6 +1,6 @@
 import { Context } from '@deepseek-ai/cordis';
 import { RegistrationTable } from '../core/tables/registry.js';
-import { reject } from '../core/storage.js';
+import { Rejection, reject, text } from '../core/storage.js';
 import { activityReader } from './plan/activity-reader.js';
 import { readFactReferences } from './plan/facts.js';
 import { installLivingPrompt } from './prompt-context.js';
@@ -180,19 +180,70 @@ export class LivingView {
             return { value, isCurrent: () => read?.() === value };
     }
     get(area) { return this.lookup(area)?.value; }
-    readFrame(host, workspaceId, includePlan = false) {
+    boundScope(host, workspaceId) {
         const binding = currentBinding(host);
         if (!this.isCurrent() || binding?.workspaceId !== workspaceId)
             reject('STALE_BINDING', '生活工作区已切换或组件已停止');
+        const validate = () => {
+            if (!this.isCurrent() || !sameBinding(currentBinding(host), binding))
+                reject('STALE_BINDING', '生活工作区或组件已切换');
+        };
+        return { binding, validate };
+    }
+    async command(host, { workspaceId, requestId }, options, execute) {
+        const signal = options?.signal;
+        const outcome = { effect: 'none' };
+        let validateBinding;
+        const validate = () => {
+            signal?.throwIfAborted();
+            validateBinding?.();
+        };
+        try {
+            text(requestId, 'request id');
+            outcome.operationId = requestId;
+            validateBinding = this.boundScope(host, workspaceId).validate;
+            const value = await withLivingCaller(validate, () => execute({ validate, effect(effect, operationId) {
+                    outcome.effect = effect;
+                    if (operationId !== undefined)
+                        outcome.operationId = operationId;
+                } }));
+            validate();
+            return { ok: true, value };
+        }
+        catch (error) {
+            const { effect, operationId } = outcome;
+            if (effect === 'none') {
+                if (signal?.aborted)
+                    return { ok: false, error: { code: 'CANCELLED', message: '生活命令已取消', operationId, effect, retry: 'same_request' } };
+                // Queue failures may use the old facade's untyped binding/cancellation error.
+                if (!(error instanceof Rejection))
+                    try {
+                        validate();
+                    }
+                    catch (denial) {
+                        error = denial;
+                    }
+                if (error instanceof Rejection)
+                    return { ok: false, error: { operationId, ...error.detail } };
+                return { ok: false, error: { code: 'INTERNAL', message: String(error), operationId, effect, retry: 'same_request' } };
+            }
+            const message = error instanceof Error ? error.message : String(error);
+            if (effect === 'unknown')
+                return { ok: false, error: { code: 'OUTCOME_UNKNOWN', message, operationId, effect, retry: 'reconcile' } };
+            return { ok: false, error: { code: signal?.aborted ? 'CANCELLED' : 'INTERNAL', message, operationId, effect, retry: 'reconcile' } };
+        }
+    }
+    readFrame(host, workspaceId, includePlan = false) {
+        const scope = this.boundScope(host, workspaceId);
         const body = this.lookup('body'), economy = this.lookup('economy');
         const plan = includePlan ? this.lookup('plan') : undefined;
         const sameArea = (area, ref) => this.lookup(area)?.value === ref?.value && (!ref || ref.isCurrent());
         const validate = () => {
-            if (!this.isCurrent() || !sameBinding(currentBinding(host), binding) || !sameArea('body', body) ||
-                !sameArea('economy', economy) || (includePlan && !sameArea('plan', plan)))
+            scope.validate();
+            if (!sameArea('body', body) || !sameArea('economy', economy) || (includePlan && !sameArea('plan', plan)))
                 reject('STALE_BINDING', '生活工作区或组件已切换');
         };
-        return { binding, body, economy, validate };
+        return { ...scope, body, economy, validate };
     }
     async worldSnapshot(host, workspaceId) {
         const { binding, body, economy, validate } = this.readFrame(host, workspaceId, true);
