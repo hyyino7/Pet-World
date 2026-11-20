@@ -3542,13 +3542,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 14,
+      "line": 15,
       "column": 26,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
@@ -3584,13 +3584,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 287
+        "line": 297
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 287,
+      "line": 297,
       "column": 12,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
@@ -3876,13 +3876,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/change/this . store . update:callback0",
-        "line": 188
+        "line": 195
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 188,
+      "line": 195,
       "column": 21,
       "scope": "PersistentLifePlan/change/this . store . update:callback0",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
@@ -3919,13 +3919,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/retryAt",
-        "line": 260
+        "line": 270
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 260,
+      "line": 270,
       "column": 9,
       "scope": "PersistentLifePlan/retryAt",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
@@ -3962,13 +3962,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/keep/this . change:callback1",
-        "line": 271
+        "line": 281
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 271,
+      "line": 281,
       "column": 24,
       "scope": "PersistentLifePlan/keep/this . change:callback1",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
@@ -4005,13 +4005,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 287
+        "line": 297
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 287,
+      "line": 297,
       "column": 12,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
@@ -4048,13 +4048,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/reconsider",
-        "line": 318
+        "line": 328
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 318,
+      "line": 328,
       "column": 19,
       "scope": "PersistentLifePlan/reconsider",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
@@ -4091,13 +4091,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/advance",
-        "line": 330
+        "line": 340
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 330,
+      "line": 340,
       "column": 19,
       "scope": "PersistentLifePlan/advance",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
@@ -4134,13 +4134,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 348
+        "line": 354
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 348,
+      "line": 354,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
@@ -4177,14 +4177,14 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 497
+        "line": 535
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 497,
-      "column": 11,
+      "line": 535,
+      "column": 83,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
       "expression": "[ \"active\" , \"waiting\" ]",
@@ -5638,13 +5638,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "CompanionEconomy/gardenPort/transaction",
-        "line": 154
+        "line": 159
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 154,
+      "line": 159,
       "column": 24,
       "scope": "CompanionEconomy/gardenPort/transaction",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"<module>\"}",
@@ -6228,13 +6228,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "<module>",
-        "line": 20
+        "line": 21
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -6558,13 +6558,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 46
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 43,
+      "line": 46,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -6579,50 +6579,6 @@
       ],
       "shape": "array",
       "relation": "重复",
-      "other": {
-        "file": "src/console/settings.ts",
-        "scope": "settingsHandler/<callback>",
-        "line": 225
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/console/settings.ts",
-      "line": 225,
-      "column": 80,
-      "scope": "settingsHandler/<callback>",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
-      "expression": "[ \"feed\" , \"water\" , \"play\" , \"pet\" , \"sleep\" , \"wake\" ]",
-      "values": [
-        "feed",
-        "pet",
-        "play",
-        "sleep",
-        "wake",
-        "water"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/desktopRest",
-        "line": 573
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 573,
-      "column": 44,
-      "scope": "CompanionLife/desktopRest",
-      "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
-      "expression": "\"sleep\" | \"wake\"",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "union",
-      "relation": "子集",
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
@@ -6909,13 +6865,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/readingOperation",
-        "line": 313
+        "line": 339
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 313,
+      "line": 339,
       "column": 112,
       "scope": "EconomyStore/readingOperation",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6950,13 +6906,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 65
+        "line": 67
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 65,
+      "line": 67,
       "column": 11,
       "scope": "<module>",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6991,13 +6947,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "CompanionBehavior/publish",
-        "line": 222
+        "line": 225
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 222,
+      "line": 225,
       "column": 26,
       "scope": "CompanionBehavior/publish",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -7122,13 +7078,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
+        "line": 300
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 273,
+      "line": 300,
       "column": 68,
       "scope": "EconomyStore/configure/this . mutate:callback3",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -7168,13 +7124,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 11
+        "line": 14
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 11,
+      "line": 14,
       "column": 44,
       "scope": "<module>",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -8188,13 +8144,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 415
+        "line": 419
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 415,
+      "line": 419,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -8231,13 +8187,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "<module>",
-        "line": 20
+        "line": 21
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -8554,13 +8510,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 46
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 43,
+      "line": 46,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -8574,49 +8530,6 @@
         "water"
       ],
       "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 58
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 58,
-      "column": 12,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
-      "expression": "\"sleep\" | \"wake\" | \"water\" | \"feed\" | \"play\"",
-      "values": [
-        "feed",
-        "play",
-        "sleep",
-        "wake",
-        "water"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/desktopRest",
-        "line": 573
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 573,
-      "column": 44,
-      "scope": "CompanionLife/desktopRest",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"sleep\" | \"wake\"",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "union",
       "relation": "子集",
       "other": {
         "file": "src/contracts/behavior.ts",
@@ -9220,13 +9133,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 14,
+      "line": 15,
       "column": 26,
       "scope": "<module>",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -9265,13 +9178,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 287
+        "line": 297
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 287,
+      "line": 297,
       "column": 12,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -9309,13 +9222,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/advance/this . change:callback1",
-        "line": 409
+        "line": 419
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 409,
+      "line": 419,
       "column": 31,
       "scope": "PersistentLifePlan/advance/this . change:callback1",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -9353,13 +9266,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/advance/this . change:callback1",
-        "line": 435
+        "line": 445
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 435,
+      "line": 445,
       "column": 19,
       "scope": "PersistentLifePlan/advance/this . change:callback1",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -9644,13 +9557,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "CompanionEconomy/gardenPort/transaction",
-        "line": 154
+        "line": 159
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 154,
+      "line": 159,
       "column": 24,
       "scope": "CompanionEconomy/gardenPort/transaction",
       "target": "{\"file\":\"src/contracts/common.ts\",\"scope\":\"<module>\"}",
@@ -10394,13 +10307,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 415
+        "line": 419
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 415,
+      "line": 419,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/contracts/interaction.ts\",\"scope\":\"<module>\"}",
@@ -10756,13 +10669,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "<module>",
-        "line": 252
+        "line": 280
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 252,
+      "line": 280,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/core/native/agent.ts\",\"scope\":\"<module>\"}",
@@ -10802,13 +10715,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 630
+        "line": 679
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 630,
+      "line": 679,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/core/native/agent.ts\",\"scope\":\"<module>\"}",
@@ -11067,13 +10980,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 415
+        "line": 419
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 415,
+      "line": 419,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/core/native/conversation.ts\",\"scope\":\"CoreNative/observeFacts\"}",
@@ -11321,13 +11234,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 14,
+      "line": 15,
       "column": 26,
       "scope": "<module>",
       "target": "{\"file\":\"src/core/native/result.ts\",\"scope\":\"<module>\"}",
@@ -11364,13 +11277,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 287
+        "line": 297
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 287,
+      "line": 297,
       "column": 12,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/core/native/result.ts\",\"scope\":\"<module>\"}",
@@ -11633,13 +11546,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "CompanionEconomy/gardenPort/transaction",
-        "line": 154
+        "line": 159
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 154,
+      "line": 159,
       "column": 24,
       "scope": "CompanionEconomy/gardenPort/transaction",
       "target": "{\"file\":\"src/core/storage.ts\",\"scope\":\"reject\"}",
@@ -12930,13 +12843,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "<module>",
-        "line": 20
+        "line": 21
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
@@ -13065,13 +12978,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 46
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 43,
+      "line": 46,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
@@ -13085,47 +12998,6 @@
         "water"
       ],
       "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/desktop/platform/plugin.ts",
-        "scope": "PetPlatform/handle",
-        "line": 630
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/desktop/platform/plugin.ts",
-      "line": 630,
-      "column": 10,
-      "scope": "PetPlatform/handle",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
-      "expression": "[ \"sleep\" , \"wake\" , \"pet\" ]",
-      "values": [
-        "pet",
-        "sleep",
-        "wake"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/desktopRest",
-        "line": 573
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 573,
-      "column": 44,
-      "scope": "CompanionLife/desktopRest",
-      "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
-      "expression": "\"sleep\" | \"wake\"",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "union",
       "relation": "子集",
       "other": {
         "file": "src/desktop/platform/plugin.ts",
@@ -13459,13 +13331,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 630
+        "line": 679
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 630,
+      "line": 679,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/desktop/plugin.ts\",\"scope\":\"<module>\"}",
@@ -13909,13 +13781,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "<module>",
-        "line": 252
+        "line": 280
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 252,
+      "line": 280,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/emotion/plugin.ts\",\"scope\":\"<module>\"}",
@@ -13955,13 +13827,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 630
+        "line": 679
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 630,
+      "line": 679,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/emotion/plugin.ts\",\"scope\":\"<module>\"}",
@@ -14361,7 +14233,7 @@
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
@@ -14407,13 +14279,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "<module>",
-        "line": 20
+        "line": 21
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchExecution\"}",
@@ -14451,13 +14323,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "<module>",
-        "line": 20
+        "line": 21
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
@@ -14498,13 +14370,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "<module>",
-        "line": 20
+        "line": 21
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/animationContext\"}",
@@ -14543,13 +14415,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "<module>",
-        "line": 20
+        "line": 21
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -14590,13 +14462,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "<module>",
-        "line": 20
+        "line": 21
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -14637,13 +14509,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "<module>",
-        "line": 20
+        "line": 21
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"<module>\"}",
@@ -14661,13 +14533,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 46
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 43,
+      "line": 46,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/plugin.ts\",\"scope\":\"<module>\"}",
@@ -14685,57 +14557,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "<module>",
-        "line": 20
+        "line": 21
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 20,
-      "column": 17,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
-      "expression": "[ \"feed\" , \"water\" , \"play\" , \"pet\" , \"sleep\" , \"wake\" ]",
-      "values": [
-        "feed",
-        "pet",
-        "play",
-        "sleep",
-        "wake",
-        "water"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/desktopRest",
-        "line": 573
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 573,
-      "column": 44,
-      "scope": "CompanionLife/desktopRest",
-      "target": "{\"file\":\"src/living/body/plugin.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"sleep\" | \"wake\"",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/plugin.ts",
-        "scope": "<module>",
-        "line": 20
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/plugin.ts",
-      "line": 20,
+      "line": 21,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"<module>\"}",
@@ -14781,13 +14609,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "<module>",
-        "line": 20
+        "line": 21
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 316,
+      "line": 344,
       "column": 42,
       "scope": "CompanionBehavior/garden",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -14823,13 +14651,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "CompanionBehavior/garden",
-        "line": 316
+        "line": 344
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 316,
+      "line": 344,
       "column": 42,
       "scope": "CompanionBehavior/garden",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/garden\"}",
@@ -14844,13 +14672,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/garden",
-        "line": 593
+        "line": 642
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 593,
+      "line": 642,
       "column": 42,
       "scope": "CompanionLife/garden",
       "target": "{\"file\":\"src/living/body/plugin.ts\",\"scope\":\"CompanionBehavior/garden\"}",
@@ -14865,7 +14693,7 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "CompanionBehavior/garden",
-        "line": 316
+        "line": 344
       }
     },
     {
@@ -14886,13 +14714,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 44
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 43,
+      "line": 44,
       "column": 11,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
@@ -14927,17 +14755,17 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "CompanionEconomy/ownerAction",
-        "line": 203
+        "line": 221
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 203,
+      "line": 221,
       "column": 5,
       "scope": "CompanionEconomy/ownerAction",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"transaction\"}",
-      "expression": "switch ( action . kind ) { case \"grant\" : store . grantMoney ( requestId , action . amount , typeof action . note === \"string\" && action . note . trim (  ) ? action . note : undefined , actor ) ; break ; case \"gift\" : store . giftItem ( requestId , action . itemId , quantity , typeof action . note === \"string\" && action . note . trim (  ) ? action . note : undefined , actor ) ; break ; case \"buy\" : store . purchase ( requestId , action . itemId , quantity , actor ) ; break ; case \"sell\" : store . sell ( requestId , action . itemId , quantity , actor ) ; break ; case \"importReading\" : { const sourceName = action . source ?. name ; check ( typeof sourceName === \"string\" && sourceName . length > 0 && sourceName . length <= 200 , \"Invalid reading source\" ) ; store . importBook ( requestId , { itemId : TemplateHead:\"reading:owner-\" digest ( requestId ) . slice ( 7 , 39 ) LastTemplateToken:\"\" , title : action . title , text : action . content , ... ( action . format === undefined ? {  } : { format : action . format } ) , source : { kind : \"owner-import\" , name : sourceName } } , actor ) ; break ; } case \"feed\" : { integer ( quantity , \"food quantity\" , 1 , 1 ) ; const body = this . living . lookup ( \"body\" ) ; check ( body , \"The shared Body is unavailable\" ) ; const admit = (  ) => { guard (  ) ; check ( body . isCurrent (  ) , \"The shared Body changed\" ) ; } ; return this . inFlight . run ( async (  ) => { const execution = await withLivingCaller ( admit , (  ) => body . value . consumeFood ( workspaceId , { operationId : TemplateHead:\"owner-food:\" digest ( requestId ) . slice ( 7 , 55 ) LastTemplateToken:\"\" , itemId : action . itemId , interaction : { requestId , actor } } , guard ) ) ; admit (  ) ; return finish ( execution ) ; } ) ; } default : throw Error ( \"Unknown economic action\" ) ; }",
+      "expression": "switch ( action . kind ) { case \"grant\" : store . grantMoney ( requestId , action . amount , typeof action . note === \"string\" && action . note . trim (  ) ? action . note : undefined , actor ) ; break ; case \"gift\" : store . giftItem ( requestId , action . itemId , quantity , typeof action . note === \"string\" && action . note . trim (  ) ? action . note : undefined , actor ) ; break ; case \"buy\" :  case \"sell\" : { recordEffect ?. ( \"unknown\" ) ; try { if ( action . kind === \"buy\" ) store . purchase ( requestId , action . itemId , quantity , actor ) ; else store . sell ( requestId , action . itemId , quantity , actor ) ; } catch ( error ) { if ( error instanceof Rejection ) recordEffect ?. ( \"none\" ) ; throw error ; } recordEffect ?. ( \"partial\" ) ; break ; } case \"importReading\" : { const sourceName = action . source ?. name ; check ( typeof sourceName === \"string\" && sourceName . length > 0 && sourceName . length <= 200 , \"Invalid reading source\" ) ; store . importBook ( requestId , { itemId : TemplateHead:\"reading:owner-\" digest ( requestId ) . slice ( 7 , 39 ) LastTemplateToken:\"\" , title : action . title , text : action . content , ... ( action . format === undefined ? {  } : { format : action . format } ) , source : { kind : \"owner-import\" , name : sourceName } } , actor ) ; break ; } case \"feed\" : { integer ( quantity , \"food quantity\" , 1 , 1 ) ; const body = this . living . lookup ( \"body\" ) ; check ( body , \"The shared Body is unavailable\" ) ; const admit = (  ) => { guard (  ) ; check ( body . isCurrent (  ) , \"The shared Body changed\" ) ; } ; return this . inFlight . run ( async (  ) => { const execution = await withLivingCaller ( admit , (  ) => body . value . consumeFood ( workspaceId , { operationId : TemplateHead:\"owner-food:\" digest ( requestId ) . slice ( 7 , 55 ) LastTemplateToken:\"\" , itemId : action . itemId , interaction : { requestId , actor } } , guard ) ) ; admit (  ) ; return finish ( execution ) ; } ) ; } default : throw Error ( \"Unknown economic action\" ) ; }",
       "values": [
         "buy",
         "feed",
@@ -15054,13 +14882,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/readingOperation",
-        "line": 313
+        "line": 339
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 313,
+      "line": 339,
       "column": 112,
       "scope": "EconomyStore/readingOperation",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"readingStatus\"}",
@@ -15095,13 +14923,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 65
+        "line": 67
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 65,
+      "line": 67,
       "column": 11,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"readingStatus\"}",
@@ -15137,13 +14965,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 14,
+      "line": 15,
       "column": 26,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
@@ -15179,13 +15007,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 287
+        "line": 297
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 287,
+      "line": 297,
       "column": 12,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
@@ -15584,13 +15412,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 46
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 43,
+      "line": 46,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
@@ -15604,54 +15432,6 @@
         "water"
       ],
       "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "<module>",
-        "line": 85
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 85,
-      "column": 34,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
-      "expression": "[ \"command\" , \"pet\" , \"poke\" , \"feed\" , \"water\" , \"play\" , \"talk\" , \"sleep\" , \"wake\" , \"lamp\" ]",
-      "values": [
-        "command",
-        "feed",
-        "lamp",
-        "pet",
-        "play",
-        "poke",
-        "sleep",
-        "talk",
-        "wake",
-        "water"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/desktopRest",
-        "line": 573
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 573,
-      "column": 44,
-      "scope": "CompanionLife/desktopRest",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"sleep\" | \"wake\"",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "union",
       "relation": "子集",
       "other": {
         "file": "src/living/body/room.ts",
@@ -15733,13 +15513,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
+        "line": 300
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 273,
+      "line": 300,
       "column": 68,
       "scope": "EconomyStore/configure/this . mutate:callback3",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
@@ -15777,13 +15557,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 11
+        "line": 14
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 11,
+      "line": 14,
       "column": 44,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
@@ -15953,13 +15733,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/advance/this . change:callback1",
-        "line": 435
+        "line": 445
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 435,
+      "line": 445,
       "column": 19,
       "scope": "PersistentLifePlan/advance/this . change:callback1",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/gardenUnavailable\"}",
@@ -16397,13 +16177,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
+        "line": 300
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 273,
+      "line": 300,
       "column": 68,
       "scope": "EconomyStore/configure/this . mutate:callback3",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
@@ -16441,13 +16221,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 11
+        "line": 14
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 11,
+      "line": 14,
       "column": 44,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
@@ -16746,13 +16526,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 14,
+      "line": 15,
       "column": 26,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/updateExecution\"}",
@@ -16788,13 +16568,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 14,
+      "line": 15,
       "column": 26,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/parkExecution\"}",
@@ -16830,13 +16610,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 287
+        "line": 297
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 287,
+      "line": 297,
       "column": 12,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/parkExecution\"}",
@@ -16873,13 +16653,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "CompanionEconomy/gardenPort/transaction",
-        "line": 154
+        "line": 159
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 154,
+      "line": 159,
       "column": 24,
       "scope": "CompanionEconomy/gardenPort/transaction",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchEconomy\"}",
@@ -17133,13 +16913,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 46
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 43,
+      "line": 46,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchExecution\"}",
@@ -17154,46 +16934,6 @@
       ],
       "shape": "array",
       "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/dispatchExecution",
-        "line": 539
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 539,
-      "column": 34,
-      "scope": "CompanionRoom/dispatchExecution",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
-      "expression": "[ \"sleep\" , \"wake\" ]",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/desktopRest",
-        "line": 573
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 573,
-      "column": 44,
-      "scope": "CompanionLife/desktopRest",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchExecution\"}",
-      "expression": "\"sleep\" | \"wake\"",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "union",
-      "relation": "重复",
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/dispatchExecution",
@@ -17265,13 +17005,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/advance/this . change:callback1",
-        "line": 435
+        "line": 445
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 435,
+      "line": 445,
       "column": 19,
       "scope": "PersistentLifePlan/advance/this . change:callback1",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/planAdmissionWait\"}",
@@ -17504,13 +17244,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 415
+        "line": 419
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 415,
+      "line": 419,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
@@ -17729,13 +17469,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 46
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 43,
+      "line": 46,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
@@ -17749,49 +17489,6 @@
         "water"
       ],
       "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/startPlanned",
-        "line": 611
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 611,
-      "column": 35,
-      "scope": "CompanionRoom/startPlanned",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
-      "expression": "[ \"sleep\" , \"wake\" , \"water\" , \"feed\" , \"play\" ]",
-      "values": [
-        "feed",
-        "play",
-        "sleep",
-        "wake",
-        "water"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/desktopRest",
-        "line": 573
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 573,
-      "column": 44,
-      "scope": "CompanionLife/desktopRest",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
-      "expression": "\"sleep\" | \"wake\"",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "union",
       "relation": "子集",
       "other": {
         "file": "src/living/body/room.ts",
@@ -18096,13 +17793,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 415
+        "line": 419
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 415,
+      "line": 419,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/startPlanned\"}",
@@ -18355,13 +18052,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 46
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 43,
+      "line": 46,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/animationContext\"}",
@@ -18501,13 +18198,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/readingOperation",
-        "line": 313
+        "line": 339
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 313,
+      "line": 339,
       "column": 112,
       "scope": "EconomyStore/readingOperation",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/presentationActivity\"}",
@@ -18542,13 +18239,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 65
+        "line": 67
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 65,
+      "line": 67,
       "column": 11,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/presentationActivity\"}",
@@ -18714,13 +18411,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/advance/this . change:callback1",
-        "line": 435
+        "line": 445
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 435,
+      "line": 445,
       "column": 19,
       "scope": "PersistentLifePlan/advance/this . change:callback1",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/tickAvailable\"}",
@@ -19022,13 +18719,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 14,
+      "line": 15,
       "column": 26,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/tickAvailable\"}",
@@ -19064,13 +18761,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 287
+        "line": 297
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 287,
+      "line": 297,
       "column": 12,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/tickAvailable\"}",
@@ -19085,49 +18782,6 @@
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
         "line": 960
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 1047,
-      "column": 124,
-      "scope": "CompanionRoom/act",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
-      "expression": "[ \"command\" , \"go\" , \"place\" , \"sleep\" , \"wake\" ]",
-      "values": [
-        "command",
-        "go",
-        "place",
-        "sleep",
-        "wake"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/desktopRest",
-        "line": 573
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 573,
-      "column": 44,
-      "scope": "CompanionLife/desktopRest",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/act\"}",
-      "expression": "\"sleep\" | \"wake\"",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/act",
-        "line": 1047
       }
     },
     {
@@ -19148,13 +18802,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/garden",
-        "line": 593
+        "line": 642
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 593,
+      "line": 642,
       "column": 42,
       "scope": "CompanionLife/garden",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -19232,13 +18886,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 283
+        "line": 293
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 283,
+      "line": 293,
       "column": 49,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -19274,13 +18928,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 522
+        "line": 572
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 522,
+      "line": 572,
       "column": 65,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -19316,13 +18970,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 523
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 523,
+      "line": 573,
       "column": 9,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -19399,13 +19053,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/advance/this . change:callback1",
-        "line": 435
+        "line": 445
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 435,
+      "line": 445,
       "column": 19,
       "scope": "PersistentLifePlan/advance/this . change:callback1",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -19477,7 +19131,7 @@
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 252,
+      "line": 280,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"<module>\"}",
@@ -19494,13 +19148,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 630
+        "line": 679
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 630,
+      "line": 679,
       "column": 23,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"<module>\"}",
@@ -19518,13 +19172,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "<module>",
-        "line": 252
+        "line": 280
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 260,
+      "line": 288,
       "column": 51,
       "scope": "apply",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -19558,13 +19212,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "apply",
-        "line": 260
+        "line": 288
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 260,
+      "line": 288,
       "column": 51,
       "scope": "apply",
       "target": "{\"file\":\"src/room/tool-context.ts\",\"scope\":\"<module>\"}",
@@ -19598,13 +19252,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "apply",
-        "line": 260
+        "line": 288
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 262,
+      "line": 290,
       "column": 33,
       "scope": "apply",
       "target": "{\"file\":\"src/living/economy/tool-context.ts\",\"scope\":\"economyPage\"}",
@@ -19638,13 +19292,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "apply",
-        "line": 262
+        "line": 290
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 14,
+      "line": 15,
       "column": 26,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -19659,13 +19313,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 287
+        "line": 297
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 287,
+      "line": 297,
       "column": 12,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
@@ -19679,13 +19333,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "<module>",
-        "line": 14
+        "line": 15
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 249,
+      "line": 276,
       "column": 66,
       "scope": "EconomyStore/configure/this . mutate:callback3",
       "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
@@ -19699,13 +19353,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 21
+        "line": 24
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 21,
+      "line": 24,
       "column": 58,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
@@ -19719,13 +19373,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 249
+        "line": 276
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 273,
+      "line": 300,
       "column": 68,
       "scope": "EconomyStore/configure/this . mutate:callback3",
       "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
@@ -19742,13 +19396,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 11
+        "line": 14
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 11,
+      "line": 14,
       "column": 44,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
@@ -19765,13 +19419,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
+        "line": 300
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 273,
+      "line": 300,
       "column": 68,
       "scope": "EconomyStore/configure/this . mutate:callback3",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -19811,13 +19465,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
+        "line": 300
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 273,
+      "line": 300,
       "column": 68,
       "scope": "EconomyStore/configure/this . mutate:callback3",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
@@ -19857,13 +19511,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
+        "line": 300
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 273,
+      "line": 300,
       "column": 68,
       "scope": "EconomyStore/configure/this . mutate:callback3",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
@@ -19903,13 +19557,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 273
+        "line": 300
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 282,
+      "line": 309,
       "column": 100,
       "scope": "EconomyStore/importBook",
       "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
@@ -19923,13 +19577,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 28
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 28,
+      "line": 29,
       "column": 12,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/importBook\"}",
@@ -19943,13 +19597,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/importBook",
-        "line": 282
+        "line": 309
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 313,
+      "line": 339,
       "column": 112,
       "scope": "EconomyStore/readingOperation",
       "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
@@ -19963,13 +19617,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 65
+        "line": 67
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 65,
+      "line": 67,
       "column": 11,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/readingOperation\"}",
@@ -19984,13 +19638,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/readingOperation",
-        "line": 313
+        "line": 339
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 11,
+      "line": 14,
       "column": 44,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -20030,13 +19684,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 11
+        "line": 14
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 11,
+      "line": 14,
       "column": 44,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
@@ -20076,13 +19730,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 11
+        "line": 14
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 11,
+      "line": 14,
       "column": 44,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
@@ -20122,7 +19776,7 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 11
+        "line": 14
       }
     },
     {
@@ -20627,13 +20281,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 415
+        "line": 419
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 415,
+      "line": 419,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -20716,13 +20370,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 46
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 43,
+      "line": 46,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -20736,49 +20390,6 @@
         "water"
       ],
       "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan-tools.ts",
-        "scope": "registerPlanTools",
-        "line": 103
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan-tools.ts",
-      "line": 103,
-      "column": 40,
-      "scope": "registerPlanTools",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
-      "expression": "[ \"sleep\" , \"wake\" , \"water\" , \"feed\" , \"play\" ]",
-      "values": [
-        "feed",
-        "play",
-        "sleep",
-        "wake",
-        "water"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/desktopRest",
-        "line": 573
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 573,
-      "column": 44,
-      "scope": "CompanionLife/desktopRest",
-      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
-      "expression": "\"sleep\" | \"wake\"",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "union",
       "relation": "子集",
       "other": {
         "file": "src/living/plan/plan-tools.ts",
@@ -21069,13 +20680,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 283
+        "line": 293
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 283,
+      "line": 293,
       "column": 49,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -21111,13 +20722,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 522
+        "line": 572
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 522,
+      "line": 572,
       "column": 65,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -21153,13 +20764,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 523
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 523,
+      "line": 573,
       "column": 9,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -21239,13 +20850,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 348
+        "line": 354
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 348,
+      "line": 354,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
@@ -21282,14 +20893,14 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 497
+        "line": 535
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 497,
-      "column": 11,
+      "line": 535,
+      "column": 83,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
       "expression": "[ \"active\" , \"waiting\" ]",
@@ -21327,13 +20938,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 415
+        "line": 419
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 415,
+      "line": 419,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -21427,13 +21038,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 46
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 43,
+      "line": 46,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -21447,49 +21058,6 @@
         "water"
       ],
       "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "parsePlan/raw . steps . map:callback0",
-        "line": 94
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 94,
-      "column": 13,
-      "scope": "parsePlan/raw . steps . map:callback0",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
-      "expression": "[ \"sleep\" , \"wake\" , \"water\" , \"feed\" , \"play\" ]",
-      "values": [
-        "feed",
-        "play",
-        "sleep",
-        "wake",
-        "water"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/desktopRest",
-        "line": 573
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 573,
-      "column": 44,
-      "scope": "CompanionLife/desktopRest",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
-      "expression": "\"sleep\" | \"wake\"",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "union",
       "relation": "子集",
       "other": {
         "file": "src/living/plan/plan.ts",
@@ -21568,13 +21136,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/factSource",
-        "line": 415
+        "line": 419
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 415,
+      "line": 419,
       "column": 29,
       "scope": "CompanionLife/factSource",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/raw . steps . map:callback0\"}",
@@ -21611,13 +21179,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 348
+        "line": 354
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 348,
+      "line": 354,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/decode\"}",
@@ -21654,14 +21222,14 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 497
+        "line": 535
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 497,
-      "column": 11,
+      "line": 535,
+      "column": 83,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/decode\"}",
       "expression": "[ \"active\" , \"waiting\" ]",
@@ -21680,7 +21248,7 @@
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 188,
+      "line": 195,
       "column": 21,
       "scope": "PersistentLifePlan/change/this . store . update:callback0",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/stopRuntime\"}",
@@ -21694,13 +21262,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 348
+        "line": 354
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 348,
+      "line": 354,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/change/this . store . update:callback0\"}",
@@ -21714,13 +21282,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/change/this . store . update:callback0",
-        "line": 188
+        "line": 195
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 188,
+      "line": 195,
       "column": 21,
       "scope": "PersistentLifePlan/change/this . store . update:callback0",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/checkReadingPlan\"}",
@@ -21734,14 +21302,14 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 497
+        "line": 535
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 497,
-      "column": 11,
+      "line": 535,
+      "column": 83,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/change/this . store . update:callback0\"}",
       "expression": "[ \"active\" , \"waiting\" ]",
@@ -21754,13 +21322,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/change/this . store . update:callback0",
-        "line": 188
+        "line": 195
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 260,
+      "line": 270,
       "column": 9,
       "scope": "PersistentLifePlan/retryAt",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/stopRuntime\"}",
@@ -21774,13 +21342,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 348
+        "line": 354
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 348,
+      "line": 354,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/retryAt\"}",
@@ -21794,13 +21362,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/retryAt",
-        "line": 260
+        "line": 270
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 260,
+      "line": 270,
       "column": 9,
       "scope": "PersistentLifePlan/retryAt",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/checkReadingPlan\"}",
@@ -21814,14 +21382,14 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 497
+        "line": 535
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 497,
-      "column": 11,
+      "line": 535,
+      "column": 83,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/retryAt\"}",
       "expression": "[ \"active\" , \"waiting\" ]",
@@ -21834,13 +21402,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/retryAt",
-        "line": 260
+        "line": 270
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 271,
+      "line": 281,
       "column": 24,
       "scope": "PersistentLifePlan/keep/this . change:callback1",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/stopRuntime\"}",
@@ -21854,13 +21422,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 348
+        "line": 354
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 348,
+      "line": 354,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/keep/this . change:callback1\"}",
@@ -21874,13 +21442,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/keep/this . change:callback1",
-        "line": 271
+        "line": 281
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 271,
+      "line": 281,
       "column": 24,
       "scope": "PersistentLifePlan/keep/this . change:callback1",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/checkReadingPlan\"}",
@@ -21894,14 +21462,14 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 497
+        "line": 535
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 497,
-      "column": 11,
+      "line": 535,
+      "column": 83,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/keep/this . change:callback1\"}",
       "expression": "[ \"active\" , \"waiting\" ]",
@@ -21914,13 +21482,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/keep/this . change:callback1",
-        "line": 271
+        "line": 281
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 283,
+      "line": 293,
       "column": 49,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/controlPlan\"}",
@@ -21935,13 +21503,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 522
+        "line": 572
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 522,
+      "line": 572,
       "column": 65,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -21956,13 +21524,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 283
+        "line": 293
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 283,
+      "line": 293,
       "column": 49,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/controlPlan\"}",
@@ -21977,13 +21545,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 523
+        "line": 573
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 523,
+      "line": 573,
       "column": 9,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -21998,13 +21566,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 283
+        "line": 293
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 283,
+      "line": 293,
       "column": 49,
       "scope": "PersistentLifePlan/control",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/request\"}",
@@ -22040,13 +21608,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/control",
-        "line": 283
+        "line": 293
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 318,
+      "line": 328,
       "column": 19,
       "scope": "PersistentLifePlan/reconsider",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/stopRuntime\"}",
@@ -22060,13 +21628,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 348
+        "line": 354
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 348,
+      "line": 354,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/reconsider\"}",
@@ -22080,13 +21648,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/reconsider",
-        "line": 318
+        "line": 328
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 318,
+      "line": 328,
       "column": 19,
       "scope": "PersistentLifePlan/reconsider",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/checkReadingPlan\"}",
@@ -22100,14 +21668,14 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 497
+        "line": 535
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 497,
-      "column": 11,
+      "line": 535,
+      "column": 83,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/reconsider\"}",
       "expression": "[ \"active\" , \"waiting\" ]",
@@ -22120,13 +21688,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/reconsider",
-        "line": 318
+        "line": 328
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 330,
+      "line": 340,
       "column": 19,
       "scope": "PersistentLifePlan/advance",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/stopRuntime\"}",
@@ -22140,13 +21708,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/stopRuntime",
-        "line": 348
+        "line": 354
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 348,
+      "line": 354,
       "column": 26,
       "scope": "CompanionLife/stopRuntime",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance\"}",
@@ -22160,13 +21728,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/advance",
-        "line": 330
+        "line": 340
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
-      "line": 330,
+      "line": 340,
       "column": 19,
       "scope": "PersistentLifePlan/advance",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/checkReadingPlan\"}",
@@ -22180,14 +21748,14 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/checkReadingPlan",
-        "line": 497
+        "line": 535
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 497,
-      "column": 11,
+      "line": 535,
+      "column": 83,
       "scope": "CompanionLife/checkReadingPlan",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance\"}",
       "expression": "[ \"active\" , \"waiting\" ]",
@@ -22200,13 +21768,13 @@
       "other": {
         "file": "src/living/plan/plan.ts",
         "scope": "PersistentLifePlan/advance",
-        "line": 330
+        "line": 340
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 43,
+      "line": 46,
       "column": 17,
       "scope": "<module>",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"<module>\"}",
@@ -22252,13 +21820,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "<module>",
-        "line": 43
+        "line": 46
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 522,
+      "line": 572,
       "column": 65,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/request\"}",
@@ -22294,13 +21862,13 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 522
+        "line": 572
       }
     },
     {
       "rule": "R8",
       "file": "src/living/plan/plugin.ts",
-      "line": 523,
+      "line": 573,
       "column": 9,
       "scope": "CompanionLife/controlPlan",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/request\"}",
@@ -22336,54 +21904,6 @@
       "other": {
         "file": "src/living/plan/plugin.ts",
         "scope": "CompanionLife/controlPlan",
-        "line": 523
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 573,
-      "column": 44,
-      "scope": "CompanionLife/desktopRest",
-      "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"sleep\" | \"wake\"",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/room/plugin.ts",
-        "scope": "<module>",
-        "line": 18
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/room/plugin.ts",
-      "line": 18,
-      "column": 21,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/desktopRest\"}",
-      "expression": "[ \"command\" , \"pet\" , \"poke\" , \"feed\" , \"water\" , \"play\" , \"talk\" , \"sleep\" , \"wake\" , \"lamp\" ]",
-      "values": [
-        "command",
-        "feed",
-        "lamp",
-        "pet",
-        "play",
-        "poke",
-        "sleep",
-        "talk",
-        "wake",
-        "water"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/desktopRest",
         "line": 573
       }
     },
@@ -23510,7 +23030,7 @@
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 38,
+      "line": 39,
       "column": 52,
       "scope": "<module>",
       "target": "kind",

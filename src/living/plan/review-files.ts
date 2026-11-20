@@ -1,12 +1,9 @@
-import type {Context} from '@deepseek-ai/cordis';
-import type {Agent} from '@deepseek-ai/dsh-agent';
 import {lstatSync} from 'node:fs';
 import {join,relative,resolve,sep} from 'node:path';
 import {formatLocalTime} from '#dsh-world/timeContext';
 import {companionWritingFile,type CompanionWritingScope} from '../../core/companion-writing.js';
 import {companionRecordPaths} from '../../core/record-paths.js';
 import type {PetCoreHost} from '../../core/index.js';
-import {installSourceFileGuard} from '../../core/life-review-files.js';
 
 export interface LifeReviewFileAccess {
   workspaceId:string;root:string;storageId:string;sessionId:string;guest:boolean;
@@ -57,14 +54,4 @@ export function assertLifeReviewFile(host:Pick<PetCoreHost,'workspace'>,access:L
     }
   }
   throw Error('自主回顾的原生文件工具仅访问自己的记录和本次明确回顾素材');
-}
-
-export function installLifeReviewFileGuard(ctx:Context,host:PetCoreHost,getAccess:(agent:Agent)=>LifeReviewFileAccess|undefined,clock:()=>Date=()=>new Date()) {
-  return installSourceFileGuard(ctx,agent=>{
-    const access=getAccess(agent);
-    if(access)return {
-      key:()=>lifeReviewFileAccessKey(access),
-      check:(tool,path)=>assertLifeReviewFile(host,access,tool,path,clock()),
-    };
-  });
 }

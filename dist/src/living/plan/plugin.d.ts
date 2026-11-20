@@ -168,28 +168,9 @@ export declare class CompanionLife {
         room?: any;
         fact?: CompanionFact;
     }>;
-    /** Compatibility methods delegate; Behavior remains available after Life unload. */
-    desktopRest(workspaceId: string, action: 'sleep' | 'wake'): Promise<{
-        home: any;
-        behavior: {
-            revision: number;
-            bootId: `${string}-${string}-${string}-${string}-${string}`;
-            activityId: string | null;
-            kind: string;
-            startedAt?: number;
-            phase: "idle" | "pending" | "moving" | "working" | "sleeping" | "completed";
-            presentationKind?: "read" | "reading-wait" | "rest";
-            readingState?: "unread" | "offered" | "confirmed";
-            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext;
-        };
-        ok: boolean;
-        changed: boolean;
-        event: any;
-        room?: any;
-        fact?: CompanionFact;
-    }>;
     private behavior;
     private forwardToBody;
+    /** Compatibility methods delegate; Behavior remains available after Life unload. */
     roomAction(workspaceId: string, input: unknown, by?: string): Promise<{
         home: any;
         behavior: {

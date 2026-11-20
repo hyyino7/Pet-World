@@ -330,13 +330,6 @@ export class EconomyStore {
     const startOffset=segment*size,endOffset=Math.min(startOffset+size,reading.text.length);
     return {itemId,title:reading.title,version:reading.version,segment,totalSegments,text:reading.text.slice(startOffset,endOffset),startOffset,endOffset,nextSegment:segment+1<totalSegments?segment+1:null,source:reading.source,bookmark:this.allBookmarks().find(row=>row.itemId===itemId&&row.version===reading.version)??null};
   }
-  bookmark(requestId:string,itemId:string,input:{version:string;offset:number}):ReadingBookmark {
-    token(input.version,'content version');integer(input.offset,'bookmark offset');return this.mutate(requestId,'bookmark',{itemId,...input},()=>{
-      const reading=this.ownedReading(itemId);if(reading.version!==input.version)reject('STALE_REVISION','Reading content changed; open its current version');integer(input.offset,'bookmark offset',0,reading.text.length);
-      const row:ReadingBookmark={itemId,version:input.version,offset:input.offset,updatedAt:Date.now()};
-      this.putBookmark(row);this.bump();return row;
-    });
-  }
   private putBookmark(bookmark: ReadingBookmark) {
     const {itemId,version} = bookmark;
     const saved=this.db.prepare('INSERT INTO bookmarks VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE value<>excluded.value')

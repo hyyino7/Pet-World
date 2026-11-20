@@ -3,7 +3,6 @@ import { join, relative, resolve, sep } from 'node:path';
 import { formatLocalTime } from '#dsh-world/timeContext';
 import { companionWritingFile } from '../../core/companion-writing.js';
 import { companionRecordPaths } from '../../core/record-paths.js';
-import { installSourceFileGuard } from '../../core/life-review-files.js';
 const validDay = (day) => typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day)
     && Number.isFinite(Date.parse(day + 'T00:00:00Z')) && new Date(day + 'T00:00:00Z').toISOString().slice(0, 10) === day;
 export const lifeReviewFileAccessKey = (access) => JSON.stringify([access.workspaceId, access.root, access.storageId, access.sessionId, access.guest, access.reviewDay, access.writing?.directory]);
@@ -56,15 +55,5 @@ export function assertLifeReviewFile(host, access, tool, path, now = new Date())
         }
     }
     throw Error('自主回顾的原生文件工具仅访问自己的记录和本次明确回顾素材');
-}
-export function installLifeReviewFileGuard(ctx, host, getAccess, clock = () => new Date()) {
-    return installSourceFileGuard(ctx, agent => {
-        const access = getAccess(agent);
-        if (access)
-            return {
-                key: () => lifeReviewFileAccessKey(access),
-                check: (tool, path) => assertLifeReviewFile(host, access, tool, path, clock()),
-            };
-    });
 }
 //# sourceMappingURL=review-files.js.map

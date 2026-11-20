@@ -743,10 +743,6 @@ export class CompanionLife {
             return Promise.reject(Error('未知的生活动作'));
         return this.forwardToBody(body => body.act(workspaceId, action, requestId, channel));
     }
-    /** Compatibility methods delegate; Behavior remains available after Life unload. */
-    desktopRest(workspaceId, action) {
-        return this.forwardToBody(body => body.act(workspaceId, action));
-    }
     behavior() {
         this.assertOpen();
         const behavior = this.living.lookup('body');
@@ -762,6 +758,7 @@ export class CompanionLife {
             return result;
         });
     }
+    /** Compatibility methods delegate; Behavior remains available after Life unload. */
     roomAction(workspaceId, input, by = '伙伴') {
         return this.forwardToBody(body => body.roomAction(workspaceId, input, by));
     }

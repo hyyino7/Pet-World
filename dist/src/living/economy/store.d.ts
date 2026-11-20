@@ -1,4 +1,4 @@
-import type { BodyUseProof, CatalogItem, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, ItemUse, LedgerEntry, ReadingBookmark, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
+import type { BodyUseProof, CatalogItem, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, ItemUse, LedgerEntry, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
 import type { WalletView } from '../../contracts/living.js';
 import { type GardenClock } from './garden-clock.js';
@@ -81,10 +81,6 @@ export declare class EconomyStore {
         segment?: number;
         maxCharacters?: number;
     }): ReadingSegment;
-    bookmark(requestId: string, itemId: string, input: {
-        version: string;
-        offset: number;
-    }): ReadingBookmark;
     private putBookmark;
     private readingOperation;
     /** Offers and confirmations are durable actual content-delivery receipts;

@@ -123,7 +123,7 @@ test('R5: paused garden checkpoints retain the original stale-revision guard and
 
 test('R5: a backwards clock cannot rewind the paused garden checkpoint',t=>{
   const f=fixture(t);f.move(6*HOUR);f.room.tick();const before=f.saved();
-  f.room.garden('state',{},false,f.start+HOUR);
+  f.room.garden('state',{},f.start+HOUR);
   assert.equal(f.saved().updatedAt,before.updatedAt);assert.equal(f.saved().plots[0].progress,0);
   assert.equal(f.store.readGarden(f.start+HOUR,pausedClock).updatedAt,before.updatedAt);
 });

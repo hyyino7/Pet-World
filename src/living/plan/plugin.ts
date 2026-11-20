@@ -621,10 +621,6 @@ export class CompanionLife {
     if (!actions.includes(action as typeof actions[number])) return Promise.reject(Error('未知的生活动作'));
     return this.forwardToBody(body=>body.act(workspaceId,action,requestId,channel));
   }
-  /** Compatibility methods delegate; Behavior remains available after Life unload. */
-  desktopRest(workspaceId: string, action: 'sleep' | 'wake') {
-    return this.forwardToBody(body=>body.act(workspaceId, action));
-  }
   private behavior() {
     this.assertOpen();
     const behavior = this.living.lookup('body');
@@ -638,6 +634,7 @@ export class CompanionLife {
       validate();return result;
     });
   }
+  /** Compatibility methods delegate; Behavior remains available after Life unload. */
   roomAction(workspaceId: string, input: unknown, by = '伙伴') {
     return this.forwardToBody(body=>body.roomAction(workspaceId,input,by));
   }

@@ -880,6 +880,17 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
   - `pnpm run test:behavior-list` 索引 11 通过、0 失败，自动行为 93 通过、0 失败。3 条 L3 手工验收未运行。
   - `pnpm run test:native-life` 试跑 1 次，前置构建通过，Electron 启动后命令以 1 退出。原生断言未运行，原因：临时 `DSH_HOME` 缺少桌面 profile，`mountInstalledStandard` 报 `ENOENT: no such file or directory, open '<临时 DSH_HOME>/profiles/desktop/package.json'`。原生断言 0 通过、0 失败，`bubbles` 未验证。
 
+### 第 3 批 · 3E
+
+- 01 两个门面共用世界快照，Body 提供两域事实流，三区发送可合并的 `world.changed`。11 个文件，367 行（+344 / −23）。生命周期快测 32/32。
+- 02 五条命令复用原入口和回执。新阅读命令重放已完成步骤只核对原片段、返回原回执。6 个文件，351 行（+313 / −38）。快测 33/33、23/23。
+- 03 完成五项清理。两条回顾测试移到真实来源分支，以同一 token 验证目标文件变为软链及历史日记出现后的拒绝。13 个文件，188 行（+113 / −75）。快测 33/33、56/56、2/2，脚本语法检查通过。
+- 执行中补充：M2A-28 索引改指新位置
+- 四条入口测试在旧实现上均失败。三个临时副本分别执行 `pnpm run build`、`pnpm run check:arch` 和本组细则快测，末次各组失败 0 项。文件和行数排除 `dist/src/**` 与基线。
+- `pnpm run check:types`、`pnpm run check:arch -- --report` 通过。`living` 的 R1–R4 为 0，`--write-baseline` 收紧 `desktopRest` 的 22 条 R8 关系，新增 0 条。
+- `node --test tests/behavior-list/index.test.mjs` 通过 11/11。`pnpm run build && pnpm run test:behavior-list` 构建通过，索引自测 11/11，自动行为 93/93，`M2A-28` 执行并通过 1 次，Memory 回环通过。
+- 三组补丁含构建产物与基线，依次应用到 `6a76e50` 可逐字节还原当前工作区。合并门禁由 Claude 在沙箱外运行。
+
 ## 审查结论
 
 ### 1A 第一轮验收（Codex 审查 + Claude 核实）
