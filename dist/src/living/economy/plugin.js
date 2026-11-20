@@ -1,7 +1,7 @@
 import { economyOverview, economyPage } from './tool-context.js';
 import { InFlight, LivingView, mountLivingArea, settleCleanup, withLivingCaller } from '../index.js';
 import { defineTool } from '@deepseek-ai/dsh-tools';
-import { readFileSync } from 'node:fs';
+import { lstatSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { bytesDigest, canonical, check, digest, integer, Rejection } from '../../core/storage.js';
@@ -12,7 +12,7 @@ import { CONTRACT_VERSION } from '../../contracts/version.js';
 import { EconomyStore, projectWallet } from './store.js';
 import { installEconomyAccessGuard } from './access.js';
 import { readLifeControl } from '../plan/control-file.js';
-import { bodyCheckpointDirectory, ECONOMY_ADOPTION_FILE, economyAdoptionPath, economyFile, economyRecoveryAdvice, readEconomyFileEvidence } from './adoption.js';
+import { bodyCheckpointDirectory, ECONOMY_ADOPTION_FILE, economyAdoptionPath, economyFile, inspectEconomyAdoption } from './adoption.js';
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json', ECONOMY_ADOPTION_FILE];
 const access = { mode: 'bounded', detail: '余额与物品由程序结算。原生文件工具防误改；同一系统账户的命令和其他插件仍可访问文件。' };
 export const economyStateToolDeclaration = {
@@ -29,6 +29,7 @@ export class CompanionEconomy {
     ctx;
     host;
     current;
+    preparationFailure;
     closed = false;
     living;
     inFlight = new InFlight();
@@ -43,10 +44,14 @@ export class CompanionEconomy {
         return status.target ? join(status.target.path, '.chatpet', 'data', 'economy') : undefined;
     }
     initializationFiles(target) {
-        const storageId = this.host.workspace.storageId(), companionId = this.host.workspace.runtime.config.companionId;
-        const evidence = readEconomyFileEvidence(target.path, { storageId, companionId });
-        const verified = evidence.database && this.current?.key === canonical({ path: target.path, storageId, companionId });
-        return evidence.adoption || evidence.storage || verified ? inventoryFiles : [];
+        const root = join(target.path, '.chatpet'), data = join(root, 'data');
+        try {
+            if ([root, data, join(data, 'economy'), join(data, 'living')].every(path => lstatSync(path, { throwIfNoEntry: false })?.isDirectory())
+                && inventoryFiles.slice(1).every(path => economyFile(join(root, path))))
+                return inventoryFiles;
+        }
+        catch { /* Wallet admission reports invalid wallet files. */ }
+        return [];
     }
     retainedGarden(target, file) {
         const sourcePath = join(bodyCheckpointDirectory(target.path), 'garden.json');
@@ -67,6 +72,7 @@ export class CompanionEconomy {
         check(initializing || status.state === 'ready' && status.target?.id === target.id && status.target.path === target.path, 'Economy requires the current bound workspace');
         const storageId = this.host.workspace.storageId(), companionId = this.host.workspace.runtime.config.companionId;
         const key = canonical({ path: target.path, storageId, companionId });
+        this.preparationFailure = undefined;
         if (this.current?.key === key) {
             this.current.store.validate(initializing);
             this.current.binding.target = target;
@@ -76,20 +82,26 @@ export class CompanionEconomy {
         this.current = undefined;
         const metadata = this.host.workspace.runtime.store;
         const binding = { target };
-        const store = new EconomyStore({ workspacePath: target.path, storageId, companionId,
-            loadLegacyGarden: () => this.retainedGarden(target, legacyFile),
-            walletChanged: () => {
-                const { id, path } = binding.target;
-                this.living.changed({ workspaceId: id, path, storageId });
-            },
-            guard: () => {
-                this.assertOpen();
-                check(this.host.workspace.status().state !== 'migration-required', 'migration-required');
-                check(metadata.persisted(), 'Core database is absent or moved');
-                check(this.host.workspace.storageId() === storageId, 'Economy binding changed');
-            } });
-        this.current = { key, binding, store };
-        return store;
+        try {
+            const store = new EconomyStore({ workspacePath: target.path, storageId, companionId,
+                loadLegacyGarden: () => this.retainedGarden(target, legacyFile),
+                walletChanged: () => {
+                    const { id, path } = binding.target;
+                    this.living.changed({ workspaceId: id, path, storageId });
+                },
+                guard: () => {
+                    this.assertOpen();
+                    check(this.host.workspace.status().state !== 'migration-required', 'migration-required');
+                    check(metadata.persisted(), 'Core database is absent or moved');
+                    check(this.host.workspace.storageId() === storageId, 'Economy binding changed');
+                } });
+            this.current = { key, binding, store };
+            return store;
+        }
+        catch (error) {
+            this.preparationFailure = { key, error };
+            throw error;
+        }
     }
     capabilityStatus() {
         const { state, target } = this.host.workspace.status();
@@ -97,18 +109,14 @@ export class CompanionEconomy {
             return { state: 'unavailable', reason: null, supportedOperations: [] };
         try {
             const storageId = this.host.workspace.storageId(), companionId = this.host.workspace.runtime.config.companionId;
-            const evidence = readEconomyFileEvidence(target.path, { storageId, companionId });
-            const current = this.current?.key === canonical({ path: target.path, storageId, companionId }) ? this.current : undefined;
-            if (evidence.adoption && (!evidence.database || !current)) {
-                const reason = evidence.database
-                    ? 'Retry initialization with the existing wallet. Follow the recovery steps if it reports an uninitialized database.'
-                    : 'The authoritative economy database is missing.';
-                return { state: 'unavailable', reason: reason + economyRecoveryAdvice(economyAdoptionPath(target.path)), supportedOperations: [] };
-            }
-            if (state === 'ready' && current) {
-                current.store.validate();
+            const key = canonical({ path: target.path, storageId, companionId });
+            if (state === 'ready' && this.current?.key === key) {
+                this.current.store.validate();
                 return { state: 'ready', reason: null, supportedOperations: ['snapshot', 'ownerAction', 'settings'] };
             }
+            const evidence = inspectEconomyAdoption(target.path, { storageId, companionId });
+            if (evidence.database && this.preparationFailure?.key === key)
+                throw this.preparationFailure.error;
             return { state: 'initializing', reason: null, supportedOperations: [] };
         }
         catch (error) {

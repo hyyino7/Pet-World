@@ -20,7 +20,7 @@ export declare class EconomyStore {
     constructor(options: EconomyStoreOptions);
     private safeFile;
     private writeStorageMarker;
-    /** Cheap lease/inode validation for the hot Body adapter path. */
+    /** Validate wallet admission, including retained evidence, when reusing the open Store. */
     validate(initializing?: boolean): void;
     private ensure;
     private transaction;

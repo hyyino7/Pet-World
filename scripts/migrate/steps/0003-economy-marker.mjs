@@ -87,7 +87,7 @@ export default {
   adopted(context) {
     if (observe(coreFile(context), markerInvalid, source).length) return true;
     const evidence = files(context);
-    return evidence.adoption || evidence.storage || readBodyEconomyAuthority(context.plan.repo)
+    return evidence.adoption || evidence.storage || checked(markerInvalid, () => readBodyEconomyAuthority(context.plan.repo))
       || evidence.database && observe(walletFile(context), walletInvalid, db => walletMarker(context, db));
   },
   complete(context, {economyAdopted} = {}) {

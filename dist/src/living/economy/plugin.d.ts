@@ -32,6 +32,7 @@ export declare class CompanionEconomy {
     private readonly ctx;
     readonly host: PetCoreHost;
     private current?;
+    private preparationFailure?;
     private closed;
     private readonly living;
     private readonly inFlight;

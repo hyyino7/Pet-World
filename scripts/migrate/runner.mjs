@@ -41,6 +41,7 @@ export function migrationStatus(installation, selected = steps, { plan = false }
     const recordedComplete = index < journal.settledStepCount || isStepSettled(event);
     const inFlight = event === 'start' || event === 'failed';
     try {
+      // Only 0003 exposes adopted() and verifies its target before the manifest advances.
       const complete = (version > index || inFlight && selected[index].adopted) && targetComplete(selected[index], context,
         {recorded:recordedComplete, versioned:!inFlight, economyAdopted:previous?.header.economyAdopted});
       const state = complete && version > index ? 'complete' : recordedComplete ? 'inconsistent' : event ?? 'pending';

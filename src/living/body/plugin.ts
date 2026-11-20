@@ -14,7 +14,7 @@ import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomInteractionContext } from './room.js';
 import {gardenHomeProjection} from './garden-receipt.js';
 import { LifeControlFileError, readLifeControl } from '../plan/control-file.js';
-import { readEconomyFileEvidence } from '../economy/adoption.js';
+import { readEconomyFileEvidence, readEconomyJournalEvidence } from '../economy/adoption.js';
 import { LivingView, livingCaller, mountLivingArea, settleCleanup, type LivingPorts, type RecordCommandEffect } from '../index.js';
 export type { PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 
@@ -184,7 +184,7 @@ export class CompanionBehavior {
         if(!economy) {
           const {companionId}=this.host.workspace.runtime.config;
           const evidence=readEconomyFileEvidence(target.path,{storageId,companionId});
-          if(evidence.adoption || evidence.storage || evidence.database)
+          if(evidence.adoption || evidence.storage || evidence.database || readEconomyJournalEvidence(target.path,storageId))
             throw Error('权威经济组件暂不可用；原钱包、库存与菜园已保留，等待恢复');
         }
         return economy?.gardenPort(id,legacyFile,this.readingConfirmationEffect);

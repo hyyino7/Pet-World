@@ -1,11 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs,{readFileSync,renameSync,existsSync,writeFileSync} from 'node:fs';
+import fs,{readFileSync,renameSync,existsSync,rmSync,writeFileSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {syncBuiltinESMExports} from 'node:module';
 import {fixture,until} from './fixture.mjs';
 import {cordisFixture} from './entries-lifecycle.test.mjs';
+import {runMigration} from '../../scripts/migrate/runner.mjs';
+import {mockDsh} from '../migrate/helpers.mjs';
+import {economyPaths,offlineFixture} from '../migrate/offline-helpers.mjs';
 const meal='food:improved-meal',HOUR=3_600_000;
 
 test('效果落盘后的钱包路径故障保留预留并在重启后只结算一次',async t=>{
@@ -154,4 +157,61 @@ test('钱包缺库时保留旧菜园和免费照料',t=>retainedWallet(t,'old ga
 test('异绑定的钱包库或证据拒绝复活旧钱包',async t=>{
   await t.test('异绑定库',t=>retainedWallet(t,'wallet binding'));
   await t.test('异绑定证据',t=>retainedWallet(t,'proof binding'));
+});
+
+async function assertFreeCare(f, tag) {
+  for (const action of ['feed','water']) {
+    const requestId=`free-${action}-${tag}`;
+    await f.body.act(f.id,action,requestId);
+    assert.ok((await f.body.pendingFacts(f.id)).some(fact=>fact.requestId===requestId && fact.type===action));
+  }
+}
+
+test('坏钱包证据只阻断钱包并保留免费照料',async t=>{
+  const f=await cordisFixture(t,{order:['economy','body']});
+  const wallet=await f.ownerAction({kind:'grant',amount:30},'retained-wallet');
+  const wrong=JSON.stringify({storageId:'other-binding',companionId:f.core.workspace.runtime.config.companionId});
+  const data=join(f.repo,'.chatpet/data');
+  for (const name of ['living/economy-adoption.json','economy/storage.json']) {
+    const file=join(data,name), saved=readFileSync(file);
+    for (const [label, corrupted] of [['bad-json','{'],['wrong-binding',wrong]]) await t.test(`${name} ${label}`,async()=>{
+      writeFileSync(file,corrupted);
+      try {
+        assert.equal(f.core.workspace.status().state,'ready');
+        await assert.rejects(f.economy.snapshot(f.id),/JSON|different storage/);
+        assert.equal((await f.body.garden(f.id,'state')).ok,false);
+        await assertFreeCare(f,`${label}-${name}`);
+        assert.equal(readFileSync(file,'utf8'),corrupted);
+      } finally { writeFileSync(file,saved); }
+    });
+  }
+  assert.equal((await f.economy.snapshot(f.id)).balance,wallet.balance);
+});
+
+test('迁移日志挡住双目录丢失后重建钱包并保留免费照料',async t=>{
+  mockDsh(t);
+  const f=await offlineFixture(t,false,{withLegacyEconomy:true});
+  const garden=join(f.data,'life/garden.json'), retained='{"coins":61}\n';
+  writeFileSync(garden,retained);
+  const {database,adoption}=economyPaths(f);
+  const declared=JSON.parse(readFileSync(join(f.managed,'manifest.json'),'utf8')).files;
+  assert.ok(!declared.some(path=>path.startsWith('data/economy/') || path.startsWith('data/living/')));
+  await runMigration({installation:f.installation,backup:join(f.out,'backup')});
+  const journal=join(f.data,'migrations.jsonl'), log=readFileSync(journal,'utf8');
+  assert.equal(JSON.parse(log.split('\n')[0]).economyAdopted,true);
+  for (const file of [database,adoption]) rmSync(dirname(file),{recursive:true});
+
+  const registry={workspaces:[{...f.target,sessionIds:[]}],archived:[]};
+  const running=await cordisFixture(t,{existing:{...f,registry},order:['body']});
+  assert.equal(running.core.workspace.status().state,'ready');
+  assert.equal((await running.body.garden(running.id,'state')).ok,false);
+  await assertFreeCare(running,'wallet-unmounted');
+  await running.load('economy');
+  await assert.rejects(running.economy.snapshot(running.id),/authoritative economy database is missing/);
+  assert.equal((await running.body.garden(running.id,'state')).ok,false);
+  await assertFreeCare(running,'wallet-mounted');
+  assert.equal(running.core.workspace.status().state,'ready');
+  for (const file of [database,adoption]) assert.equal(existsSync(dirname(file)),false);
+  assert.equal(readFileSync(garden,'utf8'),retained);
+  assert.equal(readFileSync(journal,'utf8'),log);
 });

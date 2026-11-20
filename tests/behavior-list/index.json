@@ -249,6 +249,24 @@
       "families": []
     },
     {
+      "id": "2A5-06",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/domains.test.mjs",
+      "name": "坏钱包证据只阻断钱包并保留免费照料",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A5-07",
+      "categories": ["缺库不得空白替代"],
+      "level": "L2",
+      "file": "tests/behavior-list/domains.test.mjs",
+      "name": "迁移日志挡住双目录丢失后重建钱包并保留免费照料",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
       "id": "B17",
       "categories": [],
       "level": "L1",

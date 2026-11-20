@@ -1,7 +1,8 @@
-import { closeSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync } from 'node:fs';
+import { closeSync, constants, fstatSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { durableWrite } from '#dsh-world/life/lifeStore';
 import { check, reject, unavailable } from '../../core/storage.js';
+import { decodeMigrationJournal, parseMigrationJournal } from '../../core/storage-migration.js';
 export const ECONOMY_ADOPTION_FILE = 'data/living/economy-adoption.json';
 export const ECONOMY_INITIALIZED = 'economy.initialized';
 function directory(path) {
@@ -36,6 +37,41 @@ export function readEconomyFileEvidence(path, identity) {
     economyFile(database + '-journal');
     return { adoption: marker(join(managed, ECONOMY_ADOPTION_FILE)), storage: marker(join(wallet, 'storage.json')),
         database: !!economyFile(database) };
+}
+export function readEconomyJournalEvidence(path, storageId) {
+    try {
+        const file = join(path, '.chatpet', 'data', 'migrations.jsonl');
+        const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+        try {
+            const before = fstatSync(fd);
+            if (!before.isFile() || before.nlink !== 1)
+                return false;
+            const bytes = readFileSync(fd), after = fstatSync(fd);
+            if (bytes.length !== before.size || before.size !== after.size || before.mtimeMs !== after.mtimeMs)
+                return false;
+            const journal = parseMigrationJournal(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+            const { truncated } = decodeMigrationJournal(journal, storageId);
+            // The decoder validates every binding and only permits economyAdopted on headers that include 0003.
+            return !truncated && journal.rows.some(value => {
+                const row = value;
+                return row.event === 'migration' && row.economyAdopted === true;
+            });
+        }
+        finally {
+            closeSync(fd);
+        }
+    }
+    catch {
+        return false;
+    }
+}
+export function inspectEconomyAdoption(path, identity, expectedInitialized = false) {
+    const files = readEconomyFileEvidence(path, identity);
+    if (!files.database && (files.adoption || files.storage || expectedInitialized
+        || readEconomyJournalEvidence(path, identity.storageId) || readBodyEconomyAuthority(path)))
+        unavailable('The authoritative economy database is missing; recover it before continuing.'
+            + (files.adoption ? economyRecoveryAdvice(economyAdoptionPath(path)) : ''));
+    return files;
 }
 export function bodyCheckpointDirectory(path) {
     const managed = join(path, '.chatpet'), data = join(managed, 'data'), life = join(data, 'life');
@@ -94,7 +130,9 @@ export function writeEconomyFile(file, content) {
     durableWrite(file, content);
     syncPath(dirname(file));
 }
-export function economyRecoveryAdvice(file) {
+export function economyRecoveryAdvice(file, database) {
+    if (database)
+        return ` Adoption evidence is at ${file}. If you confirm that this first initialization never succeeded, move ${database} and any associated -wal, -shm and -journal files together to a safe location for safekeeping. Then delete this evidence and retry. Otherwise restore the rollback backup.`;
     return ` Adoption evidence is at ${file}. If this first initialization never succeeded, confirm that before deleting this evidence and retrying. Otherwise restore the rollback backup.`;
 }
 //# sourceMappingURL=adoption.js.map

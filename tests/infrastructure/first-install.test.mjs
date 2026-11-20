@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { syncBuiltinESMExports } from 'node:module';
 import { Context } from '@deepseek-ai/cordis';
@@ -9,6 +9,7 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt';
 import Tools from '@deepseek-ai/dsh-tools';
 import { createCore } from '../../dist/src/core/index.js';
 import * as economyPlugin from '../../dist/src/living/economy/plugin.js';
+import { EconomyStore } from '../../dist/src/living/economy/store.js';
 import { DatabaseSync } from 'node:sqlite';
 import { fileHashes, inspectRepoBinding, prepareRepoStorage, relocateRepoStorage } from '../../scripts/lib/repo-storage.mjs';
 import { profileFixture } from '../behavior-list/setup-config.test.mjs';
@@ -152,6 +153,64 @@ test('first initialization restarts with durable adoption evidence and refuses t
     assert.equal(existsSync(database), false);
     assert.deepEqual(readFileSync(adoption), saved);
   }
+});
+
+test('interrupted first wallet commit can recover by preserving the empty shell and removing the adoption evidence', async t => {
+  const f = fixture(t), prefs = await f.bind(), root = join(f.repo, '.chatpet');
+  const adoption = join(root, 'data/living/economy-adoption.json'), database = join(root, 'data/economy/economy.sqlite');
+  t.after(await mountWallet(f));
+  const exec = DatabaseSync.prototype.exec;
+  let interrupted = false;
+  const stop = t.mock.method(DatabaseSync.prototype, 'exec', function(sql) {
+    if (sql === 'COMMIT' && this.location() === database) {
+      interrupted = true;
+      throw Error('Injected stop before the first wallet commit');
+    }
+    return exec.call(this, sql);
+  });
+  try { assert.equal((await f.initialize(prefs.revision)).ok, false); }
+  finally { stop.mock.restore(); }
+  assert.equal(interrupted, true);
+  assert.ok(existsSync(adoption));
+  {
+    using db = new DatabaseSync(database, {readOnly:true});
+    assert.deepEqual(db.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all(), []);
+  }
+
+  const refused = await f.initialize(prefs.revision);
+  assert.equal(refused.ok, false);
+  assert.equal(refused.error.code, 'OUTCOME_UNKNOWN');
+  const capability = value(await f.host.services.core.listCapabilities(f.request(), {})).find(row => row.id === 'life.economy');
+  assert.equal(capability?.state, 'unavailable');
+  assert.match(capability.reason, /mov(?:e|ing).*economy\.sqlite.*-wal.*-shm.*-journal/);
+  assert.match(capability.reason, /delet(?:e|ing).*evidence.*retry.*rollback backup/);
+  assert.ok(capability.reason.includes(adoption));
+  const held = join(f.root, 'preserved-wallet');
+  mkdirSync(held);
+  const files = ['', '-wal', '-shm', '-journal'].map(suffix => 'economy.sqlite' + suffix)
+    .filter(name => existsSync(join(dirname(database), name)));
+  const shell = readFileSync(database);
+  for (const name of files) renameSync(join(dirname(database), name), join(held, name));
+  rmSync(adoption);
+
+  assert.equal(value(await f.initialize(prefs.revision)).state, 'ready');
+  assert.deepEqual(readdirSync(dirname(database)).filter(name => name.endsWith('.sqlite')), ['economy.sqlite']);
+  assert.deepEqual(readFileSync(join(held, 'economy.sqlite')), shell);
+  using reopened = new DatabaseSync(database, {readOnly:true});
+  assert.ok(reopened.prepare('SELECT value FROM meta WHERE key=?').get('economy.initialized'));
+});
+
+test('wallet capability reports a live lease without first initialization recovery advice', async t => {
+  const f = fixture(t), prefs = await f.bind();
+  assert.equal(value(await f.initialize(prefs.revision)).state, 'ready');
+  const owner = new EconomyStore({workspacePath:f.repo,storageId:f.host.workspace.storageId(),companionId:f.config.companionId});
+  try {
+    t.after(await mountWallet(f));
+    const wallet = value(await f.host.services.core.listCapabilities(f.request(), {})).find(row => row.id === 'life.economy');
+    assert.equal(wallet?.state, 'unavailable');
+    assert.match(wallet.reason, /live owner/);
+    assert.doesNotMatch(wallet.reason, /first initialization|rollback backup/);
+  } finally { owner.close(); }
 });
 
 for (const restart of [false,true]) test(`committed wallet repairs missing storage inventory on ${restart ? 'restart' : 'same-process retry'}`, async t => {

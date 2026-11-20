@@ -12,7 +12,7 @@ import type { CompanionFact, CompanionFactActor } from '../../contracts/interact
 import type { WalletView } from '../../contracts/living.js';
 import { advanceGardenClock, type GardenClock } from './garden-clock.js';
 import { ECONOMY_INITIALIZED, economyAdoptionPath, economyFile, economyRecoveryAdvice, ensureAdoptionDirectory,
-  readBodyEconomyAuthority, readEconomyDatabaseMarker, readEconomyFileEvidence, syncPath, writeEconomyFile } from './adoption.js';
+  inspectEconomyAdoption, readEconomyDatabaseMarker, readEconomyFileEvidence, syncPath, writeEconomyFile } from './adoption.js';
 
 const cropRows = CROPS as any[];
 const runningClock: GardenClock = {enabled:true};
@@ -54,13 +54,7 @@ export class EconomyStore {
     token(options.storageId,'storage identity');token(options.companionId,'companion identity');options.guard?.();
     const root=realpathSync(options.workspacePath), expected={storageId:options.storageId,companionId:options.companionId};
     const adoption=economyAdoptionPath(root);
-    const evidence=()=>{
-      const files=readEconomyFileEvidence(root,expected);
-      if(!files.database && (files.adoption || files.storage || options.expectedInitialized || readBodyEconomyAuthority(root)))
-        unavailable('The authoritative economy database is missing; recover it before continuing.'
-          + (files.adoption ? economyRecoveryAdvice(adoption) : ''));
-      return files;
-    };
+    const evidence=()=>inspectEconomyAdoption(root,expected,options.expectedInitialized);
     evidence();
     let directory=root;
     for(const part of ['.chatpet','data','economy']) {
@@ -93,7 +87,7 @@ export class EconomyStore {
       this.db=opened=new DatabaseSync(database);this.databaseFile=lstatSync(this.databasePath);
       if(files.database) {
         const incomplete='Economy initialization marker exists without its initialized database.'
-          + (files.adoption ? economyRecoveryAdvice(adoption) : '');
+          + (files.adoption ? economyRecoveryAdvice(adoption,this.databasePath) : '');
         if(!readEconomyDatabaseMarker(this.db,expected,incomplete)) unavailable(incomplete);
       }
       chmodSync(this.databasePath,0o600);
@@ -138,9 +132,11 @@ export class EconomyStore {
     if(!economyFile(this.markerPath))writeEconomyFile(this.markerPath,
       canonical({storageId,companionId,schema:1,database:'economy.sqlite',migration:this.meta('migration')}));
   }
-  /** Cheap lease/inode validation for the hot Body adapter path. */
+  /** Validate wallet admission, including retained evidence, when reusing the open Store. */
   validate(initializing=false):void {
     this.ensure();
+    const {workspacePath,storageId,companionId}=this.options;
+    readEconomyFileEvidence(workspacePath,{storageId,companionId});
     if(initializing)this.writeStorageMarker();
   }
   private ensure() {

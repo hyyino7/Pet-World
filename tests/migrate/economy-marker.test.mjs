@@ -3,6 +3,7 @@ import {existsSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:f
 import {dirname, join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import test from 'node:test';
+import {EconomyStore} from '../../dist/src/living/economy/store.js';
 import {fileHashes} from '../../scripts/lib/repo-storage.mjs';
 import {migrationStatus, runMigration, steps} from '../../scripts/migrate/runner.mjs';
 import economyMarkerStep from '../../scripts/migrate/steps/0003-economy-marker.mjs';
@@ -47,6 +48,48 @@ test('0003 transfers one bound marker without touching the wallet or writing dur
   assert.equal(JSON.parse(log.split('\n')[0]).economyAdopted, true);
   await runMigration({installation:f.installation, resume:true}, selected);
   assert.equal(readFileSync(journal, 'utf8'), log);
+});
+
+test('0003 reports a fixed reason for an invalid Body checkpoint during adoption detection', async t => {
+  mockDsh(t);
+  const f = await offlineFixture(t, false);
+  mkdirSync(join(f.data, 'life/home.json'));
+  await assert.rejects(runMigration({installation:f.installation, backup:join(f.out, 'backup')}, selected),
+    {code:'economy-marker-invalid'});
+  assert.equal(existsSync(join(f.data, 'migrations.jsonl')), false);
+});
+
+test('runtime journal evidence survives newer segments and ignores damaged or foreign logs', async t => {
+  mockDsh(t);
+  const f = await offlineFixture(t, false, {withLegacyEconomy:true});
+  await runMigration({installation:f.installation, backup:join(f.out, 'backup')}, selected);
+  const journal = join(f.data, 'migrations.jsonl'), log = readFileSync(journal, 'utf8');
+  const [first, ...events] = log.trimEnd().split('\n'), header = JSON.parse(first), from = header.steps.at(-1).to;
+  const next = {...header, id:'future-segment', economyAdopted:false,
+    steps:[...header.steps, {id:'0004-fixture', from, to:{...from, living:4}}]};
+  const {database, adoption} = economyPaths(f);
+  const removeWallet = () => {
+    for (const directory of [dirname(database), dirname(adoption)]) rmSync(directory, {recursive:true, force:true});
+  };
+  const openWallet = () => new EconomyStore({workspacePath:f.repo, ...identity(f)});
+  removeWallet();
+  const extended = log + JSON.stringify(next) + '\n';
+  writeFileSync(journal, extended);
+  assert.throws(openWallet, /authoritative economy database is missing/);
+  assert.equal(readFileSync(journal, 'utf8'), extended);
+  assert.equal(existsSync(database), false);
+
+  const foreign = {...header, binding:{...header.binding, storageId:'other-binding'}};
+  for (const content of [[JSON.stringify(foreign), ...events, ''].join('\n'), log + 'broken\n', log + '{', undefined]) {
+    if (content === undefined) rmSync(journal);
+    else writeFileSync(journal, content);
+    const wallet = openWallet();
+    try { assert.ok(existsSync(database)); }
+    finally { wallet.close(); }
+    removeWallet();
+    if (content === undefined) assert.equal(existsSync(journal), false);
+    else assert.equal(readFileSync(journal, 'utf8'), content);
+  }
 });
 
 for (const [shape, code] of [
