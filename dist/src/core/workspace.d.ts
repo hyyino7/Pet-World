@@ -3,8 +3,8 @@ import { type CorePreferences, type WorkspaceTarget } from './preferences.js';
 import { type CompanionConfiguration, type CompanionSettings } from './companion-settings.js';
 import type { CompanionIdentity, AttentionPolicy, WorkspaceEditScope } from '../contracts/core.js';
 import type { ServiceCall } from '../contracts/common.js';
+import { type MigrationReason } from './storage-migration.js';
 import type { CompanionBinding } from './tables/companion-ports.js';
-type MigrationReason = 'storage-version-outdated' | 'manifest-mismatch' | 'migration-incomplete' | 'journal-invalid' | 'journal-step-mismatch' | 'binding-changed';
 type InitializerFiles = readonly string[] | ((target: WorkspaceTarget) => readonly string[]);
 export interface WorkspaceStatus {
     state: 'unbound' | 'pending' | 'ready' | 'unavailable' | 'migration-required';
@@ -14,6 +14,7 @@ export interface WorkspaceStatus {
     error: string | null;
     sourceRevision: string | null;
     migrationReason?: MigrationReason;
+    olderMigrationJournal?: true;
 }
 type NativeSessionScope = {
     id: string;
@@ -95,7 +96,12 @@ export declare class CoreWorkspace {
     private read;
     private initializationMarker;
     private retainedFiles;
+    private emptyLegacyInitialization;
     private inspectMigration;
+    /** Match the binding and declared inventory accepted by inspectRepoBinding. */
+    private offlineBindingReady;
+    private migrationBlockFor;
+    private migrationBlock;
     migrationReason(): MigrationReason | undefined;
     assertMigrationReady(target?: WorkspaceTarget | null): void;
     retainedWritesAllowed(workspaceId: string, path: string, storageId: string): boolean;
@@ -109,6 +115,7 @@ export declare class CoreWorkspace {
     private validateInventory;
     private inventory;
     private verifyInventory;
+    private verifyDeclaredFiles;
     private initialize;
     private adopt;
     synchronize(operation: string): void;

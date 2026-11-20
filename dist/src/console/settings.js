@@ -1,4 +1,5 @@
 import { Rejection } from '../core/storage.js';
+import { MIGRATION_REASON } from '../core/storage-migration.js';
 import { estimateTokens } from '#dsh-world/console/snapshot';
 import { desktopAppearanceDefaults } from '../desktop/appearance.js';
 const messages = {
@@ -7,7 +8,7 @@ const messages = {
     CONFLICT: '设置已被其他操作修改，请刷新后重新编辑。',
     INVALID_ARGUMENT: '设置值无效，请检查填写内容。', UNAUTHORIZED: '当前连接没有修改设置的权限。',
     DISABLED: 'Core 当前不可用，请检查核心模块状态。',
-    'migration-required': '伙伴资料需要离线迁移。请刷新设置查看原因和操作提示。',
+    'migration-required': '伙伴资料暂时无法使用。请刷新设置查看原因和操作提示。',
     UNAVAILABLE: '00-Core 尚未就绪，请检查核心模块是否启用。',
     WORLD_UNAVAILABLE: '大肥鱼的 World 组件尚未加载。',
     PROFILE_UNAVAILABLE: '人设预览无法加载。请检查角色、用户资料和上下文字符上限。',
@@ -276,6 +277,23 @@ export function settingsHandler(getHost, getWorkspaces, getDesktop, getWorldModu
                 const prefs = unwrap(await host.services.preferences.read(context(), {}, options));
                 const workspace = unwrap(await host.services.workspace.inspect(context(), {}, options));
                 const migrating = workspace.state === 'migration-required';
+                let migrationHelp = null;
+                if (migrating)
+                    switch (workspace.migrationReason) {
+                        case MIGRATION_REASON.bindingNotMigratable:
+                            migrationHelp = '在版本页换回 0.2.0，把工作区选择和初始化理顺后再升级。';
+                            break;
+                        case MIGRATION_REASON.migrationIncomplete:
+                            migrationHelp = workspace.olderMigrationJournal
+                                ? '退出 DSH，换回原版本的包和源码续做，或按回退流程恢复。'
+                                : '退出 DSH，使用与已安装版本一致的源码和原备份，通过 --resume 续做。完成后重启 DSH。';
+                            break;
+                        case MIGRATION_REASON.storageVersionOutdated:
+                            migrationHelp = '退出 DSH，从与已安装版本一致的源码运行迁移命令。迁移成功后重启 DSH。';
+                            break;
+                        default:
+                            migrationHelp = '退出 DSH，用与已安装版本一致的源码检查存储清单、迁移日志和绑定。核对备份后按离线诊断处理。';
+                    }
                 const profile = unwrap(await host.services.workspace.readProfile(context(), {}, options));
                 const capabilities = unwrap(await host.services.core.listCapabilities(context(), {}, options));
                 const registry = getWorkspaces();
@@ -286,7 +304,7 @@ export function settingsHandler(getHost, getWorkspaces, getDesktop, getWorldModu
                     fail('CANCELLED');
                 host.workspace.assertEditScope(editorScope);
                 return { ok: true, value: { identity: { revision: identity.revision, displayName: identity.displayName, character: identity.character },
-                        policy, preferences: prefs, capabilities, workspaces, workspaceAvailable: Boolean(registry), workspace, profile, editorScope,
+                        policy, preferences: prefs, capabilities, workspaces, workspaceAvailable: Boolean(registry), workspace, migrationHelp, profile, editorScope,
                         storage: host.workspace.storageStatus(),
                         desktop: migrating ? null : getDesktop?.(host)?.status() ?? null,
                         platformAvailable: !migrating && Boolean(getPlatform?.()),

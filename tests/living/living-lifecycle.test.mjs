@@ -78,6 +78,26 @@ test('4 没有 Plan 时前台只登记 Core，挂载暂停的 Plan 后补交接'
   assert.equal(f.life.running(), false);
 });
 
+test('4 同名 Plan 已重挂时，旧代收尾不取消共享 home', async t => {
+  const f = await cordisFixture(t);
+  await f.enable();
+  const old = f.life, home = await f.agent(old.homeSessionId());
+  await home.whenIdle();
+  const gate = Promise.withResolvers(), entered = Promise.withResolvers(), stop = old.stopRuntime.bind(old);
+  t.mock.method(old, 'stopRuntime', async (...args) => { entered.resolve(); await gate.promise; await stop(...args); });
+  const closing = f.fiber('life').dispose();
+  try {
+    await entered.promise;
+    await f.load('life');
+    await eventually(() => f.life?.homeSessionId() === home.id, '新 Plan 正在同一个 home 运行');
+    const before = f.cancellations.length;
+    gate.resolve();
+    await closing;
+    assert.equal(f.cancellations.length, before);
+    assert.equal(f.life.homeSessionId(), home.id);
+  } finally { gate.resolve(); await closing; }
+});
+
 test('4 运行时和原生工具以 Core home 为准，下一次有效写修正冲突镜像', async t => {
   const f = await cordisFixture(t);
   await f.enable();

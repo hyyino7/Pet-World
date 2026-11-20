@@ -1,6 +1,6 @@
 import test, {type TestContext} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync} from 'node:fs';
+import {existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import type {Context} from '@deepseek-ai/cordis';
@@ -26,7 +26,7 @@ function fixture(t:TestContext) {
     storageId:()=>binding+'-stable',
     // Both synthetic repositories are migration-ready even when the other one is bound.
     retainedWritesAllowed:(workspaceId:string,path:string,storageId:string)=>Object.entries(roots)
-      .some(([id,rootPath])=>workspaceId===id && path===rootPath && storageId===id+'-stable'),
+      .some(([id,rootPath])=>workspaceId===id && path===rootPath && storageId===id+'-stable' && existsSync(rootPath)),
     runtime:{config:{companionId:'fish',scopeId:'owner',ownerActorId:'owner'}}}} as unknown as PetCoreHost;
   const transcripts=new NativeTranscripts(ctx,host);
   const copies=(which:'a'|'b')=>{const directory=join(roots[which],'.chatpet/data/core/native-sessions');
@@ -61,6 +61,22 @@ test('F3: one failed export neither drops nor blocks later sessions, and explici
   const f=fixture(t);f.failures.add('a1');f.transcripts.schedule('a1');f.transcripts.schedule('a2');
   await assert.rejects(f.transcripts.flush(),/export|transcript/i);assert.equal(f.copies('a')[0]?.header.id,'a2');
   f.failures.clear();await f.transcripts.flush();assert.deepEqual(f.copies('a').map(copy=>copy.header.id).sort(),['a1','a2']);
+});
+
+for (const duringRead of [false, true]) test(`F2: an unavailable original Repo ${duringRead ? 'during' : 'before'} export remains pending`, async t => {
+  const f=fixture(t), root=f.roots.a, away=root+'-away';
+  f.transcripts.schedule('a1'); f.bind('b');
+  if (duringRead) f.beforeRead(async()=>{if (!existsSync(away)) renameSync(root,away);});
+  else renameSync(root,away);
+  try {
+    await assert.rejects(f.transcripts.flush(), /exports remain pending/);
+    assert.deepEqual(f.copies('b'), []);
+  } finally { if (existsSync(away)) renameSync(away,root); }
+  f.beforeRead(async()=>{});
+  assert.deepEqual(f.copies('a'), []);
+  await f.transcripts.flush();
+  assert.deepEqual(f.copies('a').map(copy=>[copy.header.id,copy.storageId]), [['a1','a-stable']]);
+  assert.deepEqual(f.copies('b'), []);
 });
 
 test('F2: replacing only the managed directory cannot inherit an accepted export from the previous companion storage',async t=>{

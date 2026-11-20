@@ -137,6 +137,36 @@ test('second migration cannot resume when a settled segment has lost its target'
   assert.deepEqual(fileHashes(f.managed),before);
 });
 
+test('resume keeps a completed step recorded when its target is lost mid-segment', async t => {
+  mockDsh(t);
+  const f = await offlineFixture(t, false), backup = join(f.out, 'backup');
+  writeFileSync(join(f.data, 'life/life.json'), '{"version":1,"homeSessionId":"fixture-session"}\n');
+  const interrupted = await child(f, backup, 'manifest', '', 'home');
+  assert.equal(interrupted.signal, 'SIGKILL', interrupted.stderr);
+  const manifest = join(f.data, 'storage-manifest.json'), log = join(f.data, 'migrations.jsonl');
+  rmSync(manifest);
+  const events = () => rows(log).filter(row => row.step === '0001-storage-manifest');
+  const before = events();
+  assert.equal(before.at(-1).event, 'done');
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await assert.rejects(runMigration({installation:f.installation, resume:true}), {code:'migration-inconsistent'});
+    assert.equal(migrationStatus(f.installation).steps[0].state, 'inconsistent');
+    assert.deepEqual(events(), before);
+    assert.equal(existsSync(manifest), false);
+  }
+});
+
+test('an interrupted 0002 still requires the original mirror after the manifest advances', async t => {
+  mockDsh(t);
+  const f = await offlineFixture(t, false), mirror = join(f.data, 'life/life.json');
+  writeFileSync(mirror, '{"version":1,"homeSessionId":"fixture-session"}\n');
+  const interrupted = await child(f, join(f.out, 'backup'), 'manifest', '', 'home');
+  assert.equal(interrupted.signal, 'SIGKILL', interrupted.stderr);
+  writeFileSync(mirror, '{"version":1,"homeSessionId":"stale-session"}\n');
+  assert.deepEqual(migrationStatus(f.installation).steps.at(-1), {id:'0002-home-identity', state:'start'});
+  await assert.rejects(runMigration({installation:f.installation, resume:true}), {code:'home-identity-conflict'});
+});
+
 async function copyAndBind(f, name) {
   const repo = join(f.out,name), data = join(repo,'.chatpet/data');
   const config = {...f.config,dataDir:join(data,'core')};

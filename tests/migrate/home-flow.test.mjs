@@ -4,11 +4,14 @@ import {readdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {fileHashes} from '../../scripts/lib/repo-storage.mjs';
+import {loadInstallation} from '../../scripts/migrate/context.mjs';
+import homeStep from '../../scripts/migrate/steps/0002-home-identity.mjs';
 import {content} from '../../scripts/fixtures/synthetic-companion.mjs';
 import {settingsHandler} from '../../dist/src/console/settings.js';
 import {resolveCompanionHome} from '../../dist/src/core/companion-foundation.js';
 import {cordisFixture} from '../behavior-list/entries-lifecycle.test.mjs';
-import {cli, fixture, read} from './helpers.mjs';
+import {cli, fixture, mockDsh, read} from './helpers.mjs';
+import {offlineFixture} from './offline-helpers.mjs';
 
 test('旧存档只开普通 DSH 聊天，离线迁移后恢复原 home、聊天和 Bank', {timeout:60000}, async t => {
   const f = await fixture(t,'current');
@@ -86,4 +89,46 @@ test('旧存档只开普通 DSH 聊天，离线迁移后恢复原 home、聊天�
   const bank = running.core.native.memory;
   assert.ok((await bank.findForOwner(id,content.memory)).items.some(row => row.id === f.memoryId));
   assert.ok(!(await bank.findForOwner(id,content.withdrawn)).items.some(row => row.id === f.withdrawnId));
+});
+
+for (const [label, mirror] of [['没有镜像 ID', {version:1}], ['镜像 ID 滞后', {version:1, homeSessionId:'old-home'}]]) {
+  test(`新装由前台开 home 后，${label}时也能完成离线步骤并重启`, async t => {
+    const f = await offlineFixture(t, false, {keepStorageManifest:true});
+    const registry = {workspaces:[{...f.target, sessionIds:[]}], archived:[]};
+    const running = await cordisFixture(t, {existing:{...f, registry}, order:[]});
+    const home = await resolveCompanionHome(running.ctx, running.core);
+    await running.input('Synthetic foreground home turn', home.id);
+    const mirrorPath = join(f.data, 'life/life.json'), body = JSON.stringify(mirror) + '\n';
+    writeFileSync(mirrorPath, body);
+    await running.restart(() => {
+      const execute = (command, ...args) => {
+        const result = cli(f, [command, '--installation', f.installation, ...args]);
+        assert.equal(result.status, 0, result.stderr);
+        return JSON.parse(result.stdout).steps;
+      };
+      const step = {id:'0002-home-identity', state:'complete'};
+      assert.deepEqual(execute('status').at(-1), step);
+      assert.deepEqual(execute('plan'), []);
+      assert.deepEqual(execute('run', '--backup', join(f.out, 'new-init-backup')).at(-1), step);
+      assert.deepEqual(execute('status').at(-1), step);
+      assert.equal(readFileSync(mirrorPath, 'utf8'), body);
+    });
+    assert.equal(running.core.workspace.status().state, 'ready');
+    assert.equal((await resolveCompanionHome(running.ctx, running.core)).id, home.id);
+    assert.deepEqual(running.sessionCreateCalls, [home.id]);
+  });
+}
+
+test('0002 apply 保留 Core home，允许旧镜像没有 ID', async t => {
+  mockDsh(t);
+  const f = await offlineFixture(t, false);
+  const database = join(f.config.dataDir, 'core.sqlite'), body = JSON.stringify({sessionId:'synthetic-home', arrivalPending:true});
+  const query = "SELECT value FROM records WHERE kind='companion-home' AND id=?";
+  { using db = new DatabaseSync(database);
+    db.prepare("INSERT INTO records(kind,id,value) VALUES('companion-home',?,?)").run(f.storageId, body); }
+  const context = loadInstallation(f.installation);
+  assert.equal(homeStep.complete(context), false, 'Unrecorded legacy data still requires a matching mirror');
+  assert.doesNotThrow(() => homeStep.apply(context));
+  using db = new DatabaseSync(database, {readOnly:true});
+  assert.equal(db.prepare(query).get(f.storageId).value, body);
 });

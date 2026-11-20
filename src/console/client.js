@@ -1175,14 +1175,9 @@ window.__ModuleLoader__.load({
       }
       if (snapshot?.workspace.state === 'migration-required') {
         const reason = snapshot.workspace.migrationReason;
-        const help = reason === 'migration-incomplete'
-          ? '退出 DSH，使用与已安装版本一致的源码和原备份，通过 --resume 续做。完成后重启 DSH。'
-          : reason === 'storage-version-outdated'
-            ? '退出 DSH，从与已安装版本一致的源码运行迁移命令。迁移成功后重启 DSH。'
-            : '退出 DSH，用与已安装版本一致的源码检查存储清单、迁移日志和绑定。核对备份后按离线诊断处理。';
         return h('div', { className:'chatpet-settings' }, h('style', null, css),
           h(Card, {title:'需要迁移', status:'migration-required'},
-            h('p', null, 'DSH 普通聊天仍可使用。'), h('p', null, h('code', null, reason)), h('p', null, help),
+            h('p', null, 'DSH 普通聊天仍可使用。'), h('p', null, h('code', null, reason)), h('p', null, snapshot.migrationHelp),
             error && h('p', {role:'alert'}, error),
             h('button', {type:'button', disabled:loading, onClick:refresh}, '刷新设置')));
       }

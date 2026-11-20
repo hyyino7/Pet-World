@@ -23,8 +23,8 @@ function verifySaved(context, header) {
   });
 }
 
-function targetComplete(step, context, recorded = false) {
-  const complete = step.complete(context, {recorded});
+function targetComplete(step, context, evidence) {
+  const complete = step.complete(context, evidence);
   assert.equal(typeof complete, 'boolean', 'Step completion must synchronously observe its persisted target');
   return complete;
 }
@@ -38,7 +38,8 @@ export function migrationStatus(installation, selected = steps, { plan = false }
     const event = previous?.states.get(step.id);
     if (!isDeepStrictEqual(step, contract[index])) return { id:step.id, state:'unverified' };
     const recordedComplete = index < journal.settledStepCount || isStepSettled(event);
-    const complete = version > index && targetComplete(selected[index], context, recordedComplete);
+    const inFlight = previous && !settled(previous) && previous.header.steps.some(prior => prior.id === step.id);
+    const complete = version > index && targetComplete(selected[index], context, {recorded:recordedComplete, versioned:!inFlight});
     const state = complete ? 'complete' : recordedComplete ? 'inconsistent' : event ?? 'pending';
     return { id:step.id, state };
   }), truncated:journal.truncated};
@@ -59,22 +60,23 @@ function checkAdmission(context, journal, selected, contract, { resume, backup }
       if (binding) requireMigration(binding.repoHash === journalBinding(context).repoHash, 'binding-changed');
       verifySaved(context, previous.header);
     }
-  } else {
-    requireMigration(!journal.truncated, 'journal-invalid');
-    const version = manifestVersion(context, contract);
-    if (previous) {
-      requireMigration(settled(previous), 'journal-exists');
-      const prior = previous.header.steps;
-      requireMigration(isDeepStrictEqual(prior, contract.slice(0, prior.length)), 'journal-step-mismatch');
-      assertPreviousTargets(context, selected, prior.length, version);
-      requireMigration(contract.length > prior.length, 'journal-exists');
-    }
-    requireMigration(backup, 'usage');
+    return version;
   }
+  requireMigration(!journal.truncated, 'journal-invalid');
+  const version = manifestVersion(context, contract);
+  if (previous) {
+    requireMigration(settled(previous), 'journal-exists');
+    const prior = previous.header.steps;
+    requireMigration(isDeepStrictEqual(prior, contract.slice(0, prior.length)), 'journal-step-mismatch');
+    assertPreviousTargets(context, selected, prior.length, version);
+    requireMigration(contract.length > prior.length, 'journal-exists');
+  }
+  requireMigration(backup, 'usage');
+  return version;
 }
 
 function assertPreviousTargets(context, selected, count, version) {
-  requireMigration(version >= count && selected.slice(0, count).every(step => targetComplete(step, context, true)), 'migration-inconsistent');
+  requireMigration(version >= count && selected.slice(0, count).every(step => targetComplete(step, context, {recorded:true})), 'migration-inconsistent');
 }
 
 function acquireMutex(repo) {
@@ -93,7 +95,7 @@ export async function runMigration(options, selected = steps) {
     requireMigration(context.plan.repo === repo, 'binding-changed');
     assertOffline(context);
     const journal = validateJournal(context);
-    checkAdmission(context, journal, selected, contract, options);
+    const initialVersion = checkAdmission(context, journal, selected, contract, options);
     const lease = acquireLock(context.lockFile);
     try {
       let header = journal.last?.header;
@@ -112,10 +114,12 @@ export async function runMigration(options, selected = steps) {
       if (lease.stale) record({event:'lock-takeover'});
       const alreadySettled = resume && journal.settledStepCount === selected.length;
       for (const [index, step] of (alreadySettled ? [] : selected).entries()) {
+        const recorded = resume && isStepSettled(journal.last?.states.get(step.id));
+        if (recorded && index >= journal.settledStepCount)
+          requireMigration(targetComplete(step, context, {recorded:true}), 'migration-inconsistent');
         try {
-          const recorded = resume && isStepSettled(journal.last?.states.get(step.id));
-          const complete = index < journal.settledStepCount || targetComplete(step, context, recorded);
-          requireMigration(!recorded || complete, 'migration-inconsistent');
+          const complete = recorded || index < journal.settledStepCount
+            || targetComplete(step, context, {versioned:!resume && initialVersion > index});
           if (!complete) {
             record({event:'start', step:step.id});
             await step.apply(context);

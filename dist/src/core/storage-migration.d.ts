@@ -1,4 +1,14 @@
 export type StorageVersions = Readonly<Record<string, number>>;
+export declare const MIGRATION_REASON: {
+    readonly storageVersionOutdated: "storage-version-outdated";
+    readonly manifestMismatch: "manifest-mismatch";
+    readonly migrationIncomplete: "migration-incomplete";
+    readonly journalInvalid: "journal-invalid";
+    readonly journalStepMismatch: "journal-step-mismatch";
+    readonly bindingChanged: "binding-changed";
+    readonly bindingNotMigratable: "binding-not-migratable";
+};
+export type MigrationReason = typeof MIGRATION_REASON[keyof typeof MIGRATION_REASON];
 export declare const INITIAL_STORAGE_VERSIONS: Readonly<{
     behavior: 1;
     channels: 1;

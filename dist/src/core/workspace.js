@@ -9,7 +9,7 @@ import { initializeCompanionFiles, inspectCompanionFiles, validateCompanionConfi
 import { memoryDirectory } from '../memory/client.js';
 import { conversationOptions } from './options.js';
 import { bytesDigest, canonical, check, reject, Rejection, revision, now } from './storage.js';
-import { decodeMigrationJournal, HOME_STORAGE_STEP, INITIAL_STORAGE_STEP, MigrationBindingChanged, parseMigrationJournal, settled, storageManifest, storageManifestIndex } from './storage-migration.js';
+import { decodeMigrationJournal, HOME_STORAGE_STEP, INITIAL_STORAGE_STEP, MIGRATION_REASON, MigrationBindingChanged, parseMigrationJournal, settled, storageManifest, storageManifestIndex } from './storage-migration.js';
 const BASE_REQUIRED = ['README.md', 'manifest.json', 'SOUL.md', 'USER.md', 'core.json'];
 const REQUIRED = [...BASE_REQUIRED, 'COMPANION.md'];
 const LEGACY_FILES = [...BASE_REQUIRED, 'STATE.md'];
@@ -30,6 +30,7 @@ existing workspace files and instructions.
 `;
 const MAX_BYTES = 64 * 1024;
 const STORAGE_MANIFEST = 'storage-manifest.json', MIGRATION_JOURNAL = 'migrations.jsonl', INITIALIZING = '.initialization-pending.json';
+const READABLE_FILES = new Set([...REQUIRED, STORAGE_MANIFEST, MIGRATION_JOURNAL, INITIALIZING]);
 const STORAGE_STEPS = [INITIAL_STORAGE_STEP, HOME_STORAGE_STEP];
 const BOOTSTRAP_FILES = new Set(['core.sqlite', 'core.sqlite-wal', 'core.sqlite-shm', 'core.sqlite-journal', 'core.lock']);
 function validHome(record) {
@@ -154,15 +155,16 @@ export class CoreWorkspace {
             check(stat.isDirectory() && !stat.isSymbolicLink(), 'Managed directory must not be a symlink');
         return directory;
     }
-    read(directory, name) {
+    read(directory, name, offlineManifest = false) {
+        check(READABLE_FILES.has(name), 'Unknown managed file');
         const fd = openSync(join(directory, name), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
         try {
             const before = fstatSync(fd);
-            check(before.isFile() && before.nlink === 1 && (name === MIGRATION_JOURNAL || before.size <= MAX_BYTES), 'Managed file is not a regular file of the expected size');
+            check(before.isFile() && before.nlink === 1 && (offlineManifest || name === MIGRATION_JOURNAL || before.size <= MAX_BYTES), 'Managed file is not a regular file of the expected size');
             const bytes = readFileSync(fd);
             const after = fstatSync(fd);
             check(before.size === after.size && before.mtimeMs === after.mtimeMs && bytes.length === after.size, 'Managed file changed while reading');
-            return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+            return offlineManifest ? bytes.toString('utf8') : new TextDecoder('utf-8', { fatal: true }).decode(bytes);
         }
         finally {
             closeSync(fd);
@@ -172,71 +174,118 @@ export class CoreWorkspace {
         const { companionId, scopeId } = this.runtime.config;
         return { companionId, scopeId, workspaceId, modules: HOME_STORAGE_STEP.to };
     }
-    retainedFiles(directory) {
+    retainedFiles(directory, ignore) {
         return readdirSync(directory, { withFileTypes: true }).some(entry => {
+            if (entry.name === ignore)
+                return false;
             if (directory === this.runtime.store.directory && entry.isFile() && BOOTSTRAP_FILES.has(entry.name))
                 return false;
             return !entry.isDirectory() || this.retainedFiles(join(directory, entry.name));
         });
+    }
+    emptyLegacyInitialization(directory, marker) {
+        return isDeepStrictEqual(marker, { companionId: this.runtime.config.companionId }) && !this.retainedFiles(directory, INITIALIZING);
     }
     inspectMigration(target, storageId, initialized) {
         const { companionId } = this.runtime.config;
         let data, version = -1, directory;
         try {
             if (!lstatSync(target.path, { throwIfNoEntry: false }))
-                return initialized ? 'storage-version-outdated' : undefined;
+                return;
             directory = this.directory(target);
             data = join(directory, 'data');
             const stat = lstatSync(data, { throwIfNoEntry: false });
             if (stat && !stat.isDirectory())
-                return 'manifest-mismatch';
+                return { reason: MIGRATION_REASON.manifestMismatch };
             if (stat && lstatSync(join(data, STORAGE_MANIFEST), { throwIfNoEntry: false })) {
                 version = storageManifestIndex(JSON.parse(this.read(data, STORAGE_MANIFEST)), companionId, STORAGE_STEPS);
                 if (version < 0)
-                    return 'manifest-mismatch';
+                    return { reason: MIGRATION_REASON.manifestMismatch };
             }
         }
         catch {
-            return 'manifest-mismatch';
+            return { reason: MIGRATION_REASON.manifestMismatch };
         }
         try {
             if (lstatSync(join(data, MIGRATION_JOURNAL), { throwIfNoEntry: false })) {
                 const { last, truncated } = decodeMigrationJournal(parseMigrationJournal(this.read(data, MIGRATION_JOURNAL)), storageId);
                 if (!last && truncated)
-                    return 'journal-invalid';
+                    return { reason: MIGRATION_REASON.journalInvalid };
                 if (last && !isDeepStrictEqual(last.header.steps, STORAGE_STEPS.slice(0, last.header.steps.length)))
-                    return 'journal-step-mismatch';
+                    return { reason: MIGRATION_REASON.journalStepMismatch };
                 if (last && !settled(last)) {
                     if (last.header.binding && last.header.binding.repoHash !== bytesDigest(Buffer.from(target.path)).slice(7))
-                        return 'binding-changed';
-                    return 'migration-incomplete';
+                        return { reason: MIGRATION_REASON.bindingChanged };
+                    return { reason: MIGRATION_REASON.migrationIncomplete,
+                        olderMigrationJournal: last.header.steps.length < STORAGE_STEPS.length ? true : undefined };
                 }
             }
         }
         catch (error) {
-            return error instanceof MigrationBindingChanged ? 'binding-changed' : 'journal-invalid';
+            return { reason: error instanceof MigrationBindingChanged ? MIGRATION_REASON.bindingChanged : MIGRATION_REASON.journalInvalid };
         }
         if (version === STORAGE_STEPS.length - 1)
             return;
         if (version >= 0)
-            return 'storage-version-outdated';
+            return { reason: MIGRATION_REASON.storageVersionOutdated };
         try {
-            if (lstatSync(join(directory, INITIALIZING), { throwIfNoEntry: false })
-                && isDeepStrictEqual(JSON.parse(this.read(directory, INITIALIZING)), this.initializationMarker(target.id)))
-                return;
-            if (initialized || [...REQUIRED, 'STATE.md', 'self.md', 'diary', 'self.history', 'data'].some(name => {
+            if (lstatSync(join(directory, INITIALIZING), { throwIfNoEntry: false })) {
+                const marker = JSON.parse(this.read(directory, INITIALIZING));
+                if (isDeepStrictEqual(marker, this.initializationMarker(target.id)) || this.emptyLegacyInitialization(directory, marker))
+                    return;
+                return { reason: MIGRATION_REASON.storageVersionOutdated };
+            }
+            if ((initialized && existsSync(directory)) || [...REQUIRED, 'STATE.md', 'self.md', 'diary', 'self.history', 'data'].some(name => {
                 const path = join(directory, name), stat = lstatSync(path, { throwIfNoEntry: false });
                 return stat && (!stat.isDirectory() || this.retainedFiles(path));
             }))
-                return 'storage-version-outdated';
+                return { reason: MIGRATION_REASON.storageVersionOutdated };
         }
         catch {
-            return 'manifest-mismatch';
+            return { reason: MIGRATION_REASON.manifestMismatch };
         }
     }
-    migrationReason() {
-        if (this.migrationBlocked)
-            return this.migrationBlocked;
+    /** Match the binding and declared inventory accepted by inspectRepoBinding. */
+    offlineBindingReady(target) {
+        const binding = this.binding(), { config, store } = this.runtime;
+        if (binding?.target.id !== target.id || binding.target.path !== target.path || !store.persisted())
+            return false;
+        const identity = store.get('identity', 'current');
+        if (identity?.companionId !== config.companionId || identity.ownerActorId !== config.ownerActorId || store.meta('scope') !== config.scopeId)
+            return false;
+        try {
+            for (const name of ['core.sqlite', 'core.sqlite-wal', 'core.sqlite-journal', 'core.lock']) {
+                const stat = lstatSync(join(store.directory, name), { throwIfNoEntry: false });
+                if (stat && (!stat.isFile() || stat.nlink !== 1))
+                    return false;
+            }
+            const directory = this.directory(target);
+            if (existsSync(join(directory, INITIALIZING)))
+                return false;
+            const manifest = JSON.parse(this.read(directory, 'manifest.json', true));
+            if (manifest.companionId !== config.companionId || ![1, 2, 3].includes(manifest.schemaVersion) || !Array.isArray(manifest.files))
+                return false;
+            this.verifyDeclaredFiles(directory, manifest.schemaVersion === 3 ? [...new Set([...BASE_REQUIRED, ...manifest.files])] : BASE_REQUIRED);
+            return true;
+        }
+        catch {
+            return false;
+        }
+    }
+    migrationBlockFor(target, initialized = false, remember = false) {
+        const block = this.inspectMigration(target, this.storageIdFor(target), initialized);
+        if (!block)
+            return;
+        if (remember)
+            this.migrationBlocked = { target, block };
+        return this.offlineBindingReady(target) ? block : { reason: MIGRATION_REASON.bindingNotMigratable };
+    }
+    migrationBlock() {
+        const blocked = this.migrationBlocked;
+        // A restart still clears a completed migration gate, but its advice
+        // depends on whether the binding can be opened by the offline tool now.
+        if (blocked && this.offlineBindingReady(blocked.target))
+            return blocked.block;
         const store = this.runtime.store, saved = store.get('workspace-binding', 'current');
         const selected = preferences(this.runtime).workspace, portable = dirname(dirname(dirname(store.directory)));
         let prior = saved?.target;
@@ -244,20 +293,18 @@ export class CoreWorkspace {
             existsSync(join(portable, '.chatpet/manifest.json')) &&
                 (!existsSync(join(prior.path, '.chatpet')) || existsSync(join(prior.path, '.chatpet/data/core/core.sqlite')))))
             prior = { id: prior?.id ?? selected?.id ?? '', path: portable, title: '' };
-        const reason = prior && this.inspectMigration(prior, this.storageIdFor(prior), saved?.phase === 'ready')
+        return prior && this.migrationBlockFor(prior, saved?.phase === 'ready', true)
             || selected && selected.path !== prior?.path && selected.path !== saved?.target.path
-                && this.inspectMigration(selected, this.storageIdFor(selected), false);
-        if (reason)
-            this.migrationBlocked = reason;
-        return this.migrationBlocked;
+                && this.migrationBlockFor(selected, false, true) || undefined;
     }
+    migrationReason() { return this.migrationBlock()?.reason; }
     assertMigrationReady(target) {
-        const reason = this.migrationReason() || (target && this.inspectMigration(target, this.storageIdFor(target), false));
+        const reason = this.migrationReason() || (target && this.migrationBlockFor(target)?.reason);
         if (reason)
             throw new Rejection({ code: 'migration-required', reason, message: 'migration-required', effect: 'none', retry: 'never' });
     }
     retainedWritesAllowed(workspaceId, path, storageId) {
-        return !this.migrationReason() && !this.inspectMigration({ id: workspaceId, path, title: '' }, storageId, true);
+        return !this.migrationReason() && existsSync(join(path, '.chatpet')) && !this.inspectMigration({ id: workspaceId, path, title: '' }, storageId, true);
     }
     atomic(directory, name, value) {
         check(Buffer.byteLength(value) <= MAX_BYTES, 'Managed file exceeds size limit');
@@ -361,6 +408,11 @@ export class CoreWorkspace {
         const directory = this.directory(target);
         const manifest = JSON.parse(this.read(directory, 'manifest.json'));
         const files = [...new Set([...manifest.files, ...this.inventory(target)])];
+        this.verifyDeclaredFiles(directory, files, true);
+        validateCompanionConfiguration(target.path);
+        return files;
+    }
+    verifyDeclaredFiles(directory, files, requireDatabaseSchema = false) {
         this.validateInventory(files);
         const inspected = new Set();
         for (const name of files) {
@@ -368,18 +420,17 @@ export class CoreWorkspace {
             let path = directory;
             for (let index = 0; index < components.length; index++) {
                 path = join(path, components[index]);
-                if (inspected.has(path))
+                const folder = index < components.length - 1 || name.endsWith('/');
+                const key = folder ? path + '/' : path;
+                if (inspected.has(key))
                     continue;
                 const stat = lstatSync(path, { throwIfNoEntry: false });
-                const folder = index < components.length - 1 || name.endsWith('/');
                 check(stat && !stat.isSymbolicLink() && (folder ? stat.isDirectory() : stat.isFile() && stat.nlink === 1), 'Managed workspace is incomplete');
-                if (!folder && /\.(?:sqlite|db)$/.test(name))
+                if (requireDatabaseSchema && !folder && /\.(?:sqlite|db)$/.test(name))
                     check(stat.size > 0, 'Managed database has no schema');
-                inspected.add(path);
+                inspected.add(key);
             }
         }
-        validateCompanionConfiguration(target.path);
-        return files;
     }
     initialize(target) {
         this.assertMigrationReady(target);
@@ -400,8 +451,13 @@ export class CoreWorkspace {
         // Files survive a database rollback. Record this version and binding
         // before creating any companion data, so only this initialization can retry.
         const pending = join(directory, INITIALIZING), marker = this.initializationMarker(target.id);
-        if (existsSync(pending))
-            check(isDeepStrictEqual(JSON.parse(this.read(directory, INITIALIZING)), marker), 'Initialization scope changed');
+        if (existsSync(pending)) {
+            const previousMarker = JSON.parse(this.read(directory, INITIALIZING));
+            if (this.emptyLegacyInitialization(directory, previousMarker))
+                this.atomic(directory, INITIALIZING, JSON.stringify(marker) + '\n');
+            else
+                check(isDeepStrictEqual(previousMarker, marker), 'Initialization scope changed');
+        }
         else
             this.atomic(directory, INITIALIZING, JSON.stringify(marker) + '\n');
         this.runtime.fileEffect = true;
@@ -624,18 +680,18 @@ export class CoreWorkspace {
     }
     status() {
         const target = preferences(this.runtime).workspace, binding = this.binding();
-        const migrationReason = this.migrationReason();
-        if (migrationReason)
+        const block = this.migrationBlock();
+        if (block)
             return { state: 'migration-required', revision: binding?.revision ?? null, target, files: [],
-                error: 'migration-required', migrationReason, sourceRevision: null };
+                error: 'migration-required', migrationReason: block.reason, olderMigrationJournal: block.olderMigrationJournal, sourceRevision: null };
         if (!target)
             return { state: 'unbound', revision: null, target: null, files: [], error: null, sourceRevision: null };
         if (!binding)
             return { state: 'pending', revision: null, target, files: [], error: null, sourceRevision: null };
         try {
+            const directory = this.directory(target);
             if (!this.runtime.store.persisted())
                 return { state: 'pending', revision: binding.revision, target, files: [], error: 'Core database is absent or moved; initialize explicitly to persist the current companion', sourceRevision: null };
-            const directory = this.directory(target);
             if (!existsSync(directory))
                 return { state: 'pending', revision: binding.revision, target, files: [], error: 'Managed companion files are absent; initialize explicitly to prepare this workspace', sourceRevision: null };
             if (existsSync(join(directory, INITIALIZING)))

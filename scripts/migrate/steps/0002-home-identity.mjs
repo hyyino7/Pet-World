@@ -46,7 +46,7 @@ function coreHome(db, context) {
 
 export default {
   ...HOME_STORAGE_STEP,
-  complete(context, {recorded = false} = {}) {
+  complete(context, {recorded = false, versioned = false} = {}) {
     return checked(invalid, () => {
       const source = existingDatabase(context), scratch = mkdtempSync(join(tmpdir(), 'migration-home-'));
       try {
@@ -55,7 +55,7 @@ export default {
         const db = new DatabaseSync(copy, {readOnly:true});
         try {
           const current = coreHome(db, context);
-          return recorded && current !== undefined || current === legacyHome(context);
+          return (recorded || versioned) && current !== undefined || current === legacyHome(context);
         } finally { db.close(); }
       } finally { rmSync(scratch, {recursive:true, force:true}); }
     });
@@ -70,7 +70,7 @@ export default {
         db.exec('BEGIN IMMEDIATE');
         try {
           const current = coreHome(db, context);
-          requireMigration(current === undefined || current === sessionId, 'home-identity-conflict');
+          requireMigration(current === undefined || sessionId === undefined || current === sessionId, 'home-identity-conflict');
           if (current === undefined && sessionId !== undefined) {
             db.prepare('INSERT INTO records(kind,id,value) VALUES(?,?,?)').run(kind, context.plan.storageId, JSON.stringify({sessionId}));
           }

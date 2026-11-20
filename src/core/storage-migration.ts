@@ -3,6 +3,13 @@ import {isAbsolute} from 'node:path';
 import {isDeepStrictEqual} from 'node:util';
 
 export type StorageVersions = Readonly<Record<string, number>>;
+export const MIGRATION_REASON = {
+  storageVersionOutdated:'storage-version-outdated', manifestMismatch:'manifest-mismatch', migrationIncomplete:'migration-incomplete',
+  journalInvalid:'journal-invalid', journalStepMismatch:'journal-step-mismatch', bindingChanged:'binding-changed',
+  bindingNotMigratable:'binding-not-migratable',
+} as const;
+export type MigrationReason = typeof MIGRATION_REASON[keyof typeof MIGRATION_REASON];
+
 export const INITIAL_STORAGE_VERSIONS = Object.freeze({
   behavior:1, channels:1, core:1, desktop:1, economy:1, emotion:1, life:1, memory:1, room:1, voice:1,
 });

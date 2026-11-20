@@ -289,8 +289,11 @@ export class NativeTranscripts {
     }
     async exportCaptured(scope) {
         const { sessionId, cwd, root, workspaceId, storageId } = scope;
-        if (!this.host.workspace.retainedWritesAllowed(workspaceId, root, storageId))
-            return;
+        const requireWritable = () => {
+            if (!this.host.workspace.retainedWritesAllowed(workspaceId, root, storageId))
+                throw Error('Originating workspace cannot accept portable transcript writes');
+        };
+        requireWritable();
         this.validateScope(scope);
         const native = this.native(), live = native.sessions.get(sessionId);
         if (live && await native.sessions.flush(live) === false)
@@ -302,8 +305,7 @@ export class NativeTranscripts {
             if (reader.header.cwd !== cwd || scope.channel && reader.header.agentPreset !== 'chatpet-channel-guest')
                 throw Error('Native transcript session scope changed');
             const events = (await reader.read()).events;
-            if (!this.host.workspace.retainedWritesAllowed(workspaceId, root, storageId))
-                return;
+            requireWritable();
             const file = join(this.validateScope(scope), key(sessionId));
             if (existsSync(file)) {
                 const previous = this.read(file);

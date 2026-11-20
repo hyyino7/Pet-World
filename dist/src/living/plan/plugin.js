@@ -442,7 +442,7 @@ export class CompanionLife {
         if (runtime && this.runtime === runtime) {
             this.drainingRuntime = runtime;
             this.runtime = undefined;
-            const id = this.binding?.home.sessionId();
+            const id = this.living.isLatestGeneration() ? this.binding?.home.sessionId() : undefined;
             await settleCleanup(() => { if (this.living.isLatestGeneration())
                 this.ctx.emit('pet/life.changed'); }, () => runtime.stop(), async () => { if (id)
                 await this.native().get('sessionController').cancel({ sessionId: id }); }, async () => {
