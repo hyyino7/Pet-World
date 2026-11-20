@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {roomStateDeclaration} from '../../dist/src/room/plugin.js';
 import {call,say} from '../checks/lib/native-conversation-scenarios.mjs';
 
 /** Exercise an upgrade from old full default results in the actual native Life
@@ -8,7 +9,9 @@ export async function checkLifeHistory({ctx,host,workspace,life,until,setProgram
   const fixture=await ctx.plugin({inject:['tools'],apply(scope){scope.tools.register({name:'room_state',description:'Legacy default state fixture',
     parameters:{type:'object',properties:{view:{type:'string',enum:['full','overview']}}},
     output:{schema:{type:'string'},render:(_ctx,value)=>[{type:'text',text:value}]},
-    execute:async()=>JSON.stringify(await ctx.petBehavior.roomState(workspace.id))});}});
+    execute:async()=>JSON.stringify(await ctx.petBehavior.roomState(workspace.id))});
+    scope.effect(() => host.native.toolTable.register(roomStateDeclaration).revoke);
+  }});
   try {
     setProgram(async function*(options){
       if(step%3)assert.ok(!options.messages.filter(message=>message.role==='tool').at(-1)?.isError);

@@ -11,7 +11,7 @@ import { roomPhoto } from './photo.js';
 import { roomAsset, roomPrefix } from './assets.js';
 const roleActions = ['command', 'pet', 'poke', 'feed', 'water', 'play', 'talk', 'sleep', 'wake', 'lamp'];
 const output = { schema: { type: 'string' }, render: (_, text) => [{ type: 'text', text }] };
-const roomStateDeclaration = {
+export const roomStateDeclaration = {
     name: 'room_state', sources: OWNER_LIFE_TOOL_SOURCES,
     historyOverview(_args, value) {
         if (isHistoryObject(value) && isHistoryObject(value.layout) && Array.isArray(value.layout.rooms)
