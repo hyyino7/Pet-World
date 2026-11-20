@@ -103,12 +103,14 @@ export class PersistentLifePlan {
     companionId;
     storageId;
     isCurrent;
+    changed;
     store;
-    constructor(directory, companionId, storageId, timeZone, isCurrent = () => true) {
+    constructor(directory, companionId, storageId, timeZone, isCurrent = () => true, changed) {
         this.directory = directory;
         this.companionId = companionId;
         this.storageId = storageId;
         this.isCurrent = isCurrent;
+        this.changed = changed;
         this.store = createLifeStore(directory, timeZone);
     }
     read() {
@@ -136,13 +138,21 @@ export class PersistentLifePlan {
         check(Number.isSafeInteger(revision) && revision >= 0 && (!plan || plan.revision === revision), 'Stored life plan revisions disagree');
         return { revision, plan: plan ?? null };
     }
+    projection(plan) {
+        return JSON.stringify([plan?.cursor, plan?.status, plan?.execution]);
+    }
     change(expectedRevision, work, schedule = true, intentChange = true, options = {}) {
         check(this.isCurrent(), 'Life workspace changed; the old plan was not updated');
         check(Number.isSafeInteger(expectedRevision) && expectedRevision >= 0, 'Invalid expected plan revision');
-        return this.store.update(state => {
+        let visibleChanged = intentChange;
+        const saved = this.store.update(state => {
             const actual = state.planRevision ?? state.currentPlan?.revision ?? 0;
             check(actual === expectedRevision, 'Life plan changed; read the current plan before submitting again');
-            const next = work(state.currentPlan ?? null);
+            const previous = state.currentPlan ?? null;
+            const before = this.changed && !intentChange ? this.projection(previous) : undefined;
+            const next = work(previous);
+            if (before !== undefined)
+                visibleChanged = this.projection(next) !== before;
             state.planRevision = actual + (intentChange ? 1 : 0);
             if (options.resetRecovery ?? intentChange)
                 delete state.planningRecovery;
@@ -160,6 +170,9 @@ export class PersistentLifePlan {
                     delete state.alarm;
             }
         });
+        if (visibleChanged)
+            this.changed?.();
+        return saved;
     }
     async commit(expectedRevision, draft, behavior, workspaceId, validate = () => { }) {
         validate();
@@ -219,6 +232,7 @@ export class PersistentLifePlan {
                 state.planRevision = current.revision + 1;
                 delete state.planningRecovery;
             });
+            this.changed?.();
             return;
         }
         this.change(current.revision, plan => {

@@ -31,10 +31,12 @@ export class CompanionBehavior {
     deadlineAt;
     awaitingRecovery = false;
     conditions = [];
+    worldFacts;
     constructor(ctx, host, ports = {}) {
         this.ctx = ctx;
         this.host = host;
         this.living = ports instanceof LivingView ? ports : new LivingView(ports);
+        this.worldFacts = this.living.factSource(host);
         if (!(ports instanceof LivingView))
             this.activate();
     }
@@ -56,11 +58,11 @@ export class CompanionBehavior {
                 if (!isObserved() || this.currentBound(bound.id) !== bound)
                     return;
                 if (!living.get('plan') && !this.autonomous) {
-                    this.publish('observation');
+                    this.publish('observation', false);
                     return;
                 }
                 this.advanceRoom(bound);
-                this.publish();
+                this.publish('transition', false);
             }, isObserved).catch(error => { this.fault = String(error); });
         };
         this.subscriptions.push(ctx.on('pet/core.changed', () => refreshBinding()));
@@ -133,7 +135,7 @@ export class CompanionBehavior {
                         bound.room.setAutonomy(this.autonomous, Date.now(), admission?.restoreElapsed);
                     else
                         bound.room.suspendAutonomy();
-                    this.publish();
+                    this.publish('transition', false);
                 }, current).catch(error => { this.fault = String(error); });
             };
             stopLife = ctx.on('pet/life.changed', synchronize);
@@ -314,7 +316,7 @@ export class CompanionBehavior {
         const projected = { ...home, behavior: { ...activity, revision: this.revision, bootId: this.bootId } };
         return { ...projected, playback: resolveActivityPlayback(projected) };
     }
-    publish(reason = 'transition') {
+    publish(reason = 'transition', notifyFirst = reason === 'transition') {
         const bound = this.binding;
         if (!bound || this.closed || !this.living.isCurrent())
             return;
@@ -336,11 +338,15 @@ export class CompanionBehavior {
             const fingerprint = 'sha256:' + createHash('sha256').update(persisted).digest('hex');
             const changed = fingerprint !== bound.fingerprint;
             const visibleChanged = presentationFingerprint !== bound.presentationFingerprint;
+            const hadProjection = bound.presentationFingerprint !== undefined;
             if (changed) {
                 bound.fingerprint = fingerprint;
                 this.revision++;
             }
             bound.presentationFingerprint = presentationFingerprint;
+            // The mount already signaled availability before the first observer read.
+            if (visibleChanged && (hadProjection || notifyFirst))
+                this.living.changed({ workspaceId: bound.id, path: bound.path, storageId: bound.storageId });
             if (!this.publicationFault && (!changed || reason === 'observation' && !visibleChanged))
                 return;
             this.ctx.emit('pet/behavior.changed', { workspaceId: bound.id, bootId: this.bootId, revision: this.revision, reason });
@@ -402,6 +408,7 @@ export class CompanionBehavior {
                 ...(bound.room.plannedState() ? { planned: bound.room.plannedState() } : {}) };
         });
     }
+    worldSnapshot(workspaceId) { return this.living.worldSnapshot(this.host, workspaceId); }
     roomState(workspaceId) {
         return this.snapshot(workspaceId).then(value => ({ ...value.home, lifeEnabled: value.autonomyEnabled,
             identity: { displayName: this.host.workspace.runtime.identity().displayName },

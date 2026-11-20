@@ -7,6 +7,7 @@ import { canonical, check, digest, integer, reject, text, unavailable } from '..
 import { effectiveEconomyConfiguration,defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
 import type { BodyUseProof, CatalogItem, EconomyConfiguration, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, InventoryItem, ItemUse, LedgerEntry, ReadingBookmark, ReadingContent, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
+import type { WalletView } from '../../contracts/living.js';
 import { advanceGardenClock, type GardenClock } from './garden-clock.js';
 
 const cropRows = CROPS as any[];
@@ -18,6 +19,17 @@ const atTime = (value: number) => {integer(value,'time');return value;};
 const safeSum = (a: number,b: number) => {const value=a+b;integer(value,'resulting amount');return value;};
 const safeProduct = (a: number,b: number) => {const value=a*b;integer(value,'total amount');return value;};
 function token(value: unknown,label: string) {text(value,label,160);check(!/[\u0000-\u001f\u007f]/.test(value),`Invalid ${label}`);}
+
+export function projectWallet({balance, inventory, catalog, bookmarks}: EconomySnapshot): WalletView {
+  const held = new Set(inventory.filter(item => item.quantity > 0).map(item => item.itemId));
+  const reading = catalog.flatMap(item => {
+    const version = item.contentVersion;
+    if (!version || !held.has(item.id)) return [];
+    const bookmark = bookmarks.find(row => row.itemId === item.id && row.version === version) ?? null;
+    return [{itemId:item.id,version,bookmark}];
+  });
+  return {balance,inventory,reading};
+}
 
 /** One bound SQLite aggregate owns money, every item, garden jobs and their receipts.
  * No CoreStore or assistant is constructed here. The existing Core binding guard
@@ -31,6 +43,7 @@ export class EconomyStore {
   private readonly db: DatabaseSync;
   private readonly databaseFile: {dev:number;ino:number};
   private closed = false;
+  private walletDirty = false;
 
   constructor(private readonly options: EconomyStoreOptions) {
     check(isAbsolute(options.workspacePath),'Economy workspace path must be absolute');
@@ -121,8 +134,12 @@ export class EconomyStore {
   }
   private transaction<T>(fn:()=>T):T {
     this.ensure();this.db.exec('BEGIN IMMEDIATE');
-    try {const result=fn();this.db.exec('COMMIT');return result;}
+    this.walletDirty=false;
+    let result: T;
+    try {result=fn();this.db.exec('COMMIT');}
     catch(error){this.db.exec('ROLLBACK');throw error;}
+    if(this.walletDirty)try {this.options.walletChanged?.();}catch { /* The wallet has committed. */ }
+    return result;
   }
   private meta<T>(key:string):T|undefined {const row=this.db.prepare('SELECT value FROM meta WHERE key=?').get(key);return row?json<T>(row.value):undefined;}
   private requiredMeta<T>(key:string):T {const value=this.meta<T>(key);if(value===undefined)unavailable(`Economy metadata ${key} is missing`);return value;}
@@ -137,7 +154,16 @@ export class EconomyStore {
   private reserved(itemId:string){return this.allUses().filter(row=>row.itemId===itemId&&row.status==='reserved').reduce((sum,row)=>safeSum(sum,row.quantity),0);}
   private available(itemId:string){const amount=this.quantity(itemId)-this.reserved(itemId);integer(amount,'available inventory');return amount;}
   private readings():ReadingContent[]{return this.db.prepare('SELECT value FROM readings ORDER BY id').all().map(row=>json<ReadingContent>(row.value));}
-  private putReading(content:ReadingContent){this.db.prepare('INSERT INTO readings VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value').run(content.itemId,canonical(content));}
+  private readingVersion(itemId: string) {
+    return this.db.prepare("SELECT json_extract(value,'$.version') AS version FROM readings WHERE id=?").get(itemId)?.version;
+  }
+  private putReading(content:ReadingContent){
+    if(this.options.walletChanged && !this.walletDirty) {
+      const version=this.readingVersion(content.itemId);
+      this.walletDirty=version===undefined || version!==content.version && this.quantity(content.itemId)>0;
+    }
+    this.db.prepare('INSERT INTO readings VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value').run(content.itemId,canonical(content));
+  }
   private catalogRows(){return economyCatalog(this.configuration(),this.readings());}
   private item(itemId:string):CatalogItem {token(itemId,'item id');return this.catalogRows().find(row=>row.id===itemId)??reject('NOT_FOUND','Item does not exist');}
   private allBookmarks():ReadingBookmark[]{return this.db.prepare('SELECT value FROM bookmarks ORDER BY id').all().map(row=>json<ReadingBookmark>(row.value));}
@@ -154,6 +180,7 @@ export class EconomyStore {
     for(const delta of Object.values(itemDeltas))check(Number.isSafeInteger(delta),'Invalid inventory change');
     this.db.prepare('INSERT INTO ledger(id,request_id,kind,at,money_delta,balance,item_deltas,note) VALUES(?,?,?,?,?,?,?,?)')
       .run(`entry_${randomUUID()}`,requestId,kind,now,moneyDelta,this.balance(),canonical(itemDeltas),note);
+    this.walletDirty ||= moneyDelta!==0 || Object.values(itemDeltas).some(delta=>delta!==0);
   }
   /** Called only inside the existing request transaction, beside its actual result.
    * Historical requests are not replayed or turned into new experiences. */
@@ -307,8 +334,14 @@ export class EconomyStore {
     token(input.version,'content version');integer(input.offset,'bookmark offset');return this.mutate(requestId,'bookmark',{itemId,...input},()=>{
       const reading=this.ownedReading(itemId);if(reading.version!==input.version)reject('STALE_REVISION','Reading content changed; open its current version');integer(input.offset,'bookmark offset',0,reading.text.length);
       const row:ReadingBookmark={itemId,version:input.version,offset:input.offset,updatedAt:Date.now()};
-      this.db.prepare('INSERT INTO bookmarks VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value').run(`${itemId}:${input.version}`,canonical(row));this.bump();return row;
+      this.putBookmark(row);this.bump();return row;
     });
+  }
+  private putBookmark(bookmark: ReadingBookmark) {
+    const {itemId,version} = bookmark;
+    const saved=this.db.prepare('INSERT INTO bookmarks VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE value<>excluded.value')
+      .run(`${itemId}:${version}`,canonical(bookmark));
+    if(this.options.walletChanged && saved.changes && this.readingVersion(itemId)===version)this.walletDirty=true;
   }
   private readingOperation(operationId:string):{input:{itemId:string;segment:number};offer:ReadingOffer;status:'offered'|'confirmed'}|undefined {
     const row=this.db.prepare('SELECT value FROM reading_operations WHERE id=?').get(operationId);return row?json(row.value):undefined;
@@ -336,7 +369,7 @@ export class EconomyStore {
         const old=this.db.prepare('SELECT value FROM bookmarks WHERE id=?').get(key);
         const offset=Math.max(old?json<ReadingBookmark>(old.value).offset:0,row.offer.endOffset);
         const bookmark:ReadingBookmark={itemId:row.offer.itemId,version:row.offer.version,offset,updatedAt:Date.now()};
-        this.db.prepare('INSERT INTO bookmarks VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value').run(key,canonical(bookmark));
+        this.putBookmark(bookmark);
         row.status='confirmed';this.db.prepare('UPDATE reading_operations SET value=? WHERE id=?').run(canonical(row),operationId);this.bump();
       }
       return {status:'confirmed',...row.input};
@@ -352,6 +385,7 @@ export class EconomyStore {
       const item=this.item(itemId);if(item.kind!=='food'||item.bodyAction!=='feed')reject('INELIGIBLE','This item has no consumable body effect');
       if(this.available(itemId)<1)reject('INELIGIBLE','No available food item');const now=Date.now();
       const use:ItemUse={opId:requestId,requestId,itemId,quantity:1,status:'reserved',createdAt:now,updatedAt:now,effects:clone(item.effects??{})};
+      this.walletDirty=true;
       this.db.prepare('INSERT INTO uses VALUES(?,?)').run(use.opId,canonical(use));this.bump();this.recordLedger(requestId,'use-reserve',0,{},`Reserved ${item.name} for its body operation`);return use;
     });
   }
@@ -364,6 +398,7 @@ export class EconomyStore {
       if(applied){check(this.quantity(use.itemId)>=1,'Reserved food item is missing');this.setQuantity(use.itemId,this.quantity(use.itemId)-1);}
       use.status=next;use.updatedAt=Date.now();use.bodyReceiptId=proof.bodyReceiptId;
       this.db.prepare('UPDATE uses SET value=? WHERE id=?').run(canonical(use),opId);this.bump();
+      this.walletDirty=true;
       this.recordLedger(use.requestId,applied?'use-consume':'use-cancel',0,applied?{[use.itemId]:-1}:{},applied?'Body effect receipt verified; reserved food consumed':'Body receipt proves no effect; reservation released');return use;
     });
   }

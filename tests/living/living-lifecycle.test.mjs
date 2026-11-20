@@ -8,6 +8,7 @@ import {Context} from '@deepseek-ai/cordis';
 import {createAssistantMessage} from '@deepseek-ai/dsh-llm';
 import {renderContextSections} from '@deepseek-ai/dsh-system-prompt';
 import {createLifeStore} from '#dsh-world/life/lifeStore';
+import {presentFact} from '../../dist/src/core/interaction-presentation.js';
 import {cordisFixture, eventually, submitPlan} from '../behavior-list/entries-lifecycle.test.mjs';
 
 const zones = {body: 'body', life: 'plan', economy: 'economy'};
@@ -23,6 +24,130 @@ const readArea = {
   life: (life, id) => life.readPlan(id),
   economy: (economy, id) => economy.snapshot(id),
 };
+
+const readingItem = 'reading:window-and-rain';
+
+test('3E 世界快照支持单挂钱包，并隔离整个身体投影的返回副本', async t => {
+  const f = await cordisFixture(t, {order: ['economy']});
+  await f.ownerAction({kind:'grant',amount:100}, 'snapshot-funding');
+  const purchase = await f.ownerAction({kind:'buy',itemId:readingItem}, 'snapshot-book');
+  const version = purchase.catalog.find(item => item.id === readingItem).contentVersion;
+  const read = () => f.economy.worldSnapshot(f.id);
+  const initial = await read();
+  assert.equal(initial.workspaceId, f.id);
+  assert.equal(initial.storageId, f.core.workspace.storageId());
+  assert.deepEqual(initial.body, {available:false});
+  assert.equal(initial.wallet.balance, purchase.balance);
+  assert.deepEqual(initial.wallet.inventory, purchase.inventory);
+  assert.deepEqual(initial.wallet.reading, [{itemId:readingItem,version,bookmark:null}]);
+  const reading = f.economy.gardenPort(f.id);
+  const offer = reading.readSegment('snapshot-reading', {itemId:readingItem,segment:0}, Date.now());
+  reading.confirmRead('snapshot-reading', offer.receiptToken, Date.now());
+  const bookmark = {itemId:readingItem,version,offset:offer.endOffset,updatedAt:Date.now()};
+  assert.deepEqual((await read()).wallet.reading, [{itemId:readingItem,version,bookmark}]);
+
+  await f.load('body');
+  const snapshot = await f.body.worldSnapshot(f.id);
+  assert.equal(snapshot.body.available, true);
+  assert.deepEqual(snapshot.body.snapshot, await f.body.snapshot(f.id));
+  const pristine = structuredClone(snapshot);
+  snapshot.body.snapshot.home.layout.size.w = -1;
+  snapshot.body.snapshot.needs.thirst = -1;
+  snapshot.wallet.reading[0].bookmark.offset = -1;
+  assert.deepEqual(await read(), pristine);
+  await assert.rejects(f.body.worldSnapshot('other-workspace'));
+});
+
+test('3E 事实流按原编号跨区回读，缺区保留确认，原生日志落盘后可确认', async t => {
+  const f = await cordisFixture(t, {order:['economy','body']});
+  const {worldFacts} = f.body;
+  await f.body.act(f.id, 'water', 'world-facts-water');
+  await f.ownerAction({kind:'grant',amount:10}, 'world-facts-grant');
+  t.mock.timers.tick(1);
+  await f.ownerAction({kind:'buy',itemId:'seed:radish'}, 'world-facts-buy');
+  const facts = await worldFacts.pendingFacts(f.id);
+  assert.deepEqual(facts.map(row => row.requestId), ['world-facts-water','world-facts-grant','world-facts-buy']);
+  const [body, grant, purchase] = facts, reordered = [purchase,body,grant,purchase];
+  const ids = reordered.map(fact => fact.id);
+  assert.deepEqual(await worldFacts.readFacts(f.id, ids), reordered);
+  await f.unload('economy');
+  await assert.rejects(worldFacts.acknowledgeFacts(f.id, [body.id,purchase.id]));
+  assert.deepEqual(await worldFacts.pendingFacts(f.id), [body]);
+  await f.load('economy');
+
+  const agent = await f.agent();
+  const sessions = f.ctx.sessions, flush = sessions.flush.bind(sessions);
+  const entered = Promise.withResolvers(), release = Promise.withResolvers();
+  const probe = t.mock.method(sessions, 'flush', async session => {
+    if (session !== agent.session) return flush(session);
+    entered.resolve();
+    await release.promise;
+    const flushed = await flush(session);
+    assert.equal(flushed, true);
+    await worldFacts.acknowledgeFacts(f.id, ids);
+    return flushed;
+  });
+  const turn = f.input('Read the original facts.');
+  try {
+    await entered.promise;
+    assert.deepEqual(await worldFacts.pendingFacts(f.id), facts);
+  } finally { release.resolve(); }
+  const call = await turn;
+  probe.mock.restore();
+  const logged = JSON.parse(call.sections.find(row => row.name === 'chatpet.interactions').text).facts;
+  assert.deepEqual(logged, facts.map(presentFact));
+  assert.ok(f.saved(agent.id).events.some(row => row.type === 'user/message' &&
+    row.data.source.sections?.some(section => section.name === 'chatpet.interactions')));
+  assert.deepEqual(await worldFacts.pendingFacts(f.id), []);
+  assert.deepEqual(await worldFacts.readFacts(f.id, ids), reordered);
+});
+
+test('3E 世界通知覆盖三区，合并同批交易，读快照和旧租约不产生回声', async t => {
+  const f = await cordisFixture(t);
+  const changes = [], read = () => f.economy.worldSnapshot(f.id);
+  await read();
+  await delay(15);
+  const off = f.ctx.on('world.changed', change => changes.push(change));
+  t.after(off);
+  const expected = {workspaceId:f.id,storageId:f.core.workspace.storageId()};
+  const before = await read();
+  await Promise.all([f.ownerAction({kind:'grant',amount:7}, 'world-notice-7'),
+    f.ownerAction({kind:'grant',amount:3}, 'world-notice-3')]);
+  assert.deepEqual(changes.splice(0), [expected]);
+  assert.equal((await read()).wallet.balance, before.wallet.balance + 10);
+  await f.ownerAction({kind:'grant',amount:3}, 'world-notice-3');
+  await assert.rejects(f.ownerAction({kind:'buy',itemId:'seed:radish',quantity:1_000_000}, 'world-notice-refused'));
+  assert.deepEqual(changes, []);
+
+  await f.body.act(f.id, 'water', 'world-notice-water');
+  assert.deepEqual(changes.splice(0), [expected]);
+  assert.ok((await read()).body.snapshot.needs.thirst < before.body.snapshot.needs.thirst);
+  const {revision} = await f.life.readPlan(f.id);
+  await f.life.updatePlan(f.id, revision, {goal:'Rest',reason:'Fixture',steps:[],nextConsiderAt:null});
+  assert.deepEqual(changes.splice(0), [expected]);
+  await read();
+  await delay(10);
+  assert.deepEqual(changes, []);
+
+  const entered = Promise.withResolvers(), release = Promise.withResolvers();
+  const emotion = await f.ctx.plugin({apply(ctx) {
+    ctx.provide('petEmotion', {roomSnapshot() {}, async read() { entered.resolve(); await release.promise; }});
+  }});
+  const retired = assert.rejects(f.body.act(f.id, 'feed', 'world-notice-retired'));
+  let unloading;
+  try {
+    await entered.promise;
+    unloading = f.unload('body');
+    await eventually(() => changes.length > 0, '卸载通知没有等待旧身体操作');
+    assert.deepEqual(changes.splice(0), [expected]);
+    assert.deepEqual((await read()).body, {available:false});
+  } finally { release.resolve(); await unloading; await emotion.dispose(); }
+  await retired;
+  assert.deepEqual(changes, []);
+  await f.load('body');
+  assert.deepEqual(changes.splice(0), [expected]);
+  assert.equal((await read()).body.available, true);
+});
 
 test('3C 事实准备期间 Economy 重挂会作废两段，下一轮仍能读到并确认', async t => {
   const f = await cordisFixture(t);

@@ -65,8 +65,9 @@ export declare class PersistentLifePlan {
     readonly companionId: string;
     readonly storageId: string;
     private readonly isCurrent;
+    private readonly changed?;
     readonly store: LifeStore;
-    constructor(directory: string, companionId: string, storageId: string, timeZone: string, isCurrent?: () => boolean);
+    constructor(directory: string, companionId: string, storageId: string, timeZone: string, isCurrent?: () => boolean, changed?: (() => void) | undefined);
     read(): {
         revision: number;
         plan: CurrentLifePlan | null;
@@ -78,6 +79,7 @@ export declare class PersistentLifePlan {
         revision: number;
         plan: CurrentLifePlan | null;
     };
+    private projection;
     private change;
     commit(expectedRevision: number, draft: PlanDraft, behavior?: CompanionBehavior, workspaceId?: string, validate?: () => void): Promise<{
         revision: number;

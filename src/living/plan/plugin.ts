@@ -184,8 +184,11 @@ export class CompanionLife {
     const storageId=this.host.workspace.storageId();
     const bound: Bound = {id: current.id, path: current.path, directory, library: this.host.records.getLibrary(current.id),
       plan:new PersistentLifePlan(directory,this.host.workspace.runtime.identity().companionId,storageId,this.timeZone,
-        ()=>this.isCurrentBinding(bound))};
+        ()=>this.isCurrentBinding(bound),()=>this.notifyWorld(bound))};
     this.binding = bound;
+  }
+  private notifyWorld(bound: Bound) {
+    this.living.changed({workspaceId:bound.id,path:bound.path,storageId:bound.plan.storageId});
   }
   private async startRuntime(resumed = false) {
     if (this.runtime || !this.binding || !this.enabled || !this.isOpen()) return;
@@ -549,9 +552,11 @@ export class CompanionLife {
       if (enabled) this.assertOpen();
       const bound = this.binding;
       if (bound?.id !== workspaceId) throw Error('生活工作区已切换');
-      const pauses=enabled===this.enabled ? this.pauses : recordGardenPause(this.pauses,enabled,Date.now());
+      const changed=enabled!==this.enabled;
+      const pauses=changed ? recordGardenPause(this.pauses,enabled,Date.now()) : this.pauses;
       this.writeControl(bound,enabled,this.preferences,pauses);
       this.enabled = enabled;this.restoredClock=false;this.fault = undefined;
+      if(changed)this.notifyWorld(bound);
       // Body observes committed intent now, before native home/model startup.
       if (this.isOpen()) this.ctx.emit('pet/life.changed');
       if (enabled) {

@@ -1,6 +1,8 @@
 import type { BodyUseProof, CatalogItem, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, ItemUse, LedgerEntry, ReadingBookmark, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
+import type { WalletView } from '../../contracts/living.js';
 import { type GardenClock } from './garden-clock.js';
+export declare function projectWallet({ balance, inventory, catalog, bookmarks }: EconomySnapshot): WalletView;
 /** One bound SQLite aggregate owns money, every item, garden jobs and their receipts.
  * No CoreStore or assistant is constructed here. The existing Core binding guard
  * and Core JSON/error helpers are reused at this synchronous persistence boundary. */
@@ -14,6 +16,7 @@ export declare class EconomyStore {
     private readonly db;
     private readonly databaseFile;
     private closed;
+    private walletDirty;
     constructor(options: EconomyStoreOptions);
     private safeFile;
     /** Cheap lease/inode validation for the hot Body adapter path. */
@@ -33,6 +36,7 @@ export declare class EconomyStore {
     private reserved;
     private available;
     private readings;
+    private readingVersion;
     private putReading;
     private catalogRows;
     private item;
@@ -81,6 +85,7 @@ export declare class EconomyStore {
         version: string;
         offset: number;
     }): ReadingBookmark;
+    private putBookmark;
     private readingOperation;
     /** Offers and confirmations are durable actual content-delivery receipts;
      * room movement or an animation never advances a reading bookmark. */

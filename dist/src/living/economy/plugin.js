@@ -8,7 +8,7 @@ import { bytesDigest, canonical, check, digest, integer } from '../../core/stora
 import { registerWorldContext } from '../../core/native/prompt.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
-import { EconomyStore } from './store.js';
+import { EconomyStore, projectWallet } from './store.js';
 import { installEconomyAccessGuard } from './access.js';
 import { readLifeControl } from '../plan/control-file.js';
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json'];
@@ -102,6 +102,7 @@ export class CompanionEconomy {
         const expectedInitialized = !!metadata.meta(`economy.initialized:${storageId}`) || this.bodyRequiresDatabase(target);
         const store = new EconomyStore({ workspacePath: target.path, storageId, companionId, expectedInitialized,
             loadLegacyGarden: () => this.retainedGarden(target, legacyFile),
+            walletChanged: () => this.living.changed({ workspaceId: target.id, path: target.path, storageId }),
             guard: () => {
                 this.assertOpen();
                 check(metadata.persisted(), 'Core database is absent or moved');
@@ -203,6 +204,8 @@ export class CompanionEconomy {
         validate();
         return { ...snapshot, workspaceId, ledger: store.ledger({ limit: 80 }).items, configurationVersion: String(snapshot.configuration.revision), access };
     }
+    walletView(workspaceId) { return projectWallet(this.bound(workspaceId).snapshot()); }
+    worldSnapshot(workspaceId) { return this.living.worldSnapshot(this.host, workspaceId); }
     async pendingFacts(workspaceId) { return this.bound(workspaceId).pendingFacts(); }
     async readFacts(workspaceId, ids) {
         const store = this.bound(workspaceId), facts = store.readFacts(ids);

@@ -13,7 +13,7 @@ import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
 import type { CompanionToolDeclaration } from '../../contracts/tables.js';
 import type { RoomEconomyPort, RoomFoodReservation } from '../body/room.js';
-import { EconomyStore } from './store.js';
+import { EconomyStore, projectWallet } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
 import { installEconomyAccessGuard } from './access.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
@@ -97,6 +97,7 @@ export class CompanionEconomy {
     const expectedInitialized=!!metadata.meta(`economy.initialized:${storageId}`)||this.bodyRequiresDatabase(target);
     const store=new EconomyStore({workspacePath:target.path,storageId,companionId,expectedInitialized,
       loadLegacyGarden:()=>this.retainedGarden(target,legacyFile),
+      walletChanged:()=>this.living.changed({workspaceId:target.id,path:target.path,storageId}),
       guard:()=>{this.assertOpen();check(metadata.persisted(),'Core database is absent or moved');
         check(this.host.workspace.storageId()===storageId,'Economy binding changed');}});
     const remember=()=>metadata.setMeta(`economy.initialized:${storageId}`,{companionId,path:target.path});
@@ -177,6 +178,8 @@ export class CompanionEconomy {
     validate();const store=this.bound(workspaceId),snapshot=store.snapshot();validate();
     return {...snapshot,workspaceId,ledger:store.ledger({limit:80}).items,configurationVersion:String(snapshot.configuration.revision),access};
   }
+  walletView(workspaceId: string) { return projectWallet(this.bound(workspaceId).snapshot()); }
+  worldSnapshot(workspaceId: string) { return this.living.worldSnapshot(this.host, workspaceId); }
   async pendingFacts(workspaceId:string):Promise<CompanionFact[]> {return this.bound(workspaceId).pendingFacts();}
   async readFacts(workspaceId:string,ids:readonly string[]):Promise<CompanionFact[]> {
     const store=this.bound(workspaceId),facts=store.readFacts(ids);check(this.bound(workspaceId)===store,'Economy binding changed');return facts;

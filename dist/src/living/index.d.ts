@@ -1,5 +1,8 @@
 import { Context, type Fiber } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../core/index.js';
+import type { CompanionBinding } from '../core/tables/companion-ports.js';
+import type { CompanionFactSource } from '../contracts/interaction.js';
+import type { WorldChanged, WorldSnapshot } from '../contracts/living.js';
 import type { RegistrationLease } from '../contracts/tables.js';
 import type { CompanionBehavior } from './body/plugin.js';
 import type { CompanionLife } from './plan/plugin.js';
@@ -10,6 +13,11 @@ interface Areas {
     economy: CompanionEconomy;
 }
 type Area = keyof Areas;
+declare module '@deepseek-ai/cordis' {
+    interface Events {
+        'world.changed'(value: WorldChanged): void;
+    }
+}
 export declare function serviceLabel(contextScope: Context, name: string): symbol;
 export interface AreaReference<T> {
     readonly value: T;
@@ -37,6 +45,7 @@ export declare class LivingWorld {
     lookup<K extends Area>(area: K): (AreaReference<Areas[K]> & {
         lease: RegistrationLease;
     }) | undefined;
+    changed(ctx: Context, host: PetCoreHost, valid: () => boolean, expected?: CompanionBinding): void;
 }
 type AreaPorts = {
     [K in Area]?: () => Areas[K] | undefined;
@@ -49,9 +58,13 @@ export declare class LivingView {
     readonly isCurrent: () => boolean;
     private readonly world?;
     readonly isLatestGeneration: () => boolean;
-    constructor(ports?: LivingPorts, isCurrent?: () => boolean, world?: LivingWorld | undefined, isLatestGeneration?: () => boolean);
+    readonly changed: (binding: CompanionBinding) => void;
+    constructor(ports?: LivingPorts, isCurrent?: () => boolean, world?: LivingWorld | undefined, isLatestGeneration?: () => boolean, changed?: (binding: CompanionBinding) => void);
     lookup<K extends Area>(area: K): AreaReference<Areas[K]> | undefined;
     get<K extends Area>(area: K): Areas[K] | undefined;
+    private readFrame;
+    worldSnapshot(host: PetCoreHost, workspaceId: string): Promise<WorldSnapshot>;
+    factSource(host: PetCoreHost): CompanionFactSource;
     watch<K extends Area>(ctx: Context, area: K, notify: (area: AreaReference<Areas[K]> | undefined, isObserved: () => boolean) => void): () => void;
 }
 export declare function settleCleanup(...steps: (() => void | Promise<void>)[]): Promise<void>;

@@ -1,11 +1,16 @@
 import {Context, FiberState, type Fiber} from '@deepseek-ai/cordis';
 import type {PetCoreHost} from '../core/index.js';
 import {RegistrationTable} from '../core/tables/registry.js';
+import type {CompanionBinding} from '../core/tables/companion-ports.js';
+import {reject} from '../core/storage.js';
+import type {CompanionFact, CompanionFactSource} from '../contracts/interaction.js';
+import type {WorldChanged, WorldSnapshot} from '../contracts/living.js';
 import type {RegistrationLease, TableRegistration} from '../contracts/tables.js';
 import type {CompanionBehavior} from './body/plugin.js';
 import type {CompanionLife} from './plan/plugin.js';
 import type {CompanionEconomy} from './economy/plugin.js';
 import {activityReader} from './plan/activity-reader.js';
+import {readFactReferences} from './plan/facts.js';
 import {installLivingPrompt} from './prompt-context.js';
 
 interface Areas {body: CompanionBehavior; plan: CompanionLife; economy: CompanionEconomy}
@@ -21,9 +26,25 @@ type Slots<T> = Map<symbol, Slot<T>>;
 interface Domain {
   worlds: Set<LivingWorld>;
   slots: {[K in Area]: Slots<Areas[K]>};
+  changes: Map<string, (() => boolean)[]>;
   core?: {areas: number; dispose(): void | Promise<void>};
 }
 const domains = new WeakMap<Context, WeakMap<PetCoreHost, Domain>>();
+
+declare module '@deepseek-ai/cordis' {
+  interface Events {'world.changed'(value: WorldChanged): void}
+}
+
+function currentBinding(host: PetCoreHost): CompanionBinding | undefined {
+  const {state, target} = host.workspace.status();
+  if (state !== 'ready' || !target) return;
+  const storageId = host.workspace.storageId();
+  if (storageId) return {workspaceId:target.id,path:target.path,storageId};
+}
+
+function sameBinding(current: CompanionBinding | undefined, captured: CompanionBinding) {
+  return current?.workspaceId === captured.workspaceId && current.path === captured.path && current.storageId === captured.storageId;
+}
 
 export function serviceLabel(contextScope: Context, name: string) {
   const defaults = contextScope.root[Context.isolate];
@@ -75,7 +96,7 @@ export class LivingWorld {
     if (!hosts) domains.set(root, hosts = new WeakMap());
     let domain = hosts.get(host);
     if (!domain) {
-      domain = {worlds: new Set(), slots: {body: new Map(), plan: new Map(), economy: new Map()}};
+      domain = {worlds: new Set(), slots: {body: new Map(), plan: new Map(), economy: new Map()}, changes: new Map()};
       hosts.set(host, domain);
     }
     const labels = labelsOf(ctx);
@@ -138,6 +159,27 @@ export class LivingWorld {
   lookup<K extends Area>(area: K): (AreaReference<Areas[K]> & {lease: RegistrationLease}) | undefined {
     return currentArea<Areas[K]>(this.domain.slots[area].get(this.labels[area]), area);
   }
+
+  changed(ctx: Context, host: PetCoreHost, valid: () => boolean, expected?: CompanionBinding) {
+    // Notification failures cannot invalidate completed domain work.
+    try {
+      const binding = expected ?? currentBinding(host);
+      if (!binding) return;
+      const {workspaceId, path, storageId} = binding;
+      const key = JSON.stringify([workspaceId, path, storageId]);
+      const pending = this.domain.changes.get(key);
+      if (pending) { pending.push(valid); return; }
+      const guards = [valid];
+      this.domain.changes.set(key, guards);
+      queueMicrotask(() => {
+        this.domain.changes.delete(key);
+        try {
+          if (sameBinding(currentBinding(host), binding) && guards.some(guard => guard()))
+            ctx.emit('world.changed', {workspaceId, storageId});
+        } catch { /* A failed observer has no effect on the committed result. */ }
+      });
+    } catch { /* Binding may already be unavailable during teardown. */ }
+  }
 }
 
 type AreaPorts = {[K in Area]?: () => Areas[K] | undefined};
@@ -145,7 +187,8 @@ export type LivingPorts = AreaPorts & {observe?: boolean};
 
 export class LivingView {
   constructor(private readonly ports: LivingPorts = {}, readonly isCurrent = () => true,
-    private readonly world?: LivingWorld, readonly isLatestGeneration = isCurrent) {}
+    private readonly world?: LivingWorld, readonly isLatestGeneration = isCurrent,
+    readonly changed: (binding: CompanionBinding) => void = () => {}) {}
 
   lookup<K extends Area>(area: K): AreaReference<Areas[K]> | undefined {
     if (this.world) return this.world.lookup(area);
@@ -155,6 +198,67 @@ export class LivingView {
   }
 
   get<K extends Area>(area: K): Areas[K] | undefined { return this.lookup(area)?.value; }
+
+  private readFrame(host: PetCoreHost, workspaceId: string, includePlan = false) {
+    const binding = currentBinding(host);
+    if (!this.isCurrent() || binding?.workspaceId !== workspaceId) reject('STALE_BINDING', '生活工作区已切换或组件已停止');
+    const body = this.lookup('body'), economy = this.lookup('economy');
+    const plan = includePlan ? this.lookup('plan') : undefined;
+    const sameArea = (area: Area, ref?: AreaReference<unknown>) =>
+      this.lookup(area)?.value === ref?.value && (!ref || ref.isCurrent());
+    const validate = () => {
+      if (!this.isCurrent() || !sameBinding(currentBinding(host), binding) || !sameArea('body', body) ||
+        !sameArea('economy', economy) || (includePlan && !sameArea('plan', plan)))
+        reject('STALE_BINDING', '生活工作区或组件已切换');
+    };
+    return {binding, body, economy, validate};
+  }
+
+  async worldSnapshot(host: PetCoreHost, workspaceId: string): Promise<WorldSnapshot> {
+    const {binding, body, economy, validate} = this.readFrame(host, workspaceId, true);
+    const snapshot = body && await withLivingCaller(validate, () => body.value.snapshot(workspaceId));
+    validate();
+    const wallet = economy?.value.walletView(workspaceId) ?? null;
+    validate();
+    return {workspaceId,storageId:binding.storageId,wallet,
+      body:snapshot ? {available:true,snapshot:structuredClone(snapshot)} : {available:false}};
+  }
+
+  factSource(host: PetCoreHost): CompanionFactSource {
+    const domains = ['body', 'economy'] as const;
+    const references = (ids: readonly string[]) => ids.map(id => {
+      const domain = domains.find(candidate => id.startsWith(`${candidate}:`));
+      if (!domain) reject('INVALID_ARGUMENT', '未知互动事实所属区');
+      return {domain,id};
+    });
+    return {
+      pendingFacts: async workspaceId => {
+        const frame = this.readFrame(host, workspaceId);
+        const facts = await Promise.all(domains.map(domain =>
+          withLivingCaller(frame.validate, () => frame[domain]?.value.pendingFacts(workspaceId) ?? [])));
+        frame.validate();
+        return facts.flat().sort((a,b) => a.occurredAt.localeCompare(b.occurredAt) || a.id.localeCompare(b.id));
+      },
+      readFacts: async (workspaceId, ids) => {
+        const frame = this.readFrame(host, workspaceId);
+        return withLivingCaller(frame.validate, () =>
+          readFactReferences(workspaceId, references(ids), (domain: CompanionFact['domain']) => frame[domain]?.value, frame.validate));
+      },
+      acknowledgeFacts: async (workspaceId, ids) => {
+        const frame = this.readFrame(host, workspaceId), refs = references(ids);
+        const batches = domains.flatMap(domain => {
+          const batch = refs.filter(ref => ref.domain === domain).map(ref => ref.id);
+          if (!batch.length) return [];
+          const source = frame[domain]?.value;
+          if (!source) throw Error('原互动事实所属组件暂不可用，保留原编号等待恢复');
+          return [{source,batch}];
+        });
+        for (const {source,batch} of batches)
+          await withLivingCaller(frame.validate, () => source.acknowledgeFacts(workspaceId, batch));
+        frame.validate();
+      },
+    };
+  }
 
   watch<K extends Area>(ctx: Context, area: K,
     notify: (area: AreaReference<Areas[K]> | undefined, isObserved: () => boolean) => void): () => void {
@@ -192,20 +296,27 @@ export function mountLivingArea<K extends Area>(ctx: Context, host: PetCoreHost,
   const {world, release} = LivingWorld.retain(ctx, host, area);
   let registration: (TableRegistration & {isLatestGeneration(): boolean}) | undefined;
   let stopPort: void | (() => void | Promise<void>), stopCore: (() => void | Promise<void>) | undefined;
-  let value: Areas[K] | undefined, cleanup: Promise<void> | undefined;
+  let value: Areas[K] | undefined, cleanup: Promise<void> | undefined, stopStatus: (() => void) | undefined;
   const dispose = () => cleanup ??= settleCleanup(
     () => registration?.revoke(),
     () => stopPort?.(),
     () => stopCore?.(),
     () => {if(value) return close(value);},
-  ).finally(() => release(registration?.lease.generation));
+  ).finally(() => { stopStatus?.(); release(registration?.lease.generation); });
   try {
     ctx.effect(() => dispose);
+    const active = () => world.lookup(area)?.lease === registration?.lease && registration !== undefined;
     const view = new LivingView({}, () => registration?.lease.isCurrent() === true &&
       (ctx.fiber.state === FiberState.LOADING || ctx.fiber.state === FiberState.ACTIVE), world,
-      () => registration?.isLatestGeneration() === true);
+      () => registration?.isLatestGeneration() === true, binding => world.changed(ctx, host, active, binding));
     value = create(view);
     registration = world.register(area, value, ctx.fiber);
+    stopStatus = ctx.root.on('internal/status', (fiber, previous) => {
+      if (fiber !== ctx.fiber) return;
+      if (fiber.state === FiberState.ACTIVE) world.changed(ctx, host, active);
+      else if (previous === FiberState.ACTIVE)
+        world.changed(ctx, host, () => registration?.isLatestGeneration() === true && !world.lookup(area));
+    });
     stopPort = start(value, view);
     stopCore = world.retainCore(ctx, host, area);
   } catch (error) {

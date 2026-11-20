@@ -58,6 +58,7 @@ export declare class CompanionLife {
     private publishRest;
     private directory;
     private synchronize;
+    private notifyWorld;
     private startRuntime;
     private stopRuntime;
     private tick;

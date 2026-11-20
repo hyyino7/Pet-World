@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../../core/index.js';
 import type { BehaviorChange, BehaviorSnapshot, PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
 import { CompanionRoom } from './room.js';
+import type { CompanionFactSource } from '../../contracts/interaction.js';
 import type { RoomInteractionContext } from './room.js';
 import { LivingView, type LivingPorts } from '../index.js';
 export type { PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
@@ -25,6 +26,7 @@ export declare class CompanionBehavior {
     private deadlineAt?;
     private awaitingRecovery;
     private conditions;
+    readonly worldFacts: CompanionFactSource;
     constructor(ctx: Context, host: PetCoreHost, ports?: LivingPorts | LivingView);
     activate(): void;
     private enqueue;
@@ -53,6 +55,7 @@ export declare class CompanionBehavior {
         pending: boolean;
     } | undefined;
     snapshot(workspaceId: string): Promise<BehaviorSnapshot>;
+    worldSnapshot(workspaceId: string): Promise<import("../../contracts/living.js").WorldSnapshot>;
     roomState(workspaceId: string): Promise<any>;
     roomAction(workspaceId: string, input: unknown, by?: string, interaction?: RoomInteractionContext): Promise<{
         home: any;

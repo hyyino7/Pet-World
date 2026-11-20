@@ -143,7 +143,7 @@ function parsePlan(raw: unknown, legacy: boolean): PlanDraft {
 export class PersistentLifePlan {
   readonly store: LifeStore;
   constructor(readonly directory: string, readonly companionId: string, readonly storageId: string, timeZone: string,
-    private readonly isCurrent:()=>boolean=()=>true) {
+    private readonly isCurrent:()=>boolean=()=>true, private readonly changed?:()=>void) {
     this.store=createLifeStore(directory,timeZone);
   }
   read(): {revision:number; plan:CurrentLifePlan|null} {
@@ -171,14 +171,21 @@ export class PersistentLifePlan {
     check(Number.isSafeInteger(revision) && revision>=0 && (!plan || plan.revision===revision), 'Stored life plan revisions disagree');
     return {revision,plan:plan ?? null};
   }
+  private projection(plan: CurrentLifePlan | null | undefined) {
+    return JSON.stringify([plan?.cursor,plan?.status,plan?.execution]);
+  }
   private change(expectedRevision:number, work:(plan:CurrentLifePlan|null)=>CurrentLifePlan|null, schedule=true, intentChange=true,
     options:{resetRecovery?:boolean;decision?:boolean}={}) {
     check(this.isCurrent(),'Life workspace changed; the old plan was not updated');
     check(Number.isSafeInteger(expectedRevision) && expectedRevision>=0, 'Invalid expected plan revision');
-    return this.store.update(state=>{
+    let visibleChanged=intentChange;
+    const saved=this.store.update(state=>{
       const actual=state.planRevision ?? (state.currentPlan as CurrentLifePlan|undefined)?.revision ?? 0;
       check(actual===expectedRevision,'Life plan changed; read the current plan before submitting again');
-      const next=work(state.currentPlan as CurrentLifePlan|null ?? null);
+      const previous=state.currentPlan as CurrentLifePlan|null ?? null;
+      const before=this.changed && !intentChange ? this.projection(previous) : undefined;
+      const next=work(previous);
+      if(before!==undefined)visibleChanged=this.projection(next)!==before;
       state.planRevision=actual+(intentChange?1:0);
       if(options.resetRecovery ?? intentChange)delete state.planningRecovery;
       if(options.decision)state.planDecisionRevision=state.planRevision;
@@ -189,6 +196,8 @@ export class PersistentLifePlan {
         else delete state.alarm;
       }
     });
+    if(visibleChanged)this.changed?.();
+    return saved;
   }
   async commit(expectedRevision:number, draft:PlanDraft, behavior?:CompanionBehavior, workspaceId?:string,validate:()=>void=()=>{}) {
     validate();
@@ -236,6 +245,7 @@ export class PersistentLifePlan {
         // A clock/cancellation is newer intent, but not a saved life decision.
         state.planRevision=current.revision+1;delete state.planningRecovery;
       });
+      this.changed?.();
       return;
     }
     this.change(current.revision,plan=>{

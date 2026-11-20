@@ -1,3 +1,6 @@
+import type {InventoryItem, ReadingBookmark} from '../../contracts/living.js';
+export type {InventoryItem, ReadingBookmark} from '../../contracts/living.js';
+
 export type ItemKind = 'seed' | 'harvest' | 'compost' | 'food' | 'reading';
 export interface CatalogItem {
   id: string; kind: ItemKind; name: string; description: string;
@@ -21,8 +24,6 @@ export type EconomyConfigurationPatch = Partial<Omit<EconomyConfiguration, 'vers
   crops?: Record<string, Partial<Pick<CropConfiguration, 'growMs' | 'seedCost'>>>;
   itemPrices?: EconomyConfiguration['itemPrices'];
 };
-export interface InventoryItem {itemId: string; quantity: number; reserved: number; available: number}
-export interface ReadingBookmark {itemId: string; version: string; offset: number; updatedAt: number}
 export interface ReadingContent {
   itemId: string; title: string; text: string; version: string;
   format?: 'article' | 'book';
@@ -55,6 +56,7 @@ export interface EconomyStoreOptions {
   expectedInitialized?: boolean;
   /** Guard the existing Core binding/lease before every database operation. */
   guard?: () => void;
+  walletChanged?: () => void;
 }
 export interface ReadingSegment {
   itemId: string; title: string; version: string; segment: number; totalSegments: number;

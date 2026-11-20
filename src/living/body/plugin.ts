@@ -9,7 +9,7 @@ import type { BehaviorActivity, BehaviorChange, BehaviorSnapshot, CompanionExpre
 import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
-import type { CompanionFactActor } from '../../contracts/interaction.js';
+import type { CompanionFactActor, CompanionFactSource } from '../../contracts/interaction.js';
 import type { RoomInteractionContext } from './room.js';
 import {gardenHomeProjection} from './garden-receipt.js';
 import { LifeControlFileError, readLifeControl } from '../plan/control-file.js';
@@ -38,8 +38,10 @@ export class CompanionBehavior {
   private deadlineAt?:number;
   private awaitingRecovery=false;
   private conditions:readonly {metric:string;comparison:string;value:number}[]=[];
+  readonly worldFacts: CompanionFactSource;
   constructor(private ctx: Context, private host: PetCoreHost, ports: LivingPorts | LivingView = {}) {
     this.living = ports instanceof LivingView ? ports : new LivingView(ports);
+    this.worldFacts = this.living.factSource(host);
     if (!(ports instanceof LivingView)) this.activate();
   }
   activate() {
@@ -51,8 +53,8 @@ export class CompanionBehavior {
       this.synchronize();const bound=this.binding;if(!bound)return;
       await this.refreshEmotion(bound.id);validate();
       if(!isObserved()||this.currentBound(bound.id)!==bound)return;
-      if(!living.get('plan') && !this.autonomous) {this.publish('observation');return;}
-      this.advanceRoom(bound);this.publish();
+      if(!living.get('plan') && !this.autonomous) {this.publish('observation',false);return;}
+      this.advanceRoom(bound);this.publish('transition',false);
     },isObserved).catch(error=>{this.fault=String(error);});};
     this.subscriptions.push(ctx.on('pet/core.changed',()=>refreshBinding()));
     this.subscriptions.push(living.watch(ctx,'economy',(economy,observed)=>{
@@ -99,7 +101,7 @@ export class CompanionBehavior {
           this.autonomous=admission?.enabled ?? life.running();
           if(admission || this.autonomous)bound.room.setAutonomy(this.autonomous,Date.now(),admission?.restoreElapsed);
           else bound.room.suspendAutonomy();
-          this.publish();
+          this.publish('transition',false);
         },current).catch(error=>{this.fault=String(error);});
       };
       stopLife=ctx.on('pet/life.changed',synchronize);synchronize();
@@ -219,7 +221,7 @@ export class CompanionBehavior {
     const projected={...home,behavior:{...activity,revision:this.revision,bootId:this.bootId}};
     return {...projected,playback:resolveActivityPlayback(projected)};
   }
-  private publish(reason:'observation'|'transition'='transition') {
+  private publish(reason:'observation'|'transition'='transition',notifyFirst = reason==='transition') {
     const bound = this.binding; if (!bound || this.closed || !this.living.isCurrent()) return;
     if(reason==='observation' && this.deadlineAt!==undefined && Date.now()>=this.deadlineAt) {reason='transition';this.deadlineAt=undefined;}
     try {
@@ -236,8 +238,12 @@ export class CompanionBehavior {
       const fingerprint='sha256:'+createHash('sha256').update(persisted).digest('hex');
       const changed=fingerprint!==bound.fingerprint;
       const visibleChanged=presentationFingerprint!==bound.presentationFingerprint;
+      const hadProjection=bound.presentationFingerprint!==undefined;
       if(changed) {bound.fingerprint=fingerprint;this.revision++;}
       bound.presentationFingerprint=presentationFingerprint;
+      // The mount already signaled availability before the first observer read.
+      if(visibleChanged && (hadProjection || notifyFirst))
+        this.living.changed({workspaceId:bound.id,path:bound.path,storageId:bound.storageId});
       if(!this.publicationFault && (!changed || reason==='observation' && !visibleChanged))return;
       this.ctx.emit('pet/behavior.changed', {workspaceId:bound.id,bootId:this.bootId,revision:this.revision,reason});
       this.publicationFault=undefined;
@@ -286,6 +292,7 @@ export class CompanionBehavior {
         ...(bound.room.plannedState() ? {planned:bound.room.plannedState()} : {})};
     });
   }
+  worldSnapshot(workspaceId: string) { return this.living.worldSnapshot(this.host, workspaceId); }
   roomState(workspaceId: string) {
     return this.snapshot(workspaceId).then(value => ({...value.home,lifeEnabled:value.autonomyEnabled,
       identity:{displayName:this.host.workspace.runtime.identity().displayName},

@@ -67,6 +67,8 @@ export declare class CompanionEconomy {
             importedAt: number;
         };
     }>;
+    walletView(workspaceId: string): import("../../contracts/living.js").WalletView;
+    worldSnapshot(workspaceId: string): Promise<import("../../contracts/living.js").WorldSnapshot>;
     pendingFacts(workspaceId: string): Promise<CompanionFact[]>;
     readFacts(workspaceId: string, ids: readonly string[]): Promise<CompanionFact[]>;
     acknowledgeFacts(workspaceId: string, ids: readonly string[]): Promise<void>;
