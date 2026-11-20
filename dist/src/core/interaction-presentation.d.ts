@@ -5,7 +5,7 @@ export declare const INTERACTION_CONTEXT = "chatpet.interactions";
 export declare function presentFact(fact: CompanionFact): {
     operationId?: string | undefined;
     id: string;
-    domain: "body" | "economy";
+    domain: "economy" | "body";
     type: string;
     at: string;
     actor: import("../contracts/interaction.js").CompanionFactActor;

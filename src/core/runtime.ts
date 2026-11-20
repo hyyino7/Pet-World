@@ -6,6 +6,7 @@ import {CoreAuthority} from './authority.js';
 import {conversationOptions, type ConversationOptions} from './options.js';
 import {canonical, check, CoreStore, id, reject, Rejection, revision, text, timestamp} from './storage.js';
 import {CapabilityTable} from './tables/capabilities.js';
+import type {CoreWorkspace} from './workspace.js';
 
 export interface CoreConfig {
   dataDir:string; companionId:string;
@@ -24,7 +25,8 @@ export class CoreRuntime {
   readonly core:CoreService;
   readonly bootId=id('boot');
   readonly defaultConversation:Readonly<ConversationOptions>;
-  files?:import('./workspace.js').CoreWorkspace;
+  files?:CoreWorkspace;
+  private readonly workspace?:CoreWorkspace;
   fileEffect=false;
   private stopped=false;
   onChange:(operation:string,value:unknown)=>void=()=>{};
@@ -35,7 +37,7 @@ export class CoreRuntime {
     id,owner,contractVersion,...status(),
   }));
 
-  constructor(readonly config:CoreConfig) {
+  constructor(readonly config:CoreConfig, createWorkspace?:(runtime:CoreRuntime)=>CoreWorkspace) {
     this.defaultConversation=conversationOptions(config.conversation);
     for(const key of ['companionId','scopeId','ownerActorId'])text(config[key as keyof CoreConfig],key);
     this.validateIdentity(config);
@@ -43,12 +45,13 @@ export class CoreRuntime {
     this.authority=new CoreAuthority(config.companionId,config.scopeId);
     this.owner=this.authority.client({module:'core',actor:{kind:'owner',id:config.ownerActorId},operations:['*']});
     try {
-      this.store.transaction(()=>{
-        const identity=this.store.get<CompanionIdentity>('identity','current');
-        if(identity&&(identity.companionId!==config.companionId||identity.ownerActorId!==config.ownerActorId||this.store.meta('scope')!==config.scopeId))
-          reject('INCOMPATIBLE','Stored identity/scope does not match host configuration');
+      this.workspace=this.files=createWorkspace?.(this);
+      const identity=this.store.get<CompanionIdentity>('identity','current');
+      if(identity&&(identity.companionId!==config.companionId||identity.ownerActorId!==config.ownerActorId||this.store.meta('scope')!==config.scopeId))
+        reject('INCOMPATIBLE','Stored identity/scope does not match host configuration');
+      if(!this.workspace?.migrationReason())this.store.transaction(()=>{
         if(!identity) {
-          this.store.put('identity','current',{companionId:config.companionId,revision:1,displayName:config.displayName,character:config.character,ownerActorId:config.ownerActorId});
+          this.store.put('identity','current',this.configuredIdentity());
           this.store.setMeta('scope',config.scopeId);
         }
         if(!this.store.get('policy','current'))this.store.put('policy','current',{revision:1,quiet:false});
@@ -73,9 +76,15 @@ export class CoreRuntime {
     check(typeof input.displayName==='string'&&input.displayName.length<=256&&!/[\r\n]/.test(input.displayName),'Invalid displayName');
     check(typeof input.character==='string'&&input.character.length<=32_768,'Invalid character');
   }
-  identity():CompanionIdentity{return this.store.require('identity','current');}
+  private configuredIdentity():CompanionIdentity {
+    const {companionId,displayName,character,ownerActorId}=this.config;
+    return {companionId,revision:1,displayName,character,ownerActorId};
+  }
+  identity():CompanionIdentity {
+    return this.store.get('identity','current') ?? this.configuredIdentity();
+  }
   policy():AttentionPolicy {
-    const saved=this.store.require<AttentionPolicy>('policy','current');
+    const saved=this.store.get<AttentionPolicy>('policy','current') ?? {revision:1,quiet:false};
     return {revision:saved.revision,quiet:saved.quiet};
   }
   get conversation():Readonly<ConversationOptions> {
@@ -90,9 +99,11 @@ export class CoreRuntime {
         const principal=this.authority.owner(context,name,this.config.ownerActorId);
         if(options?.signal?.aborted)throw new Rejection({code:'CANCELLED',message:'Call cancelled before admission',effect:'none',retry:'never'});
         if(options?.deadline){timestamp(options.deadline);if(Date.parse(options.deadline)<=Date.now())throw new Rejection({code:'TIMED_OUT',message:'Call deadline expired',effect:'none',retry:'never'});}
+        if(write)this.workspace?.assertMigrationReady();
         if(name==='workspace.initialize')await this.store.ensurePersisted();
         this.files?.synchronize(name);this.fileEffect=false;canonical(input);
         check(input!==null&&typeof input==='object'&&!Array.isArray(input),'Expected request object');
+        if(write)this.workspace?.assertMigrationReady();
         const run=()=>{const value=fn(input);if(write)this.store.setMeta('stateRevision',(this.store.meta<number>('stateRevision')??0)+1);return value;};
         const value=write?this.store.mutate(`${principal.module}:${principal.actor.kind}:${principal.actor.id}`,name,context.requestId,input,run):run();
         if(write)try{this.onChange(name,{bootId:this.bootId,revision:this.store.meta('stateRevision')});}catch{/* Committed configuration remains authoritative. */}

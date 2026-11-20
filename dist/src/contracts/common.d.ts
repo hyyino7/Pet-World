@@ -27,6 +27,11 @@ export type ContractError = {
     effect: 'none';
     retry: 'never' | 'refresh';
 } | {
+    code: 'migration-required';
+    reason: string;
+    effect: 'none';
+    retry: 'never';
+} | {
     code: 'UNAVAILABLE' | 'TIMED_OUT' | 'CANCELLED' | 'INTERNAL';
     effect: 'none';
     retry: 'never' | 'same_request';

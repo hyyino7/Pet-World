@@ -10,9 +10,8 @@ import { memoryDirectory } from '../memory/client.js';
 import { join, relative, sep } from 'node:path';
 /** One companion's configuration, records and hooks into the native DSH runtime. */
 export function createCore(config) {
-    const runtime = new CoreRuntime(Object.freeze({ ...config }));
-    const workspace = new CoreWorkspace(runtime);
-    runtime.files = workspace;
+    const runtime = new CoreRuntime(Object.freeze({ ...config }), runtime => new CoreWorkspace(runtime));
+    const workspace = runtime.files;
     const native = new CoreNative(runtime), records = new CoreRecords(workspace, native);
     if (config.memory)
         native.memory = new NativeMemory(runtime, config.memory);

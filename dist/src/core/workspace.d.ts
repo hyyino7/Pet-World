@@ -3,14 +3,16 @@ import { type CorePreferences, type WorkspaceTarget } from './preferences.js';
 import { type CompanionConfiguration, type CompanionSettings } from './companion-settings.js';
 import type { CompanionIdentity, AttentionPolicy, WorkspaceEditScope } from '../contracts/core.js';
 import type { ServiceCall } from '../contracts/common.js';
+type MigrationReason = 'storage-version-outdated' | 'manifest-mismatch' | 'migration-incomplete' | 'journal-invalid' | 'journal-step-mismatch' | 'binding-changed';
 type InitializerFiles = readonly string[] | ((target: WorkspaceTarget) => readonly string[]);
 export interface WorkspaceStatus {
-    state: 'unbound' | 'pending' | 'ready' | 'unavailable';
+    state: 'unbound' | 'pending' | 'ready' | 'unavailable' | 'migration-required';
     revision: number | null;
     target: WorkspaceTarget | null;
     files: readonly string[];
     error: string | null;
     sourceRevision: string | null;
+    migrationReason?: MigrationReason;
 }
 type NativeSessionScope = {
     id: string;
@@ -67,6 +69,7 @@ export declare class CoreWorkspace {
     readonly runtime: CoreRuntime;
     readonly port: WorkspaceService;
     private readonly initializers;
+    private migrationBlocked?;
     constructor(runtime: CoreRuntime);
     /** Captured by the editor, then checked inside the original synchronous
      * configuration mutation. No new binding generation or durable state. */
@@ -75,10 +78,17 @@ export declare class CoreWorkspace {
     private binding;
     private directory;
     private read;
+    private initializationMarker;
+    private retainedFiles;
+    private inspectMigration;
+    migrationReason(): MigrationReason | undefined;
+    assertMigrationReady(target?: WorkspaceTarget | null): void;
+    retainedWritesAllowed(workspaceId: string, path: string, storageId: string): boolean;
     private atomic;
     private soul;
     private documents;
     storageId(): string;
+    private storageIdFor;
     /** Module-owned synchronous schema preparation, never a service start. */
     registerInitializer(id: string, run: (target: WorkspaceTarget) => void, files?: InitializerFiles): () => void;
     private validateInventory;

@@ -23,7 +23,11 @@ function fixture(t:TestContext) {
       return {header:log.header,read:async()=>{await beforeRead?.(id);return {events:structuredClone(log.events)};},close:async()=>{}};
     }}} as unknown as Context;
   const host={workspace:{status:()=>({state:'ready',target:{id:binding,path:roots[binding],title:binding}}),
-    storageId:()=>binding+'-stable',runtime:{config:{companionId:'fish',scopeId:'owner',ownerActorId:'owner'}}}} as unknown as PetCoreHost;
+    storageId:()=>binding+'-stable',
+    // Both synthetic repositories are migration-ready even when the other one is bound.
+    retainedWritesAllowed:(workspaceId:string,path:string,storageId:string)=>Object.entries(roots)
+      .some(([id,rootPath])=>workspaceId===id && path===rootPath && storageId===id+'-stable'),
+    runtime:{config:{companionId:'fish',scopeId:'owner',ownerActorId:'owner'}}}} as unknown as PetCoreHost;
   const transcripts=new NativeTranscripts(ctx,host);
   const copies=(which:'a'|'b')=>{const directory=join(roots[which],'.chatpet/data/core/native-sessions');
     try{return readdirSync(directory).filter(name=>/^[a-f0-9]{64}\.json$/.test(name)).map(name=>JSON.parse(readFileSync(join(directory,name),'utf8')));}catch{return [] as any[];}};

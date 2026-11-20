@@ -5,6 +5,7 @@ import { CoreAuthority } from './authority.js';
 import { type ConversationOptions } from './options.js';
 import { CoreStore } from './storage.js';
 import { CapabilityTable } from './tables/capabilities.js';
+import type { CoreWorkspace } from './workspace.js';
 export interface CoreConfig {
     dataDir: string;
     companionId: string;
@@ -25,15 +26,17 @@ export declare class CoreRuntime {
     readonly core: CoreService;
     readonly bootId: string;
     readonly defaultConversation: Readonly<ConversationOptions>;
-    files?: import('./workspace.js').CoreWorkspace;
+    files?: CoreWorkspace;
+    private readonly workspace?;
     fileEffect: boolean;
     private stopped;
     onChange: (operation: string, value: unknown) => void;
     readonly capabilityTable: CapabilityTable;
     readonly capabilityStatuses: Partial<Record<CapabilityStatus['id'], () => ReturnType<CapabilityRegistration['status']> | undefined>>;
     capabilities: () => CapabilityStatus[];
-    constructor(config: CoreConfig);
+    constructor(config: CoreConfig, createWorkspace?: (runtime: CoreRuntime) => CoreWorkspace);
     private validateIdentity;
+    private configuredIdentity;
     identity(): CompanionIdentity;
     policy(): AttentionPolicy;
     get conversation(): Readonly<ConversationOptions>;

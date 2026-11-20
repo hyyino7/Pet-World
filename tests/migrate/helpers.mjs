@@ -22,7 +22,9 @@ export function mockDsh(t, running = false) {
 export async function fixture(t, variant) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'migrate-synthetic-')));
   t.after(() => rmSync(root, {recursive:true, force:true}));
-  return generateSynthetic(join(root, 'installed'), variant);
+  const result = await generateSynthetic(join(root, 'installed'), variant);
+  rmSync(join(result.data, 'storage-manifest.json'));
+  return result;
 }
 export function planFor(f) {
   return backupPlan({repo:f.repo,workspaceId:f.target.id,storageId:f.storageId,profileDir:f.profile,dshHome:f.home,config:f.config});
@@ -47,7 +49,12 @@ export async function recall(f) {
   } finally { await host.close(); }
 }
 export async function coreAtLegacyVersion(f) {
-  await coreReady(f); await recall(f);
+  const host = createCore(f.config);
+  try {
+    const state = value(await host.services.workspace.inspect(host.operator.request('inspect-before-home-migration'), {}));
+    assert.equal(state.state, 'migration-required');
+    assert.equal(state.migrationReason, 'storage-version-outdated');
+  } finally { await host.close(); }
 }
 export function memoryLogical(f) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'migrate-memory-')));

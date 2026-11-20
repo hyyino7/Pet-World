@@ -21,6 +21,7 @@ type RejectedCode = 'INVALID_ARGUMENT' | 'UNAUTHORIZED' | 'NOT_FOUND'
   | 'STALE_REVISION' | 'STALE_BINDING' | 'INELIGIBLE' | 'EXPIRED_USE' | 'LIMIT_REACHED';
 export type ContractError = { message: string; operationId?: string } & (
   | { code: RejectedCode; effect: 'none'; retry: 'never' | 'refresh' }
+  | { code: 'migration-required'; reason: string; effect: 'none'; retry: 'never' }
   | { code: 'UNAVAILABLE' | 'TIMED_OUT' | 'CANCELLED' | 'INTERNAL';
       effect: 'none'; retry: 'never' | 'same_request' }
   | { code: 'UNAVAILABLE' | 'TIMED_OUT' | 'CANCELLED' | 'INTERNAL';

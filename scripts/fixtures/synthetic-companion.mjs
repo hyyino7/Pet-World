@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Fixed synthetic content only. No installed application, model or personal Repo.
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { createCore } from '../../dist/src/core/index.js';
@@ -50,18 +50,23 @@ export async function generateSynthetic(out, variant = 'current') {
   const host = createCore(config); let domains;
   let sequence = 0; const request = () => host.operator.request('fixture-' + ++sequence);
   try {
-    // Select the old layout using real persisted resources before Core chooses paths.
+    const before = value(await host.services.preferences.read(request(), {}));
+    const prefs = value(await host.services.preferences.save(request(), {expectedRevision:before.revision, workspace:target, conversation:before.conversation}));
+    assert.equal(value(await host.services.workspace.initialize(request(), {expectedPreferencesRevision:prefs.revision})).state, 'ready');
+    // Lay out the synthetic legacy files after admitting a genuinely new Repo.
     const bodyDirectory = join(data, variant === 'legacy' ? 'life' : 'behavior');
     mkdirSync(bodyDirectory, {recursive:true});
     const initial = new CompanionRoom(bodyDirectory, () => undefined);
     initial.setAutonomy(true); initial.setAutonomy(false); initial.flush();
     if (variant === 'legacy') {
-      mkdirSync(join(data, 'life', 'diary'), {recursive:true});
-      mkdirSync(join(data, 'life', 'photos'), {recursive:true});
+      const manifestFile = join(managed, 'manifest.json'), manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
+      for (const [from,to] of [['self.md','data/life/self.md'], ['diary/','data/life/diary/'],
+        ['self.history/','data/life/self.history/'], ['data/core/photos/','data/life/photos/']]) {
+        renameSync(join(managed, from), join(managed, to));
+        manifest.files = manifest.files.map(name => name.startsWith(from) ? to + name.slice(from.length) : name);
+      }
+      writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + '\n');
     }
-    const before = value(await host.services.preferences.read(request(), {}));
-    const prefs = value(await host.services.preferences.save(request(), {expectedRevision:before.revision, workspace:target, conversation:before.conversation}));
-    assert.equal(value(await host.services.workspace.initialize(request(), {expectedPreferencesRevision:prefs.revision})).state, 'ready');
     const profileValue = value(await host.services.workspace.readProfile(request(), {}));
     value(await host.services.workspace.saveProfile(request(), {expectedScope:host.workspace.editScope(), expectedRevision:profileValue.revision, text:content.profile}));
     const foundation = value(await host.services.workspace.readFoundation(request(), {}));

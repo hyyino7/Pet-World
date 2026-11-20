@@ -79,6 +79,9 @@ export class CompanionEconomy {
     /** Initialization is schema preparation only: no allowance, gifts or goals. */
     prepare(target, legacyFile, initializing = false) {
         this.assertOpen();
+        const status = this.host.workspace.status();
+        check(status.state !== 'migration-required', 'migration-required');
+        check(initializing || status.state === 'ready' && status.target?.id === target.id && status.target.path === target.path, 'Economy requires the current bound workspace');
         const storageId = this.host.workspace.storageId(), companionId = this.host.workspace.runtime.config.companionId;
         const key = canonical({ path: target.path, storageId, companionId });
         if (this.current?.key === key) {
@@ -110,6 +113,7 @@ export class CompanionEconomy {
             },
             guard: () => {
                 this.assertOpen();
+                check(this.host.workspace.status().state !== 'migration-required', 'migration-required');
                 check(metadata.persisted(), 'Core database is absent or moved');
                 check(this.host.workspace.storageId() === storageId, 'Economy binding changed');
             } });

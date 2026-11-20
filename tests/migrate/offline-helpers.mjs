@@ -25,6 +25,7 @@ export async function offlineFixture(t, memory = true) {
     assert.equal(value(await host.services.workspace.initialize(request(),{expectedPreferencesRevision:prefs.revision})).state,'ready');
     storageId = host.workspace.storageId();
   } finally {await host.close();}
+  rmSync(join(data, 'storage-manifest.json'));
   const write = (file,text) => {mkdirSync(dirname(file),{recursive:true});writeFileSync(file,text);};
   write(join(profile,'node_modules/her-world/package.json'),JSON.stringify({name:'her-world',version:'0.1.8',synthetic:true}));
   write(join(profile,'cordis.patch.yml'),'# Synthetic metadata fixture\n');

@@ -40,18 +40,21 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'her-world-entries-')));
   const repo = join(root, 'workspace'), id = 'world';
   const directory = join(repo, '.chatpet/data/life');
-  mkdirSync(directory, {recursive:true});
-  const home = Object.assign(emptyHomeState(Date.now()), {
-    room:'living', spot:'sofa', asleep:false, sleepPending:false, route:null, dwell:null, command:null,
-    freeTarget:null, reactionUntil:0, lastInteractionAt:0, eventLog:[],
-    needs:{hunger:.8, thirst:.2, energy:.8, bladder:.1, pain:0},
-  });
-  const garden = createGarden(Date.now());
-  garden.care.autoEnabled = false;
-  if (crop) Object.assign(garden.plots[0], {tilled:true, cropId:'radish', progress:0, moisture:.8, plantedAt:Date.now(),
-    cropProfile:{growMs:12 * 3_600_000, yield:3, waterDurationFactor:1.25, fertilizerGrowth:1.2, fertilizerYield:2}});
-  writeFileSync(join(directory,'home.json'), JSON.stringify(home));
-  writeFileSync(join(directory,'garden.json'), JSON.stringify(garden));
+  mkdirSync(repo);
+  function seedBody() {
+    mkdirSync(directory, {recursive:true});
+    const home = Object.assign(emptyHomeState(Date.now()), {
+      room:'living', spot:'sofa', asleep:false, sleepPending:false, route:null, dwell:null, command:null,
+      freeTarget:null, reactionUntil:0, lastInteractionAt:0, eventLog:[],
+      needs:{hunger:.8, thirst:.2, energy:.8, bladder:.1, pain:0},
+    });
+    const garden = createGarden(Date.now());
+    garden.care.autoEnabled = false;
+    if (crop) Object.assign(garden.plots[0], {tilled:true, cropId:'radish', progress:0, moisture:.8, plantedAt:Date.now(),
+      cropProfile:{growMs:12 * 3_600_000, yield:3, waterDurationFactor:1.25, fertilizerGrowth:1.2, fertilizerYield:2}});
+    writeFileSync(join(directory,'home.json'), JSON.stringify(home));
+    writeFileSync(join(directory,'garden.json'), JSON.stringify(garden));
+  }
   const registryFile = join(root,'workspaces.json');
   let workspaces, registry;
   function openRegistry() {
@@ -224,6 +227,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       assert.ok(result.ok,JSON.stringify(result));
       const initialized = await core.services.workspace.initialize(request('initialize'),{expectedPreferencesRevision:result.value.revision});
       assert.ok(initialized.ok,JSON.stringify(initialized));
+      seedBody();
     }
     for (const key of entriesToLoad) if (key!=='economy' || !legacyGarden) await load(key);
   }

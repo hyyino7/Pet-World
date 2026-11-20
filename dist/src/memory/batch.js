@@ -118,7 +118,7 @@ export function installMemoryBatch(ctx, host) {
                     reviews.delete(row.sessionId);
             }).catch(error => {
                 const latest = store.get('memory-batch', row.sessionId);
-                if (latest) {
+                if (latest && matches(row)) {
                     const messages = [];
                     for (let e = error; e instanceof Error; e = e.cause)
                         messages.push(e.message);

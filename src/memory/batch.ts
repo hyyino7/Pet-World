@@ -105,7 +105,7 @@ export function installMemoryBatch(ctx: Context, host: PetCoreHost): () => Promi
         if (consumed && !abort.signal.aborted && review) reviews.delete(row.sessionId);
       }).catch(error => {
         const latest = store.get<Pending>('memory-batch', row.sessionId);
-        if (latest) {
+        if (latest && matches(row)) {
           const messages: string[] = [];
           for (let e: unknown = error; e instanceof Error; e = e.cause) messages.push(e.message);
           const failures = (latest.failures ?? 0)+1;

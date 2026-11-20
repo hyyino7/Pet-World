@@ -91,7 +91,7 @@ interface JournalSegment {
 export declare class MigrationBindingChanged extends Error {
 }
 export declare const settled: (segment: JournalSegment) => boolean;
-export declare const isStepSettled: (event: string | undefined) => event is "done" | "skip";
+export declare const isStepSettled: (event: string | undefined) => event is "skip" | "done";
 export declare function parseMigrationJournal(text: string): {
     rows: unknown[];
     truncated: boolean;
