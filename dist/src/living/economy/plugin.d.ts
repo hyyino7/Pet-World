@@ -13,7 +13,7 @@ export declare const economyStateToolDeclaration: {
     sources: readonly ("life" | "owner" | "review")[];
     historyOverview(_args: unknown, value: unknown): (Omit<import("./types.js").EconomySnapshot & {
         ledger: import("./types.js").LedgerEntry[];
-    }, "migration" | "configuration" | "ledger" | "inventory"> & {
+    }, "migration" | "ledger" | "configuration" | "inventory"> & {
         view: string;
         configurationRevision: number;
         inventory: import("./types.js").InventoryItem[];
@@ -37,8 +37,8 @@ export declare class CompanionEconomy {
     constructor(ctx: Context, host: PetCoreHost, ports?: LivingPorts | LivingView);
     private assertOpen;
     protectedDirectory(): string | undefined;
+    initializationFiles(target: WorkspaceTarget): readonly string[];
     private retainedGarden;
-    private bodyRequiresDatabase;
     /** Initialization is schema preparation only: no allowance, gifts or goals. */
     prepare(target: WorkspaceTarget, legacyFile?: string, initializing?: boolean): EconomyStore;
     private bound;

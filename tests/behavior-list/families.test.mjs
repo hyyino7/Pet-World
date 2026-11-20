@@ -9,6 +9,8 @@ import {fixture,ownerPlan,until} from './fixture.mjs';
 import {cordisFixture,eventually,meal,submitPlan} from './entries-lifecycle.test.mjs';
 import {readHearControlSource} from '../../dist/tests/behavior-list/entries.js';
 import {cli} from '../migrate/helpers.mjs';
+import {legacyEconomy} from '../migrate/offline-helpers.mjs';
+import {legacyEconomyRows} from '../../scripts/migrate/steps/0003-economy-marker.mjs';
 
 async function cursor(f,expected){await until(async()=>{await f.body.snapshot('world');return (await f.life.readPlan('world')).plan?.cursor===expected;},'计划自动推进到 '+expected);}
 
@@ -137,6 +139,7 @@ function stoppedHomeMigration(f) {
       const result = db.prepare("DELETE FROM records WHERE kind='companion-home' AND id=?").run(storageId);
       assert.equal(result.changes,1);
     }
+    legacyEconomy({config,storageId,data,repo:f.repo});
     rmSync(join(data,'storage-manifest.json'));
     put(join(profileDir,'node_modules/her-world/package.json'),{name:'her-world',version:'0.2.0'});
     put(join(home,'storages/workspace.json'),{unit:{name:'workspace',version:1},global:{workspaceIds:[f.id],archivedSessionIds},
@@ -144,9 +147,12 @@ function stoppedHomeMigration(f) {
     put(installation,{status:'installed',packageInstalled:true,profileDir,config});
     const result = cli({home},['run','--installation',installation,'--backup',join(home,'backup')]);
     assert.equal(result.status,0,result.stderr);
-    assert.deepEqual(JSON.parse(result.stdout).steps.at(-1),{id:'0002-home-identity',state:'complete'});
+    assert.deepEqual(JSON.parse(result.stdout).steps,[
+      {id:'0001-storage-manifest',state:'complete'}, {id:'0002-home-identity',state:'complete'}, {id:'0003-economy-marker',state:'complete'},
+    ]);
     assert.deepEqual(readFileSync(mirrorFile),mirror);
     using db = new DatabaseSync(join(config.dataDir,'core.sqlite'),{readOnly:true});
+    assert.deepEqual(legacyEconomyRows(db),[]);
     assert.deepEqual(JSON.parse(db.prepare("SELECT value FROM records WHERE kind='companion-home' AND id=?").get(storageId).value),
       {sessionId:homeSessionId});
   };

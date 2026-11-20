@@ -20,14 +20,15 @@ for (const variant of variants) test(`${variant}: registry coverage and old Core
   assert.equal(existsSync(join(f.data,'core/photos/album.sqlite')),!old);
   assert.equal(existsSync(join(f.data,'life/photos/album.sqlite')),old);
   const report = inventory(f.installation);
-  assert.equal(report.coverage.length,52);
+  assert.equal(report.coverage.length,53);
   assert.deepEqual(report.coverage.map(row => row.id),storage.entries.map(row => row.id));
-  assert.deepEqual(report.differences,{extra:[],missing:[]});
+  assert.deepEqual(report.differences,{extra:[],missing:['economy-adoption']});
   assert.equal(report.coverage.filter(row => row.state === 'browser-check-required').length,2);
   await coreAtLegacyVersion(f);
   const identityManifest = readFileSync(join(f.managed,'manifest.json'));
   await runMigration({installation:f.installation,backup:join(f.out,'backup')},bootstrapSteps);
   await runMigration({installation:f.installation,backup:join(f.out,'home-backup')});
+  assert.deepEqual(inventory(f.installation).differences,{extra:[],missing:[]});
   await coreReady(f); await recall(f);
   assert.deepEqual(readFileSync(join(f.managed,'manifest.json')),identityManifest);
 });

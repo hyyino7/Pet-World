@@ -1,6 +1,7 @@
 import {closeSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync} from 'node:fs';
 import {dirname, join} from 'node:path';
 import type {DatabaseSync} from 'node:sqlite';
+import {durableWrite} from '#dsh-world/life/lifeStore';
 import {check, reject, unavailable} from '../../core/storage.js';
 
 export const ECONOMY_ADOPTION_FILE = 'data/living/economy-adoption.json';
@@ -58,9 +59,9 @@ export function readBodyEconomyAuthority(path: string) {
   return JSON.parse(readFileSync(file, 'utf8')).economyGardenAuthority === true;
 }
 
-export function readEconomyDatabaseMarker(db: DatabaseSync, identity: EconomyIdentity) {
+export function readEconomyDatabaseMarker(db: DatabaseSync, identity: EconomyIdentity,
+  incomplete = 'Economy initialization marker exists without its initialized database') {
   const tables = new Set(db.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all().map(row => row.name));
-  const incomplete = 'Economy initialization marker exists without its initialized database';
   if (!tables.has('meta')) unavailable(incomplete);
   const meta = db.prepare('SELECT value FROM meta WHERE key=?');
   const schema = meta.get('schema');
@@ -87,4 +88,13 @@ export function ensureAdoptionDirectory(file: string) {
   const parent = dirname(file);
   if (!directory(parent)) mkdirSync(parent, {mode:0o700});
   syncPath(dirname(parent));
+}
+
+export function writeEconomyFile(file: string, content: string) {
+  durableWrite(file, content);
+  syncPath(dirname(file));
+}
+
+export function economyRecoveryAdvice(file: string) {
+  return ` Adoption evidence is at ${file}. If this first initialization never succeeded, confirm that before deleting this evidence and retrying. Otherwise restore the rollback backup.`;
 }

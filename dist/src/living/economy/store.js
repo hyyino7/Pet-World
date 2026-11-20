@@ -1,12 +1,14 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
-import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { CROPS, GARDEN_RULES, createGarden, normalizeGarden, advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
 import { canonical, check, digest, integer, reject, text, unavailable } from '../../core/storage.js';
 import { closeSqliteLease, setSqliteMeta } from '../../core/sqlite.js';
 import { effectiveEconomyConfiguration, defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
 import { advanceGardenClock } from './garden-clock.js';
+import { ECONOMY_INITIALIZED, economyAdoptionPath, economyFile, economyRecoveryAdvice, ensureAdoptionDirectory, readBodyEconomyAuthority, readEconomyDatabaseMarker, readEconomyFileEvidence, syncPath, writeEconomyFile } from './adoption.js';
 const cropRows = CROPS;
 const runningClock = { enabled: true };
 const terminal = new Set(['completed', 'failed', 'cancelled']);
@@ -47,13 +49,23 @@ export class EconomyStore {
         token(options.storageId, 'storage identity');
         token(options.companionId, 'companion identity');
         options.guard?.();
-        let directory = realpathSync(options.workspacePath);
-        if (options.expectedInitialized && !existsSync(join(directory, '.chatpet', 'data', 'economy', 'economy.sqlite')))
-            unavailable('Core records an initialized economy, but its database is missing; recover it before continuing');
+        const root = realpathSync(options.workspacePath), expected = { storageId: options.storageId, companionId: options.companionId };
+        const adoption = economyAdoptionPath(root);
+        const evidence = () => {
+            const files = readEconomyFileEvidence(root, expected);
+            if (!files.database && (files.adoption || files.storage || options.expectedInitialized || readBodyEconomyAuthority(root)))
+                unavailable('The authoritative economy database is missing; recover it before continuing.'
+                    + (files.adoption ? economyRecoveryAdvice(adoption) : ''));
+            return files;
+        };
+        evidence();
+        let directory = root;
         for (const part of ['.chatpet', 'data', 'economy']) {
             directory = join(directory, part);
-            if (!existsSync(directory))
+            if (!existsSync(directory)) {
                 mkdirSync(directory, { mode: 0o700 });
+                syncPath(dirname(directory));
+            }
             const stat = lstatSync(directory);
             check(stat.isDirectory() && !stat.isSymbolicLink(), 'Invalid economy directory');
         }
@@ -62,14 +74,6 @@ export class EconomyStore {
         this.databasePath = join(this.directory, 'economy.sqlite');
         this.lockPath = join(this.directory, 'economy.lock');
         this.markerPath = join(this.directory, 'storage.json');
-        const expected = { storageId: options.storageId, companionId: options.companionId };
-        if (existsSync(this.markerPath)) {
-            this.safeFile(this.markerPath);
-            const marker = json(readFileSync(this.markerPath, 'utf8'));
-            check(marker.storageId === expected.storageId && marker.companionId === expected.companionId, 'Economy belongs to a different storage or companion');
-            if (!existsSync(this.databasePath))
-                unavailable('The migrated economy database is missing; restore it before continuing');
-        }
         // This lease follows CoreStore's live-pid/token pattern. A missing/moved
         // database is rejected during normal use, even if SQLite still holds it open.
         if (existsSync(this.lockPath)) {
@@ -95,13 +99,33 @@ export class EconomyStore {
         }
         let opened;
         try {
-            if (existsSync(this.databasePath))
-                this.safeFile(this.databasePath);
-            this.db = opened = new DatabaseSync(this.databasePath);
+            options.guard?.();
+            const files = evidence(), database = pathToFileURL(this.databasePath);
+            const legacy = files.database ? undefined : options.legacyGarden ?? options.loadLegacyGarden?.();
+            if (legacy) {
+                text(legacy.sourcePath, 'legacy source path', 4096);
+                check(/^sha256:[a-f0-9]{64}$/.test(legacy.sourceHash), 'Invalid legacy garden digest');
+                this.validateGardenResources(legacy.state);
+            }
+            if (files.database)
+                database.searchParams.set('mode', 'rw');
+            else {
+                ensureAdoptionDirectory(adoption);
+                writeEconomyFile(adoption, canonical(expected) + '\n');
+            }
+            this.db = opened = new DatabaseSync(database);
             this.databaseFile = lstatSync(this.databasePath);
+            if (files.database) {
+                const incomplete = 'Economy initialization marker exists without its initialized database.'
+                    + (files.adoption ? economyRecoveryAdvice(adoption) : '');
+                if (!readEconomyDatabaseMarker(this.db, expected, incomplete))
+                    unavailable(incomplete);
+            }
             chmodSync(this.databasePath, 0o600);
-            this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;
-        CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);
+            this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000');
+            if (!files.database)
+                this.transaction(() => {
+                    this.db.exec(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY,quantity INTEGER NOT NULL CHECK(quantity>=0));
         CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY,digest TEXT NOT NULL,result TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS ledger (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL,kind TEXT NOT NULL,at INTEGER NOT NULL,money_delta INTEGER NOT NULL,balance INTEGER NOT NULL,item_deltas TEXT NOT NULL,note TEXT NOT NULL);
@@ -111,25 +135,12 @@ export class EconomyStore {
         CREATE TABLE IF NOT EXISTS bookmarks (id TEXT PRIMARY KEY,value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS reading_operations (id TEXT PRIMARY KEY,value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS interaction_facts (sequence INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT NOT NULL UNIQUE,request_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL,acknowledged INTEGER NOT NULL DEFAULT 0 CHECK(acknowledged IN (0,1)));`);
-            this.transaction(() => {
-                const schema = this.meta('schema');
-                if (schema !== undefined && schema !== '1')
-                    reject('INCOMPATIBLE', 'Unsupported economy schema');
-                if (schema === undefined) {
-                    if (options.expectedInitialized || existsSync(this.markerPath))
-                        unavailable('Economy initialization marker exists without its initialized database');
-                    const legacy = options.legacyGarden ?? options.loadLegacyGarden?.(), now = Date.now();
-                    if (legacy) {
-                        text(legacy.sourcePath, 'legacy source path', 4096);
-                        check(/^sha256:[a-f0-9]{64}$/.test(legacy.sourceHash), 'Invalid legacy garden digest');
-                        this.validateGardenResources(legacy.state);
-                    }
+                    const now = Date.now();
                     this.setMeta('configuration', defaultEconomyConfiguration());
                     const imported = legacy ? clone(legacy.state) : undefined;
                     if (imported)
                         imported.economyRevision = 1;
-                    // A growing legacy crop keeps the physical rules under which it was
-                    // planted. New purchases/plants use the current portable configuration.
+                    // Keep the physical rules for crops planted before the import.
                     for (const plot of imported?.plots ?? []) {
                         const crop = cropRows.find(row => row.id === plot?.cropId);
                         if (crop && !plot.cropProfile)
@@ -147,22 +158,10 @@ export class EconomyStore {
                         this.putReading(content);
                     if (legacy)
                         this.recordLedger('migration:legacy-garden', 'legacy-import', garden.coins, this.resourceDeltas({}, this.gardenResources(garden)), 'Imported the retained garden once; legacy files were not changed', now);
-                }
-                else {
-                    check(canonical(this.meta('identity')) === canonical(expected), 'Economy belongs to a different storage or companion');
-                }
-            });
-            if (!existsSync(this.markerPath)) {
-                const stage = join(this.directory, `.storage-${randomUUID()}.tmp`);
-                try {
-                    writeFileSync(stage, canonical({ ...expected, schema: 1, database: 'economy.sqlite', migration: this.meta('migration') }), { mode: 0o600, flag: 'wx' });
-                    renameSync(stage, this.markerPath);
-                }
-                finally {
-                    if (existsSync(stage))
-                        unlinkSync(stage);
-                }
-            }
+                    this.setMeta(ECONOMY_INITIALIZED, expected);
+                });
+            syncPath(this.directory);
+            this.writeStorageMarker();
         }
         catch (error) {
             opened?.close();
@@ -172,8 +171,17 @@ export class EconomyStore {
         }
     }
     safeFile(path) { const stat = lstatSync(path); check(stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1, 'Invalid economy storage file'); }
+    writeStorageMarker() {
+        const { storageId, companionId } = this.options;
+        if (!economyFile(this.markerPath))
+            writeEconomyFile(this.markerPath, canonical({ storageId, companionId, schema: 1, database: 'economy.sqlite', migration: this.meta('migration') }));
+    }
     /** Cheap lease/inode validation for the hot Body adapter path. */
-    validate() { this.ensure(); }
+    validate(initializing = false) {
+        this.ensure();
+        if (initializing)
+            this.writeStorageMarker();
+    }
     ensure() {
         if (this.closed)
             unavailable('Economy is closed');

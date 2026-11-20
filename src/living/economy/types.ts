@@ -52,7 +52,7 @@ export interface EconomyStoreOptions {
   legacyGarden?: {state: unknown; sourcePath: string; sourceHash: string};
   /** Resolve the preserved legacy source only when a new schema needs import. */
   loadLegacyGarden?: () => {state: unknown; sourcePath: string; sourceHash: string} | undefined;
-  /** Existing Core initialization record proves that a new empty wallet is forbidden. */
+  /** The caller has evidence that a new empty wallet is forbidden. */
   expectedInitialized?: boolean;
   /** Guard the existing Core binding/lease before every database operation. */
   guard?: () => void;

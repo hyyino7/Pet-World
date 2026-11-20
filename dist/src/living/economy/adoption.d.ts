@@ -14,7 +14,9 @@ export declare function readEconomyFileEvidence(path: string, identity: EconomyI
 };
 export declare function bodyCheckpointDirectory(path: string): string;
 export declare function readBodyEconomyAuthority(path: string): boolean;
-export declare function readEconomyDatabaseMarker(db: DatabaseSync, identity: EconomyIdentity): boolean;
+export declare function readEconomyDatabaseMarker(db: DatabaseSync, identity: EconomyIdentity, incomplete?: string): boolean;
 export declare function syncPath(path: string): void;
 export declare function economyAdoptionPath(path: string): string;
 export declare function ensureAdoptionDirectory(file: string): void;
+export declare function writeEconomyFile(file: string, content: string): void;
+export declare function economyRecoveryAdvice(file: string): string;

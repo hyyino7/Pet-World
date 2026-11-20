@@ -1,23 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rmSync, writeFileSync } from 'node:fs';
+import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { createCore } from '../../dist/src/core/index.js';
-import { HOME_STORAGE_STEP, storageManifest } from '../../dist/src/core/storage-migration.js';
 import { PersistentLifePlan } from '../../dist/src/living/plan/plan.js';
 import { openDomains } from '../../scripts/fixtures/synthetic-companion.mjs';
 import { runMigration } from '../../scripts/migrate/runner.mjs';
 import { createOfflineBackup, restoreOfflineBackup } from '../../scripts/lib/offline-backup.mjs';
 import { variants, fixture, mockDsh, planFor, read } from './helpers.mjs';
+import { legacyEconomy } from './offline-helpers.mjs';
 
 for (const variant of variants) test(`${variant}: pending Body effect settles identically across migration`, {timeout:60000}, async t => {
-  mockDsh(t); const f = await fixture(t,variant);
+  mockDsh(t); const f = await fixture(t,variant,{keepStorageManifest:true});
   t.mock.timers.enable({apis:['Date'],now:Date.now()});
   const file = join(f.data,'economy/economy.sqlite');
   const sql = text => {const db = new DatabaseSync(file);try {db.exec(text);} finally {db.close();}};
   const manifest = join(f.data,'storage-manifest.json');
-  writeFileSync(manifest, JSON.stringify(storageManifest(f.config.companionId, HOME_STORAGE_STEP.to)));
   let host = createCore(f.config), domains = openDomains(host);
   const plan = () => new PersistentLifePlan(join(f.data,'life'),f.config.companionId,f.storageId,'UTC');
   let planId, effect;
@@ -55,6 +54,7 @@ for (const variant of variants) test(`${variant}: pending Body effect settles id
   restoreOfflineBackup(planFor(f),pending,join(f.out,'before-pending-restore'));
   const bodyPath = join(f.data,variant === 'legacy' ? 'life/home.json' : 'behavior/home.json');
   assert.equal(read(bodyPath).plannedExecutions[`life:${planId}:eat`].effectAppliedAt > 0,true);
+  legacyEconomy(f);
   rmSync(manifest);
   await runMigration({installation:f.installation,backup:join(f.out,'migration-backup')});
   assert.deepEqual(await recover(),baseline);

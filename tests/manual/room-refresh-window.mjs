@@ -19,7 +19,7 @@ let target={id:'fixture',path:temporary,sessionIds:[]},origin,behavior,room,read
 let emotion={label:'初始心情',feelings:['calm'],updatedAt:1};
 const events=new Map(),views=[];
 const emit=(name,...args)=>{for(const listener of events.get(name) ?? [])listener(...args);};
-const host={native:{},workspace:{status:()=>({state:'ready',target}),storageId:()=>target.id,runtime:{identity:()=>({displayName:'Fixture'}),store:{meta:()=>undefined}}}};
+const host={native:{},workspace:{status:()=>({state:'ready',target}),storageId:()=>target.id,runtime:{config:{companionId:'fixture'},identity:()=>({displayName:'Fixture'}),store:{meta:()=>undefined}}}};
 const registry={get:id=>id===target.id?target:undefined,archivedSessionIds:[]};
 const ctx={petCore:host,workspaceRegistry:registry,
   get(name){return name==='petBehavior'?behavior:name==='petEmotion'?{read:async()=>{},roomSnapshot:()=>emotion}:name==='webServer'?{getOrigin:()=>origin}:undefined;},

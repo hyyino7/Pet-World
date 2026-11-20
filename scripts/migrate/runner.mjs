@@ -12,8 +12,9 @@ import { checked, MigrationError, requireMigration } from './errors.mjs';
 import { contractFor, journalBinding, settled, validateJournal } from './journal.mjs';
 import manifestStep, { writeManifest } from './steps/0001-storage-manifest.mjs';
 import homeIdentityStep from './steps/0002-home-identity.mjs';
+import economyMarkerStep from './steps/0003-economy-marker.mjs';
 
-export const steps = [manifestStep, homeIdentityStep];
+export const steps = [manifestStep, homeIdentityStep, economyMarkerStep];
 
 function verifySaved(context, header) {
   checked('backup-invalid', () => {
