@@ -10,6 +10,7 @@ interface Areas {
     economy: CompanionEconomy;
 }
 type Area = keyof Areas;
+export declare function serviceLabel(contextScope: Context, name: string): symbol;
 export interface AreaReference<T> {
     readonly value: T;
     isCurrent(): boolean;
@@ -21,6 +22,7 @@ export declare class LivingWorld {
     private constructor();
     private static matching;
     static find(ctx: Context, host: PetCoreHost): LivingWorld | undefined;
+    static lookupPlan(ctx: Context, host: PetCoreHost): CompanionLife | undefined;
     static retain(ctx: Context, host: PetCoreHost, area: Area): {
         world: LivingWorld;
         release: (generation?: symbol) => void;

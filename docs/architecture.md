@@ -216,10 +216,12 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 - **命令**：照料、执行计划步骤、阅读确认、购买、出售；每条带请求 ID。错误语义沿用 `ContractError`：`effect` 有三种（`none / partial / unknown`），`retry` 有四种（`never / refresh / same_request / reconcile`）。
 - **事实流**：`CompanionFactSource`。事实的准备、验证、确认在第二层的 `living/prompt-context.ts`，仍在 Core 的原生作用域登记两段、调用第一层的 `acknowledgePromptFacts`；「原生日志落盘之后才确认事实」的顺序不变，确认前复核绑定、三区租约和准备结果。
 - **变更信号**：一个事件 `world.changed`，只表示「去读快照」。它不是落盘回执（Cordis 的 `emit` 不等待返回）。
+- **生活出口**：`living/outlets.ts` 的 `registerLifeOutlet`。Desktop 登记暂停、恢复、呈现，Channels 登记主动消息送达，各自在入口登记、卸载时撤销；Life 在启动、休息和通知时用 `lookupLifeOutlet` 按租约取当前的出口，没有登记就跳过，和原来缺服务时一样。呈现出错时记原样警告，照样试 Channels。登记复用 `RegistrationTable`，按提供方的隔离标签区分。
+- **启用意图读口**：同一文件的 `readLifeEnabled`，Desktop 判断「Life 是否接管自主」时读它：有 Plan 时读持久的生活开关（`bodyClockState`），读不到再看 Plan 是否在运行；没有 Plan 就当作未接管，桌宠恢复自主，`control.json` 不变。
 
 ### 5.3 第三层对外
 
-几乎没有，只往下登记：能力状态行、提示词与历史投影、来源适配、运维操作。别的模块不读它。
+几乎没有，只往下登记：能力状态行、提示词与历史投影、来源适配、生活出口、运维操作。别的模块不读它。
 
 ### 5.4 同层共用物
 
@@ -400,7 +402,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | 6 | guest 私聊或群聊 | 渠道里不是主人的已登记身份（`channels/sessions.ts:55-59`）；准入同第 5 行的一次性收件；证据记为 `external_content`，actor 是发言人 `speakerId`（`core/native/conversation.ts:74-75`） | 私聊按发言人、群聊按会话分开（`channels/sessions.ts:29`）；每个对话一个独立工作区目录（`:100-104,119`），会话前缀 `chatpet-guest-<digest>-`（`:103`）；预设固定 `chatpet-channel-guest`，不符就拒绝（`:127,135-136`、`channels/guest.ts:5`） | 关闭渠道时取消在途 guest 轮次（`channels/sessions.ts:184`）；取最新未归档会话（`:112`）；Memory 的归档同步只遍历主人工作区（`core/native/agent.ts:112-115`），guest 会话不经过它 | 同第 5 行；另要求会话 `cwd` 和组合预设不变（`channels/sessions.ts:57-58`） |
 | 7 | Desktop 聊天 | `user` 带 `rpcId`，无 `identity`，按主人输入准入（`desktop/conversation.ts:181`）；同一 `rpcId` 不重复投递（`:173`） | 每个存储绑定记一个会话 ID，存在 Core 的 `desktop-session`（`desktop/index.ts:44-45`、`desktop/conversation.ts:138-141`）；可打开工作区里任一未归档会话（`:142-145`）；新建会话 `chatpet-<uuid>`，用 DSH 默认预设（`:159`） | 停止走原生取消（`:184-189`）；「新建」先保存再归档旧会话（`:147-157`）；关闭小窗只撤销排队命令，不停原生会话（`:81-85`） | `sameBinding` 比较 `id/path/storageId`，另有小窗代次 `revision`（`desktop/conversation.ts:37-39,128`） |
 | 8 | Room 私聊与电视观看 | 私聊：`user` 带 `rpcId`，按主人输入准入（`room/chat.ts:130`）。电视：`chatpet-room-tv`，由 Room 来源适配器只准当前这一条（`room/chat.ts:78-82,133-134,149`），证据记为 `virtual_action`、actor 是伙伴（`core/native/conversation.ts:74-75`） | 同一个会话：`chatpet-room-<storageId 摘要>-N` 取最新未归档（`room/chat.ts:67-73`），没有就新建，DSH 默认预设（`:89-95`）。私聊是前台轮次，电视是后台轮次（`core/native/agent.ts:73,184`） | 同时只处理一条（`room/chat.ts:111-112`）；调用方取消或 300 秒超时即取消原生轮次（`:113,135-136`）；关闭 Room 先中止在途请求、取消原生轮次，再等空闲（`:151-154`，关闭触发本身无测试）；先恢复会话副本和图片（`:86-87`） | `binding()` 比较 `id/path`（`room/chat.ts:61-66`），回复前后复核会话没换（`:128,145`） |
-| 9 | Desktop 碎碎念与梦话 | 没有原生会话和输入：一次性调用模型，不建 Agent、不写会话记录、不写 Memory（`desktop/features.ts:204-206,213-231`） | 系统提示只有伙伴身份（`:208`）；梦话加上游的说梦话指令（`:229`） | 自动触发要求：同一绑定、不忙、非安静模式、Life 不接管自主、设置开启、睡着与否和梦话一致（`:86-91`）；条件变化即中止（`:271-274`），时长上限（`:211`），Life 启动时暂停（`:308`、`living/plan/plugin.ts:173`） | `same(target)` 复核绑定（`desktop/features.ts:220,232`） |
+| 9 | Desktop 碎碎念与梦话 | 没有原生会话和输入：一次性调用模型，不建 Agent、不写会话记录、不写 Memory（`desktop/features.ts:204-206,213-231`） | 系统提示只有伙伴身份（`:208`）；梦话加上游的说梦话指令（`:229`） | 自动触发要求：同一绑定、不忙、非安静模式、Life 不接管自主、设置开启、睡着与否和梦话一致（`:86-91`）；条件变化即中止（`:271-274`），时长上限（`:211`），Life 启动时经生活出口暂停（`:306`、`living/plan/plugin.ts:194`） | `same(target)` 复核绑定（`desktop/features.ts:220,232`） |
 
 本表各行的测试：第 1 行 `tests/regressions/audit-r6-memory-scope.test.mjs:183`（等待期间绑定变化即撤下召回）、`tests/core/history-maintenance.test.ts:65`（换工作区不进历史维护）；第 2 行 `tests/core/companion-foundation.test.ts:87`；第 3、4 行 `tests/behavior-list/families.test.mjs:17,61`、`tests/life/review-continuation.test.ts:37`、`tests/life/life-review-runtime.test.mjs:128`；第 5 行 `tests/regressions/audit-qq-recovery.test.mjs:121`、`tests/regressions/audit-r7-channel-nudge.test.ts:71,86`、`tests/behavior-list/channels.test.mjs:14,39`；第 6 行 `tests/regressions/audit-qq-recovery.test.mjs:144`；第 7 行 `tests/desktop/desktop.test.ts:26,49`；第 8 行见行为清单 M2A-01、M2A-04、M2A-05、M2A-08、M2A-02、M2A-03（门禁外有 `scripts/checks/check-native-room.mjs`）；第 9 行 `tests/desktop/desktop-features.test.ts:13,157`、`tests/regressions/audit-desktop.test.ts:160`、`tests/regressions/audit-r2-desktop-policy.test.ts:61`。
 
@@ -584,7 +586,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | --- | --- |
 | `22-Economy` | 硬 `inject` 为 `petCore / petWorld / tools / systemPrompt / agents`。库存投喂、同步检查点时经常驻实例 `LivingWorld` 按需读 Body，读时钟时按需读 Plan，不再按服务名查找（`living/economy/plugin.ts:118-127,215,236`）。 |
 | `25-Behavior` | 硬 `inject` 只有 `petCore`。经 `LivingWorld` 按租约观察 Economy、Plan 的出现和消失（`internal/status` 刷新），用于刷新绑定和同步自治准入（`living/body/plugin.ts:58-60,79-106`、`living/index.ts:113-134`）。 |
-| `40-Life` | 硬 `inject` 为 `petCore / petWorld / agents / sessions / tools / systemPrompt`。计划推进与事实读取经 `LivingWorld` 按需读 Body、Economy（`living/plan/plugin.ts:380,404,416,536,578`）。 |
+| `40-Life` | 硬 `inject` 为 `petCore / petWorld / agents / sessions / tools / systemPrompt`。计划推进与事实读取经 `LivingWorld` 按需读 Body、Economy（`living/plan/plugin.ts:380,404,416,536,578`）。暂停、恢复桌宠自主和主动消息的呈现、送达经生活出口调用 Desktop、Channels 登记的回调，不按服务名读 `petDesktop`、`petChannels`（`living/plan/plugin.ts:159,194,319-325`）。 |
 
 `cordis.patch.yml:8-17` 中配置顺序为 Economy、Behavior、Life，三者的硬 `inject` 均未声明另外两个旧服务。
 
@@ -641,7 +643,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 3. **每个模块一条通用测试**：启动 → 触发活动 → 关闭 → 断言无残留。除假时钟外，还要断言在途 I/O 已结束、子进程已退出，并保留少量使用真实时钟的冒烟测试（假时钟证明不了 I/O 和子进程）。
 4. 切换工作区或重载后，旧作用域的回调不得写新绑定的数据：绑定校验带**实例代次**（见第 3 节）。
 5. **写入已完成但响应被取消**要有专门用例。
-6. 生活三区和 Room 对 Core 的可见性只在入口挂载时按隔离标签判定。改某个入口的 Cordis `isolate` 配置后，要重挂该入口才生效。
+6. 生活三区和 Room 对 Core 的可见性、Desktop 和 Channels 登记的生活出口、Desktop 读 Life 启用意图时取的 Plan，都只在入口挂载时按隔离标签判定。改某个入口的 Cordis `isolate` 配置后，要重挂该入口才生效。
 
 ---
 

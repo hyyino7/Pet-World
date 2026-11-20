@@ -1,6 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type { SessionPolicyRow } from '../contracts/tables.js';
 import { CONTRACT_VERSION } from '../contracts/version.js';
+import { registerLifeOutlet } from '../living/outlets.js';
 import { desktopFor, registerDesktop, type Desktop } from './index.js';
 
 export const name = '30-Desktop';
@@ -40,6 +41,15 @@ export function apply(ctx: Context): void {
   registerDesktop(ctx, host);
   const desktop = desktopFor(host);
   ctx.provide('petDesktop', desktop);
+  ctx.effect(() => registerLifeOutlet(ctx, host, 'desktop', {
+    pause: () => desktop.features?.pause(),
+    restore: () => desktop.features?.restore(false),
+    present(text, sticker) {
+      if (!desktop.presentationAvailable()) return false;
+      desktop.presentLife(text, sticker);
+      return true;
+    },
+  }).revoke);
   ctx.effect(() => host.native.sourceTable.register({
     id: 'desktop', order: 30, sources: [], branches: {}, policyRows: desktopPolicies,
     admit: () => ({kind: 'unclaimed'}),

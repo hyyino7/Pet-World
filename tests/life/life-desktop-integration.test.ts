@@ -3,13 +3,15 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import type {Context} from '@deepseek-ai/cordis';
+import {Context} from '@deepseek-ai/cordis';
 import type {CompanionBehavior} from '../../src/living/body/plugin.js';
 import type {PetCoreHost} from '../../src/core/index.js';
 import {DEFAULT_COMPANION_SETTINGS} from '../../src/core/companion-settings.js';
 import {CompanionRecordLibrary} from '../../src/core/records.js';
 import {CompanionLife} from '../../src/living/plan/plugin.js';
 import {DesktopFeatures} from '../../src/desktop/features.js';
+import {mountLivingArea} from '../../src/living/index.js';
+import {registerLifeOutlet} from '../../src/living/outlets.js';
 
 /** Real Life admission and Desktop scheduling/whisper implementation. Only the
  * native session provider, body presentation and model stream are external fakes. */
@@ -24,17 +26,16 @@ async function fixture(t:TestContext,enabled:boolean,sleeping=false) {
   const frames:{type:string;value:any}[]=[],warnings:unknown[]=[];
   const events=new Map<string,Set<(...args:any[])=>unknown>>();
   const emit=(name:string,...args:any[])=>{for(const fn of events.get(name)??[])fn(...args);};
-  let calls=0,nativeOpens=0,features:DesktopFeatures|undefined,life:CompanionLife;
+  let calls=0,nativeOpens=0,features!:DesktopFeatures,life!:CompanionLife;
   const host={native:{context:()=>({identity:'Fixture companion'})},records:{getLibrary:()=>new CompanionRecordLibrary(root,'UTC')},
     workspace:{status:()=>({state:'ready',target}),storageId:()=> 'fixture-storage',companionSettings:()=>settings,
       runtime:{config:{companionId:'fixture-fish',ownerActorId:'fixture-owner'},identity:()=>({companionId:'fixture-fish',displayName:'Fixture'}),policy:()=>({quiet:false})}}} as unknown as PetCoreHost;
   const body={restState:()=>({sleeping,pending:false}),setAutonomy:async()=>{},setReconsiderConditions:async()=>{}};
   const controller={async create(){nativeOpens++;throw Error('Fixture native session provider is unavailable');},cancel(){}};
   const logger=Object.assign(()=>({warn(...args:unknown[]){warnings.push(args);},info(){},error(){},debug(){}}),{warn(){},error(){}});
-  const ctx={get(name:string){
-    if(name==='petLife')return life;
+  const lifetime = new Context();
+  const context = (scope:Context) => ({root:scope.root,[Context.isolate]:scope[Context.isolate],get(name:string){
     if(name==='petBehavior')return body;
-    if(name==='petDesktop')return features?{features}:undefined;
     if(name==='workspaceRegistry')return {get:()=>target,archivedSessionIds:[]};
     if(name==='sessionController')return controller;
     if(name==='agentDefaultModel')return {currentSelection:()=>({provider:'fixture',model:'local'})};
@@ -44,11 +45,23 @@ async function fixture(t:TestContext,enabled:boolean,sleeping=false) {
       yield {type:'block-end',index:0,block:{type:'text',text:'A fixture thought.'}};
       yield {type:'finish',reason:{kind:'stop'}};}};
   },on(name:string,fn:(...args:any[])=>unknown){const list=events.get(name)??new Set();list.add(fn);events.set(name,list);return()=>{list.delete(fn);};},
-    emit,logger,tools:{register:()=>()=>{}},effect:()=>()=>{}} as unknown as Context;
-  life=new CompanionLife(ctx,host,'standard',{body:()=>body as unknown as CompanionBehavior});
-  features=new DesktopFeatures(ctx,host,(type,value)=>frames.push({type,value}),()=>true,()=>false);
-  const settled=async()=>{for(let pass=0;pass<8;pass++){await (life as any).serial;await features!['maintenance'];await features!['scheduling'];await Promise.resolve();}};
-  t.after(async()=>{await features!.close();await life.close();t.mock.timers.reset();rmSync(root,{recursive:true,force:true});});
+    emit,logger,tools:{register:()=>()=>{}},effect:()=>()=>{}} as unknown as Context);
+  t.after(async()=>{await lifetime.fiber.dispose();t.mock.timers.reset();rmSync(root,{recursive:true,force:true});});
+  await lifetime.plugin(scope => {
+    mountLivingArea(scope,host,'body',()=>body as unknown as CompanionBehavior,()=>{},()=>{});
+  });
+  await lifetime.plugin(scope => {
+    mountLivingArea(scope,host,'plan',view=>life=new CompanionLife(context(scope),host,'standard',view),
+      value=>value.activate());
+  });
+  await lifetime.plugin(scope => {
+    features=new DesktopFeatures(context(scope),host,(type,value)=>frames.push({type,value}),()=>true,()=>false);
+    scope.effect(()=>()=>features.close());
+    scope.effect(()=>registerLifeOutlet(scope,host,'desktop',{
+      pause:()=>features.pause(),restore:()=>features.restore(false),present:()=>false,
+    }).revoke);
+  });
+  const settled=async()=>{for(let pass=0;pass<8;pass++){await life['serial'];await features['maintenance'];await features['scheduling'];await Promise.resolve();}};
   t.mock.timers.tick(0);await settled();await features.refresh();
   return {life,features,frames,warnings,directory,settled,calls:()=>calls,nativeOpens:()=>nativeOpens,
     async advance(ms:number){t.mock.timers.tick(ms);await settled();}};

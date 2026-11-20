@@ -14,10 +14,12 @@ import {renderContextSections, renderPrompt} from '@deepseek-ai/dsh-system-promp
 import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
 import {createLifeStore} from '#dsh-world/life/lifeStore';
-import {behaviorPlugin, corePlugin, economyPlugin, lifePlugin} from '../../dist/tests/behavior-list/entries.js';
+import {behaviorPlugin, channelsPlugin, corePlugin, desktopPlugin, economyPlugin, lifePlugin} from '../../dist/tests/behavior-list/entries.js';
 import {policyHost} from './policy-host.mjs';
+import {qqTransport} from './qq-transport.mjs';
 
-const entries = {economy:economyPlugin, body:behaviorPlugin, life:lifePlugin};
+const livingEntries = {economy:economyPlugin, body:behaviorPlugin, life:lifePlugin};
+const entries = {...livingEntries, desktop:desktopPlugin, channels:channelsPlugin};
 const services = ['petBehavior', 'petLife', 'petEconomy'];
 export const meal = 'food:improved-meal';
 export const signal = () => new AbortController().signal;
@@ -33,7 +35,7 @@ export async function eventually(check, label) {
 // Cordis owns every plugin and subscription. The host supplies a scripted loop,
 // workspace registry, and disk-backed session persistence in a disposable directory.
 export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,22,59), legacyGarden = false,
-  order = Object.keys(entries), io = {}} = {}) {
+  order = Object.keys(livingEntries), io = {}} = {}) {
   t.mock.timers.enable({apis:['Date'], now:Number(now)});
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'her-world-entries-')));
   const repo = join(root, 'workspace'), id = 'world';
@@ -164,6 +166,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
     const controller = {
       async create({workspaceId,sessionId=randomUUID(),agentPreset='standard'}) {
         sessionCreateCalls.push(sessionId);
+        if (io.create) io.create();
         const selected = registry.get(workspaceId);
         await selected.attachSession(sessionId);
         if (!agents.has(sessionId)) await make(sessionId,selected.path,agentPreset);
@@ -194,6 +197,8 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       scope.provide('agentLoop',{});
       scope.provide('workspaceRegistry',registry);
       scope.provide('sessionController',controller);
+      scope.provide('webServer',{getOrigin:()=> 'http://fixture.invalid',register:()=>()=>{}});
+      scope.provide('profileContext',{dir:join(root,'profile')});
       scope.provide('agentPresets',{composedPreset:carrier=>[...agents.values()].find(agent=>agent.ctx===carrier)?.session.header.agentPreset});
       scope.provide('workingDirectory',{ensure:async agent=>agent.session.header.cwd});
       scope.provide('fs',{resolve:async (path,options)=>io.resolve ? io.resolve(path,options) : resolve(options.cwd,path),processPath:path=>path});
@@ -224,7 +229,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
   }
   async function stop() {
     if (!ctx) return;
-    for (const key of ['life','body','economy']) if (components.has(key)) await unload(key);
+    for (const key of ['life','body','economy','desktop','channels']) if (components.has(key)) await unload(key);
     await Promise.all([...agents.values()].map(agent=>agent.whenIdle()));
     for (const dispose of effects.splice(0).reverse()) await dispose();
     await ctx.fiber.dispose();
@@ -328,8 +333,165 @@ async function reviewFixture(t, runReview) {
   return f;
 }
 
+async function lifeReachFixture(t) {
+  const transport = qqTransport(t);
+  const f = await cordisFixture(t,{order:['desktop','channels','life']});
+  const channels = f.ctx.petChannels;
+  const {messaging} = await channels.request(f.id,'channelStatus',{});
+  await channels.request(f.id,'messagingSettings',{expected:messaging.config,
+    next:{qq:{enabled:true,ownerReach:true,accountId:'100',ownerSpeakerId:'200',allowPrivate:['200']}}});
+  assert.ok(transport.gateway,'合成 QQ 网关接入真实 Channels');
+  await f.enable();
+  const home = await f.agent(f.life.homeSessionId());
+  await home.whenIdle();
+  const reach = async (text, duringTool = () => () => {}) => {
+    let result, failure;
+    f.model = async call => {
+      if (lifeInput(call)) return 'Synthetic background reply';
+      const reset = duringTool();
+      try { result = await call.tool('reach_out',{text,image:'praise'}); }
+      catch (error) { failure = error; }
+      finally { reset(); }
+      return 'Synthetic foreground reply';
+    };
+    await f.input('Fixture reach request',home.id);
+    if (failure) throw failure;
+    return result;
+  };
+  return {f,transport,reach};
+}
+
 // The behavior runner identifies a test by its source file and name.
 if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
+  for (const desktopFirst of [true,false]) test(`3D Desktop ${desktopFirst?'先装':'晚装'}时按 Life 意图调度并在重载后使用新出口`,async t=>{
+    const starts = [];
+    const unavailable = 'Synthetic native opener unavailable';
+    const f = await cordisFixture(t,{
+      order:desktopFirst?['desktop','body','economy']:['body','economy','life'],
+      io:{create(){ starts.push('open'); throw Error(unavailable); }},
+    });
+    const before = f.core.workspace.companionConfiguration();
+    const saved = await f.core.services.workspace.saveCompanion(f.core.operator.request('desktop-auto'),{
+      workspaceId:f.id,expectedSettings:before,settings:{...before,desktopWhisperEnabled:true,desktopWhisperMinutes:1},
+    });
+    assert.ok(saved.ok,JSON.stringify(saved));
+    const enable = () => assert.rejects(f.life.control(f.id,true),{message:unavailable});
+    // Desktop can share Plan's label while having different Body and Economy labels.
+    const scope = desktopFirst ? f.ctx : f.ctx.isolate('petBehavior').isolate('petEconomy');
+    if (desktopFirst) {
+      const desktop = f.ctx.petDesktop, features = desktop.features;
+      desktop.onPresentation(()=>{},()=>true);
+      await features.refresh();
+      await eventually(()=>features.timer,'Life 缺席时桌宠已排程');
+      const pause = features.pause.bind(features);
+      t.mock.method(features,'pause',()=>{starts.push('pause');pause();});
+      await f.load('life');
+      await enable();
+      assert.deepEqual(starts.slice(0,2),['pause','open']);
+    } else {
+      await enable();
+      await f.load('desktop',scope);
+    }
+    const first = f.ctx.petDesktop;
+    if (!desktopFirst) first.onPresentation(()=>{},()=>true);
+    await first.features.refresh();
+    assert.equal(f.life.running(),false);
+    assert.equal(first.features.timer,undefined,'保存的启用意图压住自主排程');
+    const firstRestore = t.mock.method(first.features,'restore');
+    await f.unload('desktop');
+    const retiredRestores = firstRestore.mock.callCount();
+    await f.load('desktop',scope);
+    const current = f.ctx.petDesktop, features = current.features;
+    assert.notEqual(current,first);
+    current.onPresentation(()=>{},()=>true);
+    await features.refresh();
+    assert.equal(features.timer,undefined);
+    const restore = t.mock.method(features,'restore'), pause = t.mock.method(features,'pause');
+    await f.life.control(f.id,false);
+    assert.ok(restore.mock.callCount()>0,'显式暂停到达新桌宠');
+    assert.equal(firstRestore.mock.callCount(),retiredRestores);
+    await enable();
+    const control = readControl(f);
+    assert.equal(JSON.parse(control).enabled,true);
+    for (const key of ['body','economy','life']) await f.unload(key);
+    await features.scheduling;
+    assert.ok(features.timer,'生活三区全退后桌宠重新排程');
+    assert.equal(readControl(f),control);
+    const resumed = pause.mock.callCount();
+    await f.load('life');
+    await eventually(()=>f.life.fault?.includes(unavailable),'重挂 Life 尝试恢复原生运行');
+    await features.scheduling;
+    assert.ok(pause.mock.callCount()>resumed,'重挂 Life 重新接管桌宠');
+    assert.equal(features.timer,undefined);
+    await f.unload('life');
+    const sameLabel = pause.mock.callCount();
+    await f.load('life',f.ctx.isolate('petDesktop'));
+    await eventually(()=>f.life.fault?.includes(unavailable),'隔离的 Life 仍尝试原生启动');
+    assert.equal(pause.mock.callCount(),sameLabel,'不可见的 Desktop 不接收暂停');
+    assert.equal(firstRestore.mock.callCount(),retiredRestores,'旧出口不接收后续恢复');
+  });
+
+  test('3D 桌宠探测抛错时保留告警并继续送达 QQ',async t=>{
+    const {f,transport,reach} = await lifeReachFixture(t);
+    const fault = Error('Synthetic presentation probe failed');
+    const desktop = f.ctx.petDesktop;
+    let probing = false;
+    const stop = desktop.onPresentation(()=>{},()=>{
+      if (probing) throw fault;
+      return true;
+    });
+    t.after(stop);
+    const text = 'Fixture reach after probe error';
+    assert.match(await reach(text,()=>{probing=true;return ()=>{probing=false;};}),/已送到/);
+    assert.deepEqual(transport.sent,[{id:'200',text}]);
+    const warnings = f.ctx.logger.buffer.filter(row=>row.type==='warn' && row.args[0]==='Life presentation delivery failed');
+    assert.deepEqual(warnings.map(row=>row.args[1]),[fault]);
+  });
+
+  test('3D 主动消息先呈现再走渠道且无送达时报错',async t=>{
+    const {f,transport,reach} = await lifeReachFixture(t);
+    const channels = f.ctx.petChannels, desktop = f.ctx.petDesktop, frames = [];
+    let available = true;
+    const stop = desktop.onPresentation((type,value)=>{
+      if (type==='say' && value.life) frames.push({text:value.text,sticker:value.sticker,alreadySent:transport.sent.length});
+    },()=>available);
+    t.after(stop);
+    const lost = 'Fixture surface disappears during presentation';
+    const both = 'Fixture presentation and QQ delivery';
+    const present = desktop.presentLife.bind(desktop);
+    const disappearing = t.mock.method(desktop,'presentLife',(text,sticker)=>{
+      available = false;
+      present(text,sticker);
+    });
+    assert.match(await reach(lost),/已送到/);
+    disappearing.mock.restore();
+    available = true;
+    assert.deepEqual(frames,[]);
+    assert.deepEqual(transport.sent,[{id:'200',text:lost}]);
+    assert.ok(f.ctx.logger.buffer.some(row=>row.type==='warn' && row.args[0]==='Life presentation delivery failed' &&
+      row.args[1].message==='当前桌宠不可用，主动消息未发送'));
+    assert.match(await reach(both),/已送到/);
+    assert.deepEqual(frames,[{text:both,sticker:'praise',alreadySent:1}]);
+    const sent = [{id:'200',text:lost},{id:'200',text:both}];
+    assert.deepEqual(transport.sent,sent);
+
+    available = false;
+    const {messaging} = await channels.request(f.id,'channelStatus',{});
+    await channels.request(f.id,'messagingSettings',{expected:messaging.config,
+      next:{qq:{mutedUntil:new Date(Date.now()+hour).toISOString()}}});
+    const undelivered = /当前没有送达主动消息的渠道/;
+    await assert.rejects(reach('Fixture unavailable Desktop and muted QQ'),undelivered);
+    await f.unload('desktop');
+    await f.unload('channels');
+    await assert.rejects(reach('Fixture with both outlets absent'),undelivered);
+    assert.deepEqual(transport.sent,sent);
+
+    const legacy = await f.ctx.plugin(scope=>{
+      scope.provide('petChannels',{reach:async()=>[{status:'fulfilled',value:'unregistered'}]});
+    });
+    try { await assert.rejects(reach('Fixture without a registered channel outlet'),undelivered); }
+    finally { await legacy.dispose(); }
+  });
   test('卸载 Life 取消原生轮次并以原编号恢复在途身体计划',async t=>{
     const f = await cordisFixture(t);
     let entered;

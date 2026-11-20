@@ -25,18 +25,28 @@ interface Domain {
 }
 const domains = new WeakMap<Context, WeakMap<PetCoreHost, Domain>>();
 
+export function serviceLabel(contextScope: Context, name: string) {
+  const defaults = contextScope.root[Context.isolate];
+  defaults[name] ??= Symbol(name);
+  return contextScope[Context.isolate][name];
+}
+
 function labelsOf(contextScope: Context): Labels {
-  const defaults = contextScope.root[Context.isolate], visible = contextScope[Context.isolate];
-  const label = (name: string) => {
-    defaults[name] ??= Symbol(name);
-    return visible[name];
-  };
+  const label = (name: string) => serviceLabel(contextScope, name);
   return {body: label(services.body), plan: label(services.plan), economy: label(services.economy)};
 }
 
 export interface AreaReference<T> {
   readonly value: T;
   isCurrent(): boolean;
+}
+
+function currentArea<T>(slot: Slot<T> | undefined, area: Area): (AreaReference<T> & {lease: RegistrationLease}) | undefined {
+  const entry = slot?.table.get(area);
+  if (!entry) return;
+  const {lease, value: {value, fiber}} = entry;
+  const isCurrent = () => lease.isCurrent() && fiber.state === FiberState.ACTIVE;
+  if (isCurrent()) return {value, lease, isCurrent};
 }
 
 export class LivingWorld {
@@ -52,6 +62,11 @@ export class LivingWorld {
   static find(ctx: Context, host: PetCoreHost) {
     const domain = domains.get(ctx.root)?.get(host);
     return domain && this.matching(domain, labelsOf(ctx));
+  }
+
+  static lookupPlan(ctx: Context, host: PetCoreHost) {
+    const domain = domains.get(ctx.root)?.get(host);
+    return domain && currentArea(domain.slots.plan.get(serviceLabel(ctx, lifeService)), 'plan')?.value;
   }
 
   static retain(ctx: Context, host: PetCoreHost, area: Area) {
@@ -121,12 +136,7 @@ export class LivingWorld {
   }
 
   lookup<K extends Area>(area: K): (AreaReference<Areas[K]> & {lease: RegistrationLease}) | undefined {
-    const slots: Slots<Areas[K]> = this.domain.slots[area];
-    const entry = slots.get(this.labels[area])?.table.get(area);
-    if (!entry) return;
-    const {lease, value: {value, fiber}} = entry;
-    const isCurrent = () => lease.isCurrent() && fiber.state === FiberState.ACTIVE;
-    if (isCurrent()) return {value, lease, isCurrent};
+    return currentArea<Areas[K]>(this.domain.slots[area].get(this.labels[area]), area);
   }
 }
 

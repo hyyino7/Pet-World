@@ -5,13 +5,23 @@ import { installLivingPrompt } from './prompt-context.js';
 const bodyService = 'petBehavior', lifeService = 'petLife', economyService = 'petEconomy';
 const services = { body: bodyService, plan: lifeService, economy: economyService };
 const domains = new WeakMap();
+export function serviceLabel(contextScope, name) {
+    const defaults = contextScope.root[Context.isolate];
+    defaults[name] ??= Symbol(name);
+    return contextScope[Context.isolate][name];
+}
 function labelsOf(contextScope) {
-    const defaults = contextScope.root[Context.isolate], visible = contextScope[Context.isolate];
-    const label = (name) => {
-        defaults[name] ??= Symbol(name);
-        return visible[name];
-    };
+    const label = (name) => serviceLabel(contextScope, name);
     return { body: label(services.body), plan: label(services.plan), economy: label(services.economy) };
+}
+function currentArea(slot, area) {
+    const entry = slot?.table.get(area);
+    if (!entry)
+        return;
+    const { lease, value: { value, fiber } } = entry;
+    const isCurrent = () => lease.isCurrent() && fiber.state === 2 /* FiberState.ACTIVE */;
+    if (isCurrent())
+        return { value, lease, isCurrent };
 }
 export class LivingWorld {
     domain;
@@ -28,6 +38,10 @@ export class LivingWorld {
     static find(ctx, host) {
         const domain = domains.get(ctx.root)?.get(host);
         return domain && this.matching(domain, labelsOf(ctx));
+    }
+    static lookupPlan(ctx, host) {
+        const domain = domains.get(ctx.root)?.get(host);
+        return domain && currentArea(domain.slots.plan.get(serviceLabel(ctx, lifeService)), 'plan')?.value;
     }
     static retain(ctx, host, area) {
         const root = ctx.root;
@@ -102,14 +116,7 @@ export class LivingWorld {
         return { ...registration, isLatestGeneration: () => slot.generation === generation };
     }
     lookup(area) {
-        const slots = this.domain.slots[area];
-        const entry = slots.get(this.labels[area])?.table.get(area);
-        if (!entry)
-            return;
-        const { lease, value: { value, fiber } } = entry;
-        const isCurrent = () => lease.isCurrent() && fiber.state === 2 /* FiberState.ACTIVE */;
-        if (isCurrent())
-            return { value, lease, isCurrent };
+        return currentArea(this.domain.slots[area].get(this.labels[area]), area);
     }
 }
 export class LivingView {
