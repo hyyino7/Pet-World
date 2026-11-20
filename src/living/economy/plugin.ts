@@ -42,7 +42,7 @@ function localFile(path:string) {
 /** One synchronous ledger per active Core binding. Body owns effect receipts;
  * this service owns money/items and never creates another assistant runtime. */
 export class CompanionEconomy {
-  private current?: {key:string;target:WorkspaceTarget;store:EconomyStore};
+  private current?: {key:string;binding:{target:WorkspaceTarget};store:EconomyStore};
   private closed=false;
   private readonly living: LivingView;
   private readonly inFlight = new InFlight();
@@ -92,6 +92,7 @@ export class CompanionEconomy {
         const remember=()=>this.host.workspace.runtime.store.setMeta(`economy.initialized:${storageId}`,{companionId,path:target.path});
         if(initializing)remember();else this.host.workspace.runtime.store.transaction(remember);
       }
+      this.current.binding.target=target;
       return this.current.store;
     }
     this.current?.store.close();this.current=undefined;
@@ -99,15 +100,19 @@ export class CompanionEconomy {
     // Inspect this independent authority evidence BEFORE SQLite can create a
     // new empty file. A partial Core/marker restore cannot revive old money.
     const expectedInitialized=!!metadata.meta(`economy.initialized:${storageId}`)||this.bodyRequiresDatabase(target);
+    const binding={target};
     const store=new EconomyStore({workspacePath:target.path,storageId,companionId,expectedInitialized,
       loadLegacyGarden:()=>this.retainedGarden(target,legacyFile),
-      walletChanged:()=>this.living.changed({workspaceId:target.id,path:target.path,storageId}),
+      walletChanged:()=>{
+        const {id,path}=binding.target;
+        this.living.changed({workspaceId:id,path,storageId});
+      },
       guard:()=>{this.assertOpen();check(metadata.persisted(),'Core database is absent or moved');
         check(this.host.workspace.storageId()===storageId,'Economy binding changed');}});
     const remember=()=>metadata.setMeta(`economy.initialized:${storageId}`,{companionId,path:target.path});
     try {if(initializing)remember();else metadata.transaction(remember);}
     catch(error){store.close();throw error;}
-    this.current={key,target,store};return store;
+    this.current={key,binding,store};return store;
   }
   private bound(workspaceId:string):EconomyStore {
     this.assertOpen();
@@ -134,13 +139,13 @@ export class CompanionEconomy {
   committedGardenAt(workspaceId:string):number|undefined {
     const status=this.host.workspace.status(),current=this.current;
     if (!this.closed && this.living.isCurrent() && status.state==='ready' && status.target?.id===workspaceId
-      && current?.target.id===workspaceId && current.target.path===status.target.path)
+      && current?.binding.target.id===workspaceId && current.binding.target.path===status.target.path)
       return current.store.committedGardenAt();
   }
-  gardenPort(workspaceId:string, legacyFile?:string):RoomEconomyPort {
+  gardenPort(workspaceId:string, legacyFile?:string, recordReadingEffect?:RecordCommandEffect):RoomEconomyPort {
     const store=this.bound(workspaceId);
     if(legacyFile) {
-      const root=join(this.current!.target.path,'.chatpet','data');
+      const root=join(this.current!.binding.target.path,'.chatpet','data');
       check([join(root,'life','garden.json'),join(root,'behavior','garden.json')].includes(resolve(legacyFile)),'Garden authority path is outside the bound Body');
     }
     const checked=()=>{check(this.bound(workspaceId)===store,'Economy binding changed');return store;};
@@ -174,7 +179,20 @@ export class CompanionEconomy {
       // cancellation proof through its own no-effect receipt, not this shortcut.
       cancelUse:(operationId,proof)=>{const s=checked(),row=s.itemUse(operationId);return row&&this.use(s,s.cancelUse(operationId,proof));},
       readSegment:(operationId,input)=>checked().readOffer(operationId,input),
-      confirmRead:(operationId,token)=>checked().confirmReading(operationId,token),
+      confirmRead:(operationId,token)=>{
+        const current=checked();
+        recordReadingEffect?.('unknown',operationId);
+        try {
+          const receipt=current.confirmReading(operationId,token);
+          recordReadingEffect?.('partial');
+          return receipt;
+        } catch(error) {
+          // The Store rejects missing offers and mismatched tokens before writing a bookmark.
+          if(error instanceof Rejection && (error.detail.code==='NOT_FOUND' || error.detail.code==='CONFLICT'))
+            recordReadingEffect?.('none');
+          throw error;
+        }
+      },
       readingStatus:(operationId,input)=>checked().readingStatus(operationId,input),
     };
   }

@@ -46,6 +46,7 @@ export declare class LivingWorld {
     lookup<K extends Area>(area: K): (AreaReference<Areas[K]> & {
         lease: RegistrationLease;
     }) | undefined;
+    bindingChanged(ctx: Context, host: PetCoreHost, valid: () => boolean): void;
     changed(ctx: Context, host: PetCoreHost, valid: () => boolean, expected?: CompanionBinding): void;
 }
 type AreaPorts = {

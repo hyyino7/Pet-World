@@ -891,6 +891,17 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - `node --test tests/behavior-list/index.test.mjs` 通过 11/11。`pnpm run build && pnpm run test:behavior-list` 构建通过，索引自测 11/11，自动行为 93/93，`M2A-28` 执行并通过 1 次，Memory 回环通过。
 - 三组补丁含构建产物与基线，依次应用到 `6a76e50` 可逐字节还原当前工作区。合并门禁由 Claude 在沙箱外运行。
 
+#### 返工一轮
+
+- `executePlanStep` 按 `advance()` 后的计划状态及原步骤回执区分 `unknown/reconcile`、`none/never`、`none/refresh`，沿用 tick 恢复记录。新增派工回执未返回、截止已过和转入重考虑三条入口测试。
+- 按 `workspaceId/path/storageId` 记录已通知的绑定，首次就绪和切换时各通知一次，沿用微任务合并。新增先装载后绑定和运行中切换两条入口测试。首次读取建立的空执行表与缺省在新事件指纹中等同。
+- Store 复用时更新钱包通知使用的绑定，发送时仍复核原绑定与租约。新增同一 Repo 更换 DSH 工作区 ID 后钱包提交的入口测试。
+- 在计划写入、派工和书签确认的边界记录 `effect`。新事件指纹排除事实投递标记。新增重考虑时取消、暂停阅读确认和事实确认三条用例，保留三个旧事件及身体修订号的语义。
+- 新增 9 条用例在返工前均按预期失败，返工后全部通过。原有测试及断言全部保留。
+- `pnpm run build && pnpm run check:arch`、`pnpm run check:types` 和细则全部快测通过（42/42、23/23、56/56、2/2，脚本语法检查通过）。Living 的 R1–R4 为 0，R8 新增 0。
+- `pnpm run build && pnpm run test:behavior-list` 通过，索引 11/11，行为 93/93，含 Memory 回环。
+- 改动限于本轮授权文件和构建产物，验证使用合成数据。合并门禁由 Claude 在沙箱外运行。
+
 ## 审查结论
 
 ### 1A 第一轮验收（Codex 审查 + Claude 核实）
@@ -1066,3 +1077,42 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 **合并时由 Claude 同步的文档**：`docs/architecture.md` 6.2 和层间接口里「Life 直接读 Desktop、Channels」的说法改成第二层生活出口；`:644` 的隔离限制扩到出口和启用意图读口；「概念与扩展检查」补启用意图读口；`docs/product.md` 2a 完成标准里「第二层基线 0 条」一项勾选。
 
 **复查（返工一轮后）**：必须修 1 已修好。`scripts/checks/check-native-life.mjs:70-82` 改为用 `dist/src/living/outlets.js` 的 `registerLifeOutlet` 登记合成桌宠，`present` 记气泡并返回 `true`，`scope.effect` 返回 `revoke`，卸载时撤销；原 `petDesktop` 替身删掉了。核对过 Life、Body、Core、Memory 和 `check-life-history`、`check-life-review` 都不再读 `petDesktop`，删掉不影响别处。`:81`、`:93` 和其余断言逐字未改，`node --check` 通过。改动和 2A3D-04 的真实出口路径一致（那条用例经同一个 `lookupLifeOutlet` 断言呈现成功）。`pnpm run test:native-life` **没有运行**：它通过 `mountInstalledStandard`（`scripts/checks/lib/native-standard-preset.mjs:12-17`）读主人真实的 DSH home 里的 `profiles/desktop` 配置，Codex 在临时 `DSH_HOME` 下跑报 `ENOENT`。按约定不碰主人的 DSH 环境，这条留给主人在本机跑，或在第 6 批的隔离环境里跑。两条建议修都是合并时由 Claude 改文档，返工不涉及。`src/` 没有改动；`pnpm run build` 后工作区只有这两处改动；`check:arch` 37 / 1053 无增减；细则快测 163/163；`test:behavior-list` 行为 93/93；沙箱外 `pnpm run verify` 1534/1534，包检查通过。
+
+### 3E 第一轮验收（Codex 审查 + Claude 核实）
+
+**必须修**
+
+1. `src/living/plan/plugin.ts:494-504` 的 `executePlanStep` 把「`advance()` 返回 `true`」当作本步已执行，结果有两种情况会报 `ok:true, execution:null`，其实这一步没做成：
+   - 派工失败：`behavior.startPlanned()` 抛出非准入错误时，`PersistentLifePlan.advance()` 的 catch（`src/living/plan/plan.ts:455-466`）把计划记成 `waiting` 加 `replanReason`，返回 `true`。这条恢复路径给 tick 用没问题，但命令入口吞掉了失败，调用方区分不了「正常等待」和「派工失败、Body 可能已施效」。
+   - 改去重考虑：带 `reconsiderWhen` 的计划在 `advance()` 开头（`src/living/plan/plan.ts:345-356`）可能先触发 `reconsider()`，写入 `replanReason` 后返回 `true`，本步根本没派工。
+
+   方案约定 `null` 只表示「该步尚无执行回执」，错误要用 `ContractError` 分类（`docs/plans/stage2a-merge.md` 3E 细则「命令与门面」表下第一条）。改法：tick 用的后台恢复记录保留不动，命令入口按 `advance()` 之后计划的实际状态归类——派工失败、无法确认有没有提交，返回 `unknown/reconcile`（能证明派工前就被确定拒绝的，比如绝对截止时间已过，返回 `none/never`）；转入重新考虑的，返回 `none/refresh`。每种各补一条入口测试。
+
+2. 工作区首次就绪或切换绑定后，三区都不发 `world.changed`。Body 首次投影传的是 `notifyFirst=false`（`src/living/body/plugin.ts:57-58,105`，判断在 `:245-247`），装载时的通知又只在当时已有绑定才发（`src/living/index.ts:365` 调 `changed()`，`:168` 在 `currentBinding` 为空时直接返回）；Economy 只在提交后通知，Plan 只在启停或计划变化时通知。所以「先装载、后绑定」和「运行中切换工作区」这两种情况，新快照对新的 `workspaceId/storageId` 从拒绝变成可读，订阅者却收不到任何信号；旧事件 `pet/behavior.changed` 在首次投影时照常会发。这违背了方案「区装卸在可用性改变后通知」和「Body 复用 `publish()` 的可见投影指纹」。改法：按绑定身份记下上一次通知过的绑定，绑定第一次出现或变化时发一次（同一微任务内的合并照旧，稳定读取不自激的断言保留）；补一条「先装载后绑定」或「切换绑定」的入口测试。
+
+3. `src/living/economy/plugin.ts:104` 的 `walletChanged` 抓住的是创建 Store 时的 `target.id`，但 `prepare()` 复用 Store 的键只有 `path/storageId/companionId`（`:85-86`）。同一个 Repo 在 Economy 没卸载的情况下重新绑定到新的 DSH 工作区 ID 时，Store 会被复用，之后每次钱包提交的通知都会被 `sameBinding` 当作旧绑定丢掉（`src/living/index.ts:178`），而新工作区明明能读到更新后的钱包。改法：通知时取当前生效的绑定（例如复用 Store 时同步更新 `this.current.target`，回调里读它），对旧绑定的过滤保留。
+
+**建议修（不影响合并，返工时可以一起做）**
+
+- 两条 Plan 命令的 `effect` 标记得太早，确定拒绝或取消会被报成 `unknown/reconcile`。方向是保守的，但和方案「确定拒绝 none/never、可证明未施效 none/same_request」不一致：
+  - `src/living/plan/plugin.ts:495-496` 在 `advance()` 之前就标了 `unknown`。如果在 reconsider 读快照时取消，其实什么都没写。
+  - `src/living/body/plugin.ts:383` 在 `checkedReading()` 之前就标了 `unknown`。阅读被打断或暂停时（`src/living/body/room.ts:695-699`，抛的是普通 `Error`），书签根本没写。
+
+  改成在实际写入或派工的边界才标记。这一条和必须修 1 改的是同一处代码。
+- `src/living/body/plugin.ts:245-247`：可见投影指纹包含整个 `interactionReceipts`，`worldFacts.acknowledgeFacts()` 只改了投递标记，也会多发一次 `world.changed`。多发是安全的，但可以把投递标记排除出新通知的指纹（旧事件和修订号的语义不动）。
+- `src/living/body/plugin.ts:323`：同一个 `care` 请求重放时，`roomAction()` 先清空表情，再由 `CompanionRoom.act()` 查到旧回执，所以重放也会改变呈现、发出通知。清空表情是旧 `act` 本来就有的行为，这次不必改；改的话放到第三层切换新契约的时候。
+
+**剔除**：Codex 报「异步监听器拒绝没人接」（`src/living/index.ts:175-180`）。Cordis 的 `emit` 不等待监听器返回的 Promise，这是框架对所有事件的统一行为，仓库里现有事件都一样由订阅方自己 catch；`world.changed` 目前在 `src/` 里没有订阅方。这不是本次改动的缺陷，第三层接入时由订阅方处理。
+
+**核实结果**
+
+- 三个提交只改了细则「提交与允许修改的文件」里的文件。另外只有：方案执行记录；`tests/behavior-list/index.json` 里 M2A-28 的 `file/name`（驱动会话批准）；工具生成的 `arch/baseline/vocabulary.json`。`package.json` 和 1A 契约测试都没动。
+- 四样契约在 `src/contracts/living.ts`，`index.ts` 只加了一行类型转导出。快照挂在 `petBehavior`、`petEconomy`，事实流挂在 `petBehavior.worldFacts`，命令挂在三个门面上，没有新增服务名。快照对 Body 投影做 `structuredClone`，钱包每次都重新投影。只挂 Economy 时 `body` 为 `{available:false}`、钱包可读，有入口测试。
+- 五条命令复用原入口 `act`、`ownerAction`、`advance`、`confirmPlannedReading`。Body 和 Economy 重放走原请求指纹，指纹冲突时返回 `CONFLICT/none/never`。Plan 的阅读重放只核对原片段、不再推进游标；版本过期返回 `none/refresh`。这些都有入口测试。
+- 旧事件：Body 的 `publish()` 只多了一个 `notifyFirst` 参数，`reason` 和 `pet/behavior.changed` 的发出条件没变；`pet/life.changed`、`pet/economy.fact` 的发出位置没变。
+- 五项清理：`desktopRest`、`installLifeReviewFileGuard`、`EconomyStore.bookmark`、`living/plan/room` 在 `src/`、`scripts/`、`tests/` 里都已经没有引用；`garden()` 的三处带时间调用已同步。两条回顾守卫用例改成走真实来源分支后，`/仅访问/`、主人接管后放行、相对 cwd、`/writing path/`、guest `/范围/`、`/历史日记已经存在/` 这些断言都还在。软链场景从「目录换成软链」改成了「目标文件换成软链」，目录软链仍由纯规则测试 `tests/life/life-review-files.test.ts:48-49` 覆盖，没有放宽。
+- `check:arch` 通过，`src/living` 的 R1–R4 为 0。R8 基线删掉 22 条 `desktopRest` 关系，没有新增关系；`ownerAction` 那一条只是表达式文本跟着代码变了。
+- 我在 worktree 里重跑了 `pnpm run build`、`check:arch`，以及细则里的快测（8 个文件 120/120），`node --check scripts/checks/check-room-interactions.cjs` 通过，跑完工作区干净。门禁和行为清单以驱动会话在沙箱外的结果为准（1538/1538、93/93），我没有重跑。
+- **未手动验证**：第三层还没有接入新契约，没有真实的界面入口可以操作；入口链路由 `cordisFixture` 的真实 Cordis 装载覆盖。
+
+**合并时由 Claude 同步的文档**：`docs/architecture.md:232` 还写着 `living/plan/room.ts` 再导出，要改成已删除；四样契约和 `world.changed` 归并进 architecture.md 第 5 节（按方案在第 6 批归并的，在那里一起做）。

@@ -1,7 +1,9 @@
+import { type RecordCommandEffect } from '../index.js';
 import { type LifeStore } from '#dsh-world/life/lifeStore';
 import type { CompanionBehavior } from '../body/plugin.js';
 import { type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
 export type PlanStatus = 'active' | 'paused' | 'waiting' | 'completed' | 'cancelled';
+export declare const expiredDispatchDeadline = "The activity absolute deadline elapsed before Body admission; revise the original plan explicitly";
 export interface LifeStep {
     id: string;
     kind: PlannedActivity['kind'];
@@ -99,9 +101,9 @@ export declare class PersistentLifePlan {
         plan: CurrentLifePlan | null;
     }>;
     /** Only explicit events create a wake. Repeated ticks cannot create a polling loop. */
-    reconsider(reason: string, condition?: number): boolean;
+    reconsider(reason: string, condition?: number, recordEffect?: RecordCommandEffect): boolean;
     /** Serialized by CompanionLife; no model is called here. */
-    advance(workspaceId: string, behavior: CompanionBehavior, validate?: () => void): Promise<boolean>;
+    advance(workspaceId: string, behavior: CompanionBehavior, validate?: () => void, recordEffect?: RecordCommandEffect): Promise<boolean>;
     summary(): string;
     static describe({ revision, plan }: {
         revision: number;

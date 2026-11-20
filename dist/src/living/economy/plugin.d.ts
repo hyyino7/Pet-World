@@ -45,7 +45,7 @@ export declare class CompanionEconomy {
     private use;
     private gardenClock;
     committedGardenAt(workspaceId: string): number | undefined;
-    gardenPort(workspaceId: string, legacyFile?: string): RoomEconomyPort;
+    gardenPort(workspaceId: string, legacyFile?: string, recordReadingEffect?: RecordCommandEffect): RoomEconomyPort;
     snapshot(workspaceId: string, validate?: () => void): Promise<{
         workspaceId: string;
         ledger: import("./types.js").LedgerEntry[];

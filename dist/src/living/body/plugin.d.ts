@@ -21,6 +21,7 @@ export declare class CompanionBehavior {
     private publicationFault?;
     private revision;
     private expression?;
+    private readingConfirmationEffect?;
     private subscriptions;
     readonly bootId: `${string}-${string}-${string}-${string}-${string}`;
     private timer?;

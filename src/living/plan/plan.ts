@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import {withLivingCaller} from '../index.js';
+import {withLivingCaller, type RecordCommandEffect} from '../index.js';
 import { createLifeStore, LIFE_STATE_MAX_BYTES, type LifeStore } from '#dsh-world/life/lifeStore';
 import type { CompanionBehavior } from '../body/plugin.js';
 import { PlannedAdmissionWaitError, type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
@@ -7,6 +7,7 @@ import { requirePresentationSlot } from '../body/playback.js';
 import {gardenReceiptText} from '../body/garden-receipt.js';
 
 export type PlanStatus = 'active' | 'paused' | 'waiting' | 'completed' | 'cancelled';
+export const expiredDispatchDeadline = 'The activity absolute deadline elapsed before Body admission; revise the original plan explicitly';
 export interface LifeStep {
   id: string;
   kind: PlannedActivity['kind'];
@@ -175,10 +176,11 @@ export class PersistentLifePlan {
     return JSON.stringify([plan?.cursor,plan?.status,plan?.execution]);
   }
   private change(expectedRevision:number, work:(plan:CurrentLifePlan|null)=>CurrentLifePlan|null, schedule=true, intentChange=true,
-    options:{resetRecovery?:boolean;decision?:boolean}={}) {
+    options:{resetRecovery?:boolean;decision?:boolean;recordEffect?:RecordCommandEffect}={}) {
     check(this.isCurrent(),'Life workspace changed; the old plan was not updated');
     check(Number.isSafeInteger(expectedRevision) && expectedRevision>=0, 'Invalid expected plan revision');
     let visibleChanged=intentChange;
+    options.recordEffect?.('unknown');
     const saved=this.store.update(state=>{
       const actual=state.planRevision ?? (state.currentPlan as CurrentLifePlan|undefined)?.revision ?? 0;
       check(actual===expectedRevision,'Life plan changed; read the current plan before submitting again');
@@ -196,6 +198,7 @@ export class PersistentLifePlan {
         else delete state.alarm;
       }
     });
+    options.recordEffect?.('partial');
     if(visibleChanged)this.changed?.();
     return saved;
   }
@@ -323,18 +326,18 @@ export class PersistentLifePlan {
     return this.read();
   }
   /** Only explicit events create a wake. Repeated ticks cannot create a polling loop. */
-  reconsider(reason:string, condition?:number) {
+  reconsider(reason:string, condition?:number, recordEffect?:RecordCommandEffect) {
     const {revision,plan}=this.read();
     if (!plan || !['active','waiting'].includes(plan.status) || plan.replanReason || condition!==undefined && plan.triggeredConditions.includes(condition)) return false;
     this.change(revision,current=>{
       check(current,'No current plan');current.replanReason=reason;current.nextConsiderAt=new Date().toISOString();
       if(condition!==undefined)current.triggeredConditions.push(condition);
       return current;
-    });
+    },true,true,{recordEffect});
     return true;
   }
   /** Serialized by CompanionLife; no model is called here. */
-  async advance(workspaceId:string,behavior:CompanionBehavior,validate:()=>void=()=>{}) {
+  async advance(workspaceId:string,behavior:CompanionBehavior,validate:()=>void=()=>{},recordEffect?:RecordCommandEffect) {
     validate();
     let current=this.read();let plan=current.plan;
     if (!plan || !['active','waiting'].includes(plan.status)) return false;
@@ -351,9 +354,9 @@ export class PersistentLifePlan {
         const satisfied=condition.comparison==='gte' ? value>=condition.value : value<=condition.value;
         if(!satisfied && plan.triggeredConditions.includes(index)) {
           const latest=this.read();
-          this.change(latest.revision,p=>{check(p,'No current plan');p.triggeredConditions=p.triggeredConditions.filter(n=>n!==index);return p;},false,false);
+          this.change(latest.revision,p=>{check(p,'No current plan');p.triggeredConditions=p.triggeredConditions.filter(n=>n!==index);return p;},false,false,{recordEffect});
         }
-        if(satisfied && this.reconsider(`Body condition changed: ${condition.metric} ${condition.comparison} ${condition.value}`,index)) return true;
+        if(satisfied && this.reconsider(`Body condition changed: ${condition.metric} ${condition.comparison} ${condition.value}`,index,recordEffect)) return true;
       }
     }
     if(plan.status!=='active' && !awaitingReceipt)return false;
@@ -367,7 +370,7 @@ export class PersistentLifePlan {
         check(p,'No current plan');p.operationId=operationId;delete p.execution;
         p.dispatchUntil=step.until ?? (step.durationMinutes===undefined ? undefined : new Date(Date.now()+step.durationMinutes*60_000).toISOString());
         return p;
-      },false,false);
+      },false,false,{recordEffect});
       current=this.read();plan=current.plan!;
     }
     const operationId=plan.operationId!;
@@ -380,27 +383,33 @@ export class PersistentLifePlan {
         if(awaitingReceipt)return false;
         if(plan.replanReason)return false;
         check(!plan.execution,'A previously acknowledged activity has lost its durable receipt; preserve the state and reconcile it before replay');
-        if(step.until)check(Date.parse(step.until)>Date.now(),'The activity absolute deadline elapsed before Body admission; revise the original plan explicitly');
+        if(step.until)check(Date.parse(step.until)>Date.now(),expiredDispatchDeadline);
         // Relative stays start when Body becomes available, not while a short
         // owner reaction owns it. An absolute calendar deadline never moves.
         if(plan.admissionWait && step.durationMinutes!==undefined) {
-          this.change(current.revision,p=>{check(p,'No current plan');p.dispatchUntil=new Date(Date.now()+step.durationMinutes!*60_000).toISOString();return p;},false,false);
+          this.change(current.revision,p=>{check(p,'No current plan');p.dispatchUntil=new Date(Date.now()+step.durationMinutes!*60_000).toISOString();return p;},false,false,{recordEffect});
           current=this.read();plan=current.plan!;
         }
         const until=plan.dispatchUntil;
         try {
-          execution=await withLivingCaller(validate,()=>behavior.startPlanned(workspaceId,{operationId,kind:step.kind,activity:step.activity,
-            ...(step.room?{room:step.room,spot:step.spot}:{}),...(step.garden?{garden:step.garden}:{}),...(step.action?{action:step.action}:{}),...(step.economy?{economy:step.economy}:{}),...(step.reading?{reading:step.reading}:{}),
-            ...(step.presentationSlot?{presentationSlot:step.presentationSlot}:{}),
-            ...(until?{until,freezeOnPause:step.durationMinutes!==undefined}:{})}));
+          execution=await withLivingCaller(validate,()=>{
+            recordEffect?.('unknown');
+            return behavior.startPlanned(workspaceId,{operationId,kind:step.kind,activity:step.activity,
+              ...(step.room?{room:step.room,spot:step.spot}:{}),...(step.garden?{garden:step.garden}:{}),...(step.action?{action:step.action}:{}),...(step.economy?{economy:step.economy}:{}),...(step.reading?{reading:step.reading}:{}),
+              ...(step.presentationSlot?{presentationSlot:step.presentationSlot}:{}),
+              ...(until?{until,freezeOnPause:step.durationMinutes!==undefined}:{})});
+          });
+          recordEffect?.('partial');
         } catch(error) {
+          const waiting=error instanceof PlannedAdmissionWaitError && error.wait.operationId===operationId;
+          if(waiting)recordEffect?.('none');
           validate();
-          if(!(error instanceof PlannedAdmissionWaitError) || error.wait.operationId!==operationId)throw error;
+          if(!waiting)throw error;
           const latest=this.read();
           if(latest.plan?.id!==plan.id || latest.plan.operationId!==operationId)return false;
           if(JSON.stringify(latest.plan.admissionWait)!==JSON.stringify(error.wait))this.change(latest.revision,p=>{
             check(p,'No current plan');p.admissionWait=structuredClone(error.wait);p.pauseReason=error.message;return p;
-          },false,false);
+          },false,false,{recordEffect});
           return false;
         }
       }
@@ -413,6 +422,7 @@ export class PersistentLifePlan {
       if(!awaitingReceipt && !readingReady && execution.status==='running' && JSON.stringify(current.plan.execution)===JSON.stringify(execution))return false;
       const completedPlan=execution.status==='completed' && current.plan.cursor+1===current.plan.steps.length && !current.plan.nextConsiderAt;
       recordingReceipt=true;
+      recordEffect?.('partial');
       this.change(current.revision,p=>{
         check(p,'No current plan');p.execution=execution;
         if(p.admissionWait) {delete p.admissionWait;p.pauseReason=null;}

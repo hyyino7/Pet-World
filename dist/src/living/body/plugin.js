@@ -2,7 +2,7 @@ import { existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { buildHomePromptLine } from '#feiyu-home';
-import { check, digest, Rejection, reject, text } from '../../core/storage.js';
+import { check, digest, reject, text } from '../../core/storage.js';
 import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
@@ -25,6 +25,7 @@ export class CompanionBehavior {
     publicationFault;
     revision = 0;
     expression;
+    readingConfirmationEffect;
     subscriptions = [];
     bootId = randomUUID();
     timer;
@@ -260,7 +261,7 @@ export class CompanionBehavior {
                 const economy = this.living.get('economy');
                 if (!economy && (this.host.workspace.runtime.store.meta(`economy.initialized:${storageId}`) || existsSync(join(target.path, '.chatpet', 'data', 'economy', 'economy.sqlite'))))
                     throw Error('权威经济组件暂不可用；原钱包、库存与菜园已保留，等待恢复');
-                return economy?.gardenPort(id, legacyFile);
+                return economy?.gardenPort(id, legacyFile, this.readingConfirmationEffect);
             }, () => {
                 const settings = this.host.workspace.companionSettings?.();
                 return {
@@ -332,9 +333,12 @@ export class CompanionBehavior {
             // program-owned JSON save directly without admitting it as a new request
             // or deleting operation/fact receipts needed for replay protection.
             const home = bound.room.view(), activity = this.activity();
-            const persisted = JSON.stringify([semantic, activity, this.autonomous, home.emotion ?? null, this.expression ?? null]);
+            const details = [activity, this.autonomous, home.emotion ?? null, this.expression ?? null];
+            const persisted = JSON.stringify([semantic, ...details]);
             // Reuse the existing public Body projection; saved metrics stay full precision.
-            const presentationFingerprint = createHash('sha256').update(JSON.stringify([{ ...semantic, needs: home.body }, activity, this.autonomous, home.emotion ?? null, this.expression ?? null])).digest('hex');
+            const visibleState = { ...semantic, needs: home.body };
+            const presentation = [visibleState, ...details];
+            const presentationFingerprint = createHash('sha256').update(JSON.stringify(presentation)).digest('hex');
             const fingerprint = 'sha256:' + createHash('sha256').update(persisted).digest('hex');
             const changed = fingerprint !== bound.fingerprint;
             const visibleChanged = presentationFingerprint !== bound.presentationFingerprint;
@@ -343,10 +347,23 @@ export class CompanionBehavior {
                 bound.fingerprint = fingerprint;
                 this.revision++;
             }
-            bound.presentationFingerprint = presentationFingerprint;
-            // The mount already signaled availability before the first observer read.
-            if (visibleChanged && (hadProjection || notifyFirst))
-                this.living.changed({ workspaceId: bound.id, path: bound.path, storageId: bound.storageId });
+            if (visibleChanged) {
+                bound.presentationFingerprint = presentationFingerprint;
+                const receipts = new Set(Object.values(semantic.interactionReceipts ?? {}));
+                // A first read may lazily create the empty execution table.
+                const emptyExecutions = semantic.plannedExecutions && Object.keys(semantic.plannedExecutions).length === 0;
+                const worldFingerprint = receipts.size || emptyExecutions ? createHash('sha256').update(JSON.stringify(presentation, function (key, value) {
+                    if (key === 'acknowledged' && receipts.has(this))
+                        return undefined;
+                    if (key === 'plannedExecutions' && this === visibleState && emptyExecutions)
+                        return undefined;
+                    return value;
+                })).digest('hex') : presentationFingerprint;
+                const worldChanged = worldFingerprint !== bound.worldFingerprint;
+                bound.worldFingerprint = worldFingerprint;
+                if (worldChanged && (hadProjection || notifyFirst))
+                    this.living.changed({ workspaceId: bound.id, path: bound.path, storageId: bound.storageId });
+            }
             if (!this.publicationFault && (!changed || reason === 'observation' && !visibleChanged))
                 return;
             this.ctx.emit('pet/behavior.changed', { workspaceId: bound.id, bootId: this.bootId, revision: this.revision, reason });
@@ -519,17 +536,13 @@ export class CompanionBehavior {
     }
     confirmPlannedReading(workspaceId, operationId, receiptToken, validate = () => { }, recordEffect) {
         return this.plannedCall(workspaceId, room => {
-            recordEffect?.('unknown', operationId);
+            // The room reaches the Economy port synchronously, after checking the original reading.
+            this.readingConfirmationEffect = recordEffect;
             try {
-                const execution = room.confirmPlannedReading(operationId, receiptToken);
-                recordEffect?.('partial');
-                return execution;
+                return room.confirmPlannedReading(operationId, receiptToken);
             }
-            catch (error) {
-                // Economy rejects a missing offer or wrong token before writing the bookmark.
-                if (recordEffect && error instanceof Rejection && (error.detail.code === 'NOT_FOUND' || error.detail.code === 'CONFLICT'))
-                    recordEffect('none');
-                throw error;
+            finally {
+                this.readingConfirmationEffect = undefined;
             }
         }, validate);
     }

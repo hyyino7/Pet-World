@@ -15,7 +15,7 @@ import type { CompanionRecordLibrary, RecordOperation } from '../../core/records
 import { companionRecordPaths } from '../../core/record-paths.js';
 import { installLifeReview, REVIEW_ALARM_FILE } from './review.js';
 import type {CompanionBehavior} from '../body/plugin.js';
-import { PersistentLifePlan, parsePlanDraft, type CurrentLifePlan } from './plan.js';
+import { PersistentLifePlan, expiredDispatchDeadline, parsePlanDraft, type CurrentLifePlan } from './plan.js';
 import { registerPlanTools } from './plan-tools.js';
 import {presentFacts} from '../../core/interaction-presentation.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
@@ -492,16 +492,31 @@ export class CompanionLife {
           if(!body)unavailable('共享身体组件尚未启用');
           const admit=()=>{validate();if(!body.isCurrent())reject('STALE_BINDING','共享身体组件已变化');};
           const operationId=`life:${plan.id}:${stepId}`;
-          admit();effect('unknown',operationId);
-          const advanced=await bound.plan.advance(bound.id,body.value,admit);
-          if(advanced)effect('partial');
+          effect('none',operationId);
+          const advanced=await bound.plan.advance(bound.id,body.value,admit,effect);
           admit();
           const after=bound.plan.read().plan;
-          const execution=after?.execution as PlannedExecution | undefined;
-          if(execution?.operationId===operationId)effect('partial');
+          const receipt=after?.execution as PlannedExecution | undefined;
+          const execution=receipt?.operationId===operationId ? receipt : null;
           this.scheduleContinuation(plan,after);
           if(advanced)this.runtime?.reschedulePlan();
-          return {operationId,execution:execution?.operationId===operationId ? execution : null};
+          const awaitingReceipt=after?.status==='waiting' && after.operationId===operationId &&
+            (!execution || execution.status==='running');
+          if(after?.replanReason && (!awaitingReceipt && !execution ||
+            after.triggeredConditions.some(condition=>!plan.triggeredConditions.includes(condition)))) {
+            effect('none');
+            reject('STALE_REVISION',after.replanReason);
+          }
+          if(awaitingReceipt) {
+            // The existing recovery record preserves this specific refusal before dispatch.
+            if(after.pauseReason===`Error: ${expiredDispatchDeadline}`) {
+              effect('none');
+              reject('INELIGIBLE',expiredDispatchDeadline);
+            }
+            effect('unknown');
+            throw Error(after.replanReason ?? '原步骤的派工结果待核对');
+          }
+          return {operationId,execution};
         });
       }),
     confirmReading: ({expectedRevision,operationId,receiptToken,...request}, options) =>

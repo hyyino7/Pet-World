@@ -92,6 +92,7 @@ export class CompanionEconomy {
                 else
                     this.host.workspace.runtime.store.transaction(remember);
             }
+            this.current.binding.target = target;
             return this.current.store;
         }
         this.current?.store.close();
@@ -100,9 +101,13 @@ export class CompanionEconomy {
         // Inspect this independent authority evidence BEFORE SQLite can create a
         // new empty file. A partial Core/marker restore cannot revive old money.
         const expectedInitialized = !!metadata.meta(`economy.initialized:${storageId}`) || this.bodyRequiresDatabase(target);
+        const binding = { target };
         const store = new EconomyStore({ workspacePath: target.path, storageId, companionId, expectedInitialized,
             loadLegacyGarden: () => this.retainedGarden(target, legacyFile),
-            walletChanged: () => this.living.changed({ workspaceId: target.id, path: target.path, storageId }),
+            walletChanged: () => {
+                const { id, path } = binding.target;
+                this.living.changed({ workspaceId: id, path, storageId });
+            },
             guard: () => {
                 this.assertOpen();
                 check(metadata.persisted(), 'Core database is absent or moved');
@@ -119,7 +124,7 @@ export class CompanionEconomy {
             store.close();
             throw error;
         }
-        this.current = { key, target, store };
+        this.current = { key, binding, store };
         return store;
     }
     bound(workspaceId) {
@@ -149,13 +154,13 @@ export class CompanionEconomy {
     committedGardenAt(workspaceId) {
         const status = this.host.workspace.status(), current = this.current;
         if (!this.closed && this.living.isCurrent() && status.state === 'ready' && status.target?.id === workspaceId
-            && current?.target.id === workspaceId && current.target.path === status.target.path)
+            && current?.binding.target.id === workspaceId && current.binding.target.path === status.target.path)
             return current.store.committedGardenAt();
     }
-    gardenPort(workspaceId, legacyFile) {
+    gardenPort(workspaceId, legacyFile, recordReadingEffect) {
         const store = this.bound(workspaceId);
         if (legacyFile) {
-            const root = join(this.current.target.path, '.chatpet', 'data');
+            const root = join(this.current.binding.target.path, '.chatpet', 'data');
             check([join(root, 'life', 'garden.json'), join(root, 'behavior', 'garden.json')].includes(resolve(legacyFile)), 'Garden authority path is outside the bound Body');
         }
         const checked = () => { check(this.bound(workspaceId) === store, 'Economy binding changed'); return store; };
@@ -194,7 +199,21 @@ export class CompanionEconomy {
             // cancellation proof through its own no-effect receipt, not this shortcut.
             cancelUse: (operationId, proof) => { const s = checked(), row = s.itemUse(operationId); return row && this.use(s, s.cancelUse(operationId, proof)); },
             readSegment: (operationId, input) => checked().readOffer(operationId, input),
-            confirmRead: (operationId, token) => checked().confirmReading(operationId, token),
+            confirmRead: (operationId, token) => {
+                const current = checked();
+                recordReadingEffect?.('unknown', operationId);
+                try {
+                    const receipt = current.confirmReading(operationId, token);
+                    recordReadingEffect?.('partial');
+                    return receipt;
+                }
+                catch (error) {
+                    // The Store rejects missing offers and mismatched tokens before writing a bookmark.
+                    if (error instanceof Rejection && (error.detail.code === 'NOT_FOUND' || error.detail.code === 'CONFLICT'))
+                        recordReadingEffect?.('none');
+                    throw error;
+                }
+            },
             readingStatus: (operationId, input) => checked().readingStatus(operationId, input),
         };
     }

@@ -131,6 +131,18 @@ export class LivingWorld {
     lookup(area) {
         return currentArea(this.domain.slots[area].get(this.labels[area]), area);
     }
+    bindingChanged(ctx, host, valid) {
+        if (!valid())
+            return;
+        try {
+            const binding = currentBinding(host);
+            if (!binding)
+                this.domain.lastNotifiedBinding = undefined;
+            else if (!sameBinding(this.domain.lastNotifiedBinding, binding))
+                this.changed(ctx, host, valid, binding);
+        }
+        catch { /* Binding may already be unavailable during teardown. */ }
+    }
     changed(ctx, host, valid, expected) {
         // Notification failures cannot invalidate completed domain work.
         try {
@@ -149,8 +161,10 @@ export class LivingWorld {
             queueMicrotask(() => {
                 this.domain.changes.delete(key);
                 try {
-                    if (sameBinding(currentBinding(host), binding) && guards.some(guard => guard()))
+                    if (sameBinding(currentBinding(host), binding) && guards.some(guard => guard())) {
+                        this.domain.lastNotifiedBinding = binding;
                         ctx.emit('world.changed', { workspaceId, storageId });
+                    }
                 }
                 catch { /* A failed observer has no effect on the committed result. */ }
             });
@@ -342,6 +356,7 @@ export function mountLivingArea(ctx, host, area, create, start, close = value =>
             (ctx.fiber.state === 1 /* FiberState.LOADING */ || ctx.fiber.state === 2 /* FiberState.ACTIVE */), world, () => registration?.isLatestGeneration() === true, binding => world.changed(ctx, host, active, binding));
         value = create(view);
         registration = world.register(area, value, ctx.fiber);
+        ctx.on('pet/core.changed', () => world.bindingChanged(ctx, host, active));
         stopStatus = ctx.root.on('internal/status', (fiber, previous) => {
             if (fiber !== ctx.fiber)
                 return;
