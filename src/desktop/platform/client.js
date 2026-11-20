@@ -18194,6 +18194,14 @@ registerCompanion({
           : event.key === 'ArrowLeft' ? (index + sections.length - 1) % sections.length : null;
         if (target === null) return; event.preventDefault(); selectTab(sections[target][0]); tabs.current[target]?.focus();
       }
+      if (snapshot?.workspace.state === 'migration-required') {
+        const reason = snapshot.workspace.migrationReason;
+        return h('div', { className:'chatpet-settings' }, h('style', null, css),
+          h(Card, {title:'需要迁移', status:'migration-required'},
+            h('p', null, 'DSH 普通聊天仍可使用。'), h('p', null, h('code', null, reason)), h('p', null, snapshot.migrationHelp),
+            error && h('p', {role:'alert'}, error),
+            h('button', {type:'button', disabled:loading, onClick:refresh}, '刷新设置')));
+      }
       return h('div', { className: 'chatpet-settings' }, h('style', null, css),
         h('header',{className:'cp-heading'},h('div',null,h('small',null,'HER WORLD · COMPANION'),h('h2',null,(snapshot?.identity.displayName||'未命名伙伴')+'的世界'),h('div',{className:'cp-state'},h('i',{className:'cp-dot'}),snapshot?snapshot.workspace.state==='ready'&&snapshot.storage&&!snapshot.storage.complete?'存储待迁入工作区':workspaceLabels[snapshot.workspace.state]:'正在连接',snapshot?.preferences.workspace?' · '+snapshot.preferences.workspace.title:'')),dirty&&badge('有未保存修改')),
         h('div', { role: 'tablist', 'aria-label': 'Her World 设置分类', className: 'cp-tabs' }, ...sections.map(([id,title],index) => h('button', {

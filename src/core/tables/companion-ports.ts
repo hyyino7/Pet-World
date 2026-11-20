@@ -2,6 +2,7 @@ import {Context} from '@deepseek-ai/cordis';
 import type {Agent} from '@deepseek-ai/dsh-agent';
 import type {ActivityRecord} from '#dsh-world/life/types';
 import {RegistrationTable} from './registry.js';
+import type {HomeBinding} from '../workspace.js';
 
 export interface CompanionBinding {
   workspaceId: string;
@@ -21,6 +22,7 @@ interface Ports {
   lifeOwnsAlbum(sessionId: string): boolean;
   watchingTelevision(sessionId: string): boolean;
   isRunningLifeHome(sessionId: string): boolean;
+  applyHomeArrival(scope: HomeBinding, sessionId: string): boolean;
 }
 
 export class CompanionPorts {
@@ -31,6 +33,7 @@ export class CompanionPorts {
     lifeOwnsAlbum: new RegistrationTable(),
     watchingTelevision: new RegistrationTable(),
     isRunningLifeHome: new RegistrationTable(),
+    applyHomeArrival: new RegistrationTable(),
   };
 
   bind(ctx: Context, ownerScope: OwnerScope) {

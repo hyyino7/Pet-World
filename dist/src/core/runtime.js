@@ -13,6 +13,7 @@ export class CoreRuntime {
     bootId = id('boot');
     defaultConversation;
     files;
+    workspace;
     fileEffect = false;
     stopped = false;
     onChange = () => { };
@@ -22,7 +23,7 @@ export class CoreRuntime {
     capabilities = () => this.capabilityTable.list().map(({ id, owner, contractVersion, status }) => ({
         id, owner, contractVersion, ...status(),
     }));
-    constructor(config) {
+    constructor(config, createWorkspace) {
         this.config = config;
         this.defaultConversation = conversationOptions(config.conversation);
         for (const key of ['companionId', 'scopeId', 'ownerActorId'])
@@ -32,19 +33,21 @@ export class CoreRuntime {
         this.authority = new CoreAuthority(config.companionId, config.scopeId);
         this.owner = this.authority.client({ module: 'core', actor: { kind: 'owner', id: config.ownerActorId }, operations: ['*'] });
         try {
-            this.store.transaction(() => {
-                const identity = this.store.get('identity', 'current');
-                if (identity && (identity.companionId !== config.companionId || identity.ownerActorId !== config.ownerActorId || this.store.meta('scope') !== config.scopeId))
-                    reject('INCOMPATIBLE', 'Stored identity/scope does not match host configuration');
-                if (!identity) {
-                    this.store.put('identity', 'current', { companionId: config.companionId, revision: 1, displayName: config.displayName, character: config.character, ownerActorId: config.ownerActorId });
-                    this.store.setMeta('scope', config.scopeId);
-                }
-                if (!this.store.get('policy', 'current'))
-                    this.store.put('policy', 'current', { revision: 1, quiet: false });
-                // Retired activity/execution/contact rows remain untouched historical data.
-                // Opening the companion never reconciles, runs or mutates those records.
-            });
+            this.workspace = this.files = createWorkspace?.(this);
+            const identity = this.store.get('identity', 'current');
+            if (identity && (identity.companionId !== config.companionId || identity.ownerActorId !== config.ownerActorId || this.store.meta('scope') !== config.scopeId))
+                reject('INCOMPATIBLE', 'Stored identity/scope does not match host configuration');
+            if (!this.workspace?.migrationReason())
+                this.store.transaction(() => {
+                    if (!identity) {
+                        this.store.put('identity', 'current', this.configuredIdentity());
+                        this.store.setMeta('scope', config.scopeId);
+                    }
+                    if (!this.store.get('policy', 'current'))
+                        this.store.put('policy', 'current', { revision: 1, quiet: false });
+                    // Retired activity/execution/contact rows remain untouched historical data.
+                    // Opening the companion never reconciles, runs or mutates those records.
+                });
             this.registerBaseCapabilities();
             this.core = {
                 getIdentity: this.call('getIdentity', false, () => this.identity()),
@@ -72,9 +75,17 @@ export class CoreRuntime {
         check(typeof input.displayName === 'string' && input.displayName.length <= 256 && !/[\r\n]/.test(input.displayName), 'Invalid displayName');
         check(typeof input.character === 'string' && input.character.length <= 32_768, 'Invalid character');
     }
-    identity() { return this.store.require('identity', 'current'); }
+    configuredIdentity() {
+        const { companionId, displayName, character, ownerActorId } = this.config;
+        return { companionId, revision: 1, displayName, character, ownerActorId };
+    }
+    identity() {
+        return this.store.get('identity', 'current') ?? (this.workspace?.migrationReason()
+            ? this.configuredIdentity() : this.store.require('identity', 'current'));
+    }
     policy() {
-        const saved = this.store.require('policy', 'current');
+        const saved = this.store.get('policy', 'current') ?? (this.workspace?.migrationReason()
+            ? { revision: 1, quiet: false } : this.store.require('policy', 'current'));
         return { revision: saved.revision, quiet: saved.quiet };
     }
     get conversation() {
@@ -95,17 +106,26 @@ export class CoreRuntime {
                     if (Date.parse(options.deadline) <= Date.now())
                         throw new Rejection({ code: 'TIMED_OUT', message: 'Call deadline expired', effect: 'none', retry: 'never' });
                 }
+                if (write)
+                    this.workspace?.assertMigrationReady();
                 if (name === 'workspace.initialize')
                     await this.store.ensurePersisted();
                 this.files?.synchronize(name);
                 this.fileEffect = false;
                 canonical(input);
                 check(input !== null && typeof input === 'object' && !Array.isArray(input), 'Expected request object');
-                const run = () => { const value = fn(input); if (write)
-                    this.store.setMeta('stateRevision', (this.store.meta('stateRevision') ?? 0) + 1); return value; };
+                if (write)
+                    this.workspace?.assertMigrationReady();
+                let changed = false;
+                const run = () => { const value = fn(input); if (write) {
+                    this.store.setMeta('stateRevision', (this.store.meta('stateRevision') ?? 0) + 1);
+                    changed = true;
+                } return value; };
                 const value = write ? this.store.mutate(`${principal.module}:${principal.actor.kind}:${principal.actor.id}`, name, context.requestId, input, run) : run();
                 if (write)
                     try {
+                        if (changed)
+                            this.workspace?.configurationCommitted(name);
                         this.onChange(name, { bootId: this.bootId, revision: this.store.meta('stateRevision') });
                     }
                     catch { /* Committed configuration remains authoritative. */ }

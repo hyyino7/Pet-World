@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, symlinkSync, rmSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {syncBuiltinESMExports} from 'node:module';
 import { createCore, type CoreConfig } from '../../src/core/index.js';
+import { HOME_STORAGE_STEP, INITIAL_STORAGE_STEP, storageManifest } from '../../src/core/storage-migration.js';
 import type { Result } from '../../src/contracts/common.js';
 const unwrap = <T>(result: Result<T>): T => { if (!result.ok) assert.fail(JSON.stringify(result.error)); return result.value; };
 const fixture = () => {
@@ -15,6 +17,62 @@ const fixture = () => {
   const config: CoreConfig = { dataDir: join(repo, '.chatpet/data/core'), companionId: 'fixture-companion', scopeId: 'fixture-scope', ownerActorId: 'owner', displayName: 'Example', character: 'A configured character.' };
   return { root, repo, config };
 };
+
+test('new workspaces are initialized with the current storage version', async () => {
+  const f = fixture();
+  mkdirSync(join(f.repo,'.chatpet','diary'),{recursive:true});
+  const host = createCore(f.config);
+  const request = () => host.operator.request('new-workspace');
+  try {
+    const prefs = unwrap(await host.services.preferences.read(request(), {}));
+    const bound = unwrap(await host.services.preferences.save(request(), {expectedRevision:prefs.revision, conversation:prefs.conversation,
+      workspace:{id:'repo', path:f.repo, title:'Repo'}}));
+    assert.equal(host.workspace.status().state, 'pending');
+    const initialized = unwrap(await host.services.workspace.initialize(request(), {expectedPreferencesRevision:bound.revision}));
+    assert.equal(initialized.state, 'ready');
+    assert.deepEqual(JSON.parse(readFileSync(join(f.repo, '.chatpet/data/storage-manifest.json'), 'utf8')),
+      storageManifest(f.config.companionId, HOME_STORAGE_STEP.to));
+  } finally { await host.close(); rmSync(f.root, {recursive:true, force:true}); }
+});
+
+for (const state of ['absent', '0001', 'foreign', 'unfinished']) test(`workspace migration gate: ${state}`, async () => {
+  const f = fixture(); let host = createCore(f.config);
+  const request = () => host.operator.request('migration-gate');
+  const target = {id:'repo', path:f.repo, title:'Repo'};
+  const manifest = join(f.repo, '.chatpet/data/storage-manifest.json'), journal = join(f.repo, '.chatpet/data/migrations.jsonl');
+  const current = JSON.stringify(storageManifest(f.config.companionId, HOME_STORAGE_STEP.to));
+  try {
+    const prefs = unwrap(await host.services.preferences.read(request(), {}));
+    const bound = unwrap(await host.services.preferences.save(request(), {expectedRevision:prefs.revision, workspace:target, conversation:prefs.conversation}));
+    unwrap(await host.services.workspace.initialize(request(), {expectedPreferencesRevision:bound.revision}));
+    await host.close();
+    if (state === 'absent') rmSync(manifest, {force:true});
+    else writeFileSync(manifest, state === '0001' ? JSON.stringify(storageManifest(f.config.companionId, INITIAL_STORAGE_STEP.to))
+      : state === 'foreign' ? JSON.stringify(storageManifest('other-companion', HOME_STORAGE_STEP.to)) : current);
+    if (state === 'unfinished') writeFileSync(journal, JSON.stringify({event:'migration', id:'unfinished', schema:2,
+      backup:f.root, backupHash:'0'.repeat(64), binding:{storageId:target.id,repoHash:createHash('sha256').update(f.repo).digest('hex')},
+      steps:[INITIAL_STORAGE_STEP, HOME_STORAGE_STEP]}) + '\n');
+    host = createCore(f.config);
+    const actual = unwrap(await host.services.workspace.inspect(request(), {}));
+    assert.equal(actual.state, 'migration-required');
+    assert.equal(actual.migrationReason, state === 'foreign' ? 'manifest-mismatch' : state === 'unfinished'
+      ? 'migration-incomplete' : 'storage-version-outdated');
+    const store = host.workspace.runtime.store;
+    const before = store.db.prepare('SELECT * FROM requests').all();
+    const assertRefused = (result: Result<unknown>) => {
+      assert.equal(result.ok, false);
+      if (!result.ok) assert.equal(result.error.code, 'migration-required');
+    };
+    assertRefused(await host.services.workspace.initialize(request(), {expectedPreferencesRevision:bound.revision}));
+    assertRefused(await host.services.preferences.save(request(), {expectedRevision:bound.revision, workspace:null, conversation:bound.conversation}));
+    assertRefused(await host.services.preferences.setQuiet(request(), {expectedRevision:1, quiet:true}));
+    assert.deepEqual(store.db.prepare('SELECT * FROM requests').all(), before);
+    writeFileSync(manifest, current); rmSync(journal, {force:true});
+    assert.equal(host.workspace.status().state, 'migration-required', 'Only restart lifts the migration gate');
+    await host.close(); host = createCore(f.config);
+    assert.equal(host.workspace.status().state, 'ready');
+  } finally { await host.close(); rmSync(f.root, {recursive:true, force:true}); }
+});
 
 test('only an initialized companion Repo gets native-discoverable instructions, and owner edits survive restart', async () => {
   const f = fixture(); let host = createCore(f.config);

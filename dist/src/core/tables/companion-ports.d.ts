@@ -1,6 +1,7 @@
 import { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import type { ActivityRecord } from '#dsh-world/life/types';
+import type { HomeBinding } from '../workspace.js';
 export interface CompanionBinding {
     workspaceId: string;
     path: string;
@@ -17,6 +18,7 @@ interface Ports {
     lifeOwnsAlbum(sessionId: string): boolean;
     watchingTelevision(sessionId: string): boolean;
     isRunningLifeHome(sessionId: string): boolean;
+    applyHomeArrival(scope: HomeBinding, sessionId: string): boolean;
 }
 export declare class CompanionPorts {
     private scope?;

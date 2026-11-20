@@ -32,6 +32,8 @@ async function fixture(t:TestContext,needs:Record<string,number>={}) {
   const library=new CompanionRecordLibrary(root,'UTC');
   const host={native:{},records:{getLibrary:()=>library},workspace:{
     status:()=>({state:'ready',target:workspace}),storageId:()=> 'storage',
+    homeScope(){return {workspaceId:workspace.id,path:workspace.path,storageId:this.storageId(),bootId:'fixture-boot',generation:0};},
+    readCompanionHome:()=>({sessionId:'fixture-home'}),
     runtime:{config:{ownerActorId:'owner',companionId:'fish'},identity:()=>({companionId:'fish',displayName:'Fixture'}),store:{meta:()=>undefined}},
   }} as unknown as PetCoreHost;
   const handlers=new Map<string,Set<(...args:any[])=>unknown>>(),changes:BehaviorChange[]=[];

@@ -8,7 +8,7 @@ import { createCore } from '../../dist/src/core/index.js';
 import { value } from '../../scripts/fixtures/synthetic-companion.mjs';
 import { backupPlan } from '../../scripts/lib/offline-backup.mjs';
 
-export async function offlineFixture(t, memory = true) {
+export async function offlineFixture(t, memory = true, {keepStorageManifest = false} = {}) {
   const out = realpathSync(mkdtempSync(join(tmpdir(),'migration-metadata-')));
   t.after(() => rmSync(out,{recursive:true,force:true}));
   const repo = join(out,'repo'), home = join(out,'dsh'), profile = join(home,'profiles','fixture');
@@ -25,6 +25,7 @@ export async function offlineFixture(t, memory = true) {
     assert.equal(value(await host.services.workspace.initialize(request(),{expectedPreferencesRevision:prefs.revision})).state,'ready');
     storageId = host.workspace.storageId();
   } finally {await host.close();}
+  if (!keepStorageManifest) rmSync(join(data, 'storage-manifest.json'));
   const write = (file,text) => {mkdirSync(dirname(file),{recursive:true});writeFileSync(file,text);};
   write(join(profile,'node_modules/her-world/package.json'),JSON.stringify({name:'her-world',version:'0.1.8',synthetic:true}));
   write(join(profile,'cordis.patch.yml'),'# Synthetic metadata fixture\n');

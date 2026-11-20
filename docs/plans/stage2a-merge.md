@@ -634,6 +634,7 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 6. 入口联跑与回退证据。`tests/behavior-list/{entries-lifecycle,families}.test.mjs`、`tests/migrate/home-flow.test.mjs`、`tests/migrate/home-rollback.mjs`（后两者新）。`tests/behavior-list/entries-lifecycle.test.mjs:160-192,230-265`、`tests/behavior-list/families.test.mjs:125-194`、`tests/migrate/rollback.test.mjs:18-55,74-101`
 
 - 提交 2 改动的 1B 迁移测试只把步骤集显式选成 `0001`，原断言不放宽。提交 3 列了 14 个文件，执行中超过 15 文件或 600 行就停下拆分，不预先声明超阈值。
+- **执行中补充（主人 2026-11-20 拍板「按推荐改断言」）**：1B 有几处断言写的是「当前 Core 打开未迁移数据照样就绪、能召回」，正是本批按拍板点 6 有意改掉的行为，只选 `0001` 保不住。改法：`tests/migrate/normal.test.mjs` 的迁移前、只完成 `0001`、回退后三种状态，`tests/migrate/compatibility.test.mjs` 的迁移前，`tests/migrate/rollback.test.mjs:101` 的回退后，改为断言当前 Core 报 `migration-required`，Bank 逻辑内容不变的断言保留；完整步骤集跑完后断言就绪且能召回。「回退后旧版本可用」改由 `home-rollback.mjs` 用真实 `v0.2.0` 代码验证，不进 `verify`，合并前由 Claude 在沙箱外跑。其余 1B 断言照旧不放宽。同一拍板下，Claude 按方案意图另批两处 1B 夹具：`tests/migrate/settlement.test.mjs` 的待结算回执改在当前代码可打开的临时清单下准备（本批不改 Body、Economy 的数据形状），再还原旧形状副本去迁移，`recover()` 的断言和「迁移前后结算一致」的 `deepEqual` 不改；`tests/migrate/crash.test.mjs` 的 `copyAndBind` 改为离线写合成副本的绑定，「换路径后已收尾历史保留、未完成段拒绝续做」的断言不改。两处都只动准备步骤。
 - 回退演练用的 `v0.2.0` 检出由执行方在临时目录 `git worktree add --detach <临时目录> v0.2.0`，再按 `docs/development.md` 的恢复命令装依赖。这是本仓库自己的旧版本，不属于上游材料。`home-rollback.mjs` 不叫 `*.test.mjs`，`verify` 不会自动收集，合并前由 Claude 单独跑一次。
 
 本批范围到 home、迁移门禁和受影响入口。`economy.initialized`、`setMeta/close` 归第 5 批，第三层切新契约归阶段 3。vendor、备份器、包导出和发布流程只作取证。`docs/plans/stage2a-merge.md:446-465,655-676`、`AGENTS.md:55-63`
@@ -980,6 +981,32 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - `pnpm run build && pnpm run test:behavior-list` 通过，索引 11/11，行为 93/93，含 Memory 回环。
 - 改动限于本轮授权文件和构建产物，验证使用合成数据。合并门禁由 Claude 在沙箱外运行。
 
+### 第 4 批
+
+- 六组文件数／改动行数（加删合计，排除 `dist/src/**` 与基线）为 01 5／204、02 15／418、03 14／306、04 3／59、05 10／475、06 5／334。
+- 01 共用版本与日志判定。02 `0002` 仅复制 home ID，保留 `life.json` 原字节，四个 `SIGKILL` 边界续做通过。03 新装写最新清单，旧数据锁定拒写。04 设置显示迁移原因和操作提示。05 Core 单飞提交身份，Plan 镜像落盘后确认待迎接。06 联跑并演练旧包回退。
+- 六组均在临时副本独立执行 `pnpm run build`、`pnpm run check:arch` 和存储快测（各 5/5）。迁移快测 01 为 136/136、02 和 03 各 142/142、06 为 143/143。入口快测 03 为 113/113、05 为 118/118、06 为 122/122。04 与 06 的设置快测各 7/7，客户端语法通过。
+- `pnpm run check:types` 和 `pnpm run check:arch -- --report` 通过。R5 的 Core 读写 `life.json` 清零，R8 新增 0，基线用 `--write-baseline` 刷新。行为清单索引 11/11、执行 97/97。原 `2A1A-07` 通过，同一合成绑定迁移后复跑 `2A1A-18` 原断言通过。
+- `tests/migrate/normal.test.mjs:16`（原 14）由迁移前召回改为 `migration-required`。`:39`（原 37）由只完成 `0001` 后就绪并召回改为 `migration-required`。`:59`（原 57）由回退后就绪并召回改为 `migration-required`。保留两处 Bank 逻辑对比，`:60-61` 补上完整迁移后就绪和召回。
+- `tests/migrate/compatibility.test.mjs:27`（原 26）由迁移前就绪改为 `migration-required`。`:29-31`（原 29）将仅完成 `0001` 后就绪移至完成 `0002` 后，并查真实召回。
+- `tests/migrate/rollback.test.mjs:103`（原 101）由当前包回退后召回改为 `migration-required`。旧包回退后聊天、召回和 home 由 `home-rollback.mjs` 验证。
+- `tests/migrate/settlement.test.mjs:19-21,55-60` 在临时当前清单下准备待结算，恢复旧形状并跑完整迁移。`recover()` 内各项断言及迁移前后 `deepEqual` 原样保留。
+- `tests/migrate/crash.test.mjs:140-157` 的 `copyAndBind` 离线更新合成 SQLite 绑定并检查存储身份。换路径后的已收尾历史和未完成段拒绝续做断言原样保留。
+- `HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs` 通过 1/1，覆盖原 home、聊天、召回、送达、额度与花费。上轮 B10 首次报「B 必须真实召回 A 已确认送达的事实」，随后单项、整套及本轮均通过。03 首轮合成 Bank HTTP 500，原命令复跑全过，原因未定。
+- 02 带入 1B 断言助手，03 启用新门禁后切换其判定。05 在已列 `runtime.ts` 加提交后换代。第 4 组采用已列源码与 `dist`，实际 `./client` 的构建产物 `src/desktop/platform/client.js` 待确认是否入补丁。
+- 在 `2d05d37` 上依次重放 `/tmp/her-world-4-patches` 六组，1558 个仓库文件逐字节一致。1A 原断言保留，演练均使用合成数据。以补丁交付，合并门禁由 Claude 在沙箱外运行。
+- **门禁返工**　03 补 `audit-transcripts` 的 `retainedWritesAllowed`，05 补 `behavior-scheduling`、`life-clock-intent`、`life-desktop-integration`、`life-body` 和 `life-sleep-continuity` 的 `homeScope`、`readCompanionHome`。04 并入设置页生成客户端。六组编号沿用，文件数／改动行数（排除 `dist` 与基线）为 01 5／204、02 15／418、03 15／312、04 4／72、05 15／488、06 5／335。夹具快测 49/49，全量 1,567 项通过，Memory P2 因沙箱执行 `/bin/ps` 返回 `EPERM` 记为「环境未运行」。
+
+#### 返工一轮
+
+- 必须修 1 按主人拍板「按推荐改运行时」。绑定按 `inspectRepoBinding` 的口径核对，无法离线接手时报 `binding-not-migratable`，设置引导换回 0.2.0。缺 `.chatpet/` 或仅有旧标记的 Repo 待初始化，路径暂离时不可用。新增四类入口、路径恢复和同形状一致性测试。
+- 必须修 2 `0002` 对已达到目标版本且无在途段的存档按 Core 有效记录判定。`apply` 接受没有旧镜像 ID 的情况，在途步骤仍核对镜像严格相等。新增前台开 home 后镜像无 ID、旧 ID 的迁移重启用例，以及 `apply` 和中断续做用例。
+- 必须修 3 日志导出拒写时抛错并保留待办。测试覆盖读取原生日志前和读取过程中原 Repo 暂离，恢复后由显式 `flush()` 补写原址。
+- 建议修 1–4 恢复仅最新代取 home ID 以取消会话，已完成目标丢失检查移出追记 `failed` 的 `try`，短步骤集提示换回原包和源码续做或回退，恢复文件名白名单并纳入新增文件。保留 `nlink === 1` 以匹配离线准入并拒绝多链接共享的文件。新增同名重挂、拒绝续做后保留日志、旧步骤集提示用例。
+- 建议修 5 按拍板暂缓缓存。建议修 6 有意让 Core 在绑定仍有效时提交已经创建的替代 home，避免留下孤儿会话，Plan 继续按运行代拒绝过期结果。
+- 修前确认回归失败。修后 `pnpm run build && pnpm run check:arch`、`pnpm run check:types`、客户端语法及细则快测通过（存储 5/5、迁移 167/167、入口 123/123、日志回归 11/11）。`HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs` 通过 1/1。
+- 按 `verify` 收集全量 Node 测试，154 个文件、1,594 项通过，Memory P2 因 `/bin/ps` 返回 `EPERM` 记「环境未运行」。仅用合成数据，设置提示经真实 RPC 验证，真实 DSH 设置页待人工验收。改动在允许范围及阈值内，留在工作区，合并门禁由 Claude 执行。
+
 ## 审查结论
 
 ### 1A 第一轮验收（Codex 审查 + Claude 核实）
@@ -1216,3 +1243,60 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - 我在 worktree 里重跑：`pnpm run build`、`check:arch`（1031 条，新增 0、消失 0，`src/living` 的 R1–R4 为 0）、`check:types` 通过；细则快测 8 个文件 129/129 通过；跑完工作区干净。
 - 「新增 9 条用例在返工前失败」这一点我没有独立复现，以返工记录为准。门禁沿用驱动会话在沙箱外跑的 `pnpm run verify` 1547/1547，行为清单 93/93 是 Codex 报的，我都没有重跑。
 - 结论：可以合并，前提是主人明确同意。合并时同步 `docs/architecture.md:232`，并按第 6 批的约定归并契约文档。
+
+### 第 4 批第一轮验收（Codex 审查 + Claude 核实）
+
+**必须修**
+
+1. **运行时锁住的状态，离线迁移器接不住，主人会卡死。** 运行时的 `migrationReason()`（`src/core/workspace.ts:233-247`）按「已保存的绑定 / 可搬迁 Core 的实际目录 / 待绑定的目标」判断要不要锁，而且一旦锁定，本进程拒绝一切写入，包括重新绑定。离线迁移器的 `loadInstallation()` 却要求 `inspectRepoBinding()` 返回 `ready`（`scripts/migrate/context.mjs:15-16`），也就是选中的工作区等于已保存的绑定、路径存在、`.chatpet/` 和清单都在、没有初始化标记（`scripts/lib/repo-storage.mjs:73-84`）。只要两边判断不一致，在线不能改，离线也不能迁，设置页还提示主人「运行迁移命令」。读代码确认了四种情况：
+   - 换包前，在已初始化的 A 上又选了 B、还没初始化 B。运行时因 A 锁定（`:241-245`）；迁移器因选中的 B 和绑定 A 不一致，报 `binding-changed`。
+   - 用 `--resume-repo` 把没迁移的 0.2.0 Repo 搬到新设备（`docs/portability.md:28-36`）。运行时按可搬迁 Core 的实际目录锁定；迁移器读到的绑定路径还是旧设备的，报 `binding-changed`。
+   - 已就绪的绑定，`.chatpet/` 被删除或绑定路径暂时不在。`:200` 和 `:227-230` 报 `storage-version-outdated` 并锁定；以前会显示 `pending`（可以重新初始化）或 `unavailable`。迁移器报的是 `pending`/`unavailable`。
+   - 0.2.0 留下的初始化中断标记是旧格式 `{companionId}`，`:226` 的比较不认它，于是落到 `storage-version-outdated`；迁移器因「初始化未完成」拒绝。
+
+   为什么必须修：拍板点 6 的升级路径要求「需要迁移」之后一定能用离线命令解除；现在有确定会走进去、又没有出路的状态，而且提示是错的。改法需要先对齐，因为「让迁移器接住这些状态」要动高风险的 `scripts/lib/repo-storage.mjs`，超出本批允许范围。**推荐**：不动迁移器，让运行时只在迁移器能处理的形状（`inspectRepoBinding` 等价判定为 `ready`）上报 `storage-version-outdated`/`manifest-mismatch`；其余形状另给一个细因（比如 `binding-not-migratable`），设置页提示「在版本页换回 0.2.0，把工作区选择和初始化理顺后再升级」；对没有任何伙伴数据的形状（`.chatpet/` 不存在、只有旧格式的初始化标记而没有清单），沿用原来的 `pending`，不锁定。四种情况各补一条测试，断言要么能迁移，要么拿到对应的细因和提示。备选：放开迁移器（改高风险文件，要另行同意）。
+
+2. **新版直接初始化的存档，镜像一滞后就会被 `0002` 判成冲突并锁死。** `0002` 只在日志记过 `done/skip` 时才按 Core 为准（`scripts/migrate/steps/0002-home-identity.mjs:58`），而新装直接写 v2 清单、没有迁移日志（`src/core/workspace.ts:413-415`）。只要 Core 已有 home 记录、`life.json` 还没有对应 ID（没加载 Plan 时从前台打开 home，这是本批设计里的合法状态），或者镜像是旧 ID，`status/plan` 就把 `0002` 报成待执行；一旦执行（比如第 5 批加了 `0003`，主人照常跑迁移），`apply` 在 `:73` 报 `home-identity-conflict`，记 `failed`，留下没收尾的段。重启后运行时读到这个段，报 `migration-incomplete` 并锁定（`src/core/workspace.ts:216-219`），本来好好的工作区就进不去了。为什么必须修：第 5 批和 RC 都会在新装存档上跑完整步骤集。改法：清单版本已经超过这一步、而且没有这一步的在途段时，`complete` 按 Core 有效记录为准（和「已收尾复查」同一口径）；`apply` 在旧镜像没有 ID 时不报冲突；中断在 `0002` 当轮的，仍按严格相等。补两条测试：新装后前台开 home、不加载 Plan，再跑迁移，`status` 为 `complete`，运行时仍 `ready`；镜像是旧 ID 时同样不冲突。
+
+3. **拒写的导出被当成成功删掉。** `exportCaptured()` 在 `retainedWritesAllowed()` 为假时直接 `return`（`src/core/native/transcripts.ts:224,233`），`flush()` 就把这一项当成功从待办里删掉（`:276`）。本批之前，原 Repo 暂时不在时 `validateScope` 会抛错，待办保留、可以重试；现在原 Repo 不在会被 `inspectMigration(..., true)` 判成 `storage-version-outdated`（`src/core/workspace.ts:200`），导出就悄悄丢了。这违背 `docs/portability.md:45`「不能把这份导出重定向或悄悄丢掉」，是本批引入的回退。改法：拒写时抛错，让待办保留并按原有次数重试；补一条测试：原 Repo 暂不可用时待办还在，恢复后显式 `flush()` 能补上。
+
+**建议修（不影响合并，返工时可以一起做）**
+
+- `src/living/plan/plugin.ts:389`：停机取消 home 会话时，去掉了 3B 加的「只有最新代才取 ID」（72cde28）。同名重挂时，旧代收尾可能取消新代正在同一个 home 里跑的回合。如果是有意的（细则写的是「从本运行代保存的会话 ID 取消」），在执行记录里说明；否则恢复代次判断。
+- `scripts/migrate/runner.mjs:118`：续做时发现已完成步骤的目标丢了，第一次会正确报 `migration-inconsistent`，但同一个 catch 会追记 `failed`；解码器只认每步最后一个事件，第二次续做就不再当它完成过，会重写清单，抹掉证据。把这条检查挪到会追记 `failed` 的 try 外面。
+- `src/console/client.js:1178-1180`：0.2.0 的 `0001` 在换包前中断时，新版报 `migration-incomplete`，但「用与已安装版本一致的源码 `--resume`」会因步骤集不同被拒。日志头的步骤集比当前代码短时，提示改成「换回原版本的包和源码续做，或按回退流程恢复」。
+- `src/core/workspace.ts:176-180`：`read()` 去掉了文件名白名单，又对所有托管文件新加了 `nlink === 1`。白名单可以保留并加上新文件名；`nlink` 的新限制如果要保留，在方案里写一句。
+- 热路径的同步 I/O：`readCompanionHome()` 每次都经 `homeScope()` → `status()`，会读托管文档、清单和整份迁移日志；`isCompanionHome`、Plan store 的每次 `read/refresh/write` 都会走到。ready 状态下迁移判定的结果可以按 `stateRevision` 或文件 mtime 缓存。
+- `src/core/companion-foundation.ts:103`：Life 在等 DSH 建替代会话时被暂停或卸载，提交仍会进行。新会话本来就要用（旧 home 已归档），提交比留下孤儿会话好，不算缺陷；只是 Plan 侧返回后才拒绝，可以在执行记录里说明这是有意的。
+
+**核实结果**
+
+- 范围：六个提交只改了细则六组列出的文件。另外有：第 2 组带入的 `tests/migrate/helpers.mjs`（第 3 组本来就列了）；第 3 组的 `tests/regressions/audit-transcripts.test.ts` 和第 5 组的 5 个测试假 workspace（门禁返工，只补 `homeScope`/`readCompanionHome`/`retainedWritesAllowed`，断言一条没改）；第 5 组的 `src/core/runtime.ts`（执行记录已说明）；第 4 组的 `src/desktop/platform/client.js`（生成产物，构建后逐字节一致）。`src/core/storage.ts`、`package.json`、`vendor/**`、`scripts/lib/offline-backup.mjs`、`scripts/lib/repo-storage.mjs`、`cordis.patch.yml`、`.github/` 都没动。
+- 旧断言：`normal.test.mjs` 三处、`compatibility.test.mjs` 迁移前、`rollback.test.mjs:103` 改成 `migration-required`，完整步骤集之后断言就绪并真实召回，Bank 逻辑内容的两处 `deepEqual` 都在。`settlement.test.mjs` 只在准备阶段临时写当前清单，`recover()` 和迁移前后的 `deepEqual` 没动。`crash.test.mjs` 的 `copyAndBind` 改成离线更新 SQLite 绑定，还加了 `inspectRepoBinding` 核对存储身份；「换路径后已收尾历史保留、未完成段拒绝续做」的断言都在。`companion-foundation.test.ts` 由断言写 `life.json` 改成断言 Core 记录 `{sessionId, arrivalPending:true}`，并且 `life.json` 不存在，比原来更严。其余 1B 用例只是显式选 `0001`，没有放宽。`entries-lifecycle` 只把种身体数据挪到初始化之后（新装要求空工作区），`families` 的 G9 原断言整体复用，没删断言。
+- `0002`：只插入缺失的 `{sessionId}`，`life.json` 原字节保留（有字节级测试）；异值报 `home-identity-conflict`，Core 行不变；`complete` 在 SQLite 私有副本上判断；四个 `SIGKILL` 点都核对了日志、原备份哈希、记录数和镜像哈希；删掉 Core 行后报 `inconsistent`，续做和开新段都拒绝。`dataVersions` 和 `HOME_STORAGE_STEP.to` 一致（`core:2`、`living:2`，去掉三个旧键）。
+- 「需要迁移」：四种细因和细则一致，对外统一 `migration-required`；`CoreRuntime.call` 的写调用在 `ensurePersisted()` 前后各拦一次，`initialize/write` 入口复核，`synchronize` 短路，旧库启动跳过身份和策略补写；生活三区、Emotion、记录库、Memory、Room 都靠 `status().state === 'ready'` 准入，`status()` 在迁移态直接返回；设置 RPC 除 `snapshot` 都拒。`home-flow.test.mjs` 断言绕过写入后 Core 的 `records/requests/meta` 和托管文件都没变，普通 DSH 会话能回复且没有伙伴上下文。
+- 共享 home：单飞按 Core 实例和绑定代次登记；原生 `create` 失败时两路都拒绝、旧记录保留；Core 写失败时候选 ID 保留，重试补写、不再建会话（入口测试三种情况）；`arrivalPending` 在镜像落盘、目录 fsync 之后才清除，待迎接期间上游看不到 `greeting`；四个镜像故障用例都在。
+- 我在 worktree 里重跑：`pnpm run build`（跑完工作区干净，`dist` 和生成客户端都和源码一致）、`check:arch`（新增 0、消失 0）、`node --check src/console/client.js`；细则快测 14 个文件 270/270；`HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs` 1/1。门禁和行为清单以驱动会话在沙箱外跑的结果为准（1568/1568、97/97），我没有重跑。
+- **未手动验证**：没有在真实 DSH 里操作设置页的「需要迁移」卡片；入口链路由真实设置 RPC 和 `cordisFixture` 覆盖。
+
+**剔除**：无。Codex 的 6 条都读代码核实了：P1、两条 P2 归入必须修 1–3，另外三条归入建议修。
+
+**复查（返工一轮后，09e55e5）**：三条必须修都已修好；建议修 1–4 已做，第 6 条在执行记录里说明了，第 5 条（缓存）按拍板暂缓。
+
+1. 必须修 1 按主人拍板「按推荐改运行时」修，迁移器和 `scripts/lib/repo-storage.mjs` 都没动。
+   - 运行时新加 `offlineBindingReady()`（`src/core/workspace.ts:244-260`），按 `inspectRepoBinding` 的口径核对：选中的工作区等于绑定、Core 身份和范围、库文件形状、没有初始化标记、身份清单和声明的文件都在。不满足时报 `binding-not-migratable`，设置页提示「在版本页换回 0.2.0，把工作区选择和初始化理顺后再升级」。
+   - 没有伙伴数据的形状不锁定：`.chatpet/` 缺失时回到 `pending`；只有旧格式 `{companionId}` 标记、没有别的文件时，也回到 `pending`，初始化时换成新标记（`:197-199,406-411`）。路径不在时 `inspectMigration` 直接返回，状态是 `unavailable`。
+   - 四种情况各有入口测试（`tests/migrate/binding.test.mjs`），另有 10 种合成形状逐一断言「运行时报可迁移细因」和「`inspectRepoBinding` 为 `ready`」两者等价，包括大清单、schema 1/2、声明缺失、越界声明、带数据的旧标记、硬链接文档。
+2. 必须修 2：`run` 按准入时的清单版本把 `versioned` 传给 `complete`（`scripts/migrate/runner.mjs:122-123`），`status` 只对不在途的步骤传（`:41-42`）。新装存档上 `0002` 以 Core 有效记录为准；`apply` 在旧镜像没有 ID 时不报冲突。续做和在途段仍严格比对。新装后前台开 home、镜像没有 ID 或是旧 ID 两种情况，`status/plan/run` 都是 `complete`，重启后运行时 `ready`、home 不变；中断在 `0002`、镜像又被换成旧 ID 时，续做仍报 `home-identity-conflict`。
+3. 必须修 3：`exportCaptured()` 拒写时抛错（`src/core/native/transcripts.ts:224-236`），待办保留；`retainedWritesAllowed` 加上了 `.chatpet/` 必须存在。新测试覆盖读原生日志前、读的过程中原 Repo 暂离两种情况：待办保留、没有写到 B，恢复后显式 `flush()` 补写回 A。
+4. 建议修：Plan 停机恢复了「只有最新代才取 ID」，并补了同名重挂时旧代收尾不取消共享 home 的入口测试；runner 把「已完成目标丢失」检查挪到会追记 `failed` 的 try 外面，测试断言连续两次续做都报 `inconsistent`、日志事件不变；`migration-incomplete` 的提示改由设置 RPC 按日志头步骤集给出（`src/console/settings.ts:245-258`）；`read()` 恢复文件名白名单，`nlink === 1` 保留，理由写进了执行记录。
+
+**两点说明，不需要返工**：
+- `0002.apply` 放宽「旧镜像没有 ID」之后，runner 在 `apply` 后用严格口径复核（`runner.mjs` 的 `Step target is incomplete`）。只有「Core 有记录、镜像没有 ID、又走严格口径」才会撞上，而这种形状在未迁移的旧数据上不会出现（0.2.0 不写 `companion-home`，未迁移时运行时拒写），撞上也只是报错、不写数据。
+- 进程门禁锁定后，绑定 Repo 暂时不在时状态回到 `unavailable`，这段时间配置写入会放行（`binding.test.mjs` 最后一条断言目录恢复后门禁仍在）。这是主人拍板「路径暂不在仍为 unavailable」的结果；这段时间写不到 Repo 文件，只会改 Core 库里的记录，回退备份不受影响。
+
+**范围与验证**：
+- 返工提交改了 15 个手写文件，共 530 行；新文件只有 `tests/migrate/binding.test.mjs`。`scripts/lib/`、`src/core/storage.ts`、`package.json`、`vendor/`、`cordis.patch.yml`、`.github/` 都没动。测试 diff 里删掉的只有 import、夹具参数和 `rmSync` 的条件化，没有删断言、没有 skip；`audit-transcripts` 的假 workspace 加了「原 Repo 必须存在」，和真实实现一致。
+- 我在 worktree 里重跑：`pnpm run build`（跑完工作区干净，`dist` 和生成客户端都和源码一致）、`check:arch`（37 / 1031，新增 0、消失 0）、`check:types`、`node --check src/console/client.js`；快测 15 个文件 306/306；`HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs` 1/1。门禁和行为清单以驱动会话在沙箱外跑的结果为准（1595/1595、97/97），我没有重跑。
+- **未手动验证**：真实 DSH 设置页的「需要迁移」和「换回 0.2.0」两张卡片，留给主人体验验收。
+- 结论：可以合并，前提是主人明确同意。合并时按细则改 `docs/architecture.md:182,186` 两句（身份归第一层，镜像和待迎接归计划区），并更新 `docs/development.md` 里迁移能力的描述。`docs/plans/stage2a-merge.md` 是全阶段方案，合并时不删。

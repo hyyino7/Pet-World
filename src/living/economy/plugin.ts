@@ -82,6 +82,10 @@ export class CompanionEconomy {
   /** Initialization is schema preparation only: no allowance, gifts or goals. */
   prepare(target:WorkspaceTarget, legacyFile?:string, initializing=false):EconomyStore {
     this.assertOpen();
+    const status=this.host.workspace.status();
+    check(status.state!=='migration-required','migration-required');
+    check(initializing || status.state==='ready' && status.target?.id===target.id && status.target.path===target.path,
+      'Economy requires the current bound workspace');
     const storageId=this.host.workspace.storageId(), companionId=this.host.workspace.runtime.config.companionId;
     const key=canonical({path:target.path,storageId,companionId});
     if(this.current?.key===key) {
@@ -107,7 +111,8 @@ export class CompanionEconomy {
         const {id,path}=binding.target;
         this.living.changed({workspaceId:id,path,storageId});
       },
-      guard:()=>{this.assertOpen();check(metadata.persisted(),'Core database is absent or moved');
+      guard:()=>{this.assertOpen();check(this.host.workspace.status().state!=='migration-required','migration-required');
+        check(metadata.persisted(),'Core database is absent or moved');
         check(this.host.workspace.storageId()===storageId,'Economy binding changed');}});
     const remember=()=>metadata.setMeta(`economy.initialized:${storageId}`,{companionId,path:target.path});
     try {if(initializing)remember();else metadata.transaction(remember);}

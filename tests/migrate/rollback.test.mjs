@@ -6,7 +6,8 @@ import { dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { inspectRepoBinding } from '../../scripts/lib/repo-storage.mjs';
 import { verifyOfflineBackup } from '../../scripts/lib/offline-backup.mjs';
-import { fixture, cli, planFor, recall, read } from './helpers.mjs';
+import { fixture, cli, planFor, coreAtLegacyVersion, read } from './helpers.mjs';
+import { selectBootstrapCli } from './migration-child.mjs';
 
 function run(args) {
   const [script,...options] = args;
@@ -16,6 +17,7 @@ const checked = result => { assert.equal(result.status,0,result.stderr); return 
 const write = (file,text) => { mkdirSync(dirname(file),{recursive:true}); writeFileSync(file,text); };
 
 test('same-package restart and old-package rollback keep binding, native files and irreversible state', {timeout:30000}, async t => {
+  selectBootstrapCli(t);
   const f = await fixture(t,'current'), plan = planFor(f);
   const backup = (...args) => run(['scripts/companion-backup.mjs',...args,'--installation',f.installation]);
   const old = join(f.out,'rollback'), upgrade = join(f.out,'same-package'), historical = join(f.out,'bootstrap');
@@ -98,5 +100,5 @@ test('same-package restart and old-package rollback keep binding, native files a
     assert.deepEqual(readBinding(reopened),originalBinding);
     for (const row of after) assert.equal(reopened.prepare('SELECT value FROM records WHERE kind=? AND id=?').get(...row).value,'true');
   } finally { reopened.close(); }
-  await recall(f);
+  await coreAtLegacyVersion(f);
 });

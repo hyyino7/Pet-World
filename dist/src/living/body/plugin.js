@@ -106,6 +106,7 @@ export class CompanionBehavior {
                 void this.enqueue(() => {
                     if (!observed() || living.get('plan'))
                         return;
+                    this.synchronize();
                     this.binding?.room.suspendAutonomy();
                     this.autonomous = false;
                     this.publish();
@@ -234,7 +235,8 @@ export class CompanionBehavior {
         const storageId = target ? this.host.workspace.storageId() : undefined;
         if (this.binding?.id === target?.id && this.binding?.path === target?.path && this.binding?.storageId === storageId)
             return;
-        this.binding?.room.flush();
+        if (status.state !== 'migration-required')
+            this.binding?.room.flush();
         this.binding = undefined;
         this.conditions = [];
         this.awaitingRecovery = false;
@@ -570,12 +572,15 @@ export class CompanionBehavior {
         this.deadlineAt = undefined;
         return this.closing = settleCleanup(...this.subscriptions.splice(0), async () => {
             await this.serial;
+            const writable = this.binding && this.host.workspace.status().state !== 'migration-required';
             try {
-                this.binding?.room.suspendAutonomy();
+                if (writable)
+                    this.binding?.room.suspendAutonomy();
             }
             finally {
                 try {
-                    this.binding?.room.flush();
+                    if (writable)
+                        this.binding?.room.flush();
                 }
                 finally {
                     this.binding = undefined;

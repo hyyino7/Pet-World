@@ -88,6 +88,7 @@ export class CompanionBehavior {
         stopLife?.();stopLife=undefined;
         void this.enqueue(()=>{
           if(!observed()||living.get('plan'))return;
+          this.synchronize();
           this.binding?.room.suspendAutonomy();this.autonomous=false;this.publish();
         },observed).catch(error=>{this.fault=String(error);});
         return;
@@ -163,7 +164,8 @@ export class CompanionBehavior {
     const status = this.host.workspace.status(), target = status.state === 'ready' ? status.target : null;
     const storageId = target ? this.host.workspace.storageId() : undefined;
     if (this.binding?.id === target?.id && this.binding?.path === target?.path && this.binding?.storageId === storageId) return;
-    this.binding?.room.flush(); this.binding = undefined; this.conditions=[];this.awaitingRecovery=false;this.autonomous = false; this.fault = undefined;this.publicationFault=undefined;this.expression=undefined;
+    if (status.state !== 'migration-required') this.binding?.room.flush();
+    this.binding = undefined; this.conditions=[];this.awaitingRecovery=false;this.autonomous = false; this.fault = undefined;this.publicationFault=undefined;this.expression=undefined;
     if (this.closed || !target || !storageId) return;
     const legacy = join(target.path, '.chatpet', 'data', 'life');
     const owner = ['home.json','garden.json'].some(name => existsSync(join(legacy,name))) ? 'life' : 'behavior';
@@ -425,9 +427,10 @@ export class CompanionBehavior {
     this.closed = true; clearTimeout(this.timer);this.timer=undefined;this.deadlineAt=undefined;
     return this.closing=settleCleanup(...this.subscriptions.splice(0),async()=>{
       await this.serial;
-      try {this.binding?.room.suspendAutonomy();}
+      const writable=this.binding && this.host.workspace.status().state!=='migration-required';
+      try {if(writable) this.binding?.room.suspendAutonomy();}
       finally {
-        try {this.binding?.room.flush();}
+        try {if(writable) this.binding?.room.flush();}
         finally {
           this.binding=undefined;
           if (owners.get(this.host) === this) owners.delete(this.host);

@@ -17,7 +17,10 @@ function fixture(t:TestContext,enabled?:boolean) {
   if(enabled!==undefined){mkdirSync(directory,{recursive:true});writeFileSync(join(directory,'control.json'),JSON.stringify({version:1,enabled}));}
   const target={id:'world',path:root,sessionIds:[]},order:string[]=[],clockChanges:boolean[]=[];
   const host={native:{},records:{getLibrary:()=>new CompanionRecordLibrary(root,'UTC')},workspace:{status:()=>({state:'ready',target}),
-    storageId:()=> 'storage',runtime:{identity:()=>({companionId:'fish',displayName:'Fixture'})}}} as unknown as PetCoreHost;
+    storageId:()=> 'storage',
+    homeScope(){return {workspaceId:target.id,path:target.path,storageId:this.storageId(),bootId:'fixture-boot',generation:0};},
+    readCompanionHome:()=>undefined,
+    runtime:{identity:()=>({companionId:'fish',displayName:'Fixture'})}}} as unknown as PetCoreHost;
   let life:CompanionLife,row:any,starts=0,resumes=0;
   const body={setAutonomy:async(_workspace:string,value:boolean)=>{clockChanges.push(value);},setReconsiderConditions:async()=>{},
     inspectPlanned:async(_workspace:string,id:string)=>row?.operationId===id?structuredClone(row):undefined,

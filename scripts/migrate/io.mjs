@@ -3,6 +3,7 @@ import { MigrationError, requireMigration, checked } from './errors.mjs';
 import { randomUUID, createHash } from 'node:crypto';
 import { closeSync, fsyncSync, lstatSync, openSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { parseMigrationJournal } from '../../dist/src/core/storage-migration.js';
 
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 export const json = file => JSON.parse(readFileSync(file, 'utf8'));
@@ -31,10 +32,7 @@ export function atomicWrite(file, text) {
 }
 export function readJournal(file) {
   if (!regular(file)) return {rows:[], truncated:false};
-  const text = readFileSync(file, 'utf8'), lines = text.split('\n');
-  const tail = lines.pop();
-  // Only a non-newline-terminated final record may be a torn append.
-  return {rows:lines.map(line => checked('journal-invalid', () => JSON.parse(line))), truncated:tail.length > 0};
+  return checked('journal-invalid', () => parseMigrationJournal(readFileSync(file, 'utf8')));
 }
 export function appendJournal(file, row) {
   const {rows} = readJournal(file);

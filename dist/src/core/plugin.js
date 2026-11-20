@@ -14,7 +14,9 @@ export async function apply(ctx, config) {
     const prefs = await host.services.preferences.read(host.operator.request('startup.preferences'), {});
     if (prefs.ok && prefs.value.workspace) {
         const inspected = await host.services.workspace.inspect(host.operator.request('startup.workspace.inspect'), {});
-        if (!inspected.ok || inspected.value.state !== 'ready')
+        if (inspected.ok && inspected.value.state === 'migration-required')
+            ctx.logger(name).warn('migration-required', inspected.value.migrationReason);
+        else if (!inspected.ok || inspected.value.state !== 'ready')
             ctx.logger(name).warn('Managed workspace needs initialization; use the workspace settings to prepare it explicitly');
     }
     host.observe((operation, observation) => {

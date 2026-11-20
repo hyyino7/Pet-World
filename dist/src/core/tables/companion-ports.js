@@ -8,6 +8,7 @@ export class CompanionPorts {
         lifeOwnsAlbum: new RegistrationTable(),
         watchingTelevision: new RegistrationTable(),
         isRunningLifeHome: new RegistrationTable(),
+        applyHomeArrival: new RegistrationTable(),
     };
     bind(ctx, ownerScope) {
         const scope = this.scope = { ctx, ownerScope };

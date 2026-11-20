@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { fileHashes } from '../../scripts/lib/repo-storage.mjs';
 import { variants, fixture, cli, refusedCli } from './helpers.mjs';
 import { offlineFixture } from './offline-helpers.mjs';
+import { selectBootstrapCli } from './migration-child.mjs';
 
 function refusesFreshRun(f, code) {
   const backup = join(f.out,'fresh-backup'), before = fileHashes(f.managed);
@@ -20,6 +21,7 @@ function refusesFreshRun(f, code) {
 }
 
 for (const variant of [...variants,'offline-metadata']) test(`${variant}: completed CLI run refuses a fresh backup with journal-exists`, {timeout:60000}, async t => {
+  selectBootstrapCli(t);
   const f = await (variant === 'offline-metadata' ? offlineFixture(t) : fixture(t,variant));
   const result = cli(f,['run','--installation',f.installation,'--backup',join(f.out,'backup')]);
   assert.equal(result.status,0,result.stderr);
@@ -28,6 +30,7 @@ for (const variant of [...variants,'offline-metadata']) test(`${variant}: comple
 });
 
 test('journal refusal distinguishes valid unfinished logs from damaged logs',async t => {
+  selectBootstrapCli(t);
   const f = await offlineFixture(t), file = join(f.data,'migrations.jsonl');
   const result = cli(f,['run','--installation',f.installation,'--backup',join(f.out,'backup')]);
   assert.equal(result.status,0,result.stderr);

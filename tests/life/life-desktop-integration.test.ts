@@ -29,6 +29,8 @@ async function fixture(t:TestContext,enabled:boolean,sleeping=false) {
   let calls=0,nativeOpens=0,features!:DesktopFeatures,life!:CompanionLife;
   const host={native:{context:()=>({identity:'Fixture companion'})},records:{getLibrary:()=>new CompanionRecordLibrary(root,'UTC')},
     workspace:{status:()=>({state:'ready',target}),storageId:()=> 'fixture-storage',companionSettings:()=>settings,
+      homeScope(){return {workspaceId:target.id,path:target.path,storageId:this.storageId(),bootId:'fixture-boot',generation:0};},
+      readCompanionHome:()=>undefined,
       runtime:{config:{companionId:'fixture-fish',ownerActorId:'fixture-owner'},identity:()=>({companionId:'fixture-fish',displayName:'Fixture'}),policy:()=>({quiet:false})}}} as unknown as PetCoreHost;
   const body={restState:()=>({sleeping,pending:false}),setAutonomy:async()=>{},setReconsiderConditions:async()=>{}};
   const controller={async create(){nativeOpens++;throw Error('Fixture native session provider is unavailable');},cancel(){}};

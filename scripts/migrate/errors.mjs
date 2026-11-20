@@ -12,6 +12,8 @@ const messages = {
   'journal-invalid':'迁移日志损坏或与当前操作不一致；检查日志并使用原备份恢复。',
   'journal-step-mismatch':'日志中的步骤和版本契约与当前代码不一致；使用匹配原迁移的源码。',
   'migration-inconsistent':'已完成迁移的目标或版本清单后来缺失；检查上轮的已验证备份。',
+  'home-identity-invalid':'共享 home 数据或 Core 库无效；核对合成副本或经验证的备份。',
+  'home-identity-conflict':'Core 与旧生活文件的共享 home 身份冲突；需要人工核对迁移前备份。',
   'resume-journal-missing':'续做日志缺失；使用迁移前的原备份恢复。',
   'backup-invalid':'备份创建或校验未通过；检查原备份并使用已验证的迁移前备份恢复。',
   usage:'命令参数无效；核对命令、安装回执参数及备份或续做选项。',

@@ -1,7 +1,5 @@
-import { existsSync, lstatSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createHome, markHomeArrival } from '#dsh-world/life/home';
-import { createLifeStore } from '#dsh-world/life/lifeStore';
+import { createHome } from '#dsh-world/life/home';
 import { Faults } from '#dsh-world/faults';
 import { renderTemplate } from '#dsh-world/worldPrompt';
 import { check } from './storage.js';
@@ -25,90 +23,105 @@ export function companionWritingScope(ctx, host) {
         isHome: id => isCompanionHome(ctx, host, id) };
 }
 function recordedHome(host) {
-    const bound = host.workspace.status();
-    if (bound.state !== 'ready' || !bound.target)
-        return;
-    let path = bound.target.path;
-    for (const part of ['.chatpet', 'data', 'life', 'life.json']) {
-        path = join(path, part);
-        const stat = lstatSync(path, { throwIfNoEntry: false });
-        if (!stat)
-            return;
-        check(!stat.isSymbolicLink() && (part === 'life.json' ? stat.isFile() && stat.nlink === 1 && stat.size <= 64 * 1024 : stat.isDirectory()), 'Companion home data is invalid');
-    }
-    const state = JSON.parse(readFileSync(path, 'utf8'));
-    check(state.version === 1 && (state.homeSessionId === undefined || typeof state.homeSessionId === 'string'), 'Companion home record is invalid');
-    return state.homeSessionId;
+    const scope = host.workspace.homeScope();
+    return scope && host.workspace.readCompanionHome(scope)?.sessionId;
 }
 /** Foreground home identity does not imply that autonomous Life is enabled. */
 export function isCompanionHome(ctx, host, sessionId) {
     const current = workspace(ctx, host);
     return !!current && current.target.sessionIds.includes(sessionId)
-        && !current.registry.archivedSessionIds.includes(sessionId) && recordedHome(host) === sessionId;
+        && !current.registry.archivedSessionIds.includes(sessionId) && !host.native.isGuest(sessionId) && recordedHome(host) === sessionId;
 }
 const homes = new WeakMap();
 const owners = new WeakMap();
+const openings = new WeakMap();
+function currentHomeWorkspace(ctx, host, scope) {
+    host.workspace.readCompanionHome(scope);
+    const current = workspace(ctx, host);
+    check(current, 'Companion home workspace is unavailable');
+    return current;
+}
+function controller(ctx) {
+    const value = ctx.get('sessionController');
+    check(value, 'Native session controller is unavailable');
+    return value;
+}
+export async function resolveHomeAgent(ctx, host, scope, id) {
+    const before = currentHomeWorkspace(ctx, host, scope);
+    if (before.registry.archivedSessionIds.includes(id))
+        return;
+    check(before.target.sessionIds.includes(id) && !host.native.isGuest(id), 'Companion home does not belong to the workspace');
+    const result = await controller(ctx).resolveAgent(id);
+    const after = currentHomeWorkspace(ctx, host, scope);
+    if (after.registry.archivedSessionIds.includes(id) || !result.agent && result.error?.code === 'session/not-found')
+        return;
+    check(!result.error && result.agent?.id === id && !host.native.isGuest(id)
+        && host.workspace.sessionStatus(result.agent.session, after.registry)?.state === 'ready', 'Companion home is unavailable');
+    return result.agent;
+}
+function offerArrival(host, scope, sessionId) {
+    if (host.workspace.readCompanionHome(scope)?.arrivalPending)
+        host.native.companionPorts.get('applyHomeArrival')?.(scope, sessionId);
+}
+export function ensureCompanionHomeSession(ctx, host, scope, preset) {
+    currentHomeWorkspace(ctx, host, scope);
+    let state = openings.get(host);
+    if (!state || state.generation !== scope.generation)
+        openings.set(host, state = { generation: scope.generation });
+    const flight = state;
+    return flight.promise ??= Promise.resolve().then(async () => {
+        const old = host.workspace.readCompanionHome(scope);
+        if (old && await resolveHomeAgent(ctx, host, scope, old.sessionId))
+            return old.sessionId;
+        let sessionId = flight.candidate;
+        if (!sessionId || !await resolveHomeAgent(ctx, host, scope, sessionId)) {
+            currentHomeWorkspace(ctx, host, scope);
+            sessionId = (await controller(ctx).create({ workspaceId: scope.workspaceId, agentPreset: preset })).sessionId;
+            flight.candidate = sessionId;
+            check(await resolveHomeAgent(ctx, host, scope, sessionId), 'New companion home is unavailable');
+        }
+        host.workspace.writeCompanionHome(scope, old, { sessionId, arrivalPending: true });
+        flight.candidate = undefined;
+        offerArrival(host, scope, sessionId);
+        return sessionId;
+    }).finally(() => { flight.promise = undefined; });
+}
 /** Reuse World's recorded native home without starting its schedules or wakeups. */
 export async function resolveCompanionHome(ctx, host, preset) {
     ctx = owners.get(host) ?? ctx;
+    const scope = host.workspace.homeScope();
+    check(scope, 'Bind the companion workspace before opening its home');
     await ctx.get('petTranscripts')?.restore();
-    const current = workspace(ctx, host);
-    check(current, 'Bind the companion workspace before opening its home');
-    const key = JSON.stringify([current.target.id, current.target.path, host.workspace.storageId()]);
+    const current = currentHomeWorkspace(ctx, host, scope);
     let cached = homes.get(host);
-    if (!cached || cached.key !== key) {
+    if (!cached || cached.generation !== scope.generation) {
         const native = ctx, bound = current.target;
-        let directory = bound.path;
-        for (const part of ['.chatpet', 'data', 'life']) {
-            directory = join(directory, part);
-            if (!existsSync(directory))
-                mkdirSync(directory, { mode: 0o700 });
-            check(lstatSync(directory).isDirectory() && !lstatSync(directory).isSymbolicLink(), 'Companion home directory is invalid');
-        }
-        const store = createLifeStore(directory, Intl.DateTimeFormat().resolvedOptions().timeZone);
-        const active = () => {
-            const selected = workspace(ctx, host);
-            return selected?.target.id === bound.id && selected.target.path === bound.path;
-        };
+        const selected = () => currentHomeWorkspace(ctx, host, scope);
+        const active = () => host.workspace.homeScope()?.generation === scope.generation;
+        const member = (session) => active() && !selected().registry.archivedSessionIds.includes(session.id)
+            && !host.native.isGuest(session.id) && host.workspace.sessionStatus(session, selected().registry)?.state === 'ready';
         const selectedPreset = preset || native.get('agentPresets')?.composedPreset(ctx) || 'standard';
-        const controller = () => {
-            const value = native.get('sessionController');
-            check(value, 'Native session controller is unavailable');
-            return value;
-        };
         const logger = ctx.logger('chatpet-home');
         const home = createHome({ roomDir: bound.path, agentPreset: selectedPreset,
             get title() { const name = host.workspace.runtime.identity().displayName; return name ? name + '的家' : '伙伴的家'; }, roomTitle: bound.path,
             faults: new Faults(), logger, stopped: () => !active(),
-            current: () => recordedHome(host),
-            moveIn: id => {
-                check(active(), 'Companion home binding changed');
-                // Preserve World's pending arrival even when Room opened the home first.
-                // Life delivers it only after its scheduler is explicitly enabled.
-                store.write(markHomeArrival(store.read(), id));
-            },
-            opened: agent => { check(active() && host.workspace.sessionStatus(agent.session, current.registry)?.state === 'ready', 'Companion home left its workspace'); },
-            inWorld: session => active() && host.workspace.sessionStatus(session, current.registry)?.state === 'ready',
+            current: () => host.workspace.readCompanionHome(scope)?.sessionId,
+            moveIn: () => { }, // The shared creator commits before upstream opens the new Agent.
+            opened: agent => { check(member(agent.session), 'Companion home left its workspace'); offerArrival(host, scope, agent.id); },
+            inWorld: member,
             host: {
-                workspace: async () => { check(active(), 'Companion home binding changed'); return workspace(ctx, host).target; },
+                workspace: async () => selected().target,
                 createSession: async (_cwd, agentPreset, workspaceId) => {
-                    check(active() && workspaceId === bound.id, 'Companion home binding changed');
-                    return (await controller().create({ workspaceId: bound.id, agentPreset })).sessionId;
+                    check(workspaceId === bound.id, 'Companion home binding changed');
+                    return ensureCompanionHomeSession(ctx, host, scope, agentPreset);
                 },
-                resolveAgent: async (id) => {
-                    check(active() && workspace(ctx, host).target.sessionIds.includes(id), 'Companion home does not belong to the workspace');
-                    const result = await controller().resolveAgent(id);
-                    if (!result.agent && result.error?.code === 'session/not-found')
-                        return;
-                    check(result.agent && host.workspace.sessionStatus(result.agent.session, current.registry)?.state === 'ready', result.error?.message || 'Companion home is unavailable');
-                    return result.agent;
-                },
-                isArchived: id => current.registry.archivedSessionIds.includes(id),
-                rename: async (id, title) => { check(active(), 'Companion home binding changed'); await controller().rename({ sessionId: id, title }); },
+                resolveAgent: id => resolveHomeAgent(ctx, host, scope, id),
+                isArchived: id => selected().registry.archivedSessionIds.includes(id),
+                rename: async (id, title) => { selected(); await controller(ctx).rename({ sessionId: id, title }); },
                 origin: () => native.get('webServer')?.getOrigin() ?? '',
             },
         });
-        cached = { key, home };
+        cached = { generation: scope.generation, home };
         homes.set(host, cached);
     }
     return cached.home.open();
@@ -190,6 +203,7 @@ export function installCompanionFoundation(ctx, host, world) {
         stopIdentity();
         stopIdentityTurn();
         homes.delete(host);
+        openings.delete(host);
         if (owners.get(host) === ctx)
             owners.delete(host);
     };

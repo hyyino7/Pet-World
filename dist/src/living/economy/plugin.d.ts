@@ -13,7 +13,7 @@ export declare const economyStateToolDeclaration: {
     sources: readonly ("life" | "owner" | "review")[];
     historyOverview(_args: unknown, value: unknown): (Omit<import("./types.js").EconomySnapshot & {
         ledger: import("./types.js").LedgerEntry[];
-    }, "configuration" | "migration" | "ledger" | "inventory"> & {
+    }, "migration" | "configuration" | "ledger" | "inventory"> & {
         view: string;
         configurationRevision: number;
         inventory: import("./types.js").InventoryItem[];

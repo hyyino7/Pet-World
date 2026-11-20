@@ -3,14 +3,18 @@ import { type CorePreferences, type WorkspaceTarget } from './preferences.js';
 import { type CompanionConfiguration, type CompanionSettings } from './companion-settings.js';
 import type { CompanionIdentity, AttentionPolicy, WorkspaceEditScope } from '../contracts/core.js';
 import type { ServiceCall } from '../contracts/common.js';
+import { type MigrationReason } from './storage-migration.js';
+import type { CompanionBinding } from './tables/companion-ports.js';
 type InitializerFiles = readonly string[] | ((target: WorkspaceTarget) => readonly string[]);
 export interface WorkspaceStatus {
-    state: 'unbound' | 'pending' | 'ready' | 'unavailable';
+    state: 'unbound' | 'pending' | 'ready' | 'unavailable' | 'migration-required';
     revision: number | null;
     target: WorkspaceTarget | null;
     files: readonly string[];
     error: string | null;
     sourceRevision: string | null;
+    migrationReason?: MigrationReason;
+    olderMigrationJournal?: true;
 }
 type NativeSessionScope = {
     id: string;
@@ -62,28 +66,56 @@ export interface CompanionFoundation {
     source: 'empty' | 'owner';
     path: string;
 }
+export interface HomeBinding extends CompanionBinding {
+    bootId: string;
+    generation: number;
+}
+export interface HomeRecord {
+    sessionId: string;
+    arrivalPending?: true;
+}
 /** Core-owned repository authority; module runtime data has its own writers. */
 export declare class CoreWorkspace {
     readonly runtime: CoreRuntime;
     readonly port: WorkspaceService;
     private readonly initializers;
+    private migrationBlocked?;
+    private homeGeneration;
+    private committedTarget;
     constructor(runtime: CoreRuntime);
     /** Captured by the editor, then checked inside the original synchronous
      * configuration mutation. No new binding generation or durable state. */
     editScope(): WorkspaceEditScope;
     assertEditScope(expected: WorkspaceEditScope): void;
     private binding;
+    configurationCommitted(operation: string): void;
+    homeScope(): HomeBinding | undefined;
+    readCompanionHome(scope: HomeBinding): Readonly<HomeRecord> | undefined;
+    writeCompanionHome(scope: HomeBinding, expected: HomeRecord | undefined, next: HomeRecord): void;
     private directory;
     private read;
+    private initializationMarker;
+    private retainedFiles;
+    private emptyLegacyInitialization;
+    private inspectMigration;
+    /** Match the binding and declared inventory accepted by inspectRepoBinding. */
+    private offlineBindingReady;
+    private migrationBlockFor;
+    private migrationBlock;
+    migrationReason(): MigrationReason | undefined;
+    assertMigrationReady(target?: WorkspaceTarget | null): void;
+    retainedWritesAllowed(workspaceId: string, path: string, storageId: string): boolean;
     private atomic;
     private soul;
     private documents;
     storageId(): string;
+    private storageIdFor;
     /** Module-owned synchronous schema preparation, never a service start. */
     registerInitializer(id: string, run: (target: WorkspaceTarget) => void, files?: InitializerFiles): () => void;
     private validateInventory;
     private inventory;
     private verifyInventory;
+    private verifyDeclaredFiles;
     private initialize;
     private adopt;
     synchronize(operation: string): void;

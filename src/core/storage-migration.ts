@@ -1,0 +1,115 @@
+import assert from 'node:assert/strict';
+import {isAbsolute} from 'node:path';
+import {isDeepStrictEqual} from 'node:util';
+
+export type StorageVersions = Readonly<Record<string, number>>;
+export const MIGRATION_REASON = {
+  storageVersionOutdated:'storage-version-outdated', manifestMismatch:'manifest-mismatch', migrationIncomplete:'migration-incomplete',
+  journalInvalid:'journal-invalid', journalStepMismatch:'journal-step-mismatch', bindingChanged:'binding-changed',
+  bindingNotMigratable:'binding-not-migratable',
+} as const;
+export type MigrationReason = typeof MIGRATION_REASON[keyof typeof MIGRATION_REASON];
+
+export const INITIAL_STORAGE_VERSIONS = Object.freeze({
+  behavior:1, channels:1, core:1, desktop:1, economy:1, emotion:1, life:1, memory:1, room:1, voice:1,
+});
+const {behavior, economy, life, ...sharedVersions} = INITIAL_STORAGE_VERSIONS;
+export const HOME_STORAGE_VERSIONS = Object.freeze({...sharedVersions, core:2, living:2});
+
+export interface MigrationStepContract {
+  id: string;
+  from: StorageVersions | null;
+  to: StorageVersions;
+}
+export const INITIAL_STORAGE_STEP = Object.freeze({id:'0001-storage-manifest', from:null, to:INITIAL_STORAGE_VERSIONS});
+export const HOME_STORAGE_STEP = Object.freeze({id:'0002-home-identity', from:INITIAL_STORAGE_VERSIONS, to:HOME_STORAGE_VERSIONS});
+
+export function storageManifest(companionId: string, modules: StorageVersions) {
+  return {schemaVersion:1, companionId, modules};
+}
+
+export function storageManifestIndex(manifest: unknown, companionId: string, contract: readonly MigrationStepContract[]) {
+  return contract.findIndex(step => isDeepStrictEqual(manifest, storageManifest(companionId, step.to)));
+}
+
+function versionMap(value: unknown): value is StorageVersions {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+    && Object.keys(value).length > 0 && Object.values(value).every(version => Number.isSafeInteger(version) && version > 0);
+}
+
+export function validateMigrationContract(contract: unknown): asserts contract is MigrationStepContract[] {
+  assert.ok(Array.isArray(contract) && contract.length > 0);
+  const ids = new Set<string>(), targets: StorageVersions[] = [];
+  let previous: StorageVersions | null = null;
+  for (const step of contract) {
+    assert.ok(step && typeof step.id === 'string' && step.id && !ids.has(step.id));
+    assert.deepEqual(step.from, previous);
+    const to: unknown = step.to;
+    assert.ok(versionMap(to) && !targets.some(target => isDeepStrictEqual(target, to)));
+    ids.add(step.id);
+    targets.push(to);
+    previous = to;
+  }
+}
+
+const stepEvents = new Set(['start', 'skip', 'done', 'failed']);
+const otherEvents = new Set(['lock-takeover', 'journal-repaired']);
+const digest = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+
+interface JournalHeader {
+  id: string;
+  backup: string;
+  backupHash: string;
+  binding?: {storageId: string; repoHash: string};
+  steps: MigrationStepContract[];
+}
+interface JournalSegment { header: JournalHeader; states: Map<string, string> }
+
+export class MigrationBindingChanged extends Error {}
+export const settled = (segment: JournalSegment) => segment.header.steps.every(step => isStepSettled(segment.states.get(step.id)));
+export const isStepSettled = (event: string | undefined) => event === 'done' || event === 'skip';
+
+export function parseMigrationJournal(text: string) {
+  const lines = text.split('\n');
+  // Only a non-newline-terminated final record may be a torn append.
+  const tail = lines.pop()!;
+  return {rows:lines.map((line): unknown => JSON.parse(line)), truncated:tail.length > 0};
+}
+
+export function decodeMigrationJournal(journal: ReturnType<typeof parseMigrationJournal>, storageId: string) {
+  const ids = new Set<string>();
+  let last: JournalSegment | undefined, settledStepCount = 0;
+  for (const value of journal.rows) {
+    assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+    const row = value as Partial<JournalHeader> & {event?: string; schema?: number; manifestHash?: string; migrationId?: string; step?: string};
+    if (row.event === 'migration') {
+      const {id, backup, schema, steps, binding, backupHash, manifestHash} = row;
+      assert.ok(typeof id === 'string' && id && !ids.has(id) && typeof backup === 'string' && isAbsolute(backup));
+      let header: JournalHeader;
+      if (schema === undefined && steps === undefined && binding === undefined && backupHash === undefined) {
+        assert.ok(!last && digest(manifestHash));
+        header = {...row, id, backup, steps:[INITIAL_STORAGE_STEP], backupHash:manifestHash};
+      } else {
+        assert.ok(schema === 2 && digest(backupHash) && digest(binding?.repoHash));
+        validateMigrationContract(steps);
+        if (binding.storageId !== storageId) throw new MigrationBindingChanged();
+        if (last) {
+          const prior = last.header.steps;
+          assert.ok(settled(last) && steps.length > prior.length && isDeepStrictEqual(steps.slice(0, prior.length), prior));
+          settledStepCount = prior.length;
+        }
+        header = {...row, id, backup, steps, binding, backupHash};
+      }
+      last = {header, states:new Map()};
+      ids.add(id);
+      continue;
+    }
+    assert.ok(last && row.migrationId === last.header.id && typeof row.event === 'string');
+    if (stepEvents.has(row.event)) {
+      assert.ok(typeof row.step === 'string' && last.header.steps.some(step => step.id === row.step));
+      last.states.set(row.step, row.event);
+    } else assert.ok(otherEvents.has(row.event));
+  }
+  if (last && settled(last)) settledStepCount = last.header.steps.length;
+  return {last, settledStepCount, truncated:journal.truncated};
+}

@@ -4,7 +4,7 @@ import type { EconomySnapshot, LedgerEntry } from './types.js';
  * are available through full/paged queries, never removed from the owner. */
 export declare function economyOverview<T extends EconomySnapshot & {
     ledger: LedgerEntry[];
-}>(state: T): Omit<T, "configuration" | "migration" | "ledger" | "inventory"> & {
+}>(state: T): Omit<T, "migration" | "configuration" | "ledger" | "inventory"> & {
     view: string;
     configurationRevision: number;
     inventory: import("./types.js").InventoryItem[];

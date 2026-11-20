@@ -1210,6 +1210,42 @@
       "families": [
         "换包后 Core 配置仍在"
       ]
+    },
+    {
+      "id": "2A4-01",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/living/living-lifecycle.test.mjs",
+      "name": "4 home 镜像写失败时保留 Core 身份，卸载并重挂只交接一次",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A4-02",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/living/living-lifecycle.test.mjs",
+      "name": "4 没有 Plan 时前台只登记 Core，挂载暂停的 Plan 后补交接",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A4-03",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/living/living-lifecycle.test.mjs",
+      "name": "4 运行时和原生工具以 Core home 为准，下一次有效写修正冲突镜像",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A4-04",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/living/living-lifecycle.test.mjs",
+      "name": "4 同名重挂后旧迎接回调不能改记录、镜像或通知",
+      "l1Stage": "阶段 2",
+      "families": []
     }
   ]
 }
