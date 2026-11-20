@@ -4,6 +4,7 @@ import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readF
 import { isAbsolute, join } from 'node:path';
 import { CROPS, GARDEN_RULES, createGarden, normalizeGarden, advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
 import { canonical, check, digest, integer, reject, text, unavailable } from '../../core/storage.js';
+import { closeSqliteLease, setSqliteMeta } from '../../core/sqlite.js';
 import { effectiveEconomyConfiguration,defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
 import type { BodyUseProof, CatalogItem, EconomyConfiguration, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, InventoryItem, ItemUse, LedgerEntry, ReadingBookmark, ReadingContent, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
@@ -143,7 +144,7 @@ export class EconomyStore {
   }
   private meta<T>(key:string):T|undefined {const row=this.db.prepare('SELECT value FROM meta WHERE key=?').get(key);return row?json<T>(row.value):undefined;}
   private requiredMeta<T>(key:string):T {const value=this.meta<T>(key);if(value===undefined)unavailable(`Economy metadata ${key} is missing`);return value;}
-  private setMeta(key:string,value:unknown){this.db.prepare('INSERT INTO meta VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,canonical(value));}
+  private setMeta(key:string,value:unknown){setSqliteMeta(this.db,key,canonical(value));}
   private revision(){return this.requiredMeta<number>('revision');}
   private bump(){this.setMeta('revision',safeSum(this.revision(),1));}
   private configuration(){return effectiveEconomyConfiguration(this.requiredMeta<EconomyConfiguration>('configuration'));}
@@ -495,5 +496,5 @@ export class EconomyStore {
     return {...result,garden:this.gardenView(now,clock)};
   }
   gardenView(now=Date.now(),clock=runningClock):any {return (gardenView as (...args:any[])=>any)(this.readGarden(now,clock),now,this.gardenOptions());}
-  close() {if(this.closed)return;this.closed=true;this.db.close();if(existsSync(this.lockPath)&&readFileSync(this.lockPath,'utf8')===this.lockToken)unlinkSync(this.lockPath);}
+  close() {if(this.closed)return;this.closed=true;closeSqliteLease(this.db,this.lockPath,this.lockToken);}
 }
