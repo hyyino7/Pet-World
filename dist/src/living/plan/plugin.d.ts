@@ -1,5 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../../core/index.js';
+import type { HomeBinding } from '../../core/workspace.js';
 import { type LifePreferences } from './library.js';
 import type { RecordOperation } from '../../core/records.js';
 import { type CurrentLifePlan } from './plan.js';
@@ -61,6 +62,7 @@ export declare class CompanionLife {
     private publishRest;
     private directory;
     private synchronize;
+    applyHomeArrival(scope: HomeBinding, sessionId: string): boolean;
     private notifyWorld;
     private startRuntime;
     private stopRuntime;

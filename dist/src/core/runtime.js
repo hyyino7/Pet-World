@@ -80,10 +80,12 @@ export class CoreRuntime {
         return { companionId, revision: 1, displayName, character, ownerActorId };
     }
     identity() {
-        return this.store.get('identity', 'current') ?? this.configuredIdentity();
+        return this.store.get('identity', 'current') ?? (this.workspace?.migrationReason()
+            ? this.configuredIdentity() : this.store.require('identity', 'current'));
     }
     policy() {
-        const saved = this.store.get('policy', 'current') ?? { revision: 1, quiet: false };
+        const saved = this.store.get('policy', 'current') ?? (this.workspace?.migrationReason()
+            ? { revision: 1, quiet: false } : this.store.require('policy', 'current'));
         return { revision: saved.revision, quiet: saved.quiet };
     }
     get conversation() {
@@ -114,11 +116,16 @@ export class CoreRuntime {
                 check(input !== null && typeof input === 'object' && !Array.isArray(input), 'Expected request object');
                 if (write)
                     this.workspace?.assertMigrationReady();
-                const run = () => { const value = fn(input); if (write)
-                    this.store.setMeta('stateRevision', (this.store.meta('stateRevision') ?? 0) + 1); return value; };
+                let changed = false;
+                const run = () => { const value = fn(input); if (write) {
+                    this.store.setMeta('stateRevision', (this.store.meta('stateRevision') ?? 0) + 1);
+                    changed = true;
+                } return value; };
                 const value = write ? this.store.mutate(`${principal.module}:${principal.actor.kind}:${principal.actor.id}`, name, context.requestId, input, run) : run();
                 if (write)
                     try {
+                        if (changed)
+                            this.workspace?.configurationCommitted(name);
                         this.onChange(name, { bootId: this.bootId, revision: this.store.meta('stateRevision') });
                     }
                     catch { /* Committed configuration remains authoritative. */ }

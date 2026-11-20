@@ -24,6 +24,8 @@ test('quiet waiting stays awake; explicit sleep reaches bed, survives gentle tou
   writeFileSync(join(directory,'control.json'),JSON.stringify({version:1,enabled:true}));
   const target={id:'world',path:root,sessionIds:[]},listeners=new Map<string,Set<Function>>();
   const host={native:{},records:{getLibrary:()=>new CompanionRecordLibrary(root,'UTC')},workspace:{status:()=>({state:'ready',target}),storageId:()=> 'storage',
+    homeScope(){return {workspaceId:target.id,path:target.path,storageId:this.storageId(),bootId:'fixture-boot',generation:0};},
+    readCompanionHome:()=>undefined,
     runtime:{config:{ownerActorId:'owner',companionId:'fish'},identity:()=>({companionId:'fish',displayName:'Fixture'}),store:{meta:()=>undefined}}}} as unknown as PetCoreHost;
   let life:CompanionLife;
   const ctx={get:(name:string)=>name==='petBehavior'?body:name==='petLife'?life:name==='workspaceRegistry'?{get:()=>target}:undefined,

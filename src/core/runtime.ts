@@ -81,10 +81,12 @@ export class CoreRuntime {
     return {companionId,revision:1,displayName,character,ownerActorId};
   }
   identity():CompanionIdentity {
-    return this.store.get('identity','current') ?? this.configuredIdentity();
+    return this.store.get('identity','current') ?? (this.workspace?.migrationReason()
+      ? this.configuredIdentity() : this.store.require('identity','current'));
   }
   policy():AttentionPolicy {
-    const saved=this.store.get<AttentionPolicy>('policy','current') ?? {revision:1,quiet:false};
+    const saved=this.store.get<AttentionPolicy>('policy','current') ?? (this.workspace?.migrationReason()
+      ? {revision:1,quiet:false} : this.store.require<AttentionPolicy>('policy','current'));
     return {revision:saved.revision,quiet:saved.quiet};
   }
   get conversation():Readonly<ConversationOptions> {
@@ -104,9 +106,13 @@ export class CoreRuntime {
         this.files?.synchronize(name);this.fileEffect=false;canonical(input);
         check(input!==null&&typeof input==='object'&&!Array.isArray(input),'Expected request object');
         if(write)this.workspace?.assertMigrationReady();
-        const run=()=>{const value=fn(input);if(write)this.store.setMeta('stateRevision',(this.store.meta<number>('stateRevision')??0)+1);return value;};
+        let changed=false;
+        const run=()=>{const value=fn(input);if(write){this.store.setMeta('stateRevision',(this.store.meta<number>('stateRevision')??0)+1);changed=true;}return value;};
         const value=write?this.store.mutate(`${principal.module}:${principal.actor.kind}:${principal.actor.id}`,name,context.requestId,input,run):run();
-        if(write)try{this.onChange(name,{bootId:this.bootId,revision:this.store.meta('stateRevision')});}catch{/* Committed configuration remains authoritative. */}
+        if(write)try{
+          if(changed)this.workspace?.configurationCommitted(name);
+          this.onChange(name,{bootId:this.bootId,revision:this.store.meta('stateRevision')});
+        }catch{/* Committed configuration remains authoritative. */}
         return {ok:true,value:structuredClone(value)};
       } catch(error){
         return {ok:false,error:this.fileEffect?{code:'OUTCOME_UNKNOWN',message:'Workspace file changed; refresh to reconcile the acknowledged state',effect:'unknown',retry:'reconcile'}:error instanceof Rejection?error.detail:error instanceof TypeError

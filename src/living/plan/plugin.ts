@@ -9,7 +9,9 @@ import { createLifeRuntime, type LifeDeps } from '#dsh-world/life/runtime';
 import { createLifeStore, durableWrite } from '#dsh-world/life/lifeStore';
 import { registerWorldPrompt } from '../../core/native/prompt.js';
 import type { PetCoreHost } from '../../core/index.js';
-import { resolveCompanionHome } from '../../core/companion-foundation.js';
+import { ensureCompanionHomeSession, resolveCompanionHome, resolveHomeAgent } from '../../core/companion-foundation.js';
+import type { HomeBinding } from '../../core/workspace.js';
+import { createHomeStore } from './home-store.js';
 import { defaultLifePreferences, parseLifePreferences, type LifePreferences } from './library.js';
 import type { CompanionRecordLibrary, RecordOperation } from '../../core/records.js';
 import { companionRecordPaths } from '../../core/record-paths.js';
@@ -42,7 +44,8 @@ interface Native {
     cancel(input: {sessionId: string}): unknown;
   };
 }
-interface Bound { id: string; path: string; directory: string; library: CompanionRecordLibrary; plan: PersistentLifePlan }
+interface Bound { id: string; path: string; directory: string; library: CompanionRecordLibrary; plan: PersistentLifePlan;
+  scope: HomeBinding; home: ReturnType<typeof createHomeStore> }
 const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'] as const;
 
 /** The upstream fact layer is the only state writer. World owns scheduling,
@@ -130,6 +133,7 @@ export class CompanionLife {
     if (this.binding !== bound || !this.living.isLatestGeneration()) return false;
     const current = this.current();
     return current?.id === bound.id && current.path === bound.path
+      && this.host.workspace.homeScope()?.generation === bound.scope.generation
       && this.host.workspace.storageId() === bound.plan.storageId
       && this.host.workspace.runtime.identity().companionId === bound.plan.companionId;
   }
@@ -137,8 +141,7 @@ export class CompanionLife {
     if (!this.isCurrentBinding(bound)) throw Error('生活工作区已切换');
   }
   running() {
-    const current = this.current();
-    return this.isOpen() && this.enabled && !!this.runtime && current?.id === this.binding?.id && current?.path === this.binding?.path;
+    return this.isOpen() && this.enabled && !!this.runtime && !!this.binding && this.isCurrentBinding(this.binding);
   }
   /** Saved clock intent is independent of native planner readiness. This read
    * never waits on Life's queue or initializes a missing control directory. */
@@ -177,6 +180,8 @@ export class CompanionLife {
     this.binding = undefined; this.enabled = false; this.restoredClock=false;this.pauses=undefined;this.fault = undefined;
     const current = this.current();
     if (!current) return;
+    const scope = this.host.workspace.homeScope();
+    if (!scope) return;
     const directory = this.directory(current.path);
     for (const name of ['home.json', 'life.json']) safeLifeFile(join(directory, name));
     const settings=readLifeSettings(current.path);
@@ -184,11 +189,28 @@ export class CompanionLife {
     this.restoredClock=this.enabled;
     this.pauses=settings?.pauses;
     this.preferences=settings?.preferences ?? {...defaultLifePreferences};
-    const storageId=this.host.workspace.storageId();
+    const storageId=scope.storageId;
+    const home = createHomeStore(createLifeStore(directory,this.timeZone),directory,this.host.workspace,scope,
+      ()=>this.ctx.emit('pet/life.changed'));
     const bound: Bound = {id: current.id, path: current.path, directory, library: this.host.records.getLibrary(current.id),
       plan:new PersistentLifePlan(directory,this.host.workspace.runtime.identity().companionId,storageId,this.timeZone,
-        ()=>this.isCurrentBinding(bound),()=>this.notifyWorld(bound))};
+        ()=>this.isCurrentBinding(bound),()=>this.notifyWorld(bound)),scope,home};
     this.binding = bound;
+    const record = this.host.workspace.readCompanionHome(scope);
+    if (record?.arrivalPending) this.applyHomeArrival(scope,record.sessionId);
+  }
+  applyHomeArrival(scope: HomeBinding, sessionId: string): boolean {
+    const bound = this.binding;
+    if (!bound || !this.isOpen() || !this.isCurrentBinding(bound)) return false;
+    try {
+      const record = this.host.workspace.readCompanionHome(scope);
+      if (scope.generation !== bound.scope.generation || record?.sessionId !== sessionId) return false;
+      if (record.arrivalPending && bound.home.applyArrival(sessionId)) this.runtime?.reschedulePlan();
+      return true;
+    } catch (error) {
+      this.fault = String(error);
+      return false;
+    }
   }
   private notifyWorld(bound: Bound) {
     this.living.changed({workspaceId:bound.id,path:bound.path,storageId:bound.plan.storageId});
@@ -204,7 +226,7 @@ export class CompanionLife {
     // records World's pending arrival, so reusing this home does not skip it.
     await resolveCompanionHome(this.ctx, this.host, this.preset);
     if (!canStart()) return;
-    const store = createLifeStore(bound.directory, this.timeZone);
+    const {store} = bound.home;
     const active = () => this.runtime === runtime && canStart();
     const canWrite = () => (this.runtime === runtime || this.drainingRuntime === runtime) && this.isCurrentBinding(bound);
     const member = (id: string) => active() && this.current()?.sessionIds.includes(id) === true
@@ -231,7 +253,7 @@ export class CompanionLife {
       },
       afterReview: () => {
         if(!active() || !this.preferences.compactAfterReview || !this.running())return;
-        const id = store.read().homeSessionId;
+        const id = host.workspace.readCompanionHome(bound.scope)?.sessionId;
         if (id) host.native.requestReviewCompaction(id);
       },
       inWorkspace: id => canWrite()
@@ -300,16 +322,16 @@ export class CompanionLife {
         },
         createSession: async (_cwd, agentPreset, workspaceId) => {
           if (!active() || workspaceId!==bound.id) throw Error('生活工作区已切换');
-          const created=await native.get('sessionController').create({workspaceId: bound.id, agentPreset});
-          if(!member(created.sessionId))throw Error('生活会话不属于当前工作区');
-          return created.sessionId;
+          const id = await ensureCompanionHomeSession(this.ctx,host,bound.scope,agentPreset);
+          if(!member(id))throw Error('生活会话不属于当前工作区');
+          bound.home.refresh();
+          return id;
         },
         resolveAgent: async id => {
-          if(!member(id))throw Error('生活会话不属于当前工作区');
-          const result = await native.get('sessionController').resolveAgent(id);
-          if(!member(id))throw Error('生活工作区已切换');
-          if (result.error) throw Error(result.error.message);
-          return result.agent;
+          if(!active())throw Error('生活工作区已切换');
+          const agent = await resolveHomeAgent(this.ctx,host,bound.scope,id);
+          if(!active() || agent && !member(id))throw Error('生活工作区已切换');
+          return agent;
         },
         isArchived: id => native.get('workspaceRegistry')?.archivedSessionIds.includes(id) ?? false,
         rename: async (sessionId, title) => {
@@ -364,10 +386,9 @@ export class CompanionLife {
     if(runtime && this.runtime===runtime){
       this.drainingRuntime = runtime;
       this.runtime = undefined;
-      let id: string | undefined;
+      const id = this.binding?.home.sessionId();
       await settleCleanup(
         ()=>{if(this.living.isLatestGeneration())this.ctx.emit('pet/life.changed');},
-        ()=>{if(this.living.isLatestGeneration())id=runtime.snapshot().homeSessionId;},
         ()=>runtime.stop(),
         async()=>{if(id)await this.native().get('sessionController').cancel({sessionId:id});},
         async()=>{
@@ -440,7 +461,7 @@ export class CompanionLife {
       const home=await (body && withLivingCaller(validate,()=>body.value.roomState(workspaceId)));
       validate();
       return {...state, home: home ?? null,
-        life: this.runtime?.snapshot() ?? store.read(),
+        life: this.runtime?.snapshot() ?? this.binding.home.store.read(),
         activity: store.activityDays().slice(0, 2).reverse().flatMap(day => store.activity(day)).slice(-20),
         fault: this.fault ?? null};
     });
@@ -720,6 +741,8 @@ export function apply(ctx: Context, config: Config = {}) {
     const isHome = (id: string) => view.lookup('plan')?.value === life && life.isHome(id);
     const album = ports.register('lifeOwnsAlbum', isHome);
     const review = ports.register('isRunningLifeHome', isHome);
-    return () => settleCleanup(album.revoke, review.revoke);
+    const arrival = ports.register('applyHomeArrival', (scope,sessionId) =>
+      view.lookup('plan')?.value === life && life.applyHomeArrival(scope,sessionId));
+    return () => settleCleanup(album.revoke, review.revoke, arrival.revoke);
   });
 }

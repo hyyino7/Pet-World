@@ -166,6 +166,8 @@ test('paused or absent Life permits explicit body and garden work without passiv
   writeFileSync(join(directory,'home.json'),JSON.stringify(body));
   writeFileSync(join(directory,'garden.json'),JSON.stringify(garden));
   const host = {native:{},records:{getLibrary:()=>new CompanionRecordLibrary(base,'Asia/Ho_Chi_Minh')},workspace:{status:()=>({state:'ready',target}),storageId:()=>target.id,
+    homeScope(){return {workspaceId:target.id,path:target.path,storageId:this.storageId(),bootId:'fixture-boot',generation:0};},
+    readCompanionHome:()=>undefined,
     runtime:{config:{ownerActorId:'owner',companionId:'fish'},identity:()=>({displayName:'Fixture',companionId:'fish'}),store:{meta:()=>undefined}}}} as unknown as PetCoreHost;
   const changes: unknown[]=[];
   let behavior:CompanionBehavior;

@@ -32,14 +32,22 @@ const MAX_BYTES = 64 * 1024;
 const STORAGE_MANIFEST = 'storage-manifest.json', MIGRATION_JOURNAL = 'migrations.jsonl', INITIALIZING = '.initialization-pending.json';
 const STORAGE_STEPS = [INITIAL_STORAGE_STEP, HOME_STORAGE_STEP];
 const BOOTSTRAP_FILES = new Set(['core.sqlite', 'core.sqlite-wal', 'core.sqlite-shm', 'core.sqlite-journal', 'core.lock']);
+function validHome(record) {
+    return typeof record?.sessionId === 'string' && record.sessionId.trim().length > 0 && !record.sessionId.includes('\0')
+        && (record.arrivalPending === undefined || record.arrivalPending === true)
+        && Object.keys(record).every(key => key === 'sessionId' || key === 'arrivalPending');
+}
 /** Core-owned repository authority; module runtime data has its own writers. */
 export class CoreWorkspace {
     runtime;
     port;
     initializers = new Map();
     migrationBlocked;
+    homeGeneration = 0;
+    committedTarget;
     constructor(runtime) {
         this.runtime = runtime;
+        this.committedTarget = preferences(runtime).workspace;
         this.port = {
             inspect: runtime.call('workspace.inspect', false, () => this.status()),
             initialize: runtime.call('workspace.initialize', true, input => {
@@ -107,6 +115,36 @@ export class CoreWorkspace {
         const binding = this.runtime.store.get('workspace-binding', 'current');
         const target = preferences(this.runtime).workspace;
         return binding?.phase === 'ready' && target?.id === binding.target.id && target.path === binding.target.path ? binding : null;
+    }
+    configurationCommitted(operation) {
+        if (operation !== 'workspace.initialize' && operation !== 'preferences.save')
+            return;
+        const target = preferences(this.runtime).workspace, previous = this.committedTarget;
+        if (operation === 'workspace.initialize' || target?.id !== previous?.id || target?.path !== previous?.path)
+            this.homeGeneration++;
+        this.committedTarget = target;
+    }
+    homeScope() {
+        const { state, target } = this.status();
+        if (state === 'ready' && target)
+            return { workspaceId: target.id, path: target.path, storageId: this.storageId(),
+                bootId: this.runtime.bootId, generation: this.homeGeneration };
+    }
+    readCompanionHome(scope) {
+        const current = this.homeScope();
+        if (!current || !isDeepStrictEqual(scope, current))
+            reject('STALE_BINDING', 'Companion home binding changed');
+        const record = this.runtime.store.get('companion-home', scope.storageId);
+        check(record === undefined || validHome(record), 'Companion home record is invalid');
+        return record;
+    }
+    writeCompanionHome(scope, expected, next) {
+        this.runtime.store.transaction(() => {
+            if (!isDeepStrictEqual(this.readCompanionHome(scope), expected))
+                reject('CONFLICT', 'Companion home changed');
+            check(validHome(next), 'Companion home record is invalid');
+            this.runtime.store.put('companion-home', scope.storageId, next);
+        });
     }
     directory(target) {
         check(realpathSync(target.path) === target.path && lstatSync(target.path).isDirectory(), 'Workspace root changed');

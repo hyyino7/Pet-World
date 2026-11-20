@@ -5,7 +5,8 @@ import { createHash } from 'node:crypto';
 import { createLifeRuntime } from '#dsh-world/life/runtime';
 import { createLifeStore, durableWrite } from '#dsh-world/life/lifeStore';
 import { registerWorldPrompt } from '../../core/native/prompt.js';
-import { resolveCompanionHome } from '../../core/companion-foundation.js';
+import { ensureCompanionHomeSession, resolveCompanionHome, resolveHomeAgent } from '../../core/companion-foundation.js';
+import { createHomeStore } from './home-store.js';
 import { defaultLifePreferences, parseLifePreferences } from './library.js';
 import { companionRecordPaths } from '../../core/record-paths.js';
 import { installLifeReview, REVIEW_ALARM_FILE } from './review.js';
@@ -124,6 +125,7 @@ export class CompanionLife {
             return false;
         const current = this.current();
         return current?.id === bound.id && current.path === bound.path
+            && this.host.workspace.homeScope()?.generation === bound.scope.generation
             && this.host.workspace.storageId() === bound.plan.storageId
             && this.host.workspace.runtime.identity().companionId === bound.plan.companionId;
     }
@@ -132,8 +134,7 @@ export class CompanionLife {
             throw Error('生活工作区已切换');
     }
     running() {
-        const current = this.current();
-        return this.isOpen() && this.enabled && !!this.runtime && current?.id === this.binding?.id && current?.path === this.binding?.path;
+        return this.isOpen() && this.enabled && !!this.runtime && !!this.binding && this.isCurrentBinding(this.binding);
     }
     /** Saved clock intent is independent of native planner readiness. This read
      * never waits on Life's queue or initializes a missing control directory. */
@@ -184,6 +185,9 @@ export class CompanionLife {
         const current = this.current();
         if (!current)
             return;
+        const scope = this.host.workspace.homeScope();
+        if (!scope)
+            return;
         const directory = this.directory(current.path);
         for (const name of ['home.json', 'life.json'])
             safeLifeFile(join(directory, name));
@@ -192,10 +196,31 @@ export class CompanionLife {
         this.restoredClock = this.enabled;
         this.pauses = settings?.pauses;
         this.preferences = settings?.preferences ?? { ...defaultLifePreferences };
-        const storageId = this.host.workspace.storageId();
+        const storageId = scope.storageId;
+        const home = createHomeStore(createLifeStore(directory, this.timeZone), directory, this.host.workspace, scope, () => this.ctx.emit('pet/life.changed'));
         const bound = { id: current.id, path: current.path, directory, library: this.host.records.getLibrary(current.id),
-            plan: new PersistentLifePlan(directory, this.host.workspace.runtime.identity().companionId, storageId, this.timeZone, () => this.isCurrentBinding(bound), () => this.notifyWorld(bound)) };
+            plan: new PersistentLifePlan(directory, this.host.workspace.runtime.identity().companionId, storageId, this.timeZone, () => this.isCurrentBinding(bound), () => this.notifyWorld(bound)), scope, home };
         this.binding = bound;
+        const record = this.host.workspace.readCompanionHome(scope);
+        if (record?.arrivalPending)
+            this.applyHomeArrival(scope, record.sessionId);
+    }
+    applyHomeArrival(scope, sessionId) {
+        const bound = this.binding;
+        if (!bound || !this.isOpen() || !this.isCurrentBinding(bound))
+            return false;
+        try {
+            const record = this.host.workspace.readCompanionHome(scope);
+            if (scope.generation !== bound.scope.generation || record?.sessionId !== sessionId)
+                return false;
+            if (record.arrivalPending && bound.home.applyArrival(sessionId))
+                this.runtime?.reschedulePlan();
+            return true;
+        }
+        catch (error) {
+            this.fault = String(error);
+            return false;
+        }
     }
     notifyWorld(bound) {
         this.living.changed({ workspaceId: bound.id, path: bound.path, storageId: bound.plan.storageId });
@@ -214,7 +239,7 @@ export class CompanionLife {
         await resolveCompanionHome(this.ctx, this.host, this.preset);
         if (!canStart())
             return;
-        const store = createLifeStore(bound.directory, this.timeZone);
+        const { store } = bound.home;
         const active = () => this.runtime === runtime && canStart();
         const canWrite = () => (this.runtime === runtime || this.drainingRuntime === runtime) && this.isCurrentBinding(bound);
         const member = (id) => active() && this.current()?.sessionIds.includes(id) === true
@@ -245,7 +270,7 @@ export class CompanionLife {
             afterReview: () => {
                 if (!active() || !this.preferences.compactAfterReview || !this.running())
                     return;
-                const id = store.read().homeSessionId;
+                const id = host.workspace.readCompanionHome(bound.scope)?.sessionId;
                 if (id)
                     host.native.requestReviewCompaction(id);
             },
@@ -332,20 +357,19 @@ export class CompanionLife {
                 createSession: async (_cwd, agentPreset, workspaceId) => {
                     if (!active() || workspaceId !== bound.id)
                         throw Error('生活工作区已切换');
-                    const created = await native.get('sessionController').create({ workspaceId: bound.id, agentPreset });
-                    if (!member(created.sessionId))
+                    const id = await ensureCompanionHomeSession(this.ctx, host, bound.scope, agentPreset);
+                    if (!member(id))
                         throw Error('生活会话不属于当前工作区');
-                    return created.sessionId;
+                    bound.home.refresh();
+                    return id;
                 },
                 resolveAgent: async (id) => {
-                    if (!member(id))
-                        throw Error('生活会话不属于当前工作区');
-                    const result = await native.get('sessionController').resolveAgent(id);
-                    if (!member(id))
+                    if (!active())
                         throw Error('生活工作区已切换');
-                    if (result.error)
-                        throw Error(result.error.message);
-                    return result.agent;
+                    const agent = await resolveHomeAgent(this.ctx, host, bound.scope, id);
+                    if (!active() || agent && !member(id))
+                        throw Error('生活工作区已切换');
+                    return agent;
                 },
                 isArchived: id => native.get('workspaceRegistry')?.archivedSessionIds.includes(id) ?? false,
                 rename: async (sessionId, title) => {
@@ -418,10 +442,9 @@ export class CompanionLife {
         if (runtime && this.runtime === runtime) {
             this.drainingRuntime = runtime;
             this.runtime = undefined;
-            let id;
+            const id = this.binding?.home.sessionId();
             await settleCleanup(() => { if (this.living.isLatestGeneration())
-                this.ctx.emit('pet/life.changed'); }, () => { if (this.living.isLatestGeneration())
-                id = runtime.snapshot().homeSessionId; }, () => runtime.stop(), async () => { if (id)
+                this.ctx.emit('pet/life.changed'); }, () => runtime.stop(), async () => { if (id)
                 await this.native().get('sessionController').cancel({ sessionId: id }); }, async () => {
                 try {
                     await runtime.settled();
@@ -509,7 +532,7 @@ export class CompanionLife {
             const home = await (body && withLivingCaller(validate, () => body.value.roomState(workspaceId)));
             validate();
             return { ...state, home: home ?? null,
-                life: this.runtime?.snapshot() ?? store.read(),
+                life: this.runtime?.snapshot() ?? this.binding.home.store.read(),
                 activity: store.activityDays().slice(0, 2).reverse().flatMap(day => store.activity(day)).slice(-20),
                 fault: this.fault ?? null };
         });
@@ -837,7 +860,8 @@ export function apply(ctx, config = {}) {
         const isHome = (id) => view.lookup('plan')?.value === life && life.isHome(id);
         const album = ports.register('lifeOwnsAlbum', isHome);
         const review = ports.register('isRunningLifeHome', isHome);
-        return () => settleCleanup(album.revoke, review.revoke);
+        const arrival = ports.register('applyHomeArrival', (scope, sessionId) => view.lookup('plan')?.value === life && life.applyHomeArrival(scope, sessionId));
+        return () => settleCleanup(album.revoke, review.revoke, arrival.revoke);
     });
 }
 //# sourceMappingURL=plugin.js.map

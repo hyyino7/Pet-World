@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {syncBuiltinESMExports} from 'node:module';
 import {createHash, randomUUID} from 'node:crypto';
 import {existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -11,6 +13,7 @@ import Sessions from '@deepseek-ai/dsh-session';
 import {renderContextSections} from '@deepseek-ai/dsh-system-prompt';
 import {createLifeStore} from '#dsh-world/life/lifeStore';
 import {presentFact} from '../../dist/src/core/interaction-presentation.js';
+import {isCompanionHome, resolveCompanionHome} from '../../dist/src/core/companion-foundation.js';
 import {behaviorPlugin, corePlugin, economyPlugin} from '../../dist/tests/behavior-list/entries.js';
 import {cordisFixture, eventually, submitPlan} from '../behavior-list/entries-lifecycle.test.mjs';
 import {value} from '../behavior-list/fixture.mjs';
@@ -18,6 +21,100 @@ import {policyHost} from '../behavior-list/policy-host.mjs';
 
 const zones = {body: 'body', life: 'plan', economy: 'economy'};
 const services = {body: 'petBehavior', life: 'petLife', economy: 'petEconomy'};
+const homeRecord = f => f.core.workspace.runtime.store.get('companion-home', f.core.workspace.storageId());
+const mirrorFile = f => join(f.directory, 'life.json');
+const lifeStore = f => createLifeStore(f.directory, Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+test('4 home 镜像写失败时保留 Core 身份，卸载并重挂只交接一次', async t => {
+  const f = await cordisFixture(t);
+  await f.enable();
+  const old = await f.agent(f.life.homeSessionId());
+  await eventually(async()=> (await f.life.readPlan(f.id)).plan, '初次迎接已完成');
+  await old.whenIdle();
+  f.registry.archivedSessionIds.push(old.id);
+  const rename = fs.renameSync;
+  const fault = t.mock.method(fs, 'renameSync', (from, to) => {
+    if (to === mirrorFile(f)) throw Error('Synthetic mirror write failure');
+    return rename(from, to);
+  });
+  syncBuiltinESMExports();
+  let home;
+  try {
+    home = await resolveCompanionHome(f.ctx, f.core);
+    assert.equal((await resolveCompanionHome(f.ctx, f.core)).id, home.id);
+    assert.deepEqual(homeRecord(f), {sessionId:home.id,arrivalPending:true});
+    assert.equal(lifeStore(f).read().homeSessionId, old.id);
+    const open = fs.openSync;
+    const readFault = t.mock.method(fs, 'openSync', (file, ...args) => {
+      if (file === mirrorFile(f)) throw Error('Synthetic mirror read failure');
+      return open(file,...args);
+    });
+    syncBuiltinESMExports();
+    try { await f.unload('life'); }
+    finally { readFault.mock.restore(); syncBuiltinESMExports(); }
+    assert.ok(f.cancellations.some(row => row.sessionId === old.id || row.sessionId === home.id));
+  } finally { fault.mock.restore(); syncBuiltinESMExports(); }
+  await f.load('life');
+  const arrivals = () => f.calls.filter(call => call.agent.id === home.id && call.messages.some(message => message.source.purpose === 'first'));
+  await eventually(()=>arrivals().length===1, '重挂补交接后迎接');
+  await home.whenIdle();
+  assert.deepEqual(homeRecord(f), {sessionId:home.id});
+  assert.equal(lifeStore(f).read().homeSessionId, home.id);
+  await f.unload('life'); await f.load('life');
+  await eventually(()=>f.life.running(),'再次重挂恢复运行');
+  assert.equal(arrivals().length,1);
+});
+
+test('4 没有 Plan 时前台只登记 Core，挂载暂停的 Plan 后补交接', async t => {
+  const f = await cordisFixture(t, {order:['body','economy']});
+  const home = await resolveCompanionHome(f.ctx, f.core);
+  assert.deepEqual(homeRecord(f), {sessionId:home.id,arrivalPending:true});
+  assert.equal(existsSync(mirrorFile(f)), false);
+  await f.load('life');
+  await eventually(()=>homeRecord(f)?.arrivalPending === undefined && existsSync(mirrorFile(f)), '暂停的 Plan 持久化迎接');
+  const visible = lifeStore(f).read();
+  assert.equal(visible.homeSessionId, home.id);
+  assert.equal(visible.greeting.kind, 'arrival');
+  assert.equal(f.life.running(), false);
+});
+
+test('4 运行时和原生工具以 Core home 为准，下一次有效写修正冲突镜像', async t => {
+  const f = await cordisFixture(t);
+  await f.enable();
+  const home = await f.agent(f.life.homeSessionId()), other = await f.agent('decoy');
+  await eventually(async()=> (await f.life.readPlan(f.id)).plan, '初次迎接已完成');
+  await home.whenIdle();
+  lifeStore(f).update(state => { state.homeSessionId = other.id; state.greeting = {at:new Date().toISOString(),kind:'arrival'}; });
+  assert.equal(f.life.isHome(home.id), true);
+  assert.equal(f.life.isHome(other.id), false);
+  assert.equal(isCompanionHome(f.ctx, f.core, home.id), true);
+  assert.ok((await f.input('Home tools', home.id)).schemas.includes('reach_out'));
+  assert.ok(!(await f.input('Other tools', other.id)).schemas.includes('reach_out'));
+  const preferences = (await f.life.snapshot(f.id)).preferences;
+  await f.life.settings(f.id,preferences,{...preferences,review:'23:59'});
+  const repaired = lifeStore(f).read();
+  assert.equal(repaired.homeSessionId, home.id);
+  assert.equal(repaired.greeting, undefined);
+});
+
+test('4 同名重挂后旧迎接回调不能改记录、镜像或通知', async t => {
+  const f = await cordisFixture(t);
+  const home = await resolveCompanionHome(f.ctx, f.core);
+  const ports = f.core.native.companionPorts, old = ports.get('applyHomeArrival');
+  assert.equal(typeof old, 'function');
+  const scope = f.core.workspace.homeScope();
+  await f.unload('life'); await f.load('life');
+  await eventually(()=>ports.get('applyHomeArrival') !== old, '同名 Plan 已换代');
+  await f.life.snapshot(f.id);
+  const record = homeRecord(f), bytes = readFileSync(mirrorFile(f)); let notifications = 0;
+  const unlisten = f.ctx.on('pet/life.changed',()=>{ notifications++; });
+  try {
+    assert.equal(old(scope,home.id),false);
+    assert.deepEqual(homeRecord(f),record);
+    assert.deepEqual(readFileSync(mirrorFile(f)),bytes);
+    assert.equal(notifications,0);
+  } finally { unlisten(); }
+});
 const orders = [
   ['body', 'life', 'economy'], ['body', 'economy', 'life'],
   ['life', 'body', 'economy'], ['life', 'economy', 'body'],

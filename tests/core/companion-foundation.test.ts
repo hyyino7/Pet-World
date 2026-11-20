@@ -105,6 +105,9 @@ test('foreground owner home reuses one native session without Life or autonomous
     assert.equal((await resolveCompanionHome(f.ctx,f.host,'standard')).id,first.id);
     const message=createUserMessage({source:{kind:'dsh-world-life'},content:[]});
     assert.equal(f.host.native.sourceTable.admit({sessionId:first.id,message}).kind,'unclaimed','Opening a foreground home grants no autonomous admission');
-    assert.equal(created,1);assert.equal(JSON.parse(readFileSync(join(f.repo,'.chatpet/data/life/life.json'),'utf8')).homeSessionId,first.id);
+    assert.equal(created,1);
+    assert.deepEqual(f.host.workspace.runtime.store.get('companion-home',f.host.workspace.storageId()),
+      {sessionId:first.id,arrivalPending:true});
+    assert.equal(existsSync(join(f.repo,'.chatpet/data/life/life.json')),false);
   } finally {await f.close();}
 });

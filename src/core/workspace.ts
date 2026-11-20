@@ -14,6 +14,7 @@ import type { ServiceCall } from '../contracts/common.js';
 import { bytesDigest, canonical, check, reject, Rejection, revision, now } from './storage.js';
 import { decodeMigrationJournal, HOME_STORAGE_STEP, INITIAL_STORAGE_STEP, MigrationBindingChanged,
   parseMigrationJournal, settled, storageManifest, storageManifestIndex } from './storage-migration.js';
+import type { CompanionBinding } from './tables/companion-ports.js';
 
 const BASE_REQUIRED = ['README.md', 'manifest.json', 'SOUL.md', 'USER.md', 'core.json'] as const;
 const REQUIRED = [...BASE_REQUIRED, 'COMPANION.md'] as const;
@@ -62,13 +63,24 @@ export interface WorkspaceService {
   saveFoundation: ServiceCall<{ workspaceId: string; expectedRevision: string; text: string }, CompanionFoundation>;
 }
 export interface CompanionFoundation { text: string; revision: string; source: 'empty' | 'owner'; path: string }
+export interface HomeBinding extends CompanionBinding { bootId: string; generation: number }
+export interface HomeRecord { sessionId: string; arrivalPending?: true }
+
+function validHome(record: HomeRecord): boolean {
+  return typeof record?.sessionId === 'string' && record.sessionId.trim().length > 0 && !record.sessionId.includes('\0')
+    && (record.arrivalPending === undefined || record.arrivalPending === true)
+    && Object.keys(record).every(key => key === 'sessionId' || key === 'arrivalPending');
+}
 
 /** Core-owned repository authority; module runtime data has its own writers. */
 export class CoreWorkspace {
   readonly port: WorkspaceService;
   private readonly initializers = new Map<string, {run: (target: WorkspaceTarget) => void; files: InitializerFiles}>();
   private migrationBlocked?: MigrationReason;
+  private homeGeneration = 0;
+  private committedTarget: WorkspaceTarget | null;
   constructor(readonly runtime: CoreRuntime) {
+    this.committedTarget = preferences(runtime).workspace;
     this.port = {
       inspect: runtime.call('workspace.inspect', false, () => this.status()),
       initialize: runtime.call('workspace.initialize', true, input => {
@@ -127,6 +139,32 @@ export class CoreWorkspace {
     const binding = this.runtime.store.get<Binding>('workspace-binding', 'current');
     const target = preferences(this.runtime).workspace;
     return binding?.phase === 'ready' && target?.id === binding.target.id && target.path === binding.target.path ? binding : null;
+  }
+  configurationCommitted(operation: string): void {
+    if (operation !== 'workspace.initialize' && operation !== 'preferences.save') return;
+    const target = preferences(this.runtime).workspace, previous = this.committedTarget;
+    if (operation === 'workspace.initialize' || target?.id !== previous?.id || target?.path !== previous?.path)
+      this.homeGeneration++;
+    this.committedTarget = target;
+  }
+  homeScope(): HomeBinding | undefined {
+    const {state,target} = this.status();
+    if (state === 'ready' && target) return {workspaceId:target.id,path:target.path,storageId:this.storageId(),
+      bootId:this.runtime.bootId,generation:this.homeGeneration};
+  }
+  readCompanionHome(scope: HomeBinding): Readonly<HomeRecord> | undefined {
+    const current = this.homeScope();
+    if (!current || !isDeepStrictEqual(scope,current)) reject('STALE_BINDING', 'Companion home binding changed');
+    const record = this.runtime.store.get<HomeRecord>('companion-home', scope.storageId);
+    check(record === undefined || validHome(record), 'Companion home record is invalid');
+    return record;
+  }
+  writeCompanionHome(scope: HomeBinding, expected: HomeRecord | undefined, next: HomeRecord): void {
+    this.runtime.store.transaction(() => {
+      if (!isDeepStrictEqual(this.readCompanionHome(scope), expected)) reject('CONFLICT', 'Companion home changed');
+      check(validHome(next), 'Companion home record is invalid');
+      this.runtime.store.put('companion-home', scope.storageId, next);
+    });
   }
   private directory(target: WorkspaceTarget): string {
     check(realpathSync(target.path) === target.path && lstatSync(target.path).isDirectory(), 'Workspace root changed');

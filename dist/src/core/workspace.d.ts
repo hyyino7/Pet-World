@@ -3,6 +3,7 @@ import { type CorePreferences, type WorkspaceTarget } from './preferences.js';
 import { type CompanionConfiguration, type CompanionSettings } from './companion-settings.js';
 import type { CompanionIdentity, AttentionPolicy, WorkspaceEditScope } from '../contracts/core.js';
 import type { ServiceCall } from '../contracts/common.js';
+import type { CompanionBinding } from './tables/companion-ports.js';
 type MigrationReason = 'storage-version-outdated' | 'manifest-mismatch' | 'migration-incomplete' | 'journal-invalid' | 'journal-step-mismatch' | 'binding-changed';
 type InitializerFiles = readonly string[] | ((target: WorkspaceTarget) => readonly string[]);
 export interface WorkspaceStatus {
@@ -64,18 +65,32 @@ export interface CompanionFoundation {
     source: 'empty' | 'owner';
     path: string;
 }
+export interface HomeBinding extends CompanionBinding {
+    bootId: string;
+    generation: number;
+}
+export interface HomeRecord {
+    sessionId: string;
+    arrivalPending?: true;
+}
 /** Core-owned repository authority; module runtime data has its own writers. */
 export declare class CoreWorkspace {
     readonly runtime: CoreRuntime;
     readonly port: WorkspaceService;
     private readonly initializers;
     private migrationBlocked?;
+    private homeGeneration;
+    private committedTarget;
     constructor(runtime: CoreRuntime);
     /** Captured by the editor, then checked inside the original synchronous
      * configuration mutation. No new binding generation or durable state. */
     editScope(): WorkspaceEditScope;
     assertEditScope(expected: WorkspaceEditScope): void;
     private binding;
+    configurationCommitted(operation: string): void;
+    homeScope(): HomeBinding | undefined;
+    readCompanionHome(scope: HomeBinding): Readonly<HomeRecord> | undefined;
+    writeCompanionHome(scope: HomeBinding, expected: HomeRecord | undefined, next: HomeRecord): void;
     private directory;
     private read;
     private initializationMarker;
