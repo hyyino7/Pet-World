@@ -77,6 +77,29 @@ export declare const HOME_STORAGE_STEP: Readonly<{
         voice: 1;
     }>;
 }>;
+export declare const ECONOMY_STORAGE_STEP: Readonly<{
+    id: "0003-economy-marker";
+    from: Readonly<{
+        core: 2;
+        living: 2;
+        channels: 1;
+        desktop: 1;
+        emotion: 1;
+        memory: 1;
+        room: 1;
+        voice: 1;
+    }>;
+    to: Readonly<{
+        core: 3;
+        living: 3;
+        channels: 1;
+        desktop: 1;
+        emotion: 1;
+        memory: 1;
+        room: 1;
+        voice: 1;
+    }>;
+}>;
 export declare function storageManifest(companionId: string, modules: StorageVersions): {
     schemaVersion: number;
     companionId: string;
@@ -92,6 +115,7 @@ interface JournalHeader {
         storageId: string;
         repoHash: string;
     };
+    economyAdopted?: boolean;
     steps: MigrationStepContract[];
 }
 interface JournalSegment {
