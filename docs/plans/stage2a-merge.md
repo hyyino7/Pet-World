@@ -634,6 +634,7 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 6. 入口联跑与回退证据。`tests/behavior-list/{entries-lifecycle,families}.test.mjs`、`tests/migrate/home-flow.test.mjs`、`tests/migrate/home-rollback.mjs`（后两者新）。`tests/behavior-list/entries-lifecycle.test.mjs:160-192,230-265`、`tests/behavior-list/families.test.mjs:125-194`、`tests/migrate/rollback.test.mjs:18-55,74-101`
 
 - 提交 2 改动的 1B 迁移测试只把步骤集显式选成 `0001`，原断言不放宽。提交 3 列了 14 个文件，执行中超过 15 文件或 600 行就停下拆分，不预先声明超阈值。
+- **执行中补充（主人 2026-11-20 拍板「按推荐改断言」）**：1B 有几处断言写的是「当前 Core 打开未迁移数据照样就绪、能召回」，正是本批按拍板点 6 有意改掉的行为，只选 `0001` 保不住。改法：`tests/migrate/normal.test.mjs` 的迁移前、只完成 `0001`、回退后三种状态，`tests/migrate/compatibility.test.mjs` 的迁移前，`tests/migrate/rollback.test.mjs:101` 的回退后，改为断言当前 Core 报 `migration-required`，Bank 逻辑内容不变的断言保留；完整步骤集跑完后断言就绪且能召回。「回退后旧版本可用」改由 `home-rollback.mjs` 用真实 `v0.2.0` 代码验证，不进 `verify`，合并前由 Claude 在沙箱外跑。其余 1B 断言照旧不放宽。同一拍板下，Claude 按方案意图另批两处 1B 夹具：`tests/migrate/settlement.test.mjs` 的待结算回执改在当前代码可打开的临时清单下准备（本批不改 Body、Economy 的数据形状），再还原旧形状副本去迁移，`recover()` 的断言和「迁移前后结算一致」的 `deepEqual` 不改；`tests/migrate/crash.test.mjs` 的 `copyAndBind` 改为离线写合成副本的绑定，「换路径后已收尾历史保留、未完成段拒绝续做」的断言不改。两处都只动准备步骤。
 - 回退演练用的 `v0.2.0` 检出由执行方在临时目录 `git worktree add --detach <临时目录> v0.2.0`，再按 `docs/development.md` 的恢复命令装依赖。这是本仓库自己的旧版本，不属于上游材料。`home-rollback.mjs` 不叫 `*.test.mjs`，`verify` 不会自动收集，合并前由 Claude 单独跑一次。
 
 本批范围到 home、迁移门禁和受影响入口。`economy.initialized`、`setMeta/close` 归第 5 批，第三层切新契约归阶段 3。vendor、备份器、包导出和发布流程只作取证。`docs/plans/stage2a-merge.md:446-465,655-676`、`AGENTS.md:55-63`
@@ -979,6 +980,22 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - `pnpm run build && pnpm run check:arch`、`pnpm run check:types` 和细则全部快测通过（42/42、23/23、56/56、2/2，脚本语法检查通过）。Living 的 R1–R4 为 0，R8 新增 0。
 - `pnpm run build && pnpm run test:behavior-list` 通过，索引 11/11，行为 93/93，含 Memory 回环。
 - 改动限于本轮授权文件和构建产物，验证使用合成数据。合并门禁由 Claude 在沙箱外运行。
+
+### 第 4 批
+
+- 六组文件数／改动行数（加删合计，排除 `dist/src/**` 与基线）为 01 5／204、02 15／418、03 14／306、04 3／59、05 10／475、06 5／334。
+- 01 共用版本与日志判定。02 `0002` 仅复制 home ID，保留 `life.json` 原字节，四个 `SIGKILL` 边界续做通过。03 新装写最新清单，旧数据锁定拒写。04 设置显示迁移原因和操作提示。05 Core 单飞提交身份，Plan 镜像落盘后确认待迎接。06 联跑并演练旧包回退。
+- 六组均在临时副本独立执行 `pnpm run build`、`pnpm run check:arch` 和存储快测（各 5/5）。迁移快测 01 为 136/136、02 和 03 各 142/142、06 为 143/143。入口快测 03 为 113/113、05 为 118/118、06 为 122/122。04 与 06 的设置快测各 7/7，客户端语法通过。
+- `pnpm run check:types` 和 `pnpm run check:arch -- --report` 通过。R5 的 Core 读写 `life.json` 清零，R8 新增 0，基线用 `--write-baseline` 刷新。行为清单索引 11/11、执行 97/97。原 `2A1A-07` 通过，同一合成绑定迁移后复跑 `2A1A-18` 原断言通过。
+- `tests/migrate/normal.test.mjs:16`（原 14）由迁移前召回改为 `migration-required`。`:39`（原 37）由只完成 `0001` 后就绪并召回改为 `migration-required`。`:59`（原 57）由回退后就绪并召回改为 `migration-required`。保留两处 Bank 逻辑对比，`:60-61` 补上完整迁移后就绪和召回。
+- `tests/migrate/compatibility.test.mjs:27`（原 26）由迁移前就绪改为 `migration-required`。`:29-31`（原 29）将仅完成 `0001` 后就绪移至完成 `0002` 后，并查真实召回。
+- `tests/migrate/rollback.test.mjs:103`（原 101）由当前包回退后召回改为 `migration-required`。旧包回退后聊天、召回和 home 由 `home-rollback.mjs` 验证。
+- `tests/migrate/settlement.test.mjs:19-21,55-60` 在临时当前清单下准备待结算，恢复旧形状并跑完整迁移。`recover()` 内各项断言及迁移前后 `deepEqual` 原样保留。
+- `tests/migrate/crash.test.mjs:140-157` 的 `copyAndBind` 离线更新合成 SQLite 绑定并检查存储身份。换路径后的已收尾历史和未完成段拒绝续做断言原样保留。
+- `HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs` 通过 1/1，覆盖原 home、聊天、召回、送达、额度与花费。上轮 B10 首次报「B 必须真实召回 A 已确认送达的事实」，随后单项、整套及本轮均通过。03 首轮合成 Bank HTTP 500，原命令复跑全过，原因未定。
+- 02 带入 1B 断言助手，03 启用新门禁后切换其判定。05 在已列 `runtime.ts` 加提交后换代。第 4 组采用已列源码与 `dist`，实际 `./client` 的构建产物 `src/desktop/platform/client.js` 待确认是否入补丁。
+- 在 `2d05d37` 上依次重放 `/tmp/her-world-4-patches` 六组，1558 个仓库文件逐字节一致。1A 原断言保留，演练均使用合成数据。以补丁交付，合并门禁由 Claude 在沙箱外运行。
+- **门禁返工**　03 补 `audit-transcripts` 的 `retainedWritesAllowed`，05 补 `behavior-scheduling`、`life-clock-intent`、`life-desktop-integration`、`life-body` 和 `life-sleep-continuity` 的 `homeScope`、`readCompanionHome`。04 并入设置页生成客户端。六组编号沿用，文件数／改动行数（排除 `dist` 与基线）为 01 5／204、02 15／418、03 15／312、04 4／72、05 15／488、06 5／335。夹具快测 49/49，全量 1,567 项通过，Memory P2 因沙箱执行 `/bin/ps` 返回 `EPERM` 记为「环境未运行」。
 
 ## 审查结论
 

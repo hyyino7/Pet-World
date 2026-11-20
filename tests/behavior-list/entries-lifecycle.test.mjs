@@ -14,7 +14,7 @@ import {renderContextSections, renderPrompt} from '@deepseek-ai/dsh-system-promp
 import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
 import {createLifeStore} from '#dsh-world/life/lifeStore';
-import {behaviorPlugin, channelsPlugin, corePlugin, desktopPlugin, economyPlugin, lifePlugin} from '../../dist/tests/behavior-list/entries.js';
+import {behaviorPlugin, channelsPlugin, corePlugin, desktopPlugin, economyPlugin, lifePlugin, resolveCompanionHome} from '../../dist/tests/behavior-list/entries.js';
 import {policyHost} from './policy-host.mjs';
 import {qqTransport} from './qq-transport.mjs';
 
@@ -35,12 +35,12 @@ export async function eventually(check, label) {
 // Cordis owns every plugin and subscription. The host supplies a scripted loop,
 // workspace registry, and disk-backed session persistence in a disposable directory.
 export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,22,59), legacyGarden = false,
-  order = Object.keys(livingEntries), io = {}} = {}) {
+  order = Object.keys(livingEntries), io = {}, existing} = {}) {
   t.mock.timers.enable({apis:['Date'], now:Number(now)});
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'her-world-entries-')));
-  const repo = join(root, 'workspace'), id = 'world';
+  const repo = existing?.repo ?? join(root, 'workspace'), id = existing?.target.id ?? 'world';
   const directory = join(repo, '.chatpet/data/life');
-  mkdirSync(repo);
+  if (!existing) mkdirSync(repo);
   function seedBody() {
     mkdirSync(directory, {recursive:true});
     const home = Object.assign(emptyHomeState(Date.now()), {
@@ -58,7 +58,8 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
   const registryFile = join(root,'workspaces.json');
   let workspaces, registry;
   function openRegistry() {
-    const saved = existsSync(registryFile) ? JSON.parse(readFileSync(registryFile,'utf8')) : {workspaces:[],archived:[]};
+    const saved = existsSync(registryFile) ? JSON.parse(readFileSync(registryFile,'utf8')) :
+      existing ? existing.registry : {workspaces:[],archived:[]};
     workspaces = new Map();
     const persist = ()=>writeFileSync(registryFile,JSON.stringify({workspaces:[...workspaces.values()],archived:registry.archivedSessionIds}));
     function workspace(workspaceId,path,sessionIds=[]) {
@@ -215,11 +216,11 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
       });
       scope.on('session/flush',session=>writeFileSync(logFile(session.id),JSON.stringify({header:session.header,events:session.snapshotEvents()})));
     }});
-    const config = {dataDir:join(root,'core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',
+    const config = existing?.config ?? {dataDir:join(root,'core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',
       displayName:'Fixture',character:'Synthetic companion'};
-    await ctx.plugin(corePlugin,config);
+    await ctx.plugin(existing?.corePlugin ?? corePlugin,config);
     const core = ctx.petCore, request = label=>core.operator.request(label);
-    if (core.workspace.status().state!=='ready') {
+    if (!existing && core.workspace.status().state!=='ready') {
       const prefs = await core.services.preferences.read(request('read'),{});
       assert.ok(prefs.ok);
       const result = await core.services.preferences.save(request('bind'),{expectedRevision:prefs.value.revision,
@@ -255,6 +256,7 @@ export async function cordisFixture(t, {crop = false, now = new Date(2026,10,15,
     get body() { return ctx.petBehavior; }, get life() { return ctx.petLife; }, get economy() { return ctx.petEconomy; },
     set model(value) { model=value; },
     set snapshot(value) { snapshot=value; },
+    stop,
     async restart(between = ()=>{}, {order: entriesToLoad} = {}) { await stop(); await between(); await start(entriesToLoad); },
     async agent(sessionId='home') {
       const result = await ctx.sessionController.resolveAgent(sessionId);
@@ -367,6 +369,54 @@ async function lifeReachFixture(t) {
 
 // The behavior runner identifies a test by its source file and name.
 if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
+  for (const failure of [undefined,'native','core']) test(`4 上游唤醒和前台共用 home 创建（${failure ?? 'success'}）`, {timeout:15000}, async t => {
+    const f = await cordisFixture(t);
+    await f.enable();
+    const old = await f.agent(f.life.homeSessionId());
+    await eventually(async()=> (await f.life.readPlan(f.id)).plan,'首次计划已提交');
+    await old.whenIdle();
+    const store = createLifeStore(f.directory, Intl.DateTimeFormat().resolvedOptions().timeZone);
+    const db = f.core.workspace.runtime.store.db;
+    const record = () => f.core.workspace.runtime.store.get('companion-home',f.core.workspace.storageId());
+    f.registry.archivedSessionIds.push(old.id);
+    const entered = Promise.withResolvers(), release = Promise.withResolvers();
+    const controller = f.ctx.sessionController, create = controller.create.bind(controller);
+    let fail = failure;
+    const attempts = t.mock.method(controller,'create',async input => {
+      entered.resolve(); await release.promise;
+      if (fail === 'native') throw Error('Synthetic native create failure');
+      return create(input);
+    });
+    if (fail === 'core') db.exec("CREATE TRIGGER reject_home BEFORE UPDATE ON records WHEN OLD.kind='companion-home' BEGIN SELECT RAISE(ABORT,'Synthetic Core commit failure'); END");
+    store.update(state => { state.alarm = {source:'plan',at:new Date().toISOString(),setAt:new Date().toISOString(),note:'Synthetic wake'}; });
+    const {preferences} = await f.life.snapshot(f.id);
+    let foreground;
+    try {
+      await f.life.settings(f.id,preferences,{...preferences,review:'23:59'});
+      await entered.promise;
+      foreground = resolveCompanionHome(f.ctx,f.core).then(agent=>({agent}),error=>({error}));
+      await delay(25);
+    } finally { release.resolve(); }
+    const result = await foreground;
+    assert.equal(attempts.mock.callCount(),1);
+    if (failure) {
+      assert.ok(result.error);
+      assert.deepEqual(record(),{sessionId:old.id});
+      assert.equal(store.read().homeSessionId,old.id);
+      if (failure === 'core') db.exec('DROP TRIGGER reject_home');
+      fail = undefined;
+    } else assert.ok(result.agent);
+    const home = await resolveCompanionHome(f.ctx,f.core);
+    assert.equal(home.id,result.agent?.id ?? f.sessionCreateCalls.at(-1));
+    assert.notEqual(home.id,old.id);
+    assert.deepEqual(f.sessionCreateCalls,[old.id,home.id]);
+    assert.equal(attempts.mock.callCount(),failure === 'native' ? 2 : 1);
+    assert.equal(record().sessionId,home.id);
+    if (!failure) await eventually(()=>f.calls.some(call=>call.agent.id===home.id && call.messages.some(message=>
+      message.source.kind==='dsh-world-life' && !('purpose' in message.source))), '唤醒已进入并发打开的同一原生会话');
+    await home.whenIdle();
+  });
+
   for (const desktopFirst of [true,false]) test(`3D Desktop ${desktopFirst?'先装':'晚装'}时按 Life 意图调度并在重载后使用新出口`,async t=>{
     const starts = [];
     const unavailable = 'Synthetic native opener unavailable';
