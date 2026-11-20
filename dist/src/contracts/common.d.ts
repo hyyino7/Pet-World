@@ -3,7 +3,7 @@ export type ContractVersion = typeof import('./version.js').CONTRACT_VERSION;
 export type Timestamp = string;
 export type Revision = number;
 export type ModuleId = 'core' | 'emotion' | 'memory' | 'life' | 'desktop' | 'qq' | 'bilibili' | 'voice' | 'console';
-export type CapabilityId = 'core.conversation' | 'memory.lifecycle' | 'life.pursuits' | 'emotion.expression' | 'desktop.presentation' | 'desktop.body' | 'desktop.room' | 'channel.qq' | 'content.bilibili' | 'voice.speech' | 'console.operations';
+export type CapabilityId = 'core.conversation' | 'memory.lifecycle' | 'life.pursuits' | 'life.economy' | 'emotion.expression' | 'desktop.presentation' | 'desktop.body' | 'desktop.room' | 'channel.qq' | 'content.bilibili' | 'voice.speech' | 'console.operations';
 export interface RequestContext {
     contractVersion: ContractVersion;
     requestId: string;

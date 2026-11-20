@@ -1002,9 +1002,10 @@ window.__ModuleLoader__.load({
           button(snapshot.desktop?.running?'关闭桌宠':desktopPending?'取消启动':desktopFailure===boundId?'重试打开桌宠':'打开桌宠',
             ()=>save(snapshot.desktop.running||desktopPending?'desktopClose':desktopFailure===boundId?'desktopRetry':'desktopOpen',{workspaceId:boundId}),!desktopAvailable,primary),
           desktopPending&&desktopFailure===boundId&&button('重试打开桌宠',()=>save('desktopRetry',{workspaceId:boundId}),!desktopAvailable));
+        const walletCapability = snapshot.capabilities.find(item => item.id === 'life.economy');
         const capabilityState = (owner) => {
           if (owner === 'memory') return memoryProviderLabels[snapshot.memory?.provider] ?? '未配置';
-          const labels = snapshot.capabilities.filter(item => item.owner === owner).map(item => capabilityLabels[item.state] ?? '未知');
+          const labels = snapshot.capabilities.filter(item => item.owner === owner && item !== walletCapability).map(item => capabilityLabels[item.state] ?? '未知');
           return [...new Set(labels)].join(' / ') || (owner === 'bilibili' ? '未报告' : capabilityLabels.unavailable);
         };
         const numberField = (key, label, max, min = 0) => field(label, { type: 'number', min, max,
@@ -1141,6 +1142,7 @@ window.__ModuleLoader__.load({
               ['记忆登记目录',snapshot.storage.memory?.configured || '未配置'],
               ['设备运行环境',snapshot.storage.runtime?.python || '未配置'],
             ])),
+            walletCapability && facts([['钱包', [capabilityLabels[walletCapability.state] ?? '未知', walletCapability.reason].filter(Boolean).join(' · ')]]),
             saveButton('initialize', Boolean(repo) && !workspaceDirty && !otherWorkspaceDrafts,
               () => save('initialize', { expectedPreferencesRevision: snapshot.preferences.revision }), '检查并初始化资料目录')),
           details('高级执行限制', h('p', { className: 'cp-muted' }, '步数、工具次数和时长只限制自主生活、电视等自动轮次，不限制主人主动对话。模型和工具权限由 DSH 原生会话管理。'),

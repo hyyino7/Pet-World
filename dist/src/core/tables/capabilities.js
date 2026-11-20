@@ -3,6 +3,7 @@ const capabilityIds = {
     'core.conversation': true,
     'memory.lifecycle': true,
     'life.pursuits': true,
+    'life.economy': true,
     'emotion.expression': true,
     'desktop.presentation': true,
     'desktop.body': true,

@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs,{readFileSync,renameSync,existsSync} from 'node:fs';
-import {join} from 'node:path';
+import fs,{readFileSync,renameSync,existsSync,writeFileSync} from 'node:fs';
+import {dirname,join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {syncBuiltinESMExports} from 'node:module';
 import {fixture,until} from './fixture.mjs';
+import {cordisFixture} from './entries-lifecycle.test.mjs';
 const meal='food:improved-meal',HOUR=3_600_000;
 
 test('效果落盘后的钱包路径故障保留预留并在重启后只结算一次',async t=>{
@@ -100,4 +102,56 @@ test('钱包缺库时公开服务拒绝创建空白替代',async t=>{
   f.economy.close();const file=join(f.repo,'.chatpet/data/economy/economy.sqlite');renameSync(file,file+'.held');
   await f.restart();await assert.rejects(f.economy.snapshot('world'),/missing|recover|restore|current bound workspace/i);
   assert.equal(existsSync(file),false,'不能用空白钱包代替丢失的权威库');
+});
+
+async function retainedWallet(t, scenario) {
+  const f=await cordisFixture(t,{order:['economy']});
+  await f.ownerAction({kind:'grant',amount:30},'retained-grant');
+  assert.equal(f.fiber('body'),undefined);
+  const data=join(f.repo,'.chatpet/data'), database=join(data,'economy/economy.sqlite');
+  const adoption=join(data,'living/economy-adoption.json'), garden=join(f.directory,'garden.json');
+  if(scenario==='old garden')writeFileSync(garden, JSON.stringify({...JSON.parse(readFileSync(garden,'utf8')),coins:61}));
+  const originalGarden=readFileSync(garden), originalProof=readFileSync(adoption);
+  let held=database+'.held', retained, moved;
+  await f.restart(()=>{
+    if(scenario==='directory') {
+      renameSync(dirname(database),dirname(database)+'.held');
+      held=join(dirname(database)+'.held','economy.sqlite');
+    } else if(scenario==='wallet binding') {
+      using db=new DatabaseSync(database);
+      db.prepare('UPDATE meta SET value=? WHERE key=?').run(JSON.stringify({storageId:'wrong',companionId:'wrong'}),'identity');
+    } else if(scenario==='proof binding') {
+      writeFileSync(adoption,JSON.stringify({storageId:'wrong',companionId:'wrong'}));
+    } else {
+      renameSync(database,held);
+      if(scenario==='shell')writeFileSync(database,'');
+    }
+    retained=existsSync(database) ? readFileSync(database) : undefined;
+    moved=existsSync(held) ? readFileSync(held) : undefined;
+  });
+  await assert.rejects(f.economy.snapshot(f.id), /missing|restore|initialized database|current bound workspace|different storage/i);
+  assert.equal(existsSync(database),retained!==undefined);
+  if(retained)assert.deepEqual(readFileSync(database),retained);
+  if(scenario==='directory')assert.equal(existsSync(dirname(database)),false);
+  if(moved)assert.deepEqual(readFileSync(held),moved);
+  assert.deepEqual(readFileSync(garden),originalGarden);
+  if(scenario==='proof binding')assert.deepEqual(JSON.parse(readFileSync(adoption,'utf8')),{storageId:'wrong',companionId:'wrong'});
+  else assert.deepEqual(readFileSync(adoption),originalProof);
+
+  if(scenario==='old garden') {
+    await f.unload('economy'); await f.load('body');
+    assert.equal((await f.body.garden(f.id,'state')).ok,false);
+    await f.body.act(f.id,'water','free-water');
+    assert.equal((await f.body.pendingFacts(f.id)).at(-1).requestId,'free-water');
+    assert.deepEqual(readFileSync(garden),originalGarden);
+  }
+}
+
+test('仅挂 Economy 交易后缺库拒绝复活旧钱包',t=>retainedWallet(t,'database'));
+test('整个钱包目录丢失仍拒绝复活旧钱包',t=>retainedWallet(t,'directory'));
+test('空壳钱包库保留原字节并拒绝初始化',t=>retainedWallet(t,'shell'));
+test('钱包缺库时保留旧菜园和免费照料',t=>retainedWallet(t,'old garden'));
+test('异绑定的钱包库或证据拒绝复活旧钱包',async t=>{
+  await t.test('异绑定库',t=>retainedWallet(t,'wallet binding'));
+  await t.test('异绑定证据',t=>retainedWallet(t,'proof binding'));
 });

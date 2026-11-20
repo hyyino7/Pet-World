@@ -8,10 +8,11 @@ import { bytesDigest, canonical, check, digest, integer, Rejection } from '../..
 import { registerWorldContext } from '../../core/native/prompt.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
+import { CONTRACT_VERSION } from '../../contracts/version.js';
 import { EconomyStore, projectWallet } from './store.js';
 import { installEconomyAccessGuard } from './access.js';
 import { readLifeControl } from '../plan/control-file.js';
-import { bodyCheckpointDirectory, ECONOMY_ADOPTION_FILE, economyAdoptionPath, economyFile, readEconomyFileEvidence } from './adoption.js';
+import { bodyCheckpointDirectory, ECONOMY_ADOPTION_FILE, economyAdoptionPath, economyFile, economyRecoveryAdvice, readEconomyFileEvidence } from './adoption.js';
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json', ECONOMY_ADOPTION_FILE];
 const access = { mode: 'bounded', detail: '余额与物品由程序结算。原生文件工具防误改；同一系统账户的命令和其他插件仍可访问文件。' };
 export const economyStateToolDeclaration = {
@@ -89,6 +90,31 @@ export class CompanionEconomy {
             } });
         this.current = { key, binding, store };
         return store;
+    }
+    capabilityStatus() {
+        const { state, target } = this.host.workspace.status();
+        if (!target || state === 'migration-required')
+            return { state: 'unavailable', reason: null, supportedOperations: [] };
+        try {
+            const storageId = this.host.workspace.storageId(), companionId = this.host.workspace.runtime.config.companionId;
+            const evidence = readEconomyFileEvidence(target.path, { storageId, companionId });
+            const current = this.current?.key === canonical({ path: target.path, storageId, companionId }) ? this.current : undefined;
+            if (evidence.adoption && (!evidence.database || !current)) {
+                const reason = evidence.database
+                    ? 'Retry initialization with the existing wallet. Follow the recovery steps if it reports an uninitialized database.'
+                    : 'The authoritative economy database is missing.';
+                return { state: 'unavailable', reason: reason + economyRecoveryAdvice(economyAdoptionPath(target.path)), supportedOperations: [] };
+            }
+            if (state === 'ready' && current) {
+                current.store.validate();
+                return { state: 'ready', reason: null, supportedOperations: ['snapshot', 'ownerAction', 'settings'] };
+            }
+            return { state: 'initializing', reason: null, supportedOperations: [] };
+        }
+        catch (error) {
+            return { state: 'unavailable', reason: error instanceof Rejection ? error.message : 'Economy storage could not be verified',
+                supportedOperations: [] };
+        }
     }
     bound(workspaceId) {
         this.assertOpen();
@@ -334,6 +360,10 @@ export function apply(ctx) {
                 ctx.logger('chatpet-economy').warn('Economy is unavailable; retained files were not replaced', error);
             }
         stopInitializer = host.workspace.registerInitializer('economy', target => { service.prepare(target, undefined, true); }, target => service.initializationFiles(target));
+        ctx.effect(() => host.workspace.runtime.capabilityTable.register({
+            id: 'life.economy', owner: 'life', contractVersion: CONTRACT_VERSION, order: 11,
+            status: () => service.capabilityStatus(),
+        }).revoke);
         ctx.provide('petEconomy', service);
         installEconomyAccessGuard(ctx, () => {
             const directory = service.protectedDirectory();

@@ -4,6 +4,7 @@ import {linkSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createCore} from '../../dist/src/core/index.js';
+import {HOME_STORAGE_STEP, storageManifest} from '../../dist/src/core/storage-migration.js';
 import {settingsHandler} from '../../dist/src/console/settings.js';
 import {inspectRepoBinding} from '../../scripts/lib/repo-storage.mjs';
 import {offlineFixture} from './offline-helpers.mjs';
@@ -144,8 +145,10 @@ test('同一组待升级的合成形状，运行时可迁移与 inspectRepoBindi
     ['missing companion manifest', f => rmSync(join(f.managed, 'manifest.json')), false],
     ['foreign companion manifest', f => edit(f, {companionId:'another'}), false],
     ['hardlinked managed document', f => linkSync(join(f.managed, 'SOUL.md'), join(f.out, 'other-link')), false],
-  ]) await t.test(label, async t => {
+  ]) for (const version of ['absent', 'v2']) await t.test(`${label} / ${version}`, async t => {
     const f = await offlineFixture(t, false);
+    if (version === 'v2') writeFileSync(join(f.data, 'storage-manifest.json'),
+      JSON.stringify(storageManifest(f.config.companionId, HOME_STORAGE_STEP.to)));
     prepare(f);
     let offlineReady = false;
     try { offlineReady = inspectRepoBinding(f.config).state === 'ready'; } catch (error) { assert.equal(error.code, 'ERR_ASSERTION'); }
@@ -155,6 +158,7 @@ test('同一组待升级的合成形状，运行时可迁移与 inspectRepoBindi
       const state = host.workspace.status();
       assert.equal(state.state, 'migration-required');
       assert.equal(['storage-version-outdated', 'manifest-mismatch', 'migration-incomplete'].includes(state.migrationReason), offlineReady);
+      if (version === 'v2') assert.equal(state.migrationReason, ready ? 'storage-version-outdated' : 'binding-not-migratable');
     } finally { await host.close(); }
   });
 });

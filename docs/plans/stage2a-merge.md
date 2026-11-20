@@ -727,6 +727,8 @@ Life 在启动、休息和通知时直接找 Desktop 和 Channels（`src/living/
 - **预先声明的断言调整**　1B 专测仍显式选 `0001`，第 4 批专测显式选前两步或按 `id` 取 `0002`，保留已收尾、在途、镜像字节和拒绝续做断言。全步骤入口断言三个步骤及 v3。门禁测试把「当前」改为 v3，增加 v2 待迁移，保留旧包回退后当前 Core 拒写、完整迁移后实际召回和 Bank 逻辑相等。`tests/migrate/{normal.test.mjs:16-43,59-61,metadata-normal.test.mjs:38-52,crash.test.mjs:140-168,236-283,home-flow.test.mjs:76-117,rollback.test.mjs:93-103}`、`tests/core/workspace.test.ts:21-74`
 - **盘点断言**　旧形状夹具在停写后只置回原 Core 键、移除两份新证据。`inventory` 的布尔断言换为精确条数和匹配断言。`compatibility` 的登记数 `52→53`，旧副本精确少 `economy-adoption`，迁移后覆盖齐全。路径测试用原生最新副本，保留零差异和原树字节不变。R5 旧违规样例在测试自己的声明里保留旧 selector 和原断言。`tests/migrate/{helpers.mjs:22-27,inventory.test.mjs:12-32,inventory-paths.test.mjs:11-36,compatibility.test.mjs:22-32}`、`tests/arch/{helpers.mjs:13-19,known-violations.test.mjs:53-62}`
 
+- **执行中补充（主人 2026-11-20 拍板「都按推荐」）**　① 首次初始化中断时的处理办法不改 `src/core/runtime.ts`：Core 在文件已变动时仍统一报 `OUTCOME_UNKNOWN`，钱包区改为经自己的能力状态行（`capabilityTable`）显示证据路径和处理办法，设置页从能力状态读到；原测试改为断言能力状态行里的指引。② 迁移后钱包目录和独立证据同时丢失时，离线 `status` 由 `scripts/lib/repo-storage.mjs` 先判「声明的文件不全」，报 `binding-changed`，续做和开新段照样拒绝；接受这个原因码，不改高风险的 `repo-storage.mjs`，细则原写的 `inconsistent` 只适用于离线准入通过后的目标缺失。为实现 ①，Claude 按拍板意图另批三处：`src/contracts/common.ts` 的 `CapabilityId` 和 `src/core/tables/capabilities.ts` 的运行时清单各加一个钱包能力 ID（只加一项，不改已有 ID）；`src/console/client.js`（及重新生成的 `src/desktop/platform/client.js`）渲染能力状态行的 `reason`。
+
 **手写 host / workspace 替身**
 
 沿用现有 `status/storageId/runtime.config` 接点，无新增 CoreWorkspace 方法。手动 Room 夹具补 `companionId`，其余按下列接点核对并用门禁收齐，保留断言。第 4 批漏测的 `homeScope/readCompanionHome/retainedWritesAllowed` 夹具纳入快测。`src/living/economy/plugin.ts:85-90`、`docs/plans/stage2a-merge.md:1073,1349`
@@ -1081,6 +1083,21 @@ Memory 测试要监听本机回环，在不允许回环的沙箱里失败要换�
 - 建议修 5 按拍板暂缓缓存。建议修 6 有意让 Core 在绑定仍有效时提交已经创建的替代 home，避免留下孤儿会话，Plan 继续按运行代拒绝过期结果。
 - 修前确认回归失败。修后 `pnpm run build && pnpm run check:arch`、`pnpm run check:types`、客户端语法及细则快测通过（存储 5/5、迁移 167/167、入口 123/123、日志回归 11/11）。`HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs` 通过 1/1。
 - 按 `verify` 收集全量 Node 测试，154 个文件、1,594 项通过，Memory P2 因 `/bin/ps` 返回 `EPERM` 记「环境未运行」。仅用合成数据，设置提示经真实 RPC 验证，真实 DSH 设置页待人工验收。改动在允许范围及阈值内，留在工作区，合并门禁由 Claude 执行。
+
+### 第 5 批
+
+- 01 去重两个 Store 的 metadata 与租约关闭，02 加 `0003`、两份采用证据和日志段头的 `economyAdopted`，03 固定历史步骤夹具并精确盘点，04 切到 v3，05 补入口、崩溃、回退和钱包能力状态行。
+- 文件数／增删行数（排除构建产物和基线）为 01 4／67、02 7／370、03 9／115、04 14／269、05 14／458。
+- 先确认 `0003` 缺失、新装仍写 v2、v2 未拦截、缺钱包状态行的回归失败。五组临时副本的 `pnpm run build`、`pnpm run check:arch -- --report` 和工作区 `pnpm run check:types` 通过，R5 的 2 写、4 读清零，R8 新增 0。01–05 快测各通过 67、178、197、515、553 项。按 `verify` 收集全量 Node 测试，各通过 1596、1607、1607、1608、1639 项，每组 0 项非环境失败。各组 Memory P2 因 `/bin/ps` 返回 `EPERM` 记「环境未运行」。
+- 六处 SIGKILL、四种新装组合、v2 与离线准入口径一致、G9 结算和五种拒绝复活通过。`HER_WORLD_020_ROOT=/tmp/her-world-v020 node --test tests/migrate/home-rollback.mjs` 通过 1/1，核对旧键、余额、库存、流水、聊天、召回、home 和不可回退记录。
+- `tests/core/workspace.test.ts:34,43,52` 当前和异身份清单用 v3，原为 v2。增加 v2 待迁移，保留旧版拒写和重启解锁断言。
+- `tests/migrate/metadata-normal.test.mjs:42` 由 `storage.dataVersions` 改为明确的 `0002` 版本，`:27,56` 固定 CLI 为前两步。`tests/migrate/crash.test.mjs:152–153,166–167,250,257,272,279–281` 由默认步骤改为明确的前两步，保留原状态和拒绝续做断言。
+- `tests/migrate/home-flow.test.mjs:83–84` 由两项完成改为精确三步并检查 v3，`:117,119–120` 由末项 `0002` 完成改为精确三步。保留原 home 和镜像字节断言。
+- `tests/migrate/inventory.test.mjs:18` 由 `true` 改为 `{rows:1,matchesCurrentBinding:true}`。`tests/migrate/compatibility.test.mjs:23,25,31` 由 52 项且无缺失改为 53 项、旧副本仅缺 `economy-adoption`、迁移后零差异。`tests/migrate/inventory-paths.test.mjs:12` 换当前形状夹具，保留零差异和原树字节断言。
+- `tests/behavior-list/families.test.mjs:150–155`、`tests/migrate/home-rollback.mjs:82–83` 由末项 `0002` 完成改为三步完成，增加源键删除检查。`tests/arch/known-violations.test.mjs:53–68` 用本地旧 selector 保留 R5 原断言。1A 契约和 `recover()` 断言保留。
+- 按拍板，`tests/infrastructure/first-install.test.mjs:144–151` 由 RPC 报 `UNAVAILABLE` 且带指引改为 RPC 报 `OUTCOME_UNKNOWN`，`life.economy` 状态行报 `unavailable` 且带同一指引。Economy 卸载时撤销登记，两个设置客户端在「资料与会话」中显示 `reason`，临时渲染验证通过 1/1。
+- 按拍板，`tests/migrate/crash.test.mjs:343–364` 中声明过的钱包目录与独立证据同时丢失，离线 `status`、续做和开新段两轮均报 `binding-changed`，核对日志原字节且无新库或备份。离线准入通过的目标缺失形状保留 `inconsistent` 断言。仅使用合成数据。
+- 五个补丁在 `/tmp/her-world-5-patches`，依次应用到 `77b2df3` 后，1568 个交付文件字节及可执行权限与工作区一致。合并门禁由 Claude 在沙箱外运行。
 
 ## 审查结论
 

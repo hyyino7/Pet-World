@@ -898,6 +898,24 @@ test('R6 Economy 卸载取消路径解析，并等守卫收尾后关库释锁', 
   assert.equal((await f.economy.snapshot(f.id)).balance, committed.balance);
 });
 
+test('Economy 原生文件守卫保护钱包目录和独立采用证据', async t => {
+  const f = await cordisFixture(t, {order:['economy']});
+  const file = join(f.repo,'.chatpet/data/living/economy-adoption.json'), original = readFileSync(file);
+  for (const [name,path,denied] of [
+    ['write',file,true], ['read',file,true], ['write',join(file,'..'),true],
+    ['write',join(f.repo,'.chatpet/data/economy/storage.json'),true], ['write',join(file,'../unrelated.json'),false],
+  ]) {
+    const exec = {name,token:Symbol(name),arguments:{file_path:path},signal:new AbortController().signal};
+    const gate = await f.ctx.waterfall('tools/pre-execute',exec,async () => ({kind:'allow'}));
+    assert.equal(gate.kind,'allow');
+    const denial = f.ctx.tools.checkGuards(exec);
+    if (denied) assert.match(denial,/经济账本由程序结算/);
+    else assert.equal(denial,undefined);
+    f.ctx.emit('tools/result',exec);
+  }
+  assert.deepEqual(readFileSync(file),original);
+});
+
 test('R6 Economy 卸载等待跨区设置请求，旧请求不能写配置', async t => {
   const f = await cordisFixture(t);
   await f.body.snapshot(f.id);

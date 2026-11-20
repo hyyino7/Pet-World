@@ -9,6 +9,7 @@ import {createOfflineBackup, restoreOfflineBackup, verifyOfflineBackup} from '..
 import {inspectRepoBinding} from '../../scripts/lib/repo-storage.mjs';
 import {cordisFixture} from '../behavior-list/entries-lifecycle.test.mjs';
 import {cli, mockDsh, planFor, read} from './helpers.mjs';
+import {economyPaths} from './offline-helpers.mjs';
 
 const project = realpathSync(new URL('../..', import.meta.url));
 const fromVersion = (root, file) => import(pathToFileURL(join(root, file)).href);
@@ -28,11 +29,24 @@ test('真实 v0.2.0 回退后聊天、召回和共享 home 可用', {timeout:600
   assert.equal(read(join(oldRoot, 'package.json')).version, '0.2.0');
   const {generateSynthetic, content} = await fromVersion(oldRoot, 'scripts/fixtures/synthetic-companion.mjs');
   const oldCore = await fromVersion(oldRoot, 'dist/src/core/plugin.js');
+  const {createCore} = await fromVersion(oldRoot, 'dist/src/core/index.js');
+  const {CompanionEconomy} = await fromVersion(oldRoot, 'dist/src/economy/plugin.js');
   const {resolveCompanionHome} = await fromVersion(oldRoot, 'dist/src/core/companion-foundation.js');
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'home-rollback-')));
   t.after(() => rmSync(root, {recursive:true, force:true}));
   mockDsh(t);
   const f = await generateSynthetic(join(root, 'old-installation'));
+  const walletSnapshot = async host => {
+    const economy = new CompanionEconomy({},host);
+    try {
+      const {balance,inventory,ledger} = await economy.snapshot(f.target.id);
+      return {balance,inventory,ledger};
+    } finally { economy.close(); }
+  };
+  const preUpgrade = createCore(f.config);
+  let walletBefore;
+  try { walletBefore = await walletSnapshot(preUpgrade); }
+  finally { await preUpgrade.close(); }
   const plan = planFor(f), {installedPackage, registryFile} = plan;
   const copies = join(f.config.dataDir, 'native-sessions');
   const transcripts = readdirSync(copies).filter(name => /^[a-f0-9]{64}\.json$/.test(name));
@@ -47,9 +61,15 @@ test('真实 v0.2.0 回退后聊天、召回和共享 home 可用', {timeout:600
   const database = join(f.config.dataDir, 'core.sqlite'), originalRegistry = read(registryFile);
   const originalInstallation = readFileSync(f.installation);
   const readBinding = db => db.prepare("SELECT value FROM records WHERE kind='workspace-binding' AND id='current'").get().value;
+  const marker = (db,key) => db.prepare('SELECT value FROM meta WHERE key=?').get(key)?.value;
+  const legacyKey = `economy.initialized:${f.storageId}`;
+  const walletPaths = economyPaths(f), identity = {storageId:f.storageId,companionId:f.config.companionId};
   const originalDb = new DatabaseSync(database, {readOnly:true});
   let originalBinding;
-  try { originalBinding = readBinding(originalDb); } finally { originalDb.close(); }
+  try {
+    originalBinding = readBinding(originalDb);
+    assert.deepEqual(JSON.parse(marker(originalDb,legacyKey)),{companionId:f.config.companionId,path:f.repo});
+  } finally { originalDb.close(); }
 
   stagePackage(oldRoot, installedPackage);
   createOfflineBackup(plan, rollback);
@@ -59,7 +79,8 @@ test('真实 v0.2.0 回退后聊天、召回和共享 home 可用', {timeout:600
   const migrate = backup => {
     const result = cli(f, ['run','--installation',f.installation,'--backup',backup]);
     assert.equal(result.status, 0, result.stderr);
-    assert.deepEqual(JSON.parse(result.stdout).steps.at(-1), {id:'0002-home-identity', state:'complete'});
+    assert.deepEqual(JSON.parse(result.stdout).steps, ['0001-storage-manifest','0002-home-identity','0003-economy-marker']
+      .map(id => ({id,state:'complete'})));
   };
   migrate(samePackage);
   const newFingerprint = verifyOfflineBackup(samePackage, plan).codeFingerprint;
@@ -68,6 +89,14 @@ test('真实 v0.2.0 回退后聊天、召回和共享 home 可用', {timeout:600
   assert.equal(existsSync(manifest), false);
   migrate(join(root, 'retry'));
   assert.equal(existsSync(manifest), true);
+  assert.deepEqual([read(manifest).modules.core,read(manifest).modules.living],[3,3]);
+  assert.deepEqual(read(walletPaths.adoption),identity);
+  {
+    using core = new DatabaseSync(database,{readOnly:true});
+    using wallet = new DatabaseSync(walletPaths.database,{readOnly:true});
+    assert.equal(marker(core,legacyKey),undefined);
+    assert.deepEqual(JSON.parse(marker(wallet,'economy.initialized')),identity);
+  }
 
   const irreversible = [['life-outlet-delivery','synthetic-delivery'], ['channel-usage-event','synthetic-quota']];
   const upgraded = new DatabaseSync(database);
@@ -87,6 +116,11 @@ test('真实 v0.2.0 回退后聊天、召回和共享 home 可用', {timeout:600
   assert.equal(restored.restored, true);
   assert.equal(existsSync(manifest), false);
   assert.equal(existsSync(join(f.data, 'migrations.jsonl')), false);
+  assert.equal(existsSync(walletPaths.adoption),false);
+  {
+    using wallet = new DatabaseSync(walletPaths.database,{readOnly:true});
+    assert.equal(marker(wallet,'economy.initialized'),undefined);
+  }
   assert.deepEqual(readFileSync(f.installation), originalInstallation);
   assert.deepEqual(read(registryFile), originalRegistry);
   assert.equal(readFileSync(portable, 'utf8'), originalLog);
@@ -95,6 +129,7 @@ test('真实 v0.2.0 回退后聊天、召回和共享 home 可用', {timeout:600
   const reopened = new DatabaseSync(database, {readOnly:true});
   try {
     assert.equal(readBinding(reopened), originalBinding);
+    assert.deepEqual(JSON.parse(marker(reopened,legacyKey)),{companionId:f.config.companionId,path:f.repo});
     const row = reopened.prepare('SELECT value FROM records WHERE kind=? AND id=?');
     for (const key of irreversible) assert.equal(row.get(...key)?.value, 'true');
     assert.equal(row.get('companion-home', f.storageId), undefined);
@@ -106,6 +141,7 @@ test('真实 v0.2.0 回退后聊天、召回和共享 home 可用', {timeout:600
   const running = await cordisFixture(t, {order:[], existing:{...f, corePlugin:oldCore, registry}});
   try {
     assert.equal(running.core.workspace.status().state, 'ready');
+    assert.deepEqual(await walletSnapshot(running.core),walletBefore);
     const home = await resolveCompanionHome(running.ctx, running.core);
     assert.equal(home.id, 'fixture-session');
     assert.deepEqual(running.sessionCreateCalls, []);

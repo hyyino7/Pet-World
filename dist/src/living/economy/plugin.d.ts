@@ -1,6 +1,7 @@
 import { LivingView, type LivingPorts, type RecordCommandEffect } from '../index.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost, WorkspaceTarget } from '../../core/index.js';
+import type { CapabilityRegistration } from '../../contracts/tables.js';
 import type { PlannedActivity } from '../../contracts/behavior.js';
 import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomEconomyPort } from '../body/room.js';
@@ -41,6 +42,7 @@ export declare class CompanionEconomy {
     private retainedGarden;
     /** Initialization is schema preparation only: no allowance, gifts or goals. */
     prepare(target: WorkspaceTarget, legacyFile?: string, initializing?: boolean): EconomyStore;
+    capabilityStatus(): ReturnType<CapabilityRegistration['status']>;
     private bound;
     private use;
     private gardenClock;

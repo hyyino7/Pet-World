@@ -4,7 +4,12 @@ import fs from 'node:fs';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { syncBuiltinESMExports } from 'node:module';
+import { Context } from '@deepseek-ai/cordis';
+import SystemPrompt from '@deepseek-ai/dsh-system-prompt';
+import Tools from '@deepseek-ai/dsh-tools';
 import { createCore } from '../../dist/src/core/index.js';
+import * as economyPlugin from '../../dist/src/living/economy/plugin.js';
+import { DatabaseSync } from 'node:sqlite';
 import { fileHashes, inspectRepoBinding, prepareRepoStorage, relocateRepoStorage } from '../../scripts/lib/repo-storage.mjs';
 import { profileFixture } from '../behavior-list/setup-config.test.mjs';
 
@@ -86,6 +91,102 @@ test('failed module initialization retries against the same external Core withou
   assert.equal(existsSync(join(f.repo, '.chatpet/.initialization-pending.json')), false);
   await f.reopen();
   assert.equal(value(await f.host.services.workspace.inspect(f.request(), {})).state, 'ready');
+});
+
+function installWallet(f, beforePrepare = () => {}) {
+  const economy = new economyPlugin.CompanionEconomy({}, f.host);
+  const unregister = f.host.workspace.registerInitializer('economy', target => {
+    beforePrepare(); economy.prepare(target, undefined, true);
+  },
+    target => economy.initializationFiles(target));
+  return () => { unregister(); economy.close(); };
+}
+
+async function mountWallet(f) {
+  const ctx = new Context();
+  try {
+    ctx.provide('petCore', f.host);
+    ctx.provide('petWorld', {});
+    ctx.provide('agents', {});
+    await ctx.plugin(SystemPrompt, {includeHarnessIdentity:false});
+    await ctx.plugin(Tools);
+    await ctx.plugin(economyPlugin);
+    return () => ctx.fiber.dispose();
+  } catch (error) {
+    await ctx.fiber.dispose();
+    throw error;
+  }
+}
+
+test('first initialization restarts with durable adoption evidence and refuses to replace its uncommitted wallet', async t => {
+  const f = fixture(t), prefs = await f.bind(), root = join(f.repo, '.chatpet');
+  const adoption = join(root, 'data/living/economy-adoption.json'), database = join(root, 'data/economy/economy.sqlite');
+  let close = await mountWallet(f);
+  t.after(() => close());
+  const sync = fs.fsyncSync;
+  const stop = t.mock.method(fs, 'fsyncSync', fd => {
+    sync(fd);
+    if (existsSync(adoption) && !existsSync(database)) throw Error('Injected stop after durable adoption');
+  });
+  syncBuiltinESMExports();
+  try { assert.equal((await f.initialize(prefs.revision)).ok, false); }
+  finally { stop.mock.restore(); syncBuiltinESMExports(); }
+  const saved = readFileSync(adoption);
+  assert.equal(existsSync(database), false);
+  for (const restart of [false, true]) {
+    if (restart) {
+      await close();
+      const afterUnload = value(await f.host.services.core.listCapabilities(f.request(), {}));
+      assert.ok(!afterUnload.some(row => row.id === 'life.economy'));
+      await f.reopen();
+      close = await mountWallet(f);
+    }
+    const capabilities = value(await f.host.services.core.listCapabilities(f.request(), {}));
+    const wallet = capabilities.find(row => row.id === 'life.economy');
+    assert.equal(wallet?.state, 'unavailable');
+    assert.ok(wallet.reason.includes(adoption));
+    assert.match(wallet.reason, /first initialization never succeeded.*deleting.*rollback backup/);
+    const response = await f.initialize(prefs.revision);
+    assert.equal(response.ok, false);
+    assert.equal(response.error.code, 'OUTCOME_UNKNOWN');
+    assert.equal(existsSync(database), false);
+    assert.deepEqual(readFileSync(adoption), saved);
+  }
+});
+
+for (const restart of [false,true]) test(`committed wallet repairs missing storage inventory on ${restart ? 'restart' : 'same-process retry'}`, async t => {
+  const f = fixture(t), prefs = await f.bind(), root = join(f.repo, '.chatpet');
+  const database = join(root, 'data/economy/economy.sqlite'), storage = join(root, 'data/economy/storage.json');
+  const legacy = join(root, 'data/behavior/garden.json');
+  let close = installWallet(f, () => { if (!existsSync(legacy)) writeFileSync(legacy, '{"coins":23}'); });
+  t.after(() => close());
+  const rename = fs.renameSync;
+  const fail = t.mock.method(fs, 'renameSync', (from, to) => {
+    if (to === storage) throw Error('Injected stop before storage inventory rename');
+    rename(from, to);
+  });
+  syncBuiltinESMExports();
+  try { assert.equal((await f.initialize(prefs.revision)).ok, false); }
+  finally { fail.mock.restore(); syncBuiltinESMExports(); }
+  assert.equal(existsSync(storage), false);
+  const saved = () => {
+    using db = new DatabaseSync(database, {readOnly:true});
+    const meta = db.prepare('SELECT value FROM meta WHERE key=?');
+    return {marker:JSON.parse(meta.get('economy.initialized').value), balance:JSON.parse(meta.get('balance').value),
+      ledger:db.prepare('SELECT * FROM ledger ORDER BY sequence').all()};
+  };
+  const original = saved(), adoption = 'data/living/economy-adoption.json';
+  assert.deepEqual(original.marker, {storageId:'repo',companionId:f.config.companionId});
+  assert.equal(original.balance,23);
+  assert.equal(original.ledger.length,1);
+  if (restart) { close(); await f.reopen(); close = installWallet(f); }
+  const initialized = value(await f.initialize(prefs.revision));
+  assert.equal(initialized.state,'ready');
+  assert.ok(initialized.files.includes(adoption));
+  assert.ok(initialized.files.includes('data/economy/storage.json'));
+  assert.equal(existsSync(storage), true);
+  assert.deepEqual(saved(),original);
+  assert.equal(readFileSync(legacy,'utf8'),'{"coins":23}');
 });
 
 test('bootstrap completes stopped relocation, retries a failed manifest write, and keeps all original Core bytes', async t => {

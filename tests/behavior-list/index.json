@@ -204,6 +204,51 @@
       "families": []
     },
     {
+      "id": "2A5-01",
+      "categories": ["缺库不得空白替代"],
+      "level": "L2",
+      "file": "tests/behavior-list/domains.test.mjs",
+      "name": "仅挂 Economy 交易后缺库拒绝复活旧钱包",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A5-02",
+      "categories": ["缺库不得空白替代"],
+      "level": "L2",
+      "file": "tests/behavior-list/domains.test.mjs",
+      "name": "整个钱包目录丢失仍拒绝复活旧钱包",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A5-03",
+      "categories": ["缺库不得空白替代"],
+      "level": "L2",
+      "file": "tests/behavior-list/domains.test.mjs",
+      "name": "空壳钱包库保留原字节并拒绝初始化",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A5-04",
+      "categories": ["缺库不得空白替代"],
+      "level": "L2",
+      "file": "tests/behavior-list/domains.test.mjs",
+      "name": "钱包缺库时保留旧菜园和免费照料",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2A5-05",
+      "categories": ["缺库不得空白替代"],
+      "level": "L2",
+      "file": "tests/behavior-list/domains.test.mjs",
+      "name": "异绑定的钱包库或证据拒绝复活旧钱包",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
       "id": "B17",
       "categories": [],
       "level": "L1",
