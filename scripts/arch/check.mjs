@@ -1,16 +1,13 @@
 import {fileURLToPath} from 'node:url';
 import {resolve,join} from 'node:path';
 import {scan} from './lib/scan.mjs';
+import {summarizeJudgments,summarizeRules} from './lib/counts.mjs';
 import {updateBaselines} from './lib/ratchet.mjs';
 import {baselineMove} from './lib/move.mjs';
 
 export function report(result,log=console.log) {
-  for(const rule of ['R1','R2','R3','R4']) {
-    const entries=result.rules.filter(r=>r.rule===rule);
-    const edges=new Set(result.edges.filter(e=>e.rule===rule).map(e=>e.from+' → '+e.to));
-    const sites=new Set(entries.map(r=>JSON.stringify([r.file,r.line,r.column])));
-    const badEdges=new Set(entries.filter(r=>r.from&&r.to).map(r=>r.from+' → '+r.to));
-    log(`${rule}：${entries.length} 条违规目标；${sites.size} 个调用点；${badEdges.size} 条违规依赖边；${edges.size} 条依赖边（全图）`);
+  for(const {rule,entries,callSites,violationEdges,dependencyEdges} of summarizeRules(result)) {
+    log(`${rule}：${entries.length} 条违规目标；${callSites} 个调用点；${violationEdges} 条违规依赖边；${dependencyEdges} 条依赖边（全图）`);
     for(const r of entries)log(`${rule} ${r.file}:${r.line} ${r.scope} → ${r.target} [${r.reason}] ${r.expression}`);
   }
   log('R5 写入报告（只报告，不阻断；读写均列出）');
@@ -19,9 +16,9 @@ export function report(result,log=console.log) {
   for(const r of result.vocabulary)log(`R8 ${r.file}:${r.line} ${r.shape==='bare string'?'裸 string '+r.target:r.relation+' ['+r.values.join(', ')+'] ↔ '+r.other.file+':'+r.other.line}`);
   log('R8 全部定义位置（含子集、schema、标签表）');
   for(const r of result.definitions)log(`R8 定义 ${r.file}:${r.line} ${r.shape} [${r.values.join(', ')}]`);
-  for(const name of ['kind','action']) {
-    const rows=result.judgments.filter(r=>r.target===name),src=rows.filter(r=>r.file.startsWith('src/'));
-    log(`R8 ${name} 字符串判断：运行源码 ${src.length} 点/${new Set(src.map(r=>r.file)).size} 文件；扫描范围 ${rows.length} 点/${new Set(rows.map(r=>r.file)).size} 文件`);
+  const {kind,action}=summarizeJudgments(result.judgments);
+  for(const [name,{runtime,scanned}] of Object.entries({kind,action})) {
+    log(`R8 ${name} 字符串判断：运行源码 ${runtime.points} 点/${runtime.files} 文件；扫描范围 ${scanned.points} 点/${scanned.files} 文件`);
   }
   log(`跳过生成文件（${result.skipped.length}；自有生成源已扫描）：${result.skipped.join(', ')}`);
   log(`跳过 vendor 生成源（${result.skippedVendorSources.length}）：${result.skippedVendorSources.join(', ')}`);
