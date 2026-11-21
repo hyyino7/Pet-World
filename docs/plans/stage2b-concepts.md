@@ -561,3 +561,27 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 ### 第 5 批（Codex 独立审查 + Claude 核实，基于 `0dde010`）
 
 验收会话报告，没有写进分支的方案文件，由 2b 概念统一会话在合并时补记：两层审查都没有必须修；沙箱外 `pnpm run verify`（Node 1673 条、Python 22 条）、`pnpm run test:memory`、`pnpm run build && pnpm run test:behavior-list` 全部通过；点数 271 / 102 不变，两份基线新增 0。建议修一条：新的跨语言契约测试没有接进 `test:memory`（`package.json` 的 `scripts.test:memory`），`verify` 会收集它，已排进 6A 第 4 条。
+
+### 第 6 批 · 6A（Codex 独立审查 + Claude 核实，基于 `e2c5230`）
+
+已核实没问题的：
+
+- **身体指标**：细则第 1 条列的副本全部改用 `BODY_METRICS` 或 `BodyMetric`（快照 `needs`、`BodyNeedDelta`、食物效果校验、`reconsiderWhen` 的 schema 和校验、`applyCatalogFood` 入参、`RoomFoodReservation.effects`）；`initial-state.ts`、`catalog.ts` 的取值改成 `satisfies` 约束；`src/` 里除设置页标签表外没有别的五项副本。Room 的离线上限按 `'ceiling'` 标记挑出 `hunger / thirst / bladder`，顺序和原来一样，注释说明了 `energy`（有单独的 `energyFloor`）和 `pain`（离线不变）为什么不在里面，和上游 `home-state.js:1235-1244` 一致。枚举顺序和报错文案不变。`2B6A-01` 是真的在比对：逐个改设置页五个字段再保存，确认第 i 个标签写到第 i 个指标，并断言 `Object.keys(BODY_METRICS)` 的顺序。
+- **商品可写键**：`writableKeys` 在 `configuration` 之外，只有设置页的 `economyView` 带它（`includeWritableKeys`），动作回包、请求回执、`pet_economy_state` 都不带（`2B6A-02` 断言了）。它和 `effectiveEconomyConfiguration` 共用 `isWritableCatalogKey`；设置页不再解析 `harvest:`；`configure` 没改。设置页的 `view` 只从 `economyView` 取，不会读到缺可写键的回包。`2B6A-02` 覆盖了收获物和视图外键的排除、种子和堆肥价格保存、上架开关，以及回包丢失后用原请求重试只记一条流水。
+- **账本 kind**：两个写口收窄到 12 种 `LedgerKind`；读取类型是「已知值 | 带标记的旧字符串」，带标记的类型没有导出，没有新增裸 `kind: string`。`economy-recovery.test.ts` 只新增了一条测试，覆盖旧 kind 原样读出，以及账本 `owner-grant` 和事实 `money-grant` 各自保留。
+- **范围**：`package.json` 只改了 `scripts.test:memory` 一行。三个提交不计豁免项分别是 12 文件 / 171 行、8 / 153、5 / 52（含桌宠生成客户端）。测试只有新增，第 1–5 批的断言一条没动。
+- **点数和基线**：kind 270、action 102。按条目逐个对比：词表基线 690 → 638 → 638 → 637，三个提交新增都是 0；规则基线 37 和写入基线 324 不变。
+- **构建产物**：`f528b97`、`3b60d41` 分别导出到干净目录重新构建，`e2c5230` 在 worktree 里构建，三次构建后都没有差异。
+- **门禁（沙箱外）**：`pnpm run verify` Node 1678/1678、Python 22 条通过；`pnpm run test:memory` Python 22 条、Node 4 条（含 P2 进程测试和跨语言契约）通过；`pnpm run build && pnpm run test:behavior-list` 索引 11 条、行为测试 121 条全部通过；构建后工作区干净。
+
+Codex 报的一条必须修经核实降为建议修：
+
+1. 可写键并入了历史配置里、当前目录已经没有的商品键（`store.ts:232-241`）。一旦有这种残留，设置页保存时会一起提交，`configure` 回 `NOT_FOUND`。不算本批引入：`main` 的旧页对同样的残留也会这样提交；细则要求可写键沿用 `effectiveEconomyConfiguration` 的规则，而这条规则本来就保留这些键。`configure` 写入时会校验商品存在（`store.ts:302`、`:181`），仓库里也没有删除目录商品的路径，所以残留只可能出在跨版本目录缩小时，目前没有证据表明发生过。改成只按目录挑选会改变保存行为，要先找主人对齐，不在 6A 做。
+
+建议修（不影响合并）：
+
+2. 新版页面如果拿到旧后端的 `economyView`（没有 `writableKeys`），第一次编辑就会抛 `TypeError`（`console/client.js:510`）。页面和后端同包发布，只有混用版本时才会出现。
+3. `writableKeys` 每次 `store.snapshot()` 都要算，钱包、投喂库存检查、动作回包算完又丢掉；推断出来的返回类型也让 `ownerAction` / `settings` 的声明看起来可能带 `writableKeys`（`dist/src/living/economy/plugin.d.ts`）。可以改成只在设置视图里算。
+4. 6C 写文档时注意：开工细则第 9 条说 6A 的基础表扫描器看不见，但 `BODY_METRICS` 是字符串值表，R8 能看见；看不见的是设置页的标签对（`console/client.js:582`）。「概念与扩展检查」的层间接口一栏可以补记 Console 调 `snapshot` 时新增的 `includeWritableKeys` 选项。
+
+**结论**：没有必须修，可以合并。
