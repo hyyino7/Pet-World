@@ -1440,6 +1440,15 @@
       "families": [
         "计划推进与完成契约"
       ]
+    },
+    {
+      "id": "2B2-01",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-care-settings.test.mjs",
+      "name": "设置页照料按钮按 lifeView 顺序和文案渲染并逐个执行",
+      "l1Stage": "阶段 2",
+      "families": []
     }
   ]
 }

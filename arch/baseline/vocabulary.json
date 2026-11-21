@@ -3205,13 +3205,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 82
+        "line": 83
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 82,
+      "line": 83,
       "column": 11,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/React . useEffect:callback0\"}",
@@ -3246,13 +3246,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 411
+        "line": 415
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 411,
+      "line": 415,
       "column": 10,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/React . useEffect:callback0\"}",
@@ -3626,13 +3626,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "<module>",
-        "line": 23
+        "line": 24
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 23,
+      "line": 24,
       "column": 42,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
@@ -4401,13 +4401,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 191
+        "line": 192
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 191,
+      "line": 192,
       "column": 11,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/apply/request\"}",
@@ -4738,13 +4738,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 82
+        "line": 83
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 82,
+      "line": 83,
       "column": 11,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/console/plugin.ts\",\"scope\":\"apply\"}",
@@ -4833,13 +4833,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 164
+        "line": 165
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 164,
+      "line": 165,
       "column": 11,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/console/plugin.ts\",\"scope\":\"apply\"}",
@@ -4928,13 +4928,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 191
+        "line": 192
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 191,
+      "line": 192,
       "column": 11,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/console/plugin.ts\",\"scope\":\"apply\"}",
@@ -5029,13 +5029,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 202
+        "line": 203
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 202,
+      "line": 203,
       "column": 11,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/console/plugin.ts\",\"scope\":\"apply\"}",
@@ -5128,13 +5128,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 411
+        "line": 415
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 411,
+      "line": 415,
       "column": 10,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/console/plugin.ts\",\"scope\":\"apply\"}",
@@ -5553,7 +5553,7 @@
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 23,
+      "line": 24,
       "column": 42,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchEconomy\"}",
@@ -5606,13 +5606,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "<module>",
-        "line": 23
+        "line": 24
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 23,
+      "line": 24,
       "column": 42,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"CompanionEconomy/gardenPort/transaction\"}",
@@ -5666,13 +5666,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "<module>",
-        "line": 23
+        "line": 24
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 157,
+      "line": 158,
       "column": 45,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/desktop/platform/migration.ts\",\"scope\":\"<module>\"}",
@@ -5706,13 +5706,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 157
+        "line": 158
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 157,
+      "line": 158,
       "column": 45,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/desktop/platform/migration.ts\",\"scope\":\"resolvePresentationMigration\"}",
@@ -5746,13 +5746,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 157
+        "line": 158
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 157,
+      "line": 158,
       "column": 45,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/resolveMigration\"}",
@@ -5786,13 +5786,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 157
+        "line": 158
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 158,
+      "line": 159,
       "column": 92,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/desktop/platform/migration.ts\",\"scope\":\"<module>\"}",
@@ -5826,13 +5826,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 158
+        "line": 159
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 158,
+      "line": 159,
       "column": 92,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/desktop/platform/migration.ts\",\"scope\":\"resolvePresentationMigration\"}",
@@ -5866,13 +5866,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 158
+        "line": 159
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 158,
+      "line": 159,
       "column": 92,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/resolveMigration\"}",
@@ -5906,13 +5906,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 158
+        "line": 159
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 191,
+      "line": 192,
       "column": 11,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/request\"}",
@@ -5954,13 +5954,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 191
+        "line": 192
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 191,
+      "line": 192,
       "column": 11,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/room/window-main.cjs\",\"scope\":\"<module>\"}",
@@ -6008,13 +6008,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 191
+        "line": 192
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 191,
+      "line": 192,
       "column": 11,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/room/window-preload.cjs\",\"scope\":\"<module>\"}",
@@ -6062,13 +6062,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 191
+        "line": 192
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 191,
+      "line": 192,
       "column": 11,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/room/window.ts\",\"scope\":\"<module>\"}",
@@ -6116,147 +6116,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 191
+        "line": 192
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 228,
-      "column": 80,
-      "scope": "settingsHandler/<callback>",
-      "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
-      "expression": "[ \"feed\" , \"water\" , \"play\" , \"pet\" , \"sleep\" , \"wake\" ]",
-      "values": [
-        "feed",
-        "pet",
-        "play",
-        "sleep",
-        "wake",
-        "water"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/desktop/platform/plugin.ts",
-        "scope": "PetPlatform/handle",
-        "line": 631
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/desktop/platform/plugin.ts",
-      "line": 631,
-      "column": 52,
-      "scope": "PetPlatform/handle",
-      "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
-      "expression": "[ \"sleep\" , \"wake\" , \"pet\" ]",
-      "values": [
-        "pet",
-        "sleep",
-        "wake"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/console/settings.ts",
-        "scope": "settingsHandler/<callback>",
-        "line": 228
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/console/settings.ts",
-      "line": 228,
-      "column": 80,
-      "scope": "settingsHandler/<callback>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/dispatchExecution\"}",
-      "expression": "[ \"feed\" , \"water\" , \"play\" , \"pet\" , \"sleep\" , \"wake\" ]",
-      "values": [
-        "feed",
-        "pet",
-        "play",
-        "sleep",
-        "wake",
-        "water"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/dispatchExecution",
-        "line": 540
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 540,
-      "column": 34,
-      "scope": "CompanionRoom/dispatchExecution",
-      "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
-      "expression": "[ \"sleep\" , \"wake\" ]",
-      "values": [
-        "sleep",
-        "wake"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/console/settings.ts",
-        "scope": "settingsHandler/<callback>",
-        "line": 228
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/console/settings.ts",
-      "line": 228,
-      "column": 80,
-      "scope": "settingsHandler/<callback>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/animationContext\"}",
-      "expression": "[ \"feed\" , \"water\" , \"play\" , \"pet\" , \"sleep\" , \"wake\" ]",
-      "values": [
-        "feed",
-        "pet",
-        "play",
-        "sleep",
-        "wake",
-        "water"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/animationContext",
-        "line": 802
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 802,
-      "column": 42,
-      "scope": "CompanionRoom/animationContext",
-      "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
-      "expression": "{ feed : \"eat\" , water : \"drink\" , wake : \"wake\" }",
-      "values": [
-        "feed",
-        "wake",
-        "water"
-      ],
-      "shape": "labels",
-      "relation": "子集",
-      "other": {
-        "file": "src/console/settings.ts",
-        "scope": "settingsHandler/<callback>",
-        "line": 228
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/console/settings.ts",
-      "line": 379,
+      "line": 383,
       "column": 42,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/core/workspace.ts\",\"scope\":\"<module>\"}",
@@ -6292,13 +6158,13 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 379
+        "line": 383
       }
     },
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 379,
+      "line": 383,
       "column": 42,
       "scope": "settingsHandler/<callback>",
       "target": "{\"file\":\"src/core/workspace.ts\",\"scope\":\"CoreWorkspace/soul\"}",
@@ -6334,7 +6200,7 @@
       "other": {
         "file": "src/console/settings.ts",
         "scope": "settingsHandler/<callback>",
-        "line": 379
+        "line": 383
       }
     },
     {
@@ -20149,7 +20015,7 @@
     {
       "rule": "R8",
       "file": "src/console/settings.ts",
-      "line": 19,
+      "line": 20,
       "column": 110,
       "scope": "<callback>",
       "target": "kind",

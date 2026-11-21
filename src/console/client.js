@@ -653,7 +653,7 @@ window.__ModuleLoader__.load({
         h(EconomyPanel, {key:workspaceId, workspaceId, request}),
         view?.roomAvailable && h(RoomView, {workspaceId, request}),
         home && h(Card, {title: '陪它一会儿', note: '暂停自主生活时也能照顾它；这些操作不会调用模型。'},
-          h('div', {className: 'cp-inline-actions'}, ...[['feed', '免费基础餐食'], ['water', '倒杯水'], ['pet', '摸摸头'], ['play', '一起玩'], ['sleep', '去睡觉'], ['wake', '叫醒']].map(([action, label]) =>
+          h('div', {className: 'cp-inline-actions'}, ...view.careActions.map(({action, label}) =>
             h(React.Fragment, {key: action}, button(label, () => change('lifeAction', {action})))))),
         home && h(Card, {title: '最近的生活', note: '原版保留最近 15 分钟的生活事件。会话工具活动另存于绑定 Repo。'},
           ...(home.events.length ? home.events.map((event, i) => h('p', {key: `${event.at}-${i}`}, `${new Date(event.at).toLocaleTimeString()} · ${event.text}`)) : [h('p', {key: 'empty', className: 'cp-muted'}, '这会儿还没有新活动。')]),

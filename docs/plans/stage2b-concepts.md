@@ -285,6 +285,20 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - 用本次构建产物运行 `pnpm run test:behavior-list`，104 条全部通过。
 - 当前 37 个违规目标、R8 基线 1031 条、kind 287 点、action 105 点，合计 392 点 / 47 文件，手写超限 0 个。模块依赖以同口径复算，M2 为 60 条，2a 搬家后 46 条，2a 收尾和本次均为 40 条。生活模块合并后排除 6 条自环、8 条重复边，`aed7f27` 又移除 4 条边，`6a76e50` 再移除 2 条。第 6 批将复算结果写进 product.md 的 G5 表。
 
+### 第 2 批
+
+- `src/contracts/{behavior,living}.ts` 由带序号的动作基础表派生五组类型和数组。Body、Life、Room 和计划工具共用准入或枚举，Desktop 的入口子集加类型约束。反馈按原条件投射已完成的主人互动。
+- `src/console/{settings.ts,client.js}` 由 `lifeView.careActions` 派生照料按钮，构建重生成 `src/desktop/platform/client.js` 和受影响的 `dist/src` 产物。
+- 新增序号连续性测试、六种主人互动的反馈回归，以及设置页六个按钮经真实 RPC 执行的 `2B2-01`。第 1 批唯一的测试改动是 `2B1-03` 将 `lamp` 输入改为 `on:false`。
+- R8 kind 字符串判断由 287 点到 287 点，运行源码与扫描范围均为 43 文件。
+- R8 action 字符串判断由 105 点到 102 点，运行源码与扫描范围均为 13 文件。
+- `isCareAction` 把 World `care`、Body `act`、Life `act` 和设置页 `lifeAction` 的四处名单判断合成一处。第一组的前三处合并净减 2 点，第二组设置页接入再减 1 点。四个入口各自保留校验和报错顺序。
+- `isPlanBodyAction` 接替 Life `parsePlan` 原有的 1 点，原 Body 的 `??` 表达式未被计点，计划侧净变化 0。
+- 规则基线 37 条，新增和消失各 0。词表基线 1031 → 921 → 915，两组分别收紧 110、6 条，新增均为 0。收紧后 `pnpm run check:arch` 和 `pnpm run check:arch -- --report` 均通过。
+- `pnpm run build && node --test <受影响的测试>` 通过 101 条。首次有 1 条因设置页测试夹具在跨 VM 刷新前读取，等刷新后复跑通过。
+- `pnpm run build && pnpm run test:behavior-list` 通过 11 条索引测试和 118 条行为测试，含第 1 批 13 条、新增 L2 和真实 Memory 召回。
+- `pnpm run verify` 的 Node 测试 1667 条通过、1 条失败。Memory P2 启动服务后调用 `/bin/ps` 被沙箱拒绝（`EPERM`），单跑复现，后续断言环境原因未跑。独立补跑 Python Memory 22 条、`check:release`、`pnpm pack` 和 `check:package` 均通过。
+
 ## 审查结论
 
 ### 第 1 批（Codex 独立审查 + Claude 核实，基于 `724cbb7`）

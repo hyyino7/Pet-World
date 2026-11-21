@@ -55,7 +55,7 @@ test('主人 Room RPC 保留十五个动作、事实类型及请求重试', asyn
   const roomState = async () => value(await f.settings('roomState', {workspaceId:'world',data:{}}));
   const actions = [
     ['visit'],['pet'],['poke'],['feed'],['water'],['play'],['talk',{text:'合成留言'}],
-    ['sleep'],['wake'],['lamp',{on:true}],['command',{room:'kitchen',spot:'fridge'}],
+    ['sleep'],['wake'],['lamp',{on:false}],['command',{room:'kitchen',spot:'fridge'}],
     ['go',{pos:[-1,1]}],['place',{pos:[1,6]}],['sick'],['heal'],
   ];
   for (const [action, fields] of actions) {
