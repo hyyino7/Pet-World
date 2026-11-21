@@ -70,3 +70,58 @@ test('Desktop 动画入口按共享身体状态准入吃饭和睡醒素材', asy
   assert.deepEqual(facts.filter(fact => ['sleep','wake'].includes(fact.type)).map(fact => [fact.requestId,fact.type]),
     [['sleep-clip','sleep'],['wake-clip','wake']]);
 });
+
+test('公开身体快照的忙碌状态与 Desktop 吃饭准入一致', async t => {
+  const f = await fixture(t, {platform:true,life:false});
+  const platform = f.service('petPlatform');
+  platform.ownerAccess('world');
+  const request = (path, method = 'GET', body) => platform.handle(
+    new URL('http://fixture.invalid/chatpet-presentation/'+path),method,JSON.stringify(body),signal());
+  const {main:{bodyTemplate}} = (await request('config')).obj;
+  assert.equal((await request('config','PUT',{pets:[{...bodyTemplate,display:'web'}]})).status,200);
+
+  const snapshot = () => f.body.snapshot('world');
+  const expectReceiptBusy = async (receipt, busy, hasHome = true) => {
+    const {behavior} = await snapshot();
+    assert.equal(behavior.busy, busy);
+    assert.equal(receipt.behavior.busy, behavior.busy);
+    if (hasHome) assert.equal(receipt.home.behavior.busy, behavior.busy);
+    else assert.equal('home' in receipt, false);
+  };
+  const expectAdmission = async (id, {kind, walking = false, asleep = false, busy}) => {
+    const {home, behavior} = await snapshot();
+    if (kind) assert.equal(home.her.kind, kind);
+    assert.equal(home.her.walking, walking);
+    assert.equal(home.her.asleep, asleep);
+    assert.equal(behavior.busy, busy);
+    assert.equal(home.behavior.busy, busy);
+    assert.equal((await f.body.roomState('world')).behavior.busy, busy);
+    const {status, obj} = await request('anim?pet=main&surface=web','POST',{name:'吃饭团',requestId:id});
+    const facts = await f.body.pendingFacts('world');
+    assert.equal(facts.some(fact => fact.requestId === id && fact.type === 'feed'), !busy);
+    if (busy) {
+      assert.equal(status, 409);
+      assert.deepEqual(obj, {ok:false,reason:'activity-busy',message:'当前活动进行中，请先完成或结束该活动'});
+    } else {
+      assert.equal(status, 200);
+      assert.equal(obj.ok, true);
+    }
+    return home.her;
+  };
+
+  await expectAdmission('idle-meal', {kind:'idle',busy:false});
+  t.mock.timers.tick(13_000);
+  await expectReceiptBusy(await f.body.act('world','water','drink'), true);
+  await expectReceiptBusy(await f.body.garden('world','state'), true, false);
+  await expectReceiptBusy(await f.body.garden('world','control',{type:'auto',enabled:false}), true);
+  await expectAdmission('drinking-meal', {kind:'drink',busy:true});
+  t.mock.timers.tick(13_000);
+  await expectReceiptBusy(await f.body.roomAction('world',{action:'pet'},'主人'), false);
+  await expectAdmission('reacting-meal', {kind:'react_shy',busy:false});
+  t.mock.timers.tick(13_000);
+  await f.body.roomAction('world',{action:'command',room:'her_room',spot:'bed'},'主人');
+  const walking = await expectAdmission('walking-meal', {walking:true,busy:true});
+  t.mock.timers.tick(Math.ceil(walking.etaMs)+1);
+  assert.equal((await request('anim?pet=main&surface=web','POST',{name:'原地小憩沉眠'})).obj.accepted,true);
+  await expectAdmission('sleeping-meal', {asleep:true,busy:true});
+});

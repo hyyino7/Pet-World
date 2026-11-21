@@ -5,7 +5,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { buildHomePromptLine } from '#feiyu-home';
 import { check, digest, reject, text } from '../../core/storage.js';
 import type { PetCoreHost } from '../../core/index.js';
-import { isCareAction, type BehaviorActivity, type BehaviorChange, type BehaviorSnapshot, type CompanionExpression, type PlannedActivity, type PlannedExecution } from '../../contracts/behavior.js';
+import { isCareAction, type BehaviorActivity, type BehaviorChange, type BehaviorSnapshot, type CompanionExpression, type CurrentActivityId, type PlannedActivity, type PlannedExecution } from '../../contracts/behavior.js';
+import { bodyPhaseOf, companionBusy } from './activity.js';
 import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
@@ -22,6 +23,7 @@ interface Binding {
   id: string; path: string; storageId: string; room: CompanionRoom;
   fingerprint?: string; presentationFingerprint?: string; worldFingerprint?: string;
 }
+type VersionedBehavior = BehaviorActivity & {revision: number; bootId: ReturnType<typeof randomUUID>};
 const owners = new WeakMap<PetCoreHost, CompanionBehavior>();
 
 /** The only home/garden runtime writer. It does not create agents or model turns. */
@@ -206,7 +208,7 @@ export class CompanionBehavior {
     if (this.closed || !this.binding || this.binding.id !== workspaceId) throw Error('身体工作区已切换或组件已停止');
     return this.binding;
   }
-  private activity(): BehaviorActivity {
+  private activity(): Omit<BehaviorActivity, 'busy'> {
     const state = this.binding?.room.state;
     if (!state) return {activityId:null, kind:'idle', phase:'idle'};
     const planned = this.binding?.room.plannedState();
@@ -219,17 +221,21 @@ export class CompanionBehavior {
       state.kind?.startsWith('react_') && state.reactionUntil>0 ? state.lastInteractionAt : 0);
     const startedAt=Number.isFinite(onset) && onset>0 ? onset : 0;
     if (planned?.status==='running') return {activityId:planned.operationId,kind:state.kind,startedAt,...animation,
-      phase:planned.phase==='moving'?'moving':planned.phase==='working'?'working':'pending'};
+      phase:bodyPhaseOf(planned.phase)};
     const requested=task&&(!task.completedAt||(state.asleep&&task.action==='sleep'))?task.id:undefined;
     const automatic=state.route ? 'body:'+digest([state.route.departAt,state.route.arriveAt,state.route.target]) :
       state.dwell ? 'body:'+digest([state.dwell.until,state.dwell.target]) : state.asleep ? 'sleep:'+String(state.sleepStartedAt||'unknown') : null;
-    return {activityId:state.route?.target?.gardenJobId ?? state.dwell?.target?.gardenJobId ?? requested ?? automatic,
+    const currentActivityId: CurrentActivityId = state.route?.target?.gardenJobId ?? state.dwell?.target?.gardenJobId ?? requested ?? automatic;
+    return {activityId:currentActivityId,
       kind:state.kind,startedAt,...animation,
       phase:state.route ? 'moving' : state.asleep ? 'sleeping' : state.sleepPending || state.freeTarget || state.command ? 'pending' :
         state.dwell || state.reactionUntil > Date.now() ? 'working' : task?.completedAt ? 'completed' : 'idle'};
   }
-  private presentHome(home:any,activity=this.activity()) {
-    const projected={...home,behavior:{...activity,revision:this.revision,bootId:this.bootId}};
+  private publicBehavior(her: Parameters<typeof companionBusy>[0]): VersionedBehavior {
+    return {...this.activity(),busy:companionBusy(her),revision:this.revision,bootId:this.bootId};
+  }
+  private presentHome(home:any,behavior=this.publicBehavior(home.her)) {
+    const projected={...home,behavior:{...behavior}};
     return {...projected,playback:resolveActivityPlayback(projected)};
   }
   private publish(reason:'observation'|'transition'='transition',notifyFirst = reason==='transition') {
@@ -313,8 +319,9 @@ export class CompanionBehavior {
       const execution=JSON.stringify(bound.room.plannedState());this.advanceRoom(bound);
       this.publish(execution===JSON.stringify(bound.room.plannedState())?'observation':'transition');
       const home=this.presentHome(bound.room.view());
-      return {workspaceId,storageId:bound.storageId,bootId:this.bootId,revision:this.revision,
-        autonomyEnabled:this.autonomous,behavior:this.activity(),home,needs:structuredClone(bound.room.state.needs),presentation:behaviorPresentation(home,this.expression),fault:this.fault ?? this.publicationFault ?? null,
+      const {revision,bootId,...behavior}=home.behavior as VersionedBehavior;
+      return {workspaceId,storageId:bound.storageId,bootId,revision,
+        autonomyEnabled:this.autonomous,behavior,home,needs:structuredClone(bound.room.state.needs),presentation:behaviorPresentation(home,this.expression),fault:this.fault ?? this.publicationFault ?? null,
         ...(bound.room.plannedState() ? {planned:bound.room.plannedState()} : {})};
     });
   }
@@ -340,7 +347,7 @@ export class CompanionBehavior {
     return this.snapshot(workspaceId).then(value => ({...value.home,lifeEnabled:value.autonomyEnabled,
       identity:{displayName:this.host.workspace.runtime.identity().displayName},
       autonomyEnabled:value.autonomyEnabled,presentation:value.presentation,
-      behavior:{...value.behavior,revision:value.revision,bootId:value.bootId}}));
+      behavior:value.home.behavior as VersionedBehavior}));
   }
   roomAction(workspaceId: string, input: unknown, by = '伙伴', interaction?: RoomInteractionContext, recordEffect?: RecordCommandEffect) {
     return this.enqueue(async validate => {
@@ -353,8 +360,8 @@ export class CompanionBehavior {
       const result = bound.room.act(input,by,Date.now(),source);
       recordEffect?.('partial');
       this.publish();
-      const behavior={...this.activity(),revision:this.revision,bootId:this.bootId};
-      return {...result,home:{...this.presentHome(result.home),presentation:behaviorPresentation(result.home,this.expression)},behavior};
+      const behavior=this.publicBehavior(result.home.her);
+      return {...result,home:{...this.presentHome(result.home,behavior),presentation:behaviorPresentation(result.home,this.expression)},behavior};
     });
   }
   act(workspaceId: string, action: string, requestId:string = randomUUID(), channel = 'desktop', recordEffect?: RecordCommandEffect) {
@@ -366,15 +373,16 @@ export class CompanionBehavior {
   acknowledgeFacts(workspaceId: string, ids: readonly string[]) {
     return this.enqueue(()=>{this.checked(workspaceId).room.acknowledgeFacts(ids);});
   }
-  garden(workspaceId: string, operation: 'state'|'act'|'control', input?: unknown): Promise<ReturnType<CompanionRoom['garden']> & {home?: any}> {
+  garden(workspaceId: string, operation: 'state'|'act'|'control', input?: unknown): Promise<ReturnType<CompanionRoom['garden']> & {behavior: VersionedBehavior; home?: any}> {
     return this.enqueue(async validate => {
       const before=this.checked(workspaceId);await this.refreshEmotion(workspaceId);validate();
       const bound=this.checked(workspaceId);if(bound!==before)throw Error('身体工作区已切换');
       const execution=JSON.stringify(bound.room.plannedState());
       const result = bound.room.garden(operation,input);
       this.publish(operation==='state' && execution===JSON.stringify(bound.room.plannedState())?'observation':'transition');
-      const behavior={...this.activity(),revision:this.revision,bootId:this.bootId};
-      return {...result,behavior,...('home' in result && result.home ? {home:this.presentHome(result.home)} : {})};
+      const home='home' in result ? result.home : undefined;
+      const behavior=this.publicBehavior((home || bound.room.view()).her);
+      return {...result,behavior,...(home ? {home:this.presentHome(home,behavior)} : {})};
     });
   }
   setAutonomy(workspaceId: string, enabled: boolean) {

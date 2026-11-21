@@ -679,17 +679,21 @@ export class PetPlatform {
         await this.refreshBehavior();
         const behavior=(this.ctx as any).get('petBehavior',false);
         let her=this.behavior?.her;
-        let busy=her && (her.asleep || her.walking || !['idle','play','idle_look','react_happy','react_pout','react_shy','react_scare'].includes(her.kind));
+        const busy=this.behavior?.behavior?.busy;
         if(behavior && (sleepingClips.has(requested) || requested==='睡觉-起来')) {
           const result=await bodyAction(requested==='睡觉-起来' ? 'wake' : 'sleep');
           await this.refreshBehavior();
           return json({ok:true,accepted:true,home:result?.home,behavior:this.behavior?.behavior});
         }
-        if(behavior && eatingClips.has(requested) && her?.kind!=='eat') {
+        const eatingRequested=eatingClips.has(requested);
+        const isEating=()=>her?.kind==='eat';
+        let eating=isEating();
+        if(behavior && eatingRequested && !eating) {
           if(busy)return json({ok:false,reason:'activity-busy',message:'当前活动进行中，请先完成或结束该活动'},409);
           await bodyAction('feed');await this.refreshBehavior();her=this.behavior?.her;
-        } else if(behavior && physicalClips.has(requested) && !eatingClips.has(requested))return json({ok:false,reason:'activity-required',message:'请通过共享行为操作执行这项活动'},409);
-        if(her && requested!==this.activityAsset() && !(her.kind==='eat' && eatingClips.has(requested)))return json({ok:false,reason:'activity-busy',message:'桌宠正在呈现共享活动，请通过行为操作改变活动'},409);
+          eating=isEating();
+        } else if(behavior && physicalClips.has(requested) && !eatingRequested)return json({ok:false,reason:'activity-required',message:'请通过共享行为操作执行这项活动'},409);
+        if(her && requested!==this.activityAsset() && !(eating && eatingRequested))return json({ok:false,reason:'activity-busy',message:'桌宠正在呈现共享活动，请通过行为操作改变活动'},409);
         requestScope.signal.throwIfAborted();
       }
     }

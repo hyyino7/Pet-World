@@ -3288,14 +3288,14 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 183
+        "line": 117
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
+      "line": 117,
+      "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
       "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
@@ -3383,7 +3383,7 @@
       "rule": "R8",
       "file": "src/living/body/room.ts",
       "line": 73,
-      "column": 63,
+      "column": 52,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
       "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
@@ -3501,13 +3501,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 979
+        "line": 980
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 979,
+      "line": 980,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
@@ -4222,14 +4222,14 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 184
+        "line": 116
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 184,
-      "column": 10,
+      "line": 116,
+      "column": 30,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
       "expression": "\"pending\" | \"moving\" | \"working\" | \"waiting\" | \"completed\"",
@@ -6206,7 +6206,542 @@
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 130,
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "<module>",
+        "line": 73
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 73,
+      "column": 52,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/gardenUnavailable\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/gardenUnavailable",
+        "line": 214
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 214,
+      "column": 18,
+      "scope": "CompanionRoom/gardenUnavailable",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"paused\" , \"interrupted\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "interrupted",
+        "paused"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/updateExecution\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/updateExecution",
+        "line": 394
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 394,
+      "column": 9,
+      "scope": "CompanionRoom/updateExecution",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"failed\" ]",
+      "values": [
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/parkExecution\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/parkExecution",
+        "line": 413
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 413,
+      "column": 26,
+      "scope": "CompanionRoom/parkExecution",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/planAdmissionWait\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/planAdmissionWait",
+        "line": 612
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 612,
+      "column": 37,
+      "scope": "CompanionRoom/planAdmissionWait",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"paused\" , \"interrupted\" ]",
+      "values": [
+        "interrupted",
+        "paused"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/tickAvailable\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/tickAvailable",
+        "line": 946
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 946,
+      "column": 20,
+      "scope": "CompanionRoom/tickAvailable",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"paused\" , \"interrupted\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "interrupted",
+        "paused"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/tickAvailable\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/tickAvailable",
+        "line": 980
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 980,
+      "column": 24,
+      "scope": "CompanionRoom/tickAvailable",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/room.ts",
+        "scope": "CompanionRoom/garden",
+        "line": 1112
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/room.ts",
+      "line": 1112,
+      "column": 42,
+      "scope": "CompanionRoom/garden",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"paused\" , \"interrupted\" ]",
+      "values": [
+        "interrupted",
+        "paused"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/economy/store.ts",
+        "scope": "<module>",
+        "line": 20
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/economy/store.ts",
+      "line": 20,
+      "column": 26,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/plan/plan.ts",
+        "scope": "PersistentLifePlan/control",
+        "line": 316
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plan.ts",
+      "line": 316,
+      "column": 12,
+      "scope": "PersistentLifePlan/control",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"completed\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "completed"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/plan/plan.ts",
+        "scope": "PersistentLifePlan/advance/this . change:callback1",
+        "line": 445
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plan.ts",
+      "line": 445,
+      "column": 31,
+      "scope": "PersistentLifePlan/advance/this . change:callback1",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"running\" , \"completed\" ]",
+      "values": [
+        "completed",
+        "running"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 117,
+      "column": 31,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
+      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
+      "values": [
+        "cancelled",
+        "completed",
+        "failed",
+        "interrupted",
+        "paused",
+        "running"
+      ],
+      "shape": "union",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/plan/plan.ts",
+        "scope": "PersistentLifePlan/advance/this . change:callback1",
+        "line": 471
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/plan/plan.ts",
+      "line": 471,
+      "column": 19,
+      "scope": "PersistentLifePlan/advance/this . change:callback1",
+      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"paused\" , \"interrupted\" , \"cancelled\" ]",
+      "values": [
+        "cancelled",
+        "interrupted",
+        "paused"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/contracts/behavior.ts",
+        "scope": "<module>",
+        "line": 117
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/contracts/behavior.ts",
+      "line": 148,
       "column": 22,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/presentationActivity\"}",
@@ -6221,13 +6756,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/presentationActivity",
-        "line": 853
+        "line": 854
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 853,
+      "line": 854,
       "column": 47,
       "scope": "CompanionRoom/presentationActivity",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6242,13 +6777,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 130
+        "line": 148
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 134,
+      "line": 152,
       "column": 98,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/plugin.ts\",\"scope\":\"CompanionBehavior/publish\"}",
@@ -6262,13 +6797,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "CompanionBehavior/publish",
-        "line": 235
+        "line": 241
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 235,
+      "line": 241,
       "column": 26,
       "scope": "CompanionBehavior/publish",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6282,13 +6817,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 134
+        "line": 152
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 145,
+      "line": 163,
       "column": 16,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
@@ -6326,13 +6861,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 145
+        "line": 163
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 145,
+      "line": 163,
       "column": 16,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
@@ -6370,13 +6905,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 145
+        "line": 163
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 145,
+      "line": 163,
       "column": 16,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
@@ -6416,13 +6951,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 145
+        "line": 163
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 145,
+      "line": 163,
       "column": 16,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
@@ -6462,13 +6997,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 145
+        "line": 163
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 145,
+      "line": 163,
       "column": 16,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -6508,13 +7043,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 145
+        "line": 163
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 145,
+      "line": 163,
       "column": 16,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
@@ -6554,13 +7089,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 145
+        "line": 163
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 145,
+      "line": 163,
       "column": 16,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
@@ -6600,542 +7135,7 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 145
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "<module>",
-        "line": 73
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 73,
-      "column": 63,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/gardenUnavailable\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/gardenUnavailable",
-        "line": 214
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 214,
-      "column": 18,
-      "scope": "CompanionRoom/gardenUnavailable",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"paused\" , \"interrupted\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "interrupted",
-        "paused"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/updateExecution\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/updateExecution",
-        "line": 394
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 394,
-      "column": 9,
-      "scope": "CompanionRoom/updateExecution",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"failed\" ]",
-      "values": [
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/parkExecution\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/parkExecution",
-        "line": 413
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 413,
-      "column": 26,
-      "scope": "CompanionRoom/parkExecution",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/planAdmissionWait\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/planAdmissionWait",
-        "line": 612
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 612,
-      "column": 37,
-      "scope": "CompanionRoom/planAdmissionWait",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"paused\" , \"interrupted\" ]",
-      "values": [
-        "interrupted",
-        "paused"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/tickAvailable\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/tickAvailable",
-        "line": 945
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 945,
-      "column": 20,
-      "scope": "CompanionRoom/tickAvailable",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"paused\" , \"interrupted\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "interrupted",
-        "paused"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/tickAvailable\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/tickAvailable",
-        "line": 979
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 979,
-      "column": 24,
-      "scope": "CompanionRoom/tickAvailable",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/garden",
-        "line": 1111
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 1111,
-      "column": 42,
-      "scope": "CompanionRoom/garden",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"paused\" , \"interrupted\" ]",
-      "values": [
-        "interrupted",
-        "paused"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/economy/store.ts",
-        "scope": "<module>",
-        "line": 20
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/store.ts",
-      "line": 20,
-      "column": 26,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"failed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "PersistentLifePlan/control",
-        "line": 316
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 316,
-      "column": 12,
-      "scope": "PersistentLifePlan/control",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"completed\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "completed"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "PersistentLifePlan/advance/this . change:callback1",
-        "line": 445
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 445,
-      "column": 31,
-      "scope": "PersistentLifePlan/advance/this . change:callback1",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"running\" , \"completed\" ]",
-      "values": [
-        "completed",
-        "running"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 183,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
-      "expression": "\"running\" | \"paused\" | \"completed\" | \"cancelled\" | \"interrupted\" | \"failed\"",
-      "values": [
-        "cancelled",
-        "completed",
-        "failed",
-        "interrupted",
-        "paused",
-        "running"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "PersistentLifePlan/advance/this . change:callback1",
-        "line": 471
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 471,
-      "column": 19,
-      "scope": "PersistentLifePlan/advance/this . change:callback1",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"paused\" , \"interrupted\" , \"cancelled\" ]",
-      "values": [
-        "cancelled",
-        "interrupted",
-        "paused"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 183
+        "line": 163
       }
     },
     {
@@ -8146,7 +8146,7 @@
       "rule": "R8",
       "file": "src/living/body/room.ts",
       "line": 73,
-      "column": 63,
+      "column": 52,
       "scope": "<module>",
       "target": "{\"file\":\"src/core/native/result.ts\",\"scope\":\"<module>\"}",
       "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
@@ -8267,13 +8267,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 979
+        "line": 980
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 979,
+      "line": 980,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/core/native/result.ts\",\"scope\":\"<module>\"}",
@@ -9282,13 +9282,13 @@
       "other": {
         "file": "src/desktop/platform/plugin.ts",
         "scope": "PetPlatform/http",
-        "line": 734
+        "line": 738
       }
     },
     {
       "rule": "R8",
       "file": "src/desktop/platform/plugin.ts",
-      "line": 734,
+      "line": 738,
       "column": 17,
       "scope": "PetPlatform/http",
       "target": "{\"file\":\"src/desktop/helper/main.cjs\",\"scope\":\"app . whenReady (  ) . then:callback0/protocol . handle:callback1\"}",
@@ -9675,13 +9675,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/consumeFood",
-        "line": 659
+        "line": 660
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 659,
+      "line": 660,
       "column": 61,
       "scope": "CompanionRoom/consumeFood",
       "target": "{\"file\":\"src/desktop/platform/migration.ts\",\"scope\":\"<module>\"}",
@@ -9990,101 +9990,7 @@
     {
       "rule": "R8",
       "file": "src/desktop/platform/plugin.ts",
-      "line": 682,
-      "column": 56,
-      "scope": "PetPlatform/handle",
-      "target": "{\"file\":\"src/living/body/playback.ts\",\"scope\":\"resolveActivityPlayback\"}",
-      "expression": "[ \"idle\" , \"play\" , \"idle_look\" , \"react_happy\" , \"react_pout\" , \"react_shy\" , \"react_scare\" ]",
-      "values": [
-        "idle",
-        "idle_look",
-        "play",
-        "react_happy",
-        "react_pout",
-        "react_scare",
-        "react_shy"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/playback.ts",
-        "scope": "resolveActivityPlayback",
-        "line": 188
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/playback.ts",
-      "line": 188,
-      "column": 40,
-      "scope": "resolveActivityPlayback",
-      "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
-      "expression": "{ play : \"dance\" , idle_look : \"look\" , react_happy : \"点击回应-开心跃动\" , react_pout : \"点击回应-傲娇生气\" , react_shy : \"点击回应-害羞惊讶\" , react_scare : \"被吓一跳\" }",
-      "values": [
-        "idle_look",
-        "play",
-        "react_happy",
-        "react_pout",
-        "react_scare",
-        "react_shy"
-      ],
-      "shape": "labels",
-      "relation": "子集",
-      "other": {
-        "file": "src/desktop/platform/plugin.ts",
-        "scope": "PetPlatform/handle",
-        "line": 682
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/desktop/platform/plugin.ts",
-      "line": 682,
-      "column": 56,
-      "scope": "PetPlatform/handle",
-      "target": "{\"file\":\"src/living/body/presentation.ts\",\"scope\":\"behaviorPresentation\"}",
-      "expression": "[ \"idle\" , \"play\" , \"idle_look\" , \"react_happy\" , \"react_pout\" , \"react_shy\" , \"react_scare\" ]",
-      "values": [
-        "idle",
-        "idle_look",
-        "play",
-        "react_happy",
-        "react_pout",
-        "react_scare",
-        "react_shy"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/presentation.ts",
-        "scope": "behaviorPresentation",
-        "line": 19
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/presentation.ts",
-      "line": 19,
-      "column": 8,
-      "scope": "behaviorPresentation",
-      "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
-      "expression": "[ \"idle\" , \"play\" ]",
-      "values": [
-        "idle",
-        "play"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/desktop/platform/plugin.ts",
-        "scope": "PetPlatform/handle",
-        "line": 682
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/desktop/platform/plugin.ts",
-      "line": 696,
+      "line": 700,
       "column": 20,
       "scope": "PetPlatform/handle",
       "target": "{\"file\":\"src/room/assets.ts\",\"scope\":\"roomAsset\"}",
@@ -10118,13 +10024,13 @@
       "other": {
         "file": "src/desktop/platform/plugin.ts",
         "scope": "PetPlatform/handle",
-        "line": 696
+        "line": 700
       }
     },
     {
       "rule": "R8",
       "file": "src/desktop/platform/plugin.ts",
-      "line": 706,
+      "line": 710,
       "column": 28,
       "scope": "PetPlatform/handle",
       "target": "{\"file\":\"src/room/assets.ts\",\"scope\":\"roomAsset\"}",
@@ -10158,13 +10064,13 @@
       "other": {
         "file": "src/desktop/platform/plugin.ts",
         "scope": "PetPlatform/handle",
-        "line": 706
+        "line": 710
       }
     },
     {
       "rule": "R8",
       "file": "src/desktop/platform/plugin.ts",
-      "line": 724,
+      "line": 728,
       "column": 34,
       "scope": "PetPlatform/http",
       "target": "{\"file\":\"src/room/assets.ts\",\"scope\":\"roomAsset\"}",
@@ -10198,7 +10104,7 @@
       "other": {
         "file": "src/desktop/platform/plugin.ts",
         "scope": "PetPlatform/http",
-        "line": 724
+        "line": 728
       }
     },
     {
@@ -10832,6 +10738,100 @@
     },
     {
       "rule": "R8",
+      "file": "src/living/body/activity.ts",
+      "line": 8,
+      "column": 28,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/playback.ts\",\"scope\":\"resolveActivityPlayback\"}",
+      "expression": "[ \"idle\" , \"play\" , \"idle_look\" , \"react_happy\" , \"react_pout\" , \"react_shy\" , \"react_scare\" ]",
+      "values": [
+        "idle",
+        "idle_look",
+        "play",
+        "react_happy",
+        "react_pout",
+        "react_scare",
+        "react_shy"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/playback.ts",
+        "scope": "resolveActivityPlayback",
+        "line": 188
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/playback.ts",
+      "line": 188,
+      "column": 40,
+      "scope": "resolveActivityPlayback",
+      "target": "{\"file\":\"src/living/body/activity.ts\",\"scope\":\"<module>\"}",
+      "expression": "{ play : \"dance\" , idle_look : \"look\" , react_happy : \"点击回应-开心跃动\" , react_pout : \"点击回应-傲娇生气\" , react_shy : \"点击回应-害羞惊讶\" , react_scare : \"被吓一跳\" }",
+      "values": [
+        "idle_look",
+        "play",
+        "react_happy",
+        "react_pout",
+        "react_scare",
+        "react_shy"
+      ],
+      "shape": "labels",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/activity.ts",
+        "scope": "<module>",
+        "line": 8
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/activity.ts",
+      "line": 8,
+      "column": 28,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/presentation.ts\",\"scope\":\"behaviorPresentation\"}",
+      "expression": "[ \"idle\" , \"play\" , \"idle_look\" , \"react_happy\" , \"react_pout\" , \"react_shy\" , \"react_scare\" ]",
+      "values": [
+        "idle",
+        "idle_look",
+        "play",
+        "react_happy",
+        "react_pout",
+        "react_scare",
+        "react_shy"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/presentation.ts",
+        "scope": "behaviorPresentation",
+        "line": 19
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/presentation.ts",
+      "line": 19,
+      "column": 8,
+      "scope": "behaviorPresentation",
+      "target": "{\"file\":\"src/living/body/activity.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"idle\" , \"play\" ]",
+      "values": [
+        "idle",
+        "play"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/activity.ts",
+        "scope": "<module>",
+        "line": 8
+      }
+    },
+    {
+      "rule": "R8",
       "file": "src/living/body/playback.ts",
       "line": 27,
       "column": 24,
@@ -10949,13 +10949,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/act",
-        "line": 1040
+        "line": 1041
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1040,
+      "line": 1041,
       "column": 22,
       "scope": "CompanionRoom/act",
       "target": "{\"file\":\"src/living/body/playback.ts\",\"scope\":\"resolveActivityPlayback\"}",
@@ -10981,7 +10981,7 @@
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 369,
+      "line": 376,
       "column": 42,
       "scope": "CompanionBehavior/garden",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -10996,13 +10996,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1088
+        "line": 1089
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1088,
+      "line": 1089,
       "column": 21,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/body/plugin.ts\",\"scope\":\"CompanionBehavior/garden\"}",
@@ -11017,13 +11017,13 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "CompanionBehavior/garden",
-        "line": 369
+        "line": 376
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/plugin.ts",
-      "line": 369,
+      "line": 376,
       "column": 42,
       "scope": "CompanionBehavior/garden",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/garden\"}",
@@ -11059,7 +11059,7 @@
       "other": {
         "file": "src/living/body/plugin.ts",
         "scope": "CompanionBehavior/garden",
-        "line": 369
+        "line": 376
       }
     },
     {
@@ -11108,7 +11108,7 @@
       "rule": "R8",
       "file": "src/living/body/room.ts",
       "line": 73,
-      "column": 63,
+      "column": 52,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
       "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
@@ -11150,7 +11150,7 @@
       "rule": "R8",
       "file": "src/living/body/room.ts",
       "line": 73,
-      "column": 63,
+      "column": 52,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
       "expression": "[ \"completed\" , \"cancelled\" , \"failed\" ]",
@@ -11884,7 +11884,7 @@
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 945,
+      "line": 946,
       "column": 20,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
@@ -11920,13 +11920,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 945
+        "line": 946
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 979,
+      "line": 980,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
@@ -11962,13 +11962,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 979
+        "line": 980
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 979,
+      "line": 980,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -12003,13 +12003,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 979
+        "line": 980
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1088,
+      "line": 1089,
       "column": 21,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/garden\"}",
@@ -12045,13 +12045,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1088
+        "line": 1089
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1099,
+      "line": 1100,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -12087,13 +12087,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1099
+        "line": 1100
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1099,
+      "line": 1100,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -12129,13 +12129,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1099
+        "line": 1100
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1099,
+      "line": 1100,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/controlPlan\"}",
@@ -12171,13 +12171,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1099
+        "line": 1100
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1099,
+      "line": 1100,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/controlPlan\"}",
@@ -12213,13 +12213,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1099
+        "line": 1100
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1099,
+      "line": 1100,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/request\"}",
@@ -12255,13 +12255,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1099
+        "line": 1100
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1111,
+      "line": 1112,
       "column": 42,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
@@ -12296,13 +12296,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1111
+        "line": 1112
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1126,
+      "line": 1127,
       "column": 90,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/tools\"}",
@@ -12347,7 +12347,7 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1126
+        "line": 1127
       }
     },
     {
@@ -14995,7 +14995,7 @@
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 114,
+      "line": 130,
       "column": 5,
       "scope": "<module>",
       "target": "action",
@@ -15005,7 +15005,7 @@
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 125,
+      "line": 141,
       "column": 3,
       "scope": "<module>",
       "target": "kind",
@@ -15015,7 +15015,7 @@
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 135,
+      "line": 153,
       "column": 73,
       "scope": "<module>",
       "target": "action",
@@ -15025,7 +15025,7 @@
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 137,
+      "line": 155,
       "column": 3,
       "scope": "<module>",
       "target": "action",
