@@ -13,7 +13,7 @@ import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
 import type { CapabilityRegistration, CompanionToolDeclaration } from '../../contracts/tables.js';
 import { CONTRACT_VERSION } from '../../contracts/version.js';
-import type { PlannedActivity } from '../../contracts/behavior.js';
+import type { PlanTradeOperation } from '../../contracts/behavior.js';
 import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomEconomyPort, RoomFoodReservation } from '../body/room.js';
 import { EconomyStore, projectWallet } from './store.js';
@@ -23,8 +23,6 @@ import type { CompanionFact, CompanionFactActor } from '../../contracts/interact
 import type { GardenClock } from './garden-clock.js';
 import { readLifeControl } from '../plan/control-file.js';
 import { bodyCheckpointDirectory, ECONOMY_ADOPTION_FILE, economyAdoptionPath, economyFile, inspectEconomyAdoption } from './adoption.js';
-
-type TradeKind = Exclude<NonNullable<PlannedActivity['economy']>['type'], 'consume'>;
 
 const inventoryFiles = ['data/economy/', 'data/economy/economy.sqlite', 'data/economy/storage.json', ECONOMY_ADOPTION_FILE];
 const access = {mode:'bounded',detail:'余额与物品由程序结算。原生文件工具防误改；同一系统账户的命令和其他插件仍可访问文件。'} as const;
@@ -207,11 +205,11 @@ export class CompanionEconomy {
   }
   walletView(workspaceId: string) { return projectWallet(this.bound(workspaceId).snapshot()); }
   worldSnapshot(workspaceId: string) { return this.living.worldSnapshot(this.host, workspaceId); }
-  readonly worldCommands: Pick<WorldCommands, TradeKind> = {
+  readonly worldCommands: Pick<WorldCommands, PlanTradeOperation> = {
     buy: (input, options) => this.worldTrade('buy', input, options),
     sell: (input, options) => this.worldTrade('sell', input, options),
   };
-  private worldTrade(kind: TradeKind, {itemId, quantity, ...request}: Parameters<WorldCommands['buy']>[0],
+  private worldTrade(kind: PlanTradeOperation, {itemId, quantity, ...request}: Parameters<WorldCommands['buy']>[0],
     options: Parameters<WorldCommands['buy']>[1]) {
     const signal = options?.signal ?? new AbortController().signal;
     return this.living.command(this.host, request, options, async ({validate, effect}) =>

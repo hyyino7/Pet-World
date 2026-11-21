@@ -1,6 +1,6 @@
 import { type GardenClock } from '../economy/garden-clock.js';
 import type { CompanionEmotion } from '../../emotion/plugin.js';
-import { type PlannedActivity, type PlannedExecution, type BehaviorAnimationContext } from '../../contracts/behavior.js';
+import { type PlannedActivity, type PlannedExecution, type BehaviorAnimationContext, type PlanTradeOperation, type ReadingState } from '../../contracts/behavior.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
 export interface RoomInteractionContext {
     requestId: string;
@@ -55,7 +55,7 @@ export interface RoomEconomyPort {
     };
     gardenRules(): any;
     transaction(operationId: string, input: {
-        type: 'buy' | 'sell';
+        type: PlanTradeOperation;
         itemId: string;
         quantity: number;
     }, now: number): {
@@ -85,7 +85,7 @@ export interface RoomEconomyPort {
         segment: number;
     };
     readingStatus(operationId: string, input: RoomReadingInput): {
-        status: 'unread' | 'offered' | 'confirmed';
+        status: ReadingState;
         itemId: string;
         segment: number;
     };
@@ -177,7 +177,7 @@ export declare class CompanionRoom {
     /** Classification neither delivers text nor advances bookmarks. */
     presentationActivity(): {
         presentationKind?: 'read' | 'reading-wait' | 'rest';
-        readingState?: 'unread' | 'offered' | 'confirmed';
+        readingState?: ReadingState;
         animationContext?: BehaviorAnimationContext;
     };
     pausePlanned(operationId: string, now?: number, reason?: string): PlannedExecution;

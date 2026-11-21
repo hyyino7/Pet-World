@@ -70,7 +70,7 @@ export declare class CompanionBehavior {
             startedAt?: number;
             phase: "idle" | "pending" | "moving" | "working" | "sleeping" | "completed";
             presentationKind?: "read" | "reading-wait" | "rest";
-            readingState?: "unread" | "offered" | "confirmed";
+            readingState?: import("../../contracts/behavior.js").ReadingState;
             animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext;
         };
         ok: boolean;
@@ -89,7 +89,7 @@ export declare class CompanionBehavior {
             startedAt?: number;
             phase: "idle" | "pending" | "moving" | "working" | "sleeping" | "completed";
             presentationKind?: "read" | "reading-wait" | "rest";
-            readingState?: "unread" | "offered" | "confirmed";
+            readingState?: import("../../contracts/behavior.js").ReadingState;
             animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext;
         };
         ok: boolean;
