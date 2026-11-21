@@ -189,7 +189,17 @@
 
 **不做**：「能否被打断」（拍板点 3）；两套呈现分类器（已知问题 4）；`ActivityClip` 搬家；删 `home:any`；Desktop 其余读睡眠和身体存在的地方（`desktop/features.ts:121,199,246-260`、`desktop/platform/plugin.ts:325,331,667`），它们读的是睡没睡、有没有身体，不是忙不忙。
 
-**开工细则要定**：`busy` 在 `BehaviorActivity` 里的字段名；`companionBusy` 和呈现分类器（`living/body/presentation.ts:17-19`）各自的白名单为什么不同，写进注释。
+**开工细则（Claude 补齐，主人过目后开工；行号以第 3 批分支 `a4cc63a` 为准，合并后 `main` 相同）**
+
+1. **三种职责用类型别名写明，不改字段名。** `contracts/behavior.ts` 导出 `ActivityLabel`（自然语言标签）、`OperationId`（已派发操作）、`CurrentActivityId`（快照里的当前活动，`string | null`），分别用在 `PlannedActivity.activity`、`PlannedActivity/PlannedExecution.operationId`、`BehaviorActivity.activityId` 上，旁边注明取值来源：`activityId` 可能是执行编号、菜园任务号、照料任务号或自动摘要（`living/body/plugin.ts:221-226`）。序列化字段名一个不改。
+2. **阶段类型各自命名。** 导出 `BodyPhase`（`BehaviorActivity.phase`，`contracts/behavior.ts:128`）、`ExecutionPhase`、`ExecutionStatus`（`PlannedExecution` 的 `phase`、`status`），原处改为引用；`room.ts` 里 `updateExecution` 的阶段和状态参数跟着用这两个类型。类型注释写明两种 `completed` 的区别：身体的 `completed` 来自 `task.completedAt`（`plugin.ts:229`），执行的 `completed` 包括失败和取消的终态。
+3. **有损转换一个函数。** `living/body/` 新增纯函数 `bodyPhaseOf(phase: ExecutionPhase): BodyPhase`，承接 `plugin.ts:222` 的投影（`moving`、`working` 照搬，`pending`、`waiting`、`completed` 都变成 `pending`），注释写明丢了什么。Body 里把原始身体或上游菜园状态投影成执行阶段的几处（`room.ts` 的菜园、睡眠、移动分支）方向相反，留在原处，只改用 `ExecutionPhase` 类型。阶段不是 kind/action，点数不变。
+4. **`busy` 在快照里按画面投影算。** Desktop 读 `petBehavior.roomState()`（`desktop/platform/plugin.ts:368`），它返回的 `behavior` 来自 Body 快照的 `this.activity()`，`her` 来自同一份快照里 `presentHome(bound.room.view())` 的画面投影（`living/body/plugin.ts:315-317`）。所以新增纯函数 `companionBusy(her)`（`living/body/` 下），在快照组装处用同一个 `home.her` 算出 `busy`，放进 `behavior`；`roomState()` 原样转发 `behavior`，不用改。口径照搬 `desktop/platform/plugin.ts:682`：有 `her` 且（睡着、走路、或 `kind` 不在 `idle / play / idle_look / react_happy / react_pout / react_shy / react_scare` 里）。没有 `her` 时为 `false`，和现在 Desktop 的 `busy` 一样。注释写明它和呈现分类器（`living/body/presentation.ts:18-19`）的白名单为什么不同：一个管 Desktop 能不能插入吃饭，一个管画面选什么分类。
+5. **Desktop 改读。** `desktop/platform/plugin.ts:682` 改成读 `this.behavior?.behavior?.busy`；`:688`、`:692` 两处「是不是正在吃饭」合成一个局部变量，留在 Desktop 适配层。睡觉/起床分支、`activity-required` 分支、素材同一性判断不动。白名单从 Desktop 搬到 Body 仍算 1 个点，吃饭判断合并减 1，kind 预计 271 → 270。
+6. **设置页执行阶段标签**（`console/client.js:638`）加契约测试：标签表的键和 `ExecutionPhase` 一致。标签是界面文案，留在页面。
+7. **测试**：第 1 批 2B1-07、2B1-08 断言不改；新增 L2 测试从公开快照断言 `behavior.busy` 在空闲、走路、睡着、非空闲 kind、`react_shy` 几种状态下的取值，并和 Desktop `/anim` 的接受/拒绝对上；`bodyPhaseOf` 由 2B1-07 的五种执行阶段覆盖，不另写只断言常量的测试。
+8. **提交切分**：① 职责别名、阶段类型、`bodyPhaseOf`、`companionBusy` 和快照字段，加 L2 测试；② Desktop 改读和吃饭判断合并、阶段标签契约测试、方案执行结果。
+9. **验收**：第 1–3 批测试全绿且断言不改；kind ≤ 271、action 不升；R8 和规则基线新增 0；`pnpm run verify`（沙箱外）。
 
 ## 第 5 批：事实声明
 
@@ -204,7 +214,19 @@
 
 **特殊情况**：真实历史库里实际出现过哪些 `type` 不知道，本批不碰真实数据；用第 1 批的合成旧记录覆盖未知类型、已确认回读、同请求重试和日志确认。JSON 形状不变，但升级和回退是否不受影响以这些测试为准，不从「形状不变」推出。
 
-**开工细则要定**：读取类型的写法；新增领域时上游 `FactRef` 边界要改哪里（写进 architecture.md 5.10 的「新增事实领域」一行）。
+**开工细则（Claude 补齐，主人过目后开工；行号以第 3 批分支 `a4cc63a` 为准，合并后 `main` 相同）**
+
+1. **领域声明一张表。** `contracts/interaction.ts` 放 `FACT_DOMAINS`：`body` 的 `type` 集合是上游 `HOME_ACTIONS` 的 15 项（`vendor/feiyu-room-template/home-state.js:23-25`），`economy` 是 `purchase / sale / money-grant / item-gift / reading-import`（`living/economy/store.ts:248,257,264,272,333`）。同文件放 actor 种类表 `owner / companion / system`。派生 `FactDomain`、`BodyFactType`、`EconomyFactType`、`FACT_DOMAIN_NAMES`、`isFactDomain`、`factDomainOf(id)`。写法同第 2 批（对象表加派生，不新增字面量数组）。加一条测试：Body 的 15 项和 vendor 的 `HOME_ACTIONS` 完全一致。
+2. **读和写两种类型。** `CompanionFact` 保留为**读取**类型：按 `domain` 区分，`type` 是该领域的已知值或未登记的旧字符串（写成「已知值联合 | 带标记的未知字符串」，类型注释说明这是为了旧数据，不是新写入的出口）；读事实的地方（`CompanionFactSource`、Core、Life、提示词段、Body 的反馈筛选）都用它，签名基本不动。新增**写入**类型 `NewCompanionFact`：`type` 收窄到声明。三个写入点改用它：Body 的照料事实（`room.ts:1058`）、库存投喂（`room.ts:488`）、睡着拒绝投喂（`room.ts:684`），以及 Economy 的 `recordFact`（`store.ts:200`，`type` 参数改为 `EconomyFactType`）。导出的属性不写成裸 `type: string`，R8 裸字段不增加。
+3. **标签表补齐键。** `room.ts:1054` 的事实标签表改成以 `BodyFactType` 为键的完整映射，少一个键编译失败；`sick`、`heal` 现在没有标签，显式写成 `undefined`，摘要照旧回落成动作字，输出不变。
+4. **领域清单改引用。** `living/index.ts:289-292` 的前缀反推改用 `factDomainOf`；`core/native/conversation.ts:206` 的领域判断改用 `isFactDomain`，这一行其余校验（版本、ID、`requestId`、actor、摘要、时间、`canonical`）不增不减，缺 `type` 的事实照旧接受（差异清单已记，2B1-10 固定）；`living/plan/facts.ts:9`、`living/plan/plugin.ts:307,444` 改用 `FACT_DOMAIN_NAMES`，`plugin.ts:276`、`:439` 的领域参数改用 `FactDomain`；`living/prompt-context.ts:70` 按 `FACT_DOMAIN_NAMES` 依次取服务，顺序仍是先 Body 后 Economy，投影和确认不动。Life 按引用回读保留顺序和重复，不要求 ID 带前缀。
+5. **上游边界写进文档。** 上游 `FactRef`（`vendor/dsh-world/lib/life/types.d.ts:27`）的领域是封闭的，vendor 不能改；新增事实领域时要经 Life 的回读适配，不能只改声明。这条写进 architecture.md 5.10「新增事实领域」一行（第 6 批文档一起改）。
+6. **Python 正反双向。** `memory/provider.py` 不改。新测试：构建后读 TS 的领域和 actor 集合，逐个喂给 `interaction_source` 必须接受；再用 Python 标准库 `ast` 解析 `provider.py`，取出 `interaction_source` 里领域和 actor 两个元组，必须和 TS 集合完全相等（Python 多接受一个旧值也会失败）；不存在的领域必须拒绝。
+7. **测试**：第 1 批 2B1-09、2B1-10、2B1-11 断言不改（合成的未知 `type` 旧记录仍能读出）；新增测试只针对新行为：`factDomainOf` 对无前缀 ID 的现有处理、Body 15 项与 vendor 一致、Python 双向。类型层面的收窄由 `pnpm run check:types` 保证，不写只断言常量的测试。
+8. **点数**：这批改的是 `domain`、`type` 字段，扫描器不计点，kind/action 预计不变。
+9. **提交切分**：① 领域声明、读写两种类型、写入点和标签表、vendor 一致性测试；② 读取方改引用、Python 双向测试、方案执行结果。
+10. **验收**：第 1–3 批测试全绿且断言不改；kind、action 不升；R8 和规则基线新增 0；`pnpm run test:memory`；`pnpm run verify`（沙箱外）。
+11. **和第 4 批并行**：两批都基于第 3 批合并后的 `main`。第 4 批改 `contracts/behavior.ts`、`living/body/plugin.ts` 的快照、Desktop；第 5 批改 `contracts/interaction.ts`、Core、Life 的事实读取、`room.ts` 的事实写入。只有 `room.ts` 两边都碰（第 4 批只改 `updateExecution` 的类型），后合并的一方解冲突并重跑事实回读和重试测试。
 
 ## 第 6 批：全仓三项、点数收尾、文档与发版
 
