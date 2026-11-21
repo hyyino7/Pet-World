@@ -103,19 +103,7 @@
 
 ## 第 2 批：动作基础表
 
-**做法**：在 `src/contracts/behavior.ts` 放一张基础表，每个动作标明它属于哪些集合；照料动作带设置页按钮文案。示意（具体写法开工细则里定）：
-
-```ts
-export const BODY_ACTIONS = {
-  feed:{care:'免费基础餐食',role:true,plan:true,feedback:true},
-  water:{care:'倒杯水',role:true,plan:true,feedback:true},
-  play:{care:'一起玩',role:true,plan:true,feedback:true},
-  pet:{care:'摸摸头',role:true,feedback:true},
-  sleep:{care:'去睡觉',role:true,plan:true}, wake:{care:'叫醒',role:true,plan:true},
-  poke:{role:true,feedback:true}, talk:{role:true,feedback:true},
-  command:{role:true}, lamp:{role:true},
-} as const;
-```
+**做法**：在 `src/contracts/behavior.ts` 放一张基础表，每个动作标明它属于哪些集合；照料动作带设置页按钮文案。具体写法见本节末「开工细则」第 1 条。
 
 由它导出 `BodyAction`、`CareAction`、`RoleAction`、`PlanBodyAction`、`FeedbackAction` 五个类型和对应的只读数组（用 `Object.keys` 加筛选生成，不写新的字面量数组）。替换：
 
@@ -133,7 +121,31 @@ export const BODY_ACTIONS = {
 
 **不做**：不改上游 `HOME_ACTIONS`；不改 Desktop 的素材到动作转换（`desktop/platform/plugin.ts:671-689`，第三层适配，5.7 已定）；`catalog-food` 内部动作值不进基础表（`living/body/room.ts:459`）；Desktop 自己开放的 `sleep / wake / pet` 子集（`desktop/features.ts:164-177`、`desktop/platform/plugin.ts:626-635`）是桌宠入口自己的白名单，只把类型改为 `CareAction` 的子集；Economy 主人操作的 `feed`（`living/economy/plugin.ts:264`）是库存投喂，同名不同义，不并；Body 内部的行为分组（`room.ts:1021,1047,1052`）不是集合定义，留在原处。
 
-**开工细则要定**：`lifeView` 返回字段的名字和形状；`console/settings.ts` 改从基础表取白名单后，仍在调用 Life 之前拒绝；Life `act` 是否保留自查。
+**开工细则（Claude 补齐，主人过目后开工；行号以 `e96a5e7` 为准）**
+
+1. **集合标记用序号，保住现有顺序。** 三处顺序是外部可见的、第 1 批测试逐字固定了：设置页按钮 `feed / water / pet / play / sleep / wake`（`console/client.js:656`）、角色工具枚举 `command / pet / poke / feed / water / play / talk / sleep / wake / lamp`（`room/plugin.ts:18`，进模型的工具 schema，`concepts-actions.test.mjs:37`）、计划身体动作枚举 `sleep / wake / water / feed / play`（`plan-tools.ts:103`，`concepts-plan.test.mjs:35`）。一张表的键顺序只能满足其中一种，所以每个集合标记写成该集合里的序号，派生数组按序号排。照料标记同时带按钮文案。写法：
+
+   ```ts
+   export const BODY_ACTIONS = {
+     command:{role:1}, pet:{role:2,care:{order:3,label:'摸摸头'},feedback:true},
+     poke:{role:3,feedback:true}, feed:{role:4,care:{order:1,label:'免费基础餐食'},plan:4,feedback:true},
+     water:{role:5,care:{order:2,label:'倒杯水'},plan:3,feedback:true},
+     play:{role:6,care:{order:4,label:'一起玩'},plan:5,feedback:true},
+     talk:{role:7,feedback:true}, sleep:{role:8,care:{order:5,label:'去睡觉'},plan:1},
+     wake:{role:9,care:{order:6,label:'叫醒'},plan:2}, lamp:{role:10},
+   } as const;
+   ```
+
+   值都是对象和数字，扫描器不把它当词表定义；派生数组由函数生成，不是字面量。加一条小测试：每个集合的序号从 1 连续、不重复（漏填或撞号时失败）。
+
+2. **一个判断函数代替四份白名单检查。** `contracts/behavior.ts` 导出类型守卫 `isCareAction(value)`、`isPlanBodyAction(value)`。现在「是不是照料动作」在四个入口各判一次：`console/settings.ts:228`、`living/plan/plugin.ts:657`、`living/body/plugin.ts:325`（`worldCommands.care`）、`:362`（`act`），各自的报错不同（设置页 `INVALID_ARGUMENT`、Life「未知的生活动作」、World 先查绑定再报 `INVALID_ARGUMENT`、Body「未知的身体动作」，`concepts-actions.test.mjs:19-28` 固定）。四个入口都保留自己的检查和报错，只把判断本身换成调用同一个函数。这样字符串判断从 4 处变成守卫里的 1 处，action 预计 105 → 102；这是把同一条规则收成一个定义处，四个入口的检查次数没变，在执行结果里照这个口径写明。计划侧 `plan.ts:95` 改用 `isPlanBodyAction(String(value.action))`，保留 `String(...)` 的宽松准入（差异清单已记）；`room.ts:611` 同样改用它，点数不变。
+3. **设置页仍在调用 Life 之前拒绝。** `console/settings.ts:228` 改用 `isCareAction(input.action)`，位置和报错不变。
+4. **`lifeView` 多一个 `careActions`。** 由 `console/settings.ts:235` 在返回值上加 `careActions:[{action,label}]`（按照料序号），和现有的 `roomAvailable`、`channelsAvailable` 并列；Life 的 `snapshot()` 不改。设置页按钮改按 `view.careActions` 渲染，按钮文案、顺序、调用的 `lifeAction` 不变。`lifeView` 失败时整张卡片本来就不显示，不加兜底。补一条 L2 测试：`lifeView` 返回的 `careActions` 和按钮顺序、文案一致；用 `lifeAction` 逐个发送都被接受。
+5. **Life 的 `act` 保留自查**（它的报错文案「未知的生活动作」被固定，删掉会变成 Body 的文案）。
+6. **其余替换照方案**：角色白名单 `room.ts:85` 改为派生集合；反馈子集 `room.ts:820-823` 改用 `feedback` 标记；`contracts/living.ts:34` 改为 `CareAction`；`contracts/behavior.ts:58` 改为 `PlanBodyAction`；Desktop 的 `sleep / wake / pet` 子集（`desktop/platform/plugin.ts:630`、`desktop/features.ts:164`）只加 `satisfies readonly CareAction[]` 一类的类型约束，取值和写法不动。
+7. **顺手修的测试**：第 1 批复查留下的建议修，2B1-03 的 `lamp` 改用 `on:false` 核对参数生效（灯原本开着，`on:true` 看不出效果）。
+8. **提交切分**（每个 ≤15 文件 / 600 行，`dist/src` 不计）：① 基础表、守卫和第二层、Room、Desktop 的替换，加序号测试；② 设置页 `careActions`、按钮渲染、生成的 `src/desktop/platform/client.js`、L2 测试和 `lamp` 测试。
+9. **验收**：第 1 批 13 条和新测试全绿；`check:arch -- --report` 的 action ≤ 103（目标 102），kind 不升；R8 和规则基线新增 0，消失的条目在同一提交收紧；`pnpm run verify`（沙箱外）。
 
 ## 第 3 批：计划命令
 
