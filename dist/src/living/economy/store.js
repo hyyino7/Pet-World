@@ -7,6 +7,7 @@ import { CROPS, GARDEN_RULES, createGarden, normalizeGarden, advanceGarden, appl
 import { canonical, check, digest, integer, reject, text, unavailable } from '../../core/storage.js';
 import { closeSqliteLease, setSqliteMeta } from '../../core/sqlite.js';
 import { effectiveEconomyConfiguration, defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
+import { isBodyMetric } from '../../contracts/behavior.js';
 import { advanceGardenClock } from './garden-clock.js';
 import { ECONOMY_INITIALIZED, economyAdoptionPath, economyFile, economyRecoveryAdvice, ensureAdoptionDirectory, inspectEconomyAdoption, readEconomyDatabaseMarker, readEconomyFileEvidence, syncPath, writeEconomyFile } from './adoption.js';
 const cropRows = CROPS;
@@ -459,7 +460,7 @@ export class EconomyStore {
                     check(this.item(itemId).kind === 'food', 'Effects require a food item');
                     check(effects && typeof effects === 'object' && !Array.isArray(effects), 'Invalid food effect');
                     for (const [need, delta] of Object.entries(effects)) {
-                        check(['hunger', 'thirst', 'energy', 'bladder', 'pain'].includes(need), 'Unknown body need');
+                        check(isBodyMetric(need), 'Unknown body need');
                         check(typeof delta === 'number' && Number.isFinite(delta) && delta >= -1 && delta <= 1, 'Body need delta must be between -1 and 1');
                     }
                     config.foodEffects[itemId] = effects;

@@ -178,6 +178,16 @@ export declare const READING_STATES: {
     readonly confirmed: true;
 };
 export type ReadingState = keyof typeof READING_STATES;
+export declare const BODY_METRICS: {
+    readonly hunger: "ceiling";
+    readonly thirst: "ceiling";
+    readonly energy: "floor";
+    readonly bladder: "ceiling";
+    readonly pain: "none";
+};
+export type BodyMetric = keyof typeof BODY_METRICS;
+export declare const BODY_METRIC_NAMES: readonly BodyMetric[];
+export declare function isBodyMetric(value: string): value is BodyMetric;
 /** 自然语言活动标签，沿用序列化字段 activity。 */
 export type ActivityLabel = string;
 /** 已派发操作的编号。 */
@@ -259,7 +269,7 @@ export interface BehaviorSnapshot extends BehaviorChange {
     fault: string | null;
     planned?: PlannedExecution;
     /** Unrounded authoritative metrics for deterministic plan conditions. */
-    needs: Record<'hunger' | 'thirst' | 'energy' | 'bladder' | 'pain', number>;
+    needs: Record<BodyMetric, number>;
 }
 /** A durable program execution receipt; it is not a visual animation receipt. */
 export interface PlannedActivity {

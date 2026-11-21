@@ -9,10 +9,12 @@ import { LifeControlFileError } from '../plan/control-file.js';
 import { applyRoomAction, normalizeRoomState, roomView } from '#feiyu-room/room-state';
 import { randomUUID } from 'node:crypto';
 import { initialBodyState } from './initial-state.js';
-import { FEEDBACK_ACTIONS, ROLE_ACTIONS, PLAN_KINDS, isPlanKind, isPlanBodyAction, isPlanEconomyOperation, isPlanGardenOperation, PlannedAdmissionWaitError } from '../../contracts/behavior.js';
+import { BODY_METRICS, BODY_METRIC_NAMES, FEEDBACK_ACTIONS, ROLE_ACTIONS, PLAN_KINDS, isPlanKind, isPlanBodyAction, isPlanEconomyOperation, isPlanGardenOperation, PlannedAdmissionWaitError } from '../../contracts/behavior.js';
 import { requirePresentationSlot, animationSlotAllowed } from './playback.js';
 import { canonical, digest } from '../../core/storage.js';
 import { gardenHomeProjection, gardenReceiptProjection, gardenReceiptText } from './garden-receipt.js';
+// 离线时饥饿、口渴和如厕需求有上限，体力有单独的 energyFloor，疼痛不随离线时间变化。
+const offlineNeedMetrics = BODY_METRIC_NAMES.filter(metric => BODY_METRICS[metric] === 'ceiling');
 const terminalExecution = new Set(['completed', 'cancelled', 'failed']);
 const validatePlannedFields = {
     hold(input) {
@@ -92,7 +94,7 @@ export class CompanionRoom {
             const window = this.state.offlineBodyWindow;
             if (window && (![window.startAt, window.endAt, window.negativeUntil].every(Number.isFinite)
                 || window.endAt < window.startAt || window.negativeUntil < window.startAt
-                || ![window.energyFloor, ...['hunger', 'thirst', 'bladder'].map(key => window.needCeilings?.[key])]
+                || ![window.energyFloor, ...offlineNeedMetrics.map(key => window.needCeilings?.[key])]
                     .every(value => Number.isFinite(value) && value >= 0 && value <= 1)))
                 throw Error('离线身体时间窗口无效，原文件已保留');
         }
@@ -284,7 +286,7 @@ export class CompanionRoom {
             else {
                 const policy = this.offlinePolicy(), startAt = this.state.lastTickAt;
                 this.state.offlineBodyWindow = { startAt, endAt: now, negativeUntil: startAt + policy.hours * 3_600_000,
-                    needCeilings: Object.fromEntries(['hunger', 'thirst', 'bladder'].map(key => [key, policy.needCeiling])),
+                    needCeilings: Object.fromEntries(offlineNeedMetrics.map(key => [key, policy.needCeiling])),
                     energyFloor: policy.energyFloor };
             }
             // The same durable window survives any later partial checkpoint/restart.

@@ -9,7 +9,7 @@ import { closeSqliteLease, setSqliteMeta } from '../../core/sqlite.js';
 import { effectiveEconomyConfiguration,defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
 import type { BodyUseProof, CatalogItem, EconomyConfiguration, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, InventoryItem, ItemUse, LedgerEntry, ReadingBookmark, ReadingContent, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
 import type { CompanionFact, CompanionFactActor, EconomyFactType, NewCompanionFact } from '../../contracts/interaction.js';
-import type { ReadingState } from '../../contracts/behavior.js';
+import { isBodyMetric, type ReadingState } from '../../contracts/behavior.js';
 import type { WalletView } from '../../contracts/living.js';
 import { advanceGardenClock, type GardenClock } from './garden-clock.js';
 import { ECONOMY_INITIALIZED, economyAdoptionPath, economyFile, economyRecoveryAdvice, ensureAdoptionDirectory,
@@ -310,7 +310,7 @@ export class EconomyStore {
         check(patch.foodEffects&&typeof patch.foodEffects==='object'&&!Array.isArray(patch.foodEffects),'Invalid food effects');
         for(const [itemId,effects] of Object.entries(patch.foodEffects)) {
           check(this.item(itemId).kind==='food','Effects require a food item');check(effects&&typeof effects==='object'&&!Array.isArray(effects),'Invalid food effect');
-          for(const [need,delta] of Object.entries(effects)){check(['hunger','thirst','energy','bladder','pain'].includes(need),'Unknown body need');check(typeof delta==='number'&&Number.isFinite(delta)&&delta>=-1&&delta<=1,'Body need delta must be between -1 and 1');}
+          for(const [need,delta] of Object.entries(effects)){check(isBodyMetric(need),'Unknown body need');check(typeof delta==='number'&&Number.isFinite(delta)&&delta>=-1&&delta<=1,'Body need delta must be between -1 and 1');}
           config.foodEffects[itemId]=effects;
         }
       }

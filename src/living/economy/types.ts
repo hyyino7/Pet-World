@@ -1,5 +1,5 @@
 import type {InventoryItem, ReadingBookmark} from '../../contracts/living.js';
-import type {ReadingState} from '../../contracts/behavior.js';
+import type {BodyMetric, ReadingState} from '../../contracts/behavior.js';
 export type {InventoryItem, ReadingBookmark} from '../../contracts/living.js';
 
 export type ItemKind = 'seed' | 'harvest' | 'compost' | 'food' | 'reading';
@@ -12,7 +12,7 @@ export interface CatalogItem {
   presentationSlot?: string;
   source?: {kind: 'original' | 'owner-import'; name: string};
 }
-export type BodyNeedDelta = Partial<Record<'hunger' | 'thirst' | 'energy' | 'bladder' | 'pain',number>>;
+export type BodyNeedDelta = Partial<Record<BodyMetric,number>>;
 export interface CropConfiguration {growMs: number; seedCost: number; sellPrice: number; yield: number}
 export interface EconomyConfiguration {
   version: 1; revision: number; dailyNetReference: number; articlePrice: number; bookPrice: number; improvedMealPrice: number;

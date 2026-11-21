@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { withLivingCaller } from '../index.js';
 import { createLifeStore, LIFE_STATE_MAX_BYTES } from '#dsh-world/life/lifeStore';
-import { PLAN_KINDS, isPlanKind, isPlanBodyAction, isPlanEconomyOperation, isPlanGardenOperation, PlannedAdmissionWaitError } from '../../contracts/behavior.js';
+import { PLAN_KINDS, isPlanKind, isPlanBodyAction, isPlanEconomyOperation, isPlanGardenOperation, isBodyMetric, PlannedAdmissionWaitError } from '../../contracts/behavior.js';
 import { requirePresentationSlot } from '../body/playback.js';
 import { gardenReceiptText } from '../body/garden-receipt.js';
 export const expiredDispatchDeadline = 'The activity absolute deadline elapsed before Body admission; revise the original plan explicitly';
@@ -101,7 +101,7 @@ function parsePlan(raw, legacy) {
         instant(raw.nextConsiderAt);
     check(raw.reconsiderWhen === undefined || Array.isArray(raw.reconsiderWhen), 'Invalid reconsideration conditions');
     const reconsiderWhen = (raw.reconsiderWhen ?? []).map((value) => {
-        check(object(value) && ['hunger', 'thirst', 'energy', 'bladder', 'pain'].includes(String(value.metric)) && ['gte', 'lte'].includes(String(value.comparison))
+        check(object(value) && isBodyMetric(String(value.metric)) && ['gte', 'lte'].includes(String(value.comparison))
             && typeof value.value === 'number' && Number.isFinite(value.value) && value.value >= 0 && value.value <= 1, 'Invalid body-state condition');
         return value;
     });

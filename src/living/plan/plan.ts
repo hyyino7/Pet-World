@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import {withLivingCaller, type RecordCommandEffect} from '../index.js';
 import { createLifeStore, LIFE_STATE_MAX_BYTES, type LifeStore } from '#dsh-world/life/lifeStore';
 import type { CompanionBehavior } from '../body/plugin.js';
-import { PLAN_KINDS, isPlanKind, isPlanBodyAction, isPlanEconomyOperation, isPlanGardenOperation,
-  PlannedAdmissionWaitError, type PlanKind, type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
+import { PLAN_KINDS, isPlanKind, isPlanBodyAction, isPlanEconomyOperation, isPlanGardenOperation, isBodyMetric,
+  PlannedAdmissionWaitError, type BodyMetric, type PlanKind, type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
 import { requirePresentationSlot } from '../body/playback.js';
 import {gardenReceiptText} from '../body/garden-receipt.js';
 
@@ -24,7 +24,7 @@ export interface LifeStep {
   until?: string;
 }
 export interface LifeCondition {
-  metric: 'hunger' | 'thirst' | 'energy' | 'bladder' | 'pain';
+  metric: BodyMetric;
   comparison: 'gte' | 'lte';
   value: number;
 }
@@ -147,7 +147,7 @@ function parsePlan(raw: unknown, legacy: boolean): PlanDraft {
   if (raw.nextConsiderAt !== null) instant(raw.nextConsiderAt);
   check(raw.reconsiderWhen === undefined || Array.isArray(raw.reconsiderWhen), 'Invalid reconsideration conditions');
   const reconsiderWhen = ((raw.reconsiderWhen ?? []) as unknown[]).map((value): LifeCondition => {
-    check(object(value) && ['hunger','thirst','energy','bladder','pain'].includes(String(value.metric)) && ['gte','lte'].includes(String(value.comparison))
+    check(object(value) && isBodyMetric(String(value.metric)) && ['gte','lte'].includes(String(value.comparison))
       && typeof value.value === 'number' && Number.isFinite(value.value) && value.value >= 0 && value.value <= 1, 'Invalid body-state condition');
     return value as unknown as LifeCondition;
   });

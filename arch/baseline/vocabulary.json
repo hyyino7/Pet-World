@@ -3288,13 +3288,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
@@ -3376,13 +3376,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "<module>",
-        "line": 73
+        "line": 76
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 73,
+      "line": 76,
       "column": 52,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
@@ -3418,13 +3418,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/updateExecution",
-        "line": 394
+        "line": 397
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 394,
+      "line": 397,
       "column": 9,
       "scope": "CompanionRoom/updateExecution",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
@@ -3459,13 +3459,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/parkExecution",
-        "line": 413
+        "line": 416
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 413,
+      "line": 416,
       "column": 26,
       "scope": "CompanionRoom/parkExecution",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
@@ -3501,13 +3501,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 980
+        "line": 983
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 980,
+      "line": 983,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
@@ -4222,13 +4222,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 116
+        "line": 130
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 116,
+      "line": 130,
       "column": 30,
       "scope": "<module>",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/LifePage\"}",
@@ -5583,13 +5583,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/dispatchEconomy",
-        "line": 503
+        "line": 506
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 503,
+      "line": 506,
       "column": 48,
       "scope": "CompanionRoom/dispatchEconomy",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"<module>\"}",
@@ -6206,7 +6206,7 @@
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
@@ -6224,13 +6224,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "<module>",
-        "line": 73
+        "line": 76
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 73,
+      "line": 76,
       "column": 52,
       "scope": "<module>",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6245,13 +6245,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/gardenUnavailable\"}",
@@ -6269,13 +6269,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/gardenUnavailable",
-        "line": 214
+        "line": 217
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 214,
+      "line": 217,
       "column": 18,
       "scope": "CompanionRoom/gardenUnavailable",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6290,13 +6290,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/updateExecution\"}",
@@ -6314,13 +6314,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/updateExecution",
-        "line": 394
+        "line": 397
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 394,
+      "line": 397,
       "column": 9,
       "scope": "CompanionRoom/updateExecution",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6334,13 +6334,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/parkExecution\"}",
@@ -6358,13 +6358,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/parkExecution",
-        "line": 413
+        "line": 416
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 413,
+      "line": 416,
       "column": 26,
       "scope": "CompanionRoom/parkExecution",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6379,13 +6379,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/planAdmissionWait\"}",
@@ -6403,13 +6403,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/planAdmissionWait",
-        "line": 612
+        "line": 615
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 612,
+      "line": 615,
       "column": 37,
       "scope": "CompanionRoom/planAdmissionWait",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6423,13 +6423,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/tickAvailable\"}",
@@ -6447,13 +6447,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 946
+        "line": 949
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 946,
+      "line": 949,
       "column": 20,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6468,13 +6468,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/tickAvailable\"}",
@@ -6492,13 +6492,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 980
+        "line": 983
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 980,
+      "line": 983,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6513,13 +6513,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/garden\"}",
@@ -6537,13 +6537,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1112
+        "line": 1115
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1112,
+      "line": 1115,
       "column": 42,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6557,13 +6557,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
@@ -6602,13 +6602,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -6646,13 +6646,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
@@ -6690,13 +6690,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 117,
+      "line": 131,
       "column": 31,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
@@ -6735,13 +6735,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 117
+        "line": 131
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 148,
+      "line": 162,
       "column": 22,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/presentationActivity\"}",
@@ -6756,13 +6756,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/presentationActivity",
-        "line": 854
+        "line": 857
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 854,
+      "line": 857,
       "column": 47,
       "scope": "CompanionRoom/presentationActivity",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6777,13 +6777,13 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 148
+        "line": 162
       }
     },
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 152,
+      "line": 166,
       "column": 98,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/plugin.ts\",\"scope\":\"CompanionBehavior/publish\"}",
@@ -6817,325 +6817,7 @@
       "other": {
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
-        "line": 152
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 163,
-      "column": 16,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/constructor",
-        "line": 144
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 144,
-      "column": 36,
-      "scope": "CompanionRoom/constructor",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 163
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 163,
-      "column": 16,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/setAutonomy",
-        "line": 283
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 283,
-      "column": 43,
-      "scope": "CompanionRoom/setAutonomy",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 163
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 163,
-      "column": 16,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 313
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/store.ts",
-      "line": 313,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 163
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 163,
-      "column": 16,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/economy/types.ts",
-        "scope": "<module>",
-        "line": 15
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/types.ts",
-      "line": 15,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 163
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 163,
-      "column": 16,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan-tools.ts",
-        "scope": "registerPlanTools",
-        "line": 140
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan-tools.ts",
-      "line": 140,
-      "column": 98,
-      "scope": "registerPlanTools",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 163
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 163,
-      "column": 16,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "<module>",
-        "line": 27
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 27,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 163
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/behavior.ts",
-      "line": 163,
-      "column": 16,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-        "line": 150
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 150,
-      "column": 28,
-      "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-      "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/contracts/behavior.ts",
-        "scope": "<module>",
-        "line": 163
+        "line": 166
       }
     },
     {
@@ -7266,13 +6948,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/dispatchEconomy",
-        "line": 503
+        "line": 506
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 503,
+      "line": 506,
       "column": 48,
       "scope": "CompanionRoom/dispatchEconomy",
       "target": "{\"file\":\"src/contracts/common.ts\",\"scope\":\"<module>\"}",
@@ -7726,13 +7408,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/updateExecution",
-        "line": 394
+        "line": 397
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 394,
+      "line": 397,
       "column": 9,
       "scope": "CompanionRoom/updateExecution",
       "target": "{\"file\":\"src/contracts/interaction.ts\",\"scope\":\"<module>\"}",
@@ -8139,13 +7821,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "<module>",
-        "line": 73
+        "line": 76
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 73,
+      "line": 76,
       "column": 52,
       "scope": "<module>",
       "target": "{\"file\":\"src/core/native/result.ts\",\"scope\":\"<module>\"}",
@@ -8182,13 +7864,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/updateExecution",
-        "line": 394
+        "line": 397
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 394,
+      "line": 397,
       "column": 9,
       "scope": "CompanionRoom/updateExecution",
       "target": "{\"file\":\"src/core/native/result.ts\",\"scope\":\"<module>\"}",
@@ -8224,13 +7906,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/parkExecution",
-        "line": 413
+        "line": 416
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 413,
+      "line": 416,
       "column": 26,
       "scope": "CompanionRoom/parkExecution",
       "target": "{\"file\":\"src/core/native/result.ts\",\"scope\":\"<module>\"}",
@@ -8267,13 +7949,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 980
+        "line": 983
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 980,
+      "line": 983,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/core/native/result.ts\",\"scope\":\"<module>\"}",
@@ -8570,13 +8252,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/dispatchEconomy",
-        "line": 503
+        "line": 506
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 503,
+      "line": 506,
       "column": 48,
       "scope": "CompanionRoom/dispatchEconomy",
       "target": "{\"file\":\"src/core/storage.ts\",\"scope\":\"reject\"}",
@@ -9633,13 +9315,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/startPlanned",
-        "line": 624
+        "line": 627
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 624,
+      "line": 627,
       "column": 61,
       "scope": "CompanionRoom/startPlanned",
       "target": "{\"file\":\"src/desktop/platform/migration.ts\",\"scope\":\"<module>\"}",
@@ -9675,13 +9357,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/consumeFood",
-        "line": 660
+        "line": 663
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 660,
+      "line": 663,
       "column": 61,
       "scope": "CompanionRoom/consumeFood",
       "target": "{\"file\":\"src/desktop/platform/migration.ts\",\"scope\":\"<module>\"}",
@@ -9919,13 +9601,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/dispatchExecution",
-        "line": 564
+        "line": 567
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 564,
+      "line": 567,
       "column": 34,
       "scope": "CompanionRoom/dispatchExecution",
       "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
@@ -10949,13 +10631,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/act",
-        "line": 1041
+        "line": 1044
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1041,
+      "line": 1044,
       "column": 22,
       "scope": "CompanionRoom/act",
       "target": "{\"file\":\"src/living/body/playback.ts\",\"scope\":\"resolveActivityPlayback\"}",
@@ -10996,13 +10678,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1089
+        "line": 1092
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1089,
+      "line": 1092,
       "column": 21,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/body/plugin.ts\",\"scope\":\"CompanionBehavior/garden\"}",
@@ -11065,7 +10747,7 @@
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 26,
+      "line": 29,
       "column": 25,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
@@ -11101,13 +10783,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "<module>",
-        "line": 26
+        "line": 29
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 73,
+      "line": 76,
       "column": 52,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
@@ -11143,13 +10825,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "<module>",
-        "line": 73
+        "line": 76
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 73,
+      "line": 76,
       "column": 52,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -11184,233 +10866,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "<module>",
-        "line": 73
+        "line": 76
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 144,
-      "column": 36,
-      "scope": "CompanionRoom/constructor",
-      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 313
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/store.ts",
-      "line": 313,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/constructor",
-        "line": 144
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 144,
-      "column": 36,
-      "scope": "CompanionRoom/constructor",
-      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/economy/types.ts",
-        "scope": "<module>",
-        "line": 15
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/types.ts",
-      "line": 15,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/constructor",
-        "line": 144
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 144,
-      "column": 36,
-      "scope": "CompanionRoom/constructor",
-      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan-tools.ts",
-        "scope": "registerPlanTools",
-        "line": 140
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan-tools.ts",
-      "line": 140,
-      "column": 98,
-      "scope": "registerPlanTools",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/constructor",
-        "line": 144
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 144,
-      "column": 36,
-      "scope": "CompanionRoom/constructor",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "<module>",
-        "line": 27
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 27,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/constructor",
-        "line": 144
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 144,
-      "column": 36,
-      "scope": "CompanionRoom/constructor",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-        "line": 150
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 150,
-      "column": 28,
-      "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/constructor\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/constructor",
-        "line": 144
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 214,
+      "line": 217,
       "column": 18,
       "scope": "CompanionRoom/gardenUnavailable",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
@@ -11446,233 +10908,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/gardenUnavailable",
-        "line": 214
+        "line": 217
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 283,
-      "column": 43,
-      "scope": "CompanionRoom/setAutonomy",
-      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 313
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/store.ts",
-      "line": 313,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/setAutonomy",
-        "line": 283
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 283,
-      "column": 43,
-      "scope": "CompanionRoom/setAutonomy",
-      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/economy/types.ts",
-        "scope": "<module>",
-        "line": 15
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/types.ts",
-      "line": 15,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/setAutonomy",
-        "line": 283
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 283,
-      "column": 43,
-      "scope": "CompanionRoom/setAutonomy",
-      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan-tools.ts",
-        "scope": "registerPlanTools",
-        "line": 140
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan-tools.ts",
-      "line": 140,
-      "column": 98,
-      "scope": "registerPlanTools",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/setAutonomy",
-        "line": 283
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 283,
-      "column": 43,
-      "scope": "CompanionRoom/setAutonomy",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "<module>",
-        "line": 27
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 27,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/setAutonomy",
-        "line": 283
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 283,
-      "column": 43,
-      "scope": "CompanionRoom/setAutonomy",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"bladder\" ]",
-      "values": [
-        "bladder",
-        "hunger",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-        "line": 150
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 150,
-      "column": 28,
-      "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-      "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/setAutonomy\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/living/body/room.ts",
-        "scope": "CompanionRoom/setAutonomy",
-        "line": 283
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/body/room.ts",
-      "line": 394,
+      "line": 397,
       "column": 9,
       "scope": "CompanionRoom/updateExecution",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
@@ -11707,13 +10949,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/updateExecution",
-        "line": 394
+        "line": 397
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 413,
+      "line": 416,
       "column": 26,
       "scope": "CompanionRoom/parkExecution",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
@@ -11749,13 +10991,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/parkExecution",
-        "line": 413
+        "line": 416
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 413,
+      "line": 416,
       "column": 26,
       "scope": "CompanionRoom/parkExecution",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -11790,13 +11032,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/parkExecution",
-        "line": 413
+        "line": 416
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 503,
+      "line": 506,
       "column": 48,
       "scope": "CompanionRoom/dispatchEconomy",
       "target": "{\"file\":\"src/living/economy/plugin.ts\",\"scope\":\"CompanionEconomy/gardenPort/transaction\"}",
@@ -11837,13 +11079,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/dispatchEconomy",
-        "line": 503
+        "line": 506
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 612,
+      "line": 615,
       "column": 37,
       "scope": "CompanionRoom/planAdmissionWait",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
@@ -11878,13 +11120,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/planAdmissionWait",
-        "line": 612
+        "line": 615
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 946,
+      "line": 949,
       "column": 20,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
@@ -11920,13 +11162,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 946
+        "line": 949
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 980,
+      "line": 983,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
@@ -11962,13 +11204,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 980
+        "line": 983
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 980,
+      "line": 983,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -12003,13 +11245,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 980
+        "line": 983
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1089,
+      "line": 1092,
       "column": 21,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/garden\"}",
@@ -12045,13 +11287,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1089
+        "line": 1092
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1100,
+      "line": 1103,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -12087,13 +11329,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1100
+        "line": 1103
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1100,
+      "line": 1103,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -12129,13 +11371,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1100
+        "line": 1103
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1100,
+      "line": 1103,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/controlPlan\"}",
@@ -12171,13 +11413,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1100
+        "line": 1103
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1100,
+      "line": 1103,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/controlPlan\"}",
@@ -12213,13 +11455,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1100
+        "line": 1103
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1100,
+      "line": 1103,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/request\"}",
@@ -12255,13 +11497,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1100
+        "line": 1103
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1112,
+      "line": 1115,
       "column": 42,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
@@ -12296,13 +11538,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1112
+        "line": 1115
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1127,
+      "line": 1130,
       "column": 90,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/tools\"}",
@@ -12347,7 +11589,7 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1127
+        "line": 1130
       }
     },
     {
@@ -12601,190 +11843,6 @@
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 313,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/economy/types.ts",
-        "scope": "<module>",
-        "line": 15
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/types.ts",
-      "line": 15,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 313
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/store.ts",
-      "line": 313,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan-tools.ts",
-        "scope": "registerPlanTools",
-        "line": 140
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan-tools.ts",
-      "line": 140,
-      "column": 98,
-      "scope": "registerPlanTools",
-      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 313
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/store.ts",
-      "line": 313,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "<module>",
-        "line": 27
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 27,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 313
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/store.ts",
-      "line": 313,
-      "column": 68,
-      "scope": "EconomyStore/configure/this . mutate:callback3",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-        "line": 150
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 150,
-      "column": 28,
-      "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-      "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"EconomyStore/configure/this . mutate:callback3\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/economy/store.ts",
-        "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 313
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/store.ts",
       "line": 322,
       "column": 100,
       "scope": "EconomyStore/importBook",
@@ -12820,144 +11878,6 @@
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/importBook",
         "line": 322
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/types.ts",
-      "line": 15,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan-tools.ts",
-        "scope": "registerPlanTools",
-        "line": 140
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan-tools.ts",
-      "line": 140,
-      "column": 98,
-      "scope": "registerPlanTools",
-      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/economy/types.ts",
-        "scope": "<module>",
-        "line": 15
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/types.ts",
-      "line": 15,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "<module>",
-        "line": 27
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 27,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/economy/types.ts",
-        "scope": "<module>",
-        "line": 15
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/types.ts",
-      "line": 15,
-      "column": 44,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-        "line": 150
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 150,
-      "column": 28,
-      "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-      "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/economy/types.ts",
-        "scope": "<module>",
-        "line": 15
       }
     },
     {
@@ -13004,99 +11924,7 @@
       "rule": "R8",
       "file": "src/living/plan/plan-tools.ts",
       "line": 140,
-      "column": 98,
-      "scope": "registerPlanTools",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "<module>",
-        "line": 27
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 27,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
-      "expression": "\"hunger\" | \"thirst\" | \"energy\" | \"bladder\" | \"pain\"",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan-tools.ts",
-        "scope": "registerPlanTools",
-        "line": 140
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan-tools.ts",
-      "line": 140,
-      "column": 98,
-      "scope": "registerPlanTools",
-      "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan.ts",
-        "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-        "line": 150
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan.ts",
-      "line": 150,
-      "column": 28,
-      "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
-      "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
-      "expression": "[ \"hunger\" , \"thirst\" , \"energy\" , \"bladder\" , \"pain\" ]",
-      "values": [
-        "bladder",
-        "energy",
-        "hunger",
-        "pain",
-        "thirst"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plan-tools.ts",
-        "scope": "registerPlanTools",
-        "line": 140
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plan-tools.ts",
-      "line": 140,
-      "column": 190,
+      "column": 167,
       "scope": "registerPlanTools",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
       "expression": "[ \"gte\" , \"lte\" ]",
@@ -13136,7 +11964,7 @@
       "rule": "R8",
       "file": "src/living/plan/plan-tools.ts",
       "line": 140,
-      "column": 190,
+      "column": 167,
       "scope": "registerPlanTools",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0\"}",
       "expression": "[ \"gte\" , \"lte\" ]",
@@ -13156,7 +11984,7 @@
       "rule": "R8",
       "file": "src/living/plan/plan.ts",
       "line": 150,
-      "column": 108,
+      "column": 66,
       "scope": "parsePlan/( ( raw . reconsiderWhen ?? [  ] ) as unknown [ ] ) . map:callback0",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
       "expression": "[ \"gte\" , \"lte\" ]",
@@ -14995,7 +13823,7 @@
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 130,
+      "line": 144,
       "column": 5,
       "scope": "<module>",
       "target": "action",
@@ -15005,7 +13833,7 @@
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 141,
+      "line": 155,
       "column": 3,
       "scope": "<module>",
       "target": "kind",
@@ -15015,7 +13843,7 @@
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 153,
+      "line": 167,
       "column": 73,
       "scope": "<module>",
       "target": "action",
@@ -15025,7 +13853,7 @@
     {
       "rule": "R8",
       "file": "src/contracts/behavior.ts",
-      "line": 155,
+      "line": 169,
       "column": 3,
       "scope": "<module>",
       "target": "action",
@@ -15225,7 +14053,7 @@
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 34,
+      "line": 37,
       "column": 62,
       "scope": "<module>",
       "target": "kind",

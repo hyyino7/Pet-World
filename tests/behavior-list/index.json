@@ -1458,6 +1458,15 @@
       "name": "公开身体快照的忙碌状态与 Desktop 吃饭准入一致",
       "l1Stage": "阶段 2",
       "families": []
+    },
+    {
+      "id": "2B6A-01",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-body-metrics.test.mjs",
+      "name": "身体指标按既有顺序用于计划与设置页并保留校验行为",
+      "l1Stage": "阶段 2",
+      "families": []
     }
   ]
 }

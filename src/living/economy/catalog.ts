@@ -1,6 +1,6 @@
 import { CROPS } from '#feiyu-garden';
 import { digest } from '../../core/storage.js';
-import type { CatalogItem, EconomyConfiguration, ReadingContent } from './types.js';
+import type { BodyNeedDelta, CatalogItem, EconomyConfiguration, ReadingContent } from './types.js';
 
 /** Original texts are products, never preset biography, memories or completed experiences. */
 const originalTexts = [
@@ -19,7 +19,7 @@ export function defaultEconomyConfiguration(): EconomyConfiguration {
     compostCost:8,waterDurationFactor:1.25,fertilizerGrowth:1.2,fertilizerYield:2,
     crops:Object.fromEntries((CROPS as any[]).map((crop,index)=>[crop.id,{
       growMs:(12+index)*60*60*1000,seedCost:Math.round(9-50*(12+index)/24/8),sellPrice:3,yield:3,
-    }])),itemPrices:{},catalogEnabled:{},foodEffects:{'food:improved-meal':{hunger:-0.52,energy:0.08}}};
+    }])),itemPrices:{},catalogEnabled:{},foodEffects:{'food:improved-meal':{hunger:-0.52,energy:0.08} satisfies BodyNeedDelta}};
 }
 
 /** Old owner-entered return values remain in storage until an explicit edit,

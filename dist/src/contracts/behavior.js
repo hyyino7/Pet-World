@@ -62,6 +62,17 @@ export function isPlanGardenOperation(value) {
     return PLAN_GARDEN_OPERATION_NAMES.includes(value);
 }
 export const READING_STATES = { unread: true, offered: true, confirmed: true };
+export const BODY_METRICS = {
+    hunger: 'ceiling',
+    thirst: 'ceiling',
+    energy: 'floor',
+    bladder: 'ceiling',
+    pain: 'none',
+};
+export const BODY_METRIC_NAMES = Object.keys(BODY_METRICS);
+export function isBodyMetric(value) {
+    return Object.hasOwn(BODY_METRICS, value);
+}
 export class PlannedAdmissionWaitError extends Error {
     wait;
     constructor(wait) {
