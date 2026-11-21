@@ -233,3 +233,36 @@ async function runG9(t, migrate = false) {
 }
 test('Life 原生计划在身体效果落盘后跨重启只结算一次并自动续行', t=>runG9(t));
 test('4 在同一合成绑定迁移 home 后复跑 G9 原断言', t=>runG9(t,true));
+
+test('Life 原生睡眠计划从移动到睡眠并跨重启保留完成回执', async t => {
+  const f = await cordisFixture(t);
+  let submitted = false;
+  f.model = async call => {
+    if (!submitted && call.messages.some(message => message.source.kind === 'dsh-world-life')) {
+      submitted = true;
+      await submitPlan(call,[{id:'sleep',kind:'body',activity:'去床上睡觉',action:'sleep'}]);
+    }
+    return 'Synthetic model response';
+  };
+  await f.enable();
+  const homeId = await eventually(() => f.life.homeSessionId(),'生活打开共享 home');
+  const moving = await eventually(async () => {
+    const {plan} = await f.life.readPlan(f.id);
+    const snapshot = await f.body.snapshot(f.id);
+    return plan?.operationId && snapshot.planned?.operationId === plan.operationId &&
+      snapshot.planned.phase === 'moving' && snapshot;
+  },'睡眠步骤已派发且身体在移动');
+  const {operationId} = moving.planned;
+  assert.equal(moving.behavior.phase,'moving');
+  assert.equal(moving.behavior.activityId,operationId);
+  await (await f.agent(homeId)).whenIdle();
+  assert.ok(f.saved(homeId).events.some(event => event.type === 'tool/call' && event.data.name === 'life_plan_update'));
+  t.mock.timers.tick(120_000);
+  const sleeping = await f.body.snapshot(f.id);
+  assert.equal(sleeping.behavior.phase,'sleeping');
+  const completed = await f.body.inspectPlanned(f.id,operationId);
+  assert.deepEqual([completed.status,completed.phase],['completed','completed']);
+  await f.restart();
+  assert.equal((await f.body.snapshot(f.id)).behavior.phase,'sleeping');
+  assert.deepEqual(await f.body.inspectPlanned(f.id,operationId),completed);
+});
