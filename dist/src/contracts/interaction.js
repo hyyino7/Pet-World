@@ -12,4 +12,10 @@ export function factDomainOf(id) {
 }
 const FACT_ACTORS = { owner: true, companion: true, system: true };
 export const FACT_ACTOR_NAMES = Object.keys(FACT_ACTORS);
+/** 校验原生会话准入所需的字段。历史 type 可以未知或缺失。 */
+export function isValidFactEnvelope(fact) {
+    return fact.version === 1 && typeof fact.id === 'string' && typeof fact.requestId === 'string' && isFactDomain(fact.domain)
+        && fact.actor && FACT_ACTOR_NAMES.includes(fact.actor.kind) && typeof fact.actor.id === 'string' && fact.actor.id.length > 0
+        && typeof fact.actor.channel === 'string' && typeof fact.result?.summary === 'string' && Number.isFinite(Date.parse(fact.occurredAt));
+}
 //# sourceMappingURL=interaction.js.map

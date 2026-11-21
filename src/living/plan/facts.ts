@@ -1,12 +1,12 @@
-import type {CompanionFact,CompanionFactSource} from '../../contracts/interaction.js';
+import {FACT_DOMAIN_NAMES,type CompanionFact,type CompanionFactSource,type FactDomain} from '../../contracts/interaction.js';
 
 /** Materialize original references even when another native consumer has already
  * acknowledged them. Pending discovery and immutable fact reads are distinct. */
 export async function readFactReferences(workspaceId:string,refs:readonly Pick<CompanionFact,'domain'|'id'>[],
-  sourceFor:(domain:CompanionFact['domain'])=>CompanionFactSource|undefined,validate:()=>void):Promise<CompanionFact[]> {
+  sourceFor:(domain:FactDomain)=>CompanionFactSource|undefined,validate:()=>void):Promise<CompanionFact[]> {
   validate();
   const result=new Map<string,CompanionFact>();
-  await Promise.all((['body','economy'] as const).map(async domain=>{
+  await Promise.all(FACT_DOMAIN_NAMES.map(async domain=>{
     const ids=refs.filter(ref=>ref.domain===domain).map(ref=>ref.id);if(!ids.length)return;
     const source=sourceFor(domain);if(!source)throw Error('原互动事实所属组件暂不可用，保留原编号等待恢复');
     const facts=await source.readFacts(workspaceId,ids);

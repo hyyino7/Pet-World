@@ -2,7 +2,7 @@ import { Context, type Fiber } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../core/index.js';
 import type { CompanionBinding } from '../core/tables/companion-ports.js';
 import type { CallOptions, ContractError, Result } from '../contracts/common.js';
-import type { CompanionFactSource } from '../contracts/interaction.js';
+import { type CompanionFactSource } from '../contracts/interaction.js';
 import type { WorldChanged, WorldCommandRequest, WorldSnapshot } from '../contracts/living.js';
 import type { RegistrationLease } from '../contracts/tables.js';
 import type { CompanionBehavior } from './body/plugin.js';

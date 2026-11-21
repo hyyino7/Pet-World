@@ -7144,49 +7144,6 @@
       "line": 16,
       "column": 18,
       "scope": "<module>",
-      "target": "{\"file\":\"src/core/native/conversation.ts\",\"scope\":\"CoreNative/observeFacts\"}",
-      "expression": "\"owner\" | \"companion\" | \"system\" | \"external\"",
-      "values": [
-        "companion",
-        "external",
-        "owner",
-        "system"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/core/native/conversation.ts",
-        "scope": "CoreNative/observeFacts",
-        "line": 207
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/core/native/conversation.ts",
-      "line": 207,
-      "column": 26,
-      "scope": "CoreNative/observeFacts",
-      "target": "{\"file\":\"src/contracts/common.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"owner\" , \"companion\" , \"system\" ]",
-      "values": [
-        "companion",
-        "owner",
-        "system"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/common.ts",
-        "scope": "<module>",
-        "line": 16
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/common.ts",
-      "line": 16,
-      "column": 18,
-      "scope": "<module>",
       "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
       "expression": "\"owner\" | \"companion\" | \"system\" | \"external\"",
       "values": [
@@ -8161,87 +8118,6 @@
         "file": "src/core/native/agent.ts",
         "scope": "<module>",
         "line": 20
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/core/native/conversation.ts",
-      "line": 206,
-      "column": 98,
-      "scope": "CoreNative/observeFacts",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/factSource\"}",
-      "expression": "[ \"body\" , \"economy\" ]",
-      "values": [
-        "body",
-        "economy"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/factSource",
-        "line": 439
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 439,
-      "column": 29,
-      "scope": "CompanionLife/factSource",
-      "target": "{\"file\":\"src/core/native/conversation.ts\",\"scope\":\"CoreNative/observeFacts\"}",
-      "expression": "\"body\" | \"economy\"",
-      "values": [
-        "body",
-        "economy"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/core/native/conversation.ts",
-        "scope": "CoreNative/observeFacts",
-        "line": 206
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/core/native/conversation.ts",
-      "line": 207,
-      "column": 26,
-      "scope": "CoreNative/observeFacts",
-      "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
-      "expression": "[ \"owner\" , \"companion\" , \"system\" ]",
-      "values": [
-        "companion",
-        "owner",
-        "system"
-      ],
-      "shape": "array",
-      "relation": "子集",
-      "other": {
-        "file": "src/desktop/platform/plugin.ts",
-        "scope": "PetPlatform/handle",
-        "line": 579
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/desktop/platform/plugin.ts",
-      "line": 579,
-      "column": 88,
-      "scope": "PetPlatform/handle",
-      "target": "{\"file\":\"src/core/native/conversation.ts\",\"scope\":\"CoreNative/observeFacts\"}",
-      "expression": "\"owner\" | \"companion\"",
-      "values": [
-        "companion",
-        "owner"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/core/native/conversation.ts",
-        "scope": "CoreNative/observeFacts",
-        "line": 207
       }
     },
     {

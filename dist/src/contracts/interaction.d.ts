@@ -131,6 +131,8 @@ export type NewCompanionFact = {
         type: FactType<Domain>;
     };
 }[FactDomain];
+/** 校验原生会话准入所需的字段。历史 type 可以未知或缺失。 */
+export declare function isValidFactEnvelope(fact: CompanionFact): boolean;
 /** Each domain remains the authority. Consumers only acknowledge committed IDs. */
 export interface CompanionFactSource {
     pendingFacts(workspaceId: string): Promise<CompanionFact[]>;

@@ -1,3 +1,4 @@
+import { FACT_DOMAIN_NAMES } from '../contracts/interaction.js';
 import { acknowledgePromptFacts } from '../core/interaction-context.js';
 import { INTERACTION_CONTEXT, presentFacts } from '../core/interaction-presentation.js';
 import { ENVIRONMENT_CONTEXT, registerWorldContext } from '../core/native/prompt.js';
@@ -59,7 +60,9 @@ export function installLivingPrompt(ctx, host, world, ownerScope) {
                 planText = '当前生活计划暂不可读；保留已有安排，不根据旧聊天猜测执行进度或重新派工。';
                 logger.warn('Shared life plan context is unavailable', error);
             }
-        for (const service of [body?.value, economy?.value]) {
+        const services = { body: body?.value, economy: economy?.value };
+        for (const domain of FACT_DOMAIN_NAMES) {
+            const service = services[domain];
             if (!service)
                 continue;
             if (!isCurrent(frame))

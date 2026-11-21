@@ -20,7 +20,7 @@ import type {CompanionBehavior} from '../body/plugin.js';
 import { PersistentLifePlan, expiredDispatchDeadline, parsePlanDraft, type CurrentLifePlan } from './plan.js';
 import { registerPlanTools } from './plan-tools.js';
 import {presentFacts} from '../../core/interaction-presentation.js';
-import type { CompanionFact } from '../../contracts/interaction.js';
+import { FACT_DOMAIN_NAMES, type CompanionFact, type FactDomain } from '../../contracts/interaction.js';
 import { isCareAction, type PlannedExecution } from '../../contracts/behavior.js';
 import type { WorldCommands } from '../../contracts/living.js';
 import {integer, reject, text, unavailable} from '../../core/storage.js';
@@ -273,12 +273,12 @@ export class CompanionLife {
       facts: {
         pending:async()=> (await this.pendingFacts(bound,active)).map(fact=>({domain:fact.domain,id:fact.id})),
         read:async refs=>{
-          const sources={body:this.factSource('body'),economy:this.factSource('economy')};
+          const sources=new Map(FACT_DOMAIN_NAMES.map(domain=>[domain,this.factSource(domain)]));
           const validate=()=>{
             if(!active())throw Error('互动事实工作区已切换');
           };
           const facts=await withLivingCaller(validate,()=>readFactReferences(bound.id,refs,domain=>{
-            const source=sources[domain];
+            const source=sources.get(domain);
             return source?.isCurrent() ? source.value : undefined;
           },validate));
           return {facts,text:presentFacts(facts)};
@@ -304,7 +304,7 @@ export class CompanionLife {
           finally {await reader.close();}
         }),
         acknowledge:async refs=>{
-          for(const domain of ['body','economy'] as const) {
+          for(const domain of FACT_DOMAIN_NAMES) {
             const ids=refs.filter(ref=>ref.domain===domain).map(ref=>ref.id);if(!ids.length)continue;
             if(!active())throw Error('互动事实工作区已切换');
             const source=this.factSource(domain);if(!source)throw Error('互动事实所属组件暂不可用');
@@ -436,12 +436,12 @@ export class CompanionLife {
       bound.plan.markAutoResume(false);
     }
   }
-  private factSource(domain:'body'|'economy') {
+  private factSource(domain:FactDomain) {
     return this.living.lookup(domain);
   }
   private async pendingFacts(bound:Bound,active:()=>boolean):Promise<CompanionFact[]> {
     if(!active())throw Error('互动事实工作区已切换');
-    const sources=(['body','economy'] as const).map(domain=>this.factSource(domain));
+    const sources=FACT_DOMAIN_NAMES.map(domain=>this.factSource(domain));
     const results=await Promise.all(sources.map(async source=>{
       if(!source?.value.pendingFacts)return [];
       const validate=()=>{if(!active() || !source.isCurrent())throw Error('互动事实所属组件已变化');};

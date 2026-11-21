@@ -7,7 +7,7 @@ import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import type { NativeMemory } from './memory.js';
 import { canonical, check, digest, now, reject } from '../storage.js';
-import type { CompanionFact } from '../../contracts/interaction.js';
+import { isValidFactEnvelope, type CompanionFact } from '../../contracts/interaction.js';
 import { COMPANION_TOOL_SOURCES, type CompanionToolDeclaration, type RegistrationLease, type SessionPolicyRow, type SourceAdmission, type TurnKind } from '../../contracts/tables.js';
 import { SourceAdapterTable } from '../tables/sources.js';
 import { RegistrationTable } from '../tables/registry.js';
@@ -203,9 +203,7 @@ export class CoreNative {
     this.current(sessionId,scope);check(!scope.guest,'Private facts require an owner conversation');
     const factIds:string[]=[];
     for(const fact of facts) {
-      check(fact.version===1 && typeof fact.id==='string' && typeof fact.requestId==='string' && ['body','economy'].includes(fact.domain)
-        && fact.actor && ['owner','companion','system'].includes(fact.actor.kind) && typeof fact.actor.id==='string' && fact.actor.id.length>0
-        && typeof fact.actor.channel==='string' && typeof fact.result?.summary==='string' && Number.isFinite(Date.parse(fact.occurredAt)),'Invalid admitted interaction fact');
+      check(isValidFactEnvelope(fact),'Invalid admitted interaction fact');
       canonical(fact);
       const factId=`native-fact:${digest([scope.storageId,fact.domain,fact.id])}`;
       if(!this.runtime.store.get('source',factId))this.runtime.store.put('source',factId,{
