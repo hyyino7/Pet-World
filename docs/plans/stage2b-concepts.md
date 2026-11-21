@@ -346,6 +346,19 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - `pnpm run verify` 的环境、类型、架构和构建通过，Node 测试 1669 条通过、1 条失败。Memory P2 在 `/bin/ps` 被沙箱拒绝（`EPERM`），单跑复现，后续断言环境原因未跑。
 - 门禁中断后的 Python Memory 22 条、`pnpm run check:release`、`pnpm pack` 和 `pnpm run check:package` 已独立补跑并通过。
 
+### 第 4 批
+
+- `src/contracts/behavior.ts` 和 `src/living/body/{activity,plugin,room}.ts` 明确活动标签、操作编号和当前活动编号，集中执行阶段到身体阶段的投影，并用同一份 `homeView.her` 计算快照的 `behavior.busy`。
+- `src/desktop/platform/plugin.ts` 改读快照的 `busy`，同一份状态只判断一次是否正在吃饭，投喂刷新后再判断。第 1–3 批测试断言全部保留。
+- R8 kind 字符串判断 271 点 / 44 文件 → 270 点 / 45 文件，运行源码与扫描范围一致。
+- R8 action 字符串判断 102 点 / 13 文件 → 102 点 / 13 文件，运行源码与扫描范围一致。
+- 第 1 组加入 Body 白名单判断，暂为 272 点。第 2 组撤下 Desktop 白名单判断并合并两处 `eat` 判断，本批净减 1 点。
+- 规则基线 37 条，新增/消失 0/0。词表基线 707 → 703，新增 0、消失 4，均为 Desktop 旧白名单与播放表、呈现表的双向子集关系，在第 2 组收紧。`pnpm run check:arch` 和 `pnpm run check:arch -- --report` 均通过。
+- `pnpm run build && node --test <受影响的测试>` 239 条通过，含五种身体状态与 `/anim` 的准入、投喂事实及设置页阶段标签契约。
+- `pnpm run build && pnpm run test:behavior-list` 通过 11 条索引检查和 119 条行为测试，含 `2B4-01` 和第 1 批 13 条。
+- `pnpm run verify` 的环境、类型、架构和构建通过，Node 测试 1671 条通过、1 条失败。Memory P2 启动服务后调用 `/bin/ps` 被沙箱拒绝（`EPERM`），单跑复现，后续断言环境原因未跑。
+- 独立补跑 Python Memory 22 条、`pnpm run check:release`、`pnpm pack` 和 `pnpm run check:package`，均通过。
+
 ## 审查结论
 
 ### 第 1 批（Codex 独立审查 + Claude 核实，基于 `724cbb7`）
