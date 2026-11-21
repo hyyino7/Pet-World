@@ -1309,6 +1309,137 @@
       "name": "4 同名重挂后旧迎接回调不能改记录、镜像或通知",
       "l1Stage": "阶段 2",
       "families": []
+    },
+    {
+      "id": "2B1-01",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/concepts-actions.test.mjs",
+      "name": "照料在设置、Life、Body 和 World 保留准入及错误顺序",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-02",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/concepts-actions.test.mjs",
+      "name": "角色房间动作固定工具枚举、留言截断与角色操作拒绝",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-03",
+      "categories": [
+        "同请求重试不重复生效"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/concepts-actions.test.mjs",
+      "name": "主人 Room RPC 保留十五个动作、事实类型及请求重试",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-04",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/concepts-plan.test.mjs",
+      "name": "计划工具、Life 和 Body 固定计划种类、动作和报错顺序",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-05",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/concepts-plan.test.mjs",
+      "name": "菜园九种与经济三种计划操作通过工具并按执行回执完成",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-06",
+      "categories": [
+        "阅读必须有真实文本"
+      ],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-phases.test.mjs",
+      "name": "阅读的待取文、已取文和确认终态投影到身体与播放",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-07",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-phases.test.mjs",
+      "name": "身体快照投影运行中执行阶段及独立身体阶段",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-08",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-desktop.test.mjs",
+      "name": "Desktop 动画入口按共享身体状态准入吃饭和睡醒素材",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-09",
+      "categories": [
+        "同请求重试不重复生效",
+        "睡眠中投喂的终态"
+      ],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-facts.test.mjs",
+      "name": "钱包五类事实及库存餐食事实随原请求只写一次",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-10",
+      "categories": [
+        "输入持久化先于确认"
+      ],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-facts.test.mjs",
+      "name": "新旧事实经 Core、World、原生提示词和 Life 引用读出",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-11",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-facts.test.mjs",
+      "name": "Python 只把匹配领域、前缀及来源的记录识别为事实",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-12",
+      "categories": [
+        "输入持久化先于确认",
+        "送达与记忆召回分开"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/concepts-flow.test.mjs",
+      "name": "设置页喂食经原生日志确认后跨会话召回并跨重启保留",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-13",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/families.test.mjs",
+      "name": "Life 原生睡眠计划从移动到睡眠并跨重启保留完成回执",
+      "l1Stage": "阶段 2",
+      "families": [
+        "计划推进与完成契约"
+      ]
     }
   ]
 }

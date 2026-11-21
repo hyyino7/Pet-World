@@ -6,7 +6,7 @@ import {emptyHomeState} from '#feiyu-home';
 import {createGarden} from '#feiyu-garden';
 import {setTimeout as pause} from 'node:timers/promises';
 import {Context} from '@deepseek-ai/cordis';
-import {corePlugin,behaviorPlugin,economyPlugin,lifePlugin,voicePlugin,channelsPlugin,memoryPlugin,roomPlugin,desktopPlugin,emotionPlugin,guestPreset,resolveCompanionHome} from '../../dist/tests/behavior-list/entries.js';
+import {corePlugin,consolePlugin,behaviorPlugin,economyPlugin,lifePlugin,voicePlugin,channelsPlugin,memoryPlugin,roomPlugin,desktopPlugin,platformPlugin,emotionPlugin,guestPreset,resolveCompanionHome} from '../../dist/tests/behavior-list/entries.js';
 import {policyHost} from './policy-host.mjs';
 import {say} from '../../scripts/checks/lib/native-conversation-scenarios.mjs';
 export const value = result => {assert.equal(result.ok,true,JSON.stringify(result));return result.value;};
@@ -18,13 +18,13 @@ export async function until(check, label='边界操作完成', attempts=300) {
 
 // 假的仅为 DSH 服务、文件工具、模型响应；所有插件从 apply 入口安装。
 // 原生日志写入临时目录；重新启动插件时只恢复这些磁盘日志。
-export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=true,recognizer,memory=false,channels=false,search,policy=false,room=false,desktop=false,emotion=false,intervals=false,limits,configure}={}) {
+export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=true,recognizer,memory=false,channels=false,search,policy=false,room=false,desktop=false,platform=false,emotion=false,console=false,intervals=false,limits,configure,seedGarden}={}) {
   t.mock.timers.enable({apis:intervals?['Date','setInterval']:['Date'],now:Date.parse(now)});
   const root=realpathSync(mkdtempSync(join(tmpdir(),'behavior-list-'))),repo=join(root,'workspace');mkdirSync(repo);
   const config={dataDir:join(root,'core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fixture',character:'Synthetic companion'};
   if(memory)config.memory={python:resolve('.venv/bin/python'),dataDir:join(repo,'.chatpet/data/memory')};
   let services,handlers,effects,agents,ctx,sections,contexts,tools,guards,dsh,guest,routes,flushAllowed=true,sequence=0;
-  const warnings=[],sent=[],flushes=[],cancellations=[],archives=[];
+  const warnings=[],sent=[],flushes=[],flushAttempts=[],cancellations=[],archives=[];
   const logFile=id=>join(root,`native-${id}.json`);
   const workspace={id:'world',path:repo,sessionIds:['home','owner-b','guest'],async attachSession(id){if(!this.sessionIds.includes(id))this.sessionIds.push(id);}};
   const external=new Map();
@@ -88,9 +88,10 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
       on(name,fn,options){const rows=handlers.get(name)??[];options?.prepend?rows.unshift(fn):rows.push(fn);handlers.set(name,rows);return()=>{const i=rows.indexOf(fn);if(i>=0)rows.splice(i,1);};},
       emit(name,...args){void emit(name,...args).catch(error=>warnings.push(error));},logger,
       effect(factory){const stop=factory();if(typeof stop==='function')effects.push(stop);return()=>{};},
-      inject(names,apply){if(names.every(name=>services.has(name)))apply(ctx);},
+      inject(names,apply){if(names.every(name=>services.has(name)))apply(ctx);return {dispose(){}};},
       agents:{get:id=>agents.get(id),list:()=>[...agents.values()]},
       sessions:{get:id=>agents.get(id)?.session,async flush(session){
+        flushAttempts.push(session.id);
         if(!flushAllowed)return false;
         writeFileSync(logFile(session.id),JSON.stringify(session.snapshotEvents()));flushes.push(session.id);return true;}},
       tools:{register(tool,options){tools.set(tool.name,{tool,options});return()=>tools.delete(tool.name);},
@@ -165,6 +166,7 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
       const home=Object.assign(emptyHomeState(Date.now()),{room:'living',spot:'sofa',asleep:false,sleepPending:false,route:null,dwell:null,command:null,freeTarget:null,reactionUntil:0,lastInteractionAt:0,eventLog:[],needs:{hunger:.8,thirst:.2,energy:.8,bladder:.1,pain:0}});
       writeFileSync(join(bodyDirectory,'home.json'),JSON.stringify(home));
       const garden=createGarden(Date.now());garden.care.autoEnabled=false;
+      seedGarden?.(garden);
       writeFileSync(join(bodyDirectory,'garden.json'),JSON.stringify(garden));
     }
     behaviorPlugin.apply(ctx);
@@ -177,8 +179,11 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
       return ()=>routes.delete(route.path);
     }};
     ctx.sessionController=services.get('sessionController');
+    if(console || platform)ctx.connection={browserPeer:{principal:{kind:'owner'},signal:signal()},fetch:ctx.webServer,broadcast(){}};
+    if(console)consolePlugin.apply(ctx);
     if(search)services.set('web',{search});
-    if(desktop)desktopPlugin.apply(ctx);
+    if(desktop || platform)desktopPlugin.apply(ctx);
+    if(platform)platformPlugin.apply(ctx);
     if(room){ctx.workspaceRegistry=registry;roomPlugin.apply(ctx);}
     if(emotion)emotionPlugin.apply(ctx);
     if(dsh)guestPreset.apply(guest.ctx);
@@ -278,10 +283,23 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
     await emit('tools/result',exec);
     if(error)throw error;return typeof output==='string'&&output.startsWith('{')?JSON.parse(output):output;
   }
-  return {root,repo,config,workspace,warnings,sent,flushes,cancellations,archives,registry,bind,begin,step,end,tool,prepareTool,emit,middleware,
+  async function settings(endpoint,input,requestId=`settings-${++sequence}`){
+    const path=`/api/chatpetSettings/${endpoint}`, rpcId=`rpc-${++sequence}`;
+    const response=await routes.get(path).fetch(new Request(`http://fixture.invalid${path}`,{
+      method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({type:'client-request',rpcId,method:`chatpetSettings/${endpoint}`,payload:{requestId,input}}),
+    }));
+    assert.equal(response.status,200);
+    const envelope=await response.json();
+    assert.equal(envelope.type,'server-response');assert.equal(envelope.rpcId,rpcId);
+    return envelope.result;
+  }
+  return {root,repo,config,workspace,warnings,sent,flushes,flushAttempts,cancellations,archives,registry,bind,begin,step,end,tool,prepareTool,emit,middleware,
+    settings,
     home:()=>resolveCompanionHome(ctx,service('petCore')),
     create:async sessionId=>(await service('sessionController').create({workspaceId:'world',sessionId})).sessionId,
     schemas:({agent,toolSet})=>ctx.tools.schemas(agent,toolSet).map(schema=>schema.name),
+    toolSchema:({agent,toolSet},name)=>ctx.tools.schemas(agent,toolSet).find(schema=>schema.name===name),
     registerTool:(...args)=>dsh.register(...args),
     service,route:path=>routes.get(path),get host(){return service('petCore');},get body(){return service('petBehavior');},get economy(){return service('petEconomy');},get life(){return service('petLife');},
     agent:id=>agentInfo.get(id).agent,agents:()=>[...agents.values()],logFile,
