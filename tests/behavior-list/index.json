@@ -1387,6 +1387,50 @@
       "families": []
     },
     {
+      "id": "2B1-09",
+      "categories": [
+        "同请求重试不重复生效",
+        "睡眠中投喂的终态"
+      ],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-facts.test.mjs",
+      "name": "钱包五类事实及库存餐食事实随原请求只写一次",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-10",
+      "categories": [
+        "输入持久化先于确认"
+      ],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-facts.test.mjs",
+      "name": "新旧事实经 Core、World、原生提示词和 Life 引用读出",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-11",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-facts.test.mjs",
+      "name": "Python 只把匹配领域、前缀及来源的记录识别为事实",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-12",
+      "categories": [
+        "输入持久化先于确认",
+        "送达与记忆召回分开"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/concepts-flow.test.mjs",
+      "name": "设置页喂食经原生日志确认后跨会话召回并跨重启保留",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
       "id": "2B1-13",
       "categories": [],
       "level": "L1",
