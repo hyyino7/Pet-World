@@ -265,9 +265,9 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 每个概念的完整内容（所有定义处和转换点、同名不同义、拥有者）在用到它的阶段之前补进本节：第一批（动作、行为、活动、阶段、命令、事实）见 5.6.1；表情与贴纸、情绪、槽位与素材在阶段 3 开始前补。交付时间见 [product.md](product.md) 的「按需交付的表格」。
 
-#### 5.6.1 第一批概念细表（阶段 2a 前）
+#### 5.6.1 第一批概念细表
 
-行号已按 2a 收尾时的代码重核。R8 报告用来定位重复集合，逐份按源码核对。「词表重复基线」里的几组都在细表里列出定义处：六种照料动作、十种角色动作、五种计划身体动作已由 2b 第 2 批收成一张基础表；七种计划 kind 4 份、阅读状态 4 份待 2b 第 3 批收拢。
+第一批（动作、行为、活动、阶段、命令、事实）在阶段 2b 已收成各自一份声明，行号按 2b 收尾时的代码。声明大多写成「值为对象的表 + 派生数组和守卫」：表是唯一定义处，派生出的类型让漏改在编译时失败。R8 扫描器只认数组字面量和值全是字符串的对象，看不见值为对象或布尔的表，所以这些表和仍留着的副本（界面标签表、呈现表）之间的重叠不在 R8 基线里；份数以 [product.md](product.md)「词表重复基线」的人工核对为准。
 
 ##### 动作 `action`
 
@@ -284,50 +284,49 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 | 定义处 | 取值 | 转换点及损失 | 同名不同义 |
 | --- | --- | --- | --- |
-| `living/body/room.ts:89-90,105-115`、`vendor/feiyu-room-template/home-state.js:489,1704-1722` | 上游 JS 状态，本地 `state:any`。含路线、停留、睡眠、身体需要和 `kind`。 | 上游 `homeView` 将持久状态投影为当前画面，位置按当前时间求值。Body 公布的 `home` 保留 `any`，另提供原精度 `needs`（`living/body/plugin.ts:310-319`、`contracts/behavior.ts:40-45`）。 | `her.kind` 描述此刻身体状态，`PlannedActivity.kind` 描述要执行的操作类别（`living/body/plugin.ts:210-230`、`contracts/behavior.ts:49-60`）。 |
-| `BehaviorActivity`、`BehaviorSnapshot`（`contracts/behavior.ts:23-45`）及忙碌判定（`living/body/room.ts:224-234,568-589`、`desktop/platform/plugin.ts:679-690`） | `activityId`、开放 `kind`、封闭 `phase`，附呈现和阅读提示。忙碌及是否能接新工作由调用路径判定。 | `activity()` 从回执、路线、睡眠及反应生成语义快照。`behaviorPresentation` 和 `resolveActivityPlayback` 各再分类。原操作原因、完整身体状态及接单守卫不随单个呈现分类传出（`living/body/plugin.ts:210-235`、`living/body/presentation.ts:12-23`、`living/body/playback.ts:90-105,158-199`）。 | 视觉片段的 `playing/ended` 属播放回执。身体忙碌另由执行和路线判定（`emotion/index.ts:48-52`、`living/body/room.ts:224-234,568-589`）。 |
+| `living/body/room.ts:89-90,105-115`、`vendor/feiyu-room-template/home-state.js:489,1704-1722` | 上游 JS 状态，本地 `state:any`。含路线、停留、睡眠、身体需要和 `kind`。 | 上游 `homeView` 将持久状态投影为当前画面，位置按当前时间求值。Body 公布的 `home` 保留 `any`，另提供原精度 `needs`（`BehaviorSnapshot.needs`，以 `BodyMetric` 为键）。 | `her.kind` 描述此刻身体状态，`PlannedActivity.kind` 描述要执行的操作类别。 |
+| `BehaviorActivity`（`contracts/behavior.ts:153`）及忙碌判定 `companionBusy`（`living/body/activity.ts:17`） | `activityId`、开放 `kind`、`BodyPhase`、`busy`，附呈现和阅读提示。 | 所有公开的 `behavior` 由 Body 的 `publicBehavior(her)` 一处组装（`living/body/plugin.ts:234-237`），快照、`roomState()`、`act`、`roomAction`、`garden` 回执的 `busy` 都用同一份画面里的 `her` 算（2B4-01 固定）。`behaviorPresentation` 和 `resolveActivityPlayback` 仍各自再分类（已知问题 4，阶段 3）。 | `busy` 只回答「能不能发起一次新投喂」：睡着、走路、或 `kind` 不在七项空闲白名单（`activity.ts:8`）里为真；正在吃饭时为真，但吃饭素材仍放行、不再投喂。它和呈现分类器的白名单不同，后者管画面选什么分类。「能否被打断」按动作而异，没有统一输出，留到阶段 3。 |
 
-**拥有者**沿用第二层。**统一方式**沿用第二层输出忙碌、可打断性和当前活动，上游 `any` 留在适配器。HEAD 仍由 Body 与 Desktop 各自解释原始状态，公开快照也仍带 `home:any`（5.6 总表、`contracts/behavior.ts:40-45`、`desktop/platform/plugin.ts:679-690`）。
+**拥有者**第二层。**统一方式**：第三层读 `behavior.busy`，不再解释原始 `her.kind` 判断忙碌（`desktop/platform/plugin.ts:682`）；上游 `any` 留在 Body 适配器里，公开快照仍带 `home:any`，第三层其余读取归阶段 3。
 
 ##### 活动 `activity`
 
 | 定义处 | 取值 | 转换点及损失 | 同名不同义 |
 | --- | --- | --- | --- |
-| `LifeStep`、`CurrentLifePlan`、`PlannedActivity`（`living/plan/plan.ts:11-24,30-56`、`contracts/behavior.ts:49-64`） | `activity` 是最多 80 字符的自然语言标签。步骤 `id` 为计划内短标识。`operationId` 为已派发操作标识（`living/plan/plan.ts:80-86,367-373`）。 | 派发合成 `life:<plan.id>:<step.id>`，把相对时长换为 `until` 和 `freezeOnPause`。Body 输入不再单列原 `durationMinutes`、计划目标、理由及游标（`living/plan/plan.ts:367-374,387-401`）。 | 活动标签只供描述，执行由 `kind` 及对应字段驱动（`living/plan/plan-tools.ts:85-122`）。 |
-| `PlannedExecution`、`BehaviorActivity`（`contracts/behavior.ts:80-96,23-33`），当前执行指针（`living/body/room.ts:350-359,633-637`） | Body 持有 `currentPlannedOperation`。公开身体快照字段是 `activityId`，可能取执行编号、菜园任务号、互动号、路线摘要、睡眠号或 `null`。 | Body 内部执行 → 公开回执，去掉原入参、指纹及内部时间/结算字段。公开回执 → `BehaviorActivity`，进一步舍弃回执状态、完成条件及原因（`living/body/room.ts:354-359`、`living/body/plugin.ts:210-230`）。 | `home.her.activity` 是画面展示文字，`BehaviorPresentation.activity` 取它或 `待机`。它与计划的 `activity` 同名，来源可以不同（`living/body/presentation.ts:11-19`）。 |
+| `LifeStep`、`CurrentLifePlan`（`living/plan/plan.ts`）、`PlannedActivity`（`contracts/behavior.ts:181`） | `activity` 是 `ActivityLabel`：最多 80 字符的自然语言标签。`operationId` 是 `OperationId`：已派发操作标识（`contracts/behavior.ts:118-122`）。 | 派发合成 `life:<plan.id>:<step.id>`，把相对时长换为 `until` 和 `freezeOnPause`。Body 输入不再单列原 `durationMinutes`、计划目标、理由及游标。 | 活动标签只供描述，执行由 `kind` 及对应字段驱动。 |
+| `PlannedExecution`（`contracts/behavior.ts:212`）、`BehaviorActivity.activityId`，内部执行指针 `currentPlannedOperation`（`living/body/room.ts`） | 公开字段 `activityId` 是 `CurrentActivityId`，可能取执行编号、菜园任务号、照料任务号、路线或睡眠摘要，或 `null`（`living/body/plugin.ts:209-230`）。 | Body 内部执行 → 公开回执，去掉原入参、指纹及内部时间/结算字段。公开回执 → `BehaviorActivity`，进一步舍弃回执状态、完成条件及原因。 | `home.her.activity` 是画面展示文字，`BehaviorPresentation.activity` 取它或 `待机`，与计划的 `activity` 同名、来源可以不同。 |
 
-**拥有者**沿用第二层。**统一方式**沿用 `PlannedActivity → PlannedExecution → BehaviorActivity` 和标签、执行编号、当前活动编号三种职责。5.6 的 `label / currentActivityId` 是职责名，HEAD 这条链路上的实际字段为 `activity / activityId`，内部另有 `currentPlannedOperation`（5.6 总表、`contracts/behavior.ts:23-28,49-52`、`living/body/room.ts:350-352`）。
+**拥有者**第二层。**统一方式**：三种职责用类型别名 `ActivityLabel / OperationId / CurrentActivityId` 标在字段上，序列化字段名仍是 `activity / operationId / activityId`，没有改名。
 
 ##### 阶段 `phase`
 
 | 定义处 | 取值 | 转换点及损失 | 同名不同义 |
 | --- | --- | --- | --- |
-| 身体 `BehaviorActivity.phase`（`contracts/behavior.ts:23-31`） | `idle / pending / moving / working / sleeping / completed` | 运行中计划只保留 `moving/working`，其余执行阶段归 `pending`。无运行中计划时，从路线、睡眠、等候、停留、反应及动作回执推导（`living/body/plugin.ts:210-230`）。 | 身体的 `completed` 是快照分类，不能单凭它判断计划或经济成功。 |
-| 执行 `PlannedExecution.phase/status`（`contracts/behavior.ts:80-95`）及计划 `PlanStatus`（`living/plan/plan.ts:9`） | 执行阶段 `pending / moving / working / waiting / completed`，执行状态 `running / paused / completed / cancelled / interrupted / failed`。计划状态 `active / paused / waiting / completed / cancelled`。 | Body 暂停写 `paused/waiting`，取消写 `cancelled/completed`。Life 把回执计入自身状态和游标，仍保存公开回执供查阅（`living/body/room.ts:847-854,873-879`、`living/plan/plan.ts:417-461`）。 | `waiting` 可以是仍在运行的执行阶段，也可以是计划自己的状态。执行 `phase:completed` 包含失败或取消终态（`living/body/room.ts:390-393,873-879`）。 |
+| 身体 `BodyPhase`（`contracts/behavior.ts:125`） | `idle / pending / moving / working / sleeping / completed` | 运行中计划经 `bodyPhaseOf`（`living/body/activity.ts:4`）投影：`moving / working` 照搬，`pending / waiting / completed` 都变成 `pending`。无运行中计划时，从路线、睡眠、等候、停留、反应及任务回执推导（`living/body/plugin.ts:209-230`）。 | 身体的 `completed` 来自 `task.completedAt`，计划、库存投喂和角色动作都会产生任务；不能单凭它判断计划或经济成功。 |
+| 执行 `ExecutionPhase / ExecutionStatus`（`contracts/behavior.ts:130-131`）及计划 `PlanStatus`（`living/plan/plan.ts`） | 执行阶段 `pending / moving / working / waiting / completed`，执行状态 `running / paused / completed / cancelled / interrupted / failed`。计划状态 `active / paused / waiting / completed / cancelled`。 | Body 暂停写 `paused/waiting`，取消写 `cancelled/completed`。Body 把原始身体或上游菜园状态投影成执行阶段的几处留在 `room.ts` 原处，只引用 `ExecutionPhase`。设置页的执行阶段标签由契约测试与 `ExecutionPhase` 对齐（`tests/life/life-execution-labels.test.mjs`）。 | `waiting` 可以是仍在运行的执行阶段，也可以是计划自己的状态。执行 `phase:completed` 包含失败或取消终态；终态以 `status` 为准，旧存档有 `running + completed`，菜园失败会写 `failed + waiting`。 |
 | `ActivityClip.mode`、`ActivityPlayback.phase`（`living/body/playback.ts:4-22`），工作区 `Binding.phase`（`core/workspace.ts:45`） | 播放 `loop / once / static`。播放描述另带身体阶段字符串。绑定 `ready / inactive`。 | 播放描述复制身体阶段并按片段次序、一次性动作和素材可用性选 `mode`。模式不携带业务完成信息。解绑写 `inactive`，公共状态另投影为 `unbound/pending/...`（`living/body/playback.ts:184-201`、`core/workspace.ts:142,435-437,464,585-603`）。 | `ActivityPlayback.phase` 和 clip `mode` 是两个字段。绑定阶段和前两套状态机独立。 |
 
-**拥有者**沿用第二层身体与执行、第三层播放、第一层绑定。**统一方式**沿用分别命名 `BodyPhase / ExecutionPhase / PlaybackMode / BindingPhase` 和显式有损转换。HEAD 的 clip 类型仍位于 `living/body/`，播放 `phase` 仍是裸字符串（5.6 总表和 5.7、`living/body/playback.ts:4-22`）。
+**拥有者**第二层身体与执行、第三层播放、第一层绑定。**统一方式**：`BodyPhase / ExecutionPhase` 已各自命名，有损转换集中在 `bodyPhaseOf`。`PlaybackMode / BindingPhase` 的命名和 clip 类型搬出第二层归阶段 3；clip 类型仍位于 `living/body/`，播放 `phase` 仍是裸字符串（`living/body/playback.ts:4-22`）。
 
 ##### 命令与请求
 
 | 定义处 | 取值 | 转换点及损失 | 同名不同义 |
 | --- | --- | --- | --- |
-| 七种计划 `kind`，4 份。`contracts/behavior.ts:51`、`living/plan/plan-tools.ts:85-122`、`living/plan/plan.ts:85`、`living/body/room.ts:597` | `hold / room / move / garden / body / economy / read` | 工具判别联合 → Life 草稿校验 → Body 执行校验。Life 只带各分支需要的字段，Body 再核验地点、真实操作及原编号（`living/plan/plan.ts:80-115,397-400`、`living/body/room.ts:596-624`）。 | `room` 是到目标后持续活动，`move` 是到达即结束，`hold` 是原地持续（`living/plan/plan-tools.ts:85-99`）。 |
-| 阅读状态，4 份。`living/economy/types.ts:67`、`living/body/room.ts:53,834`、`contracts/behavior.ts:31` | `unread / offered / confirmed`。存储行只含 `offered / confirmed`，无行时合成 `unread`（`living/economy/store.ts:351-363,383-387`）。 | 取文生成耐久 `receiptToken`，确认推进原内容版本的书签。Body 根据状态投影 `read/reading-wait`，不携带正文、token 或书签偏移（`living/economy/store.ts:356-382`、`living/body/room.ts:834-845`）。确认会同步完成执行并清掉阅读投影，公开快照从 `offered` 直接回到空闲；`living/body/room.ts:834-845` 和 `living/body/playback.ts:90-94` 里 `confirmed` 的分支，在公开路径上走不到（`living/body/room.ts:490-495`，2B1-06 固定）。 | `confirmed` 是原文字片段的回执，不表示读懂。`reading-wait` 是呈现类别（`living/plan/plugin.ts:583-606`、`living/body/room.ts:834-845`）。 |
-| 计划控制与经济操作。`living/plan/plan-tools.ts:137-139`、`living/plan/plugin.ts:608-615`、`living/plan/plan.ts:296-325`、`contracts/behavior.ts:59`、`living/economy/plugin.ts:233-274`、`room/plugin.ts:129-137` | 计划控制 `pause / resume / cancel`。计划经济 `buy / sell / consume`。主人经济 `buy / sell / grant / gift / importReading / feed`。Room 菜园另有 `state / visit / careNow / auto / till / plant / water / fertilize / harvest / sell / buySeed / buyCompost`。 | 计划经济按 `operationId` 调用购买、出售或库存食用。直接主人操作保留请求和来源，投喂转为稳定身体执行编号（`living/economy/plugin.ts:162-173,233-277`、`living/body/room.ts:417-465`）。 | `cancel` 可指持久计划、菜园作业或原生对话。`feed` 可指基础照料或库存餐食（`living/body/room.ts:873-879,1071-1081`、`living/plan/plugin.ts:386-398`、`living/economy/plugin.ts:264-272`）。 |
+| 七种计划 `kind`，1 份。`PLAN_KINDS` 表（`contracts/behavior.ts:57-65`）带 `target`（要指定房间位置）和 `executable`（依据真实回执结束、不接受时长）两项属性，派生 `PlanKind` 和守卫 `isPlanKind` | `hold / room / move / garden / body / economy / read` | 工具 schema 由 `Record<PlanKind, 分支>` 生成（`living/plan/plan-tools.ts:66-104`），注册结果与 2b 前逐字节相同；Life 草稿校验和 Body 执行校验各有一张 `Record<PlanKind, 校验函数>`（`living/plan/plan.ts:74`、`living/body/room.ts:78`），每一步只判断一次 kind，报错文案和先后不变。Life 用 `String(value.kind)` 宽松准入，数组形式的 kind 会被放行并跳过位置校验（2B1-04 固定）。 | `room` 是到目标后持续活动，`move` 是到达即结束，`hold` 是原地持续。 |
+| 阅读状态，1 份。`READING_STATES`（`contracts/behavior.ts:100`）派生 `ReadingState`；Economy 存储行用 `Exclude<ReadingState,'unread'>`（`living/economy/store.ts:362`） | `unread / offered / confirmed`。存储行只含 `offered / confirmed`，无行时合成 `unread`。 | 取文生成耐久 `receiptToken`，确认推进原内容版本的书签。Body 根据状态投影 `read/reading-wait`，不携带正文、token 或书签偏移。确认会同步完成执行并清掉阅读投影，公开快照从 `offered` 直接回到空闲；`confirmed` 的呈现分支在公开路径上走不到（2B1-06 固定）。 | `confirmed` 是原文字片段的回执，不表示读懂。`reading-wait` 是呈现类别。 |
+| 计划控制与经济操作。计划经济操作 `PLAN_ECONOMY_OPERATIONS`、计划菜园操作 `PLAN_GARDEN_OPERATIONS`（`contracts/behavior.ts:73-98`，菜园表记每个操作所属的 schema 分支和分支内序号）；计划控制在 `living/plan/plan-tools.ts`、`living/plan/plan.ts`；主人经济在 `living/economy/plugin.ts`；Room 菜园工具在 `room/plugin.ts` | 计划控制 `pause / resume / cancel`。计划经济 `buy / sell / consume`。主人经济 `buy / sell / grant / gift / importReading / feed`。Room 菜园另有 `state / visit / careNow / auto / till / plant / water / fertilize / harvest / sell / buySeed / buyCompost`。 | 计划经济按 `operationId` 调用购买、出售或库存食用。直接主人操作保留请求和来源，投喂转为稳定身体执行编号（`living/economy/plugin.ts:162-173,233-277`、`living/body/room.ts:417-465`）。 | `cancel` 可指持久计划、菜园作业或原生对话。`feed` 可指基础照料或库存餐食（`living/body/room.ts:873-879,1071-1081`、`living/plan/plugin.ts:386-398`、`living/economy/plugin.ts:264-272`）。 |
 | 请求身份。`core/authority.ts:9-29`、`console/settings.ts:74-85,100-102`、`room/plugin.ts:86-95,123-126`、`living/body/room.ts:1004-1012` | Core `RequestContext`、入口 `requestId`、领域 `operationId`、版本 `expectedRevision` 分别承担授权、去重、执行关联、并发控制。 | Core 从宿主授权能力签发请求上下文。Room 用绑定、入口、请求号生成去重键，Body 对同键核对输入和 actor 指纹，重复请求返回原事实（`core/authority.ts:12-28`、`room/plugin.ts:86-95`、`living/body/room.ts:1004-1012`）。Economy 重试则从 `requests.result` 返回首次事务的视图，不返回原事实；事实只在首次事务里写入（`living/economy/store.ts:182-187`，2B1-09 固定）。 | DSH `rpcId` 是会话投递去重键，和身体执行编号分开（`desktop/conversation.ts:171-182`、`room/chat.ts:164-172`）。 |
 
-**拥有者**沿用第二层拥有生活命令及执行请求。Core 另拥有授权上下文，Desktop/Room 另拥有入口投递身份。**统一方式**沿用每个命令集合一份、其余 schema 和入口校验从它派生（5.6 总表和 5.10、`core/authority.ts:9-29`）。
+**拥有者**第二层拥有生活命令及执行请求。Core 另拥有授权上下文，Desktop/Room 另拥有入口投递身份。**统一方式**：计划 kind、经济操作、菜园操作、阅读状态各一份，schema 和入口校验从它派生；计划控制 `pause / resume / cancel` 和 Room 菜园工具的 12 个操作（含 `state / auto / careNow` 等非计划操作）仍是各自入口的词表。PLAN_ECONOMY_OPERATIONS、READING_STATES 是布尔表，R8 看不见。
 
 ##### 事实 `CompanionFact`
 
 | 定义处 | 取值 | 转换点及损失 | 同名不同义 |
 | --- | --- | --- | --- |
-| `CompanionFact / CompanionFactActor / CompanionFactSource`（`contracts/interaction.ts:2-30`）及领域写入（`living/body/room.ts:462-465,1034-1042`、`living/economy/store.ts:199-210,239-271,321-332`） | `domain` 为 `body / economy`，`type:string`。actor 为 `owner / companion / system`，结果状态为 `completed / failed / unchanged`。Body 的 `type` 可直接取动作字，Economy 当前写 `purchase / sale / money-grant / item-gift / reading-import`。 | Body 和 Economy 各提交原事实，提供按 ID 查询和确认。Body 按请求指纹去重，Economy 事实随对应交易写入（`living/body/room.ts:1004-1012,1040-1042`、`living/economy/store.ts:199-227,239-271`）。 | `fact.type` 是已提交结果类别。一个睡眠事实可记录「已接受并正在前往床」，实际睡着另看身体状态（`living/body/room.ts:1037-1041`）。 |
-| 原生快照、事实信封、Memory 投影（`core/interaction-presentation.ts:4-34`、`core/native/conversation.ts:149-187,202-220`、`memory/provider.py:67-86`） | 快照带事实身份、领域、类型、时间、actor 和结果摘要。Life 信封另可携带完整结构化 `facts`。Memory 使用 `native-fact:` 的 system 证据及来源归属。 | `presentFact` 省略 `requestId`、数值 `before/after` 和版本。Core 的 Memory 投影以摘要为内容，保留时间、actor、领域及原事实 ID，省略 `type`、数值和操作编号。Python 核对 system 类型、领域、ID 前缀与 actor，不使用 `CompanionFact.type`（`core/interaction-presentation.ts:6-16`、`core/native/conversation.ts:202-220`、`memory/provider.py:67-86`）。Core `observeFacts` 不校验 `type`：缺 `type` 的事实照常接受，证据 ID 和带 `type` 时一样（`core/native/conversation.ts:205-209`，2B1-10 固定）。 | 提示词送达的确认、领域回执和 Memory 的长期经验是三个记录点。快照须匹配原样投影，原生日志成功 `flush` 后才能回写确认（`core/interaction-presentation.ts:19-35`、`core/interaction-context.ts:12-22`）。 |
+| 领域声明 `FACT_DOMAINS`、参与者 `FACT_ACTORS`（`contracts/interaction.ts:3-23`），派生 `FactDomain / BodyFactType / EconomyFactType`、`isFactDomain`、`factDomainOf` | `body` 的 `type` 是上游 `HOME_ACTIONS` 的 15 项（基础表 10 项加 `visit / go / place / sick / heal`，测试比对 vendor）；`economy` 是 `purchase / sale / money-grant / item-gift / reading-import`。actor 为 `owner / companion / system`。 | 读取类型 `CompanionFact` 按领域区分，`type` 是已知值或带标记的 `LegacyFactType`，旧的、未登记的 `type` 照常读出；写入类型 `NewCompanionFact` 只收声明值，Body 三处写入和 Economy `recordFact` 用它（`contracts/interaction.ts:50-59`）。Body 的事实标签表以 `BodyFactType` 为键，`sick / heal` 没有标签，摘要回落成动作字。 | `fact.type` 是已提交结果类别。一个睡眠事实可记录「已接受并正在前往床」，实际睡着另看身体状态。账本 `owner-grant` 和事实 `money-grant` 是两件事。 |
+| 原生快照、事实信封、Memory 投影（`core/interaction-presentation.ts`、`core/native/conversation.ts:202-220`、`memory/provider.py:67-86`） | 快照带事实身份、领域、类型、时间、actor 和结果摘要。Memory 使用 `native-fact:` 的 system 证据及来源归属。 | Core `observeFacts` 用 `isValidFactEnvelope`（`contracts/interaction.ts:61`）校验版本、ID、领域、actor、摘要和时间，不校验 `type`，缺 `type` 的事实照常接受（2B1-10 固定）。World 按 ID 读用 `factDomainOf`，Life 和提示词段按 `FACT_DOMAIN_NAMES` 取来源，Life 回读保留顺序、重复和无前缀编号。Python 不读事实 `type`；它的领域和 actor 元组由契约测试与 TS 声明双向比对（`tests/memory/fact-attribution-contract.test.mjs`，在 `test:memory` 里）。 | 提示词送达的确认、领域回执和 Memory 的长期经验是三个记录点。快照须匹配原样投影，原生日志成功 `flush` 后才能回写确认。 |
 
-**拥有者**沿用第二层的 Body/Economy 分别拥有原事实。当前第二层的提示词段（`living/prompt-context.ts:43-117`）和 Life 都有读出与确认路径，Memory 拥有自己的证据投影（`living/plan/plugin.ts:274-315`）。**统一方式**沿用 `domain` 与 `type` 关联、统一解码，并与 Python 识别边界对齐。Python 目前重复的是领域及 actor 判定，尚无领域 `type` 识别表（5.6 总表、`core/native/conversation.ts:202-220`、`memory/provider.py:67-86`、`tests/memory/memory_provider_test.py:42-69`）。
-
+**拥有者**：Body、Economy 各自拥有本领域的原事实和 `type` 集合（Body 的集合由上游动作决定），Memory 拥有自己的证据投影。**统一方式**：领域和类型一份声明，新写入收窄、旧数据宽松读。上游 Life 的 `FactRef` 领域是封闭的（`vendor/dsh-world/lib/life/types.d.ts:27`），新增领域要经 Life 的回读适配，见 5.10。
 
 ### 5.7 动作与行为
 
@@ -341,8 +340,8 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 **第二层拥有**：
 
-- **命令与执行。** `BodyAction` 是一份基础表；执行统一到 `PlannedActivity → PlannedExecution → BehaviorActivity`，明确 `label / operationId / currentActivityId`。「照料、计划、阅读」等各自的词表一份，工具 schema、入口校验、设置页白名单都从它派生。
-- **身体状态契约。** 一个函数集中完成「身体状态 → 业务结果」（忙不忙、能否被打断、当前活动）和有损的阶段转换；第三层只消费这些结果，不再各自解释原始 kind（现在 `desktop/platform/plugin.ts`、`room/assets.ts` 都在解释）。
+- **命令与执行。** `BodyAction` 是一份基础表（`contracts/behavior.ts:10`）；执行统一到 `PlannedActivity → PlannedExecution → BehaviorActivity`，`ActivityLabel / OperationId / CurrentActivityId` 三种职责用类型别名标明。照料、计划、阅读等各自的词表一份，工具 schema、入口校验、设置页白名单和按钮都从它派生。
+- **身体状态契约。** 2b 已落地「忙不忙、当前活动」和有损的阶段转换：`companionBusy`、`bodyPhaseOf`（`living/body/activity.ts`），所有公开回执的 `behavior.busy` 一处组装，Desktop 的吃饭守卫只读这个结果。「能否被打断」现在按动作而异、没有消费方，留到阶段 3 和第三层改读一起定；`room/assets.ts` 仍按 `playback.kind` 显示提示文字，归阶段 3。
 - **表现意图。** 语义，不含任何素材名：活动、阶段、情绪、是否独占。情绪与活动在这里合并，**合并规则只写一处**，取代现在 `living/body/presentation.ts` 和 `living/body/playback.ts` 里两套对同一情绪给出不同结果的分类器。
 - **语义许可表。** 「哪种活动允许哪些语义槽」写成声明式的表，取代 `animationSlotAllowed()` 里约 40 行 `if` 链。计划里的「呈现提示」（`presentationSlot`）仍由第二层接受，但取值是语义槽，不含文件名。
 
@@ -510,8 +509,8 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | 新增上下文段 | 在模块入口用 `registerWorldPrompt` 登记（缩小后不做段声明，5.9） | 无；顺序、可见性由登记处自己写 |
 | 新增设置项 | 一份字段声明（阶段 3，按收益再评估） | 页面控件、保存键集合、校验、实际消费的接线 |
 | 新增设置页操作 | 运维操作表的一条登记（阶段 3） | 路由清单、处理分支、客户端调用 |
-| 新增照料动作 | 第二层的 `BodyAction` 基础表（`contracts/behavior.ts:10`，2b 第 2 批已落地） | 主人入口、角色工具枚举、计划类型与校验、计划 schema、设置页白名单、按钮 |
-| 新增事实领域 | 一份事实领域声明（阶段 2b） | 类型、提示词投影、Life 读取、Python 侧识别清单 |
+| 新增照料动作 | 第二层的 `BodyAction` 基础表（`contracts/behavior.ts:10`），每个动作在照料、角色、计划、反馈各集合里记序号 | 主人入口、角色工具枚举、计划类型与校验、计划 schema、设置页白名单和按钮（`lifeView.careActions`）。动作的执行和事实标签仍在 Body 里写 |
+| 新增事实领域 | `contracts/interaction.ts` 的 `FACT_DOMAINS` | 读写类型、领域清单（Core 准入、World、Life、提示词段）。领域提供者要另写；Python 元组要跟着改，契约测试会失败提醒；上游 Life 的 `FactRef` 领域封闭、vendor 不能改，要经 Life 的回读适配 |
 
 重构前的基线和 M2 后的复测见 [product.md](product.md) 的「典型修改前后对比」。
 
