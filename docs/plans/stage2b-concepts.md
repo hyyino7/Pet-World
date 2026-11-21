@@ -246,9 +246,38 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 
 ### M 批
 
-- `scripts/arch/metrics.mjs` 复用架构扫描并统计跟踪的手写文件，提供文本和 JSON 输出。两项人工度量链接到 `docs/product.md` 的对应记录。
-- `package.json` 登记 `metrics` 命令，`docs/development.md` 说明用法。`tests/infrastructure/metrics.test.mjs` 在当前仓库对照架构报告，并验证超过 1500 行的生成文件被排除。
-- `pnpm run metrics` 和 `pnpm run metrics -- --json` 均通过，标准输出可解析为 JSON。快测 1 项通过、0 项失败。`pnpm run check:arch` 通过，规则和词表基线新增及消失均为 0。
-- 当前 37 个违规目标、R8 基线 1031 条、kind 287 点、action 105 点、手写超限 0 个。模块依赖以同口径复算，M2 为 60 条，2a 搬家后 46 条，2a 收尾和本次均为 40 条（生活模块合并后排除 6 条自环、8 条重复边，后续又移除 6 条边）；这段解释第 6 批写进 product.md 的 G5 表，命令只输出当前数。
+- 第 1 条已修，`docs/development.md` 用源码检出中的路径和章节名引用 G5，打包闭包检查通过。
+- 第 2 条已修，`scripts/arch/metrics.mjs` 逐字读取 G5 表第 6、7 项最新单元格并标「人工」，缺文件、表、行或记录时报出原因。
+- 第 3 条已修，按规则列违规目标、调用点和违规边。`scripts/arch/lib/counts.mjs` 与架构报告共用。
+- 第 4 条已修，kind/action 合计按文件去重。架构检查在默认、详细和违规夹具场景中的输出逐字节一致，退出码也相同。
+- 第 5 条已修，度量支持 `--root`，`tests/infrastructure/metrics.test.mjs` 用临时 Git 仓库验证手写阈值、生成和未跟踪文件排除、依赖去重、违规数和人工记录。分别将手写统计、违规数、依赖数置零，测试均能检出。
+- 三项建议一并落实。共用分组和去重逻辑，复用 `scan.mjs` 返回的模块集合，R8 分列重复/子集关系与裸 `string` 字段，测试覆盖依赖和人工记录。
+- `pnpm run metrics` 和 `pnpm run metrics -- --json` 通过，度量快测 2 项通过、0 项失败。`pnpm run check:arch` 和独立归档的 `pnpm run check:package <归档>` 通过，两份架构基线的新增及消失均为 0。
+- `pnpm run verify` 构建成功，Node 测试 1651 项通过、1 项失败。沙箱拒绝 `tests/memory/memory-process.test.mjs:81` 调用 `/bin/ps`（`EPERM`），单独重跑复现。单跑 Python Memory 测试 22 项全部通过，`pnpm run check:release` 通过。
+- 用本次构建产物运行 `pnpm run test:behavior-list`，104 条全部通过。
+- 当前 37 个违规目标、R8 基线 1031 条、kind 287 点、action 105 点，合计 392 点 / 47 文件，手写超限 0 个。模块依赖以同口径复算，M2 为 60 条，2a 搬家后 46 条，2a 收尾和本次均为 40 条。生活模块合并后排除 6 条自环、8 条重复边，`aed7f27` 又移除 4 条边，`6a76e50` 再移除 2 条。第 6 批将复算结果写进 product.md 的 G5 表。
 
 ## 审查结论
+
+### M 批（Codex 独立审查 + Claude 核实，基于 `488d682`）
+
+已核实没问题的：
+- G5 第 4、5 项口径一致。手写超限文件 0 个，模块依赖 40 条（有向去重，排除自环和未知端点）。
+- 40 和 60 的差异解释成立：在 `d58ffc8` 上用同一个脚本复算正好是 60；`27e9232`（2a-3a 搬家）把三个生活模块并成 `living`，正好去掉 6 条自环、8 条重复边，变成 46；之后 `aed7f27`（2a-3c）去掉 4 条、`6a76e50`（2a-3d）去掉 2 条，变成 40。执行结果里的「后续又移除 6 条边」可以补上这两个提交号。
+- 脚本里没有写死的历史说明。
+- 规则 37 条、R8 1031 条、kind 287 点、action 105 点，和 `check:arch -- --report` 一致。
+- `pnpm run build && pnpm run test:behavior-list` 104 条全过。
+
+**必须修**
+
+1. **`pnpm run verify` 失败**：`Missing packaged dependency docs/development.md -> product.md`。`docs/development.md` 会进安装包，而 `docs/product.md` 不进，这次在 `docs/development.md:147` 加的相对链接触发了包检查。`6edef28` 修过同一个问题。改成同文件第 139 行的写法：写「源码检出中 `docs/product.md`「G5 手工度量」」，不用链接。
+2. **人工项没有列出最新记录**（`scripts/arch/metrics.mjs:54-57`）。方案和拍板点 11 要求「列出 product.md 里最新一列并标「人工」」，现在只输出「人工」和锚点。要从 `docs/product.md` 的 G5 表里，读出第 6、7 项最新一列的原文，原样输出，保留「人工」标签，不重新计算。读不到表或行时，明确报出读不到，不要静默留空。
+3. **G5 第 1 项只输出了违规目标数**（`metrics.mjs:35-36,66`）。G5 表的口径是按规则分别给「目标 / 调用点 / 违规边」三个数（`docs/product.md:136`）。要按规则输出这三个数，口径和 `check:arch -- --report`（`scripts/arch/check.mjs:8-13`）一致。
+4. **G5 第 3 项缺少 kind、action 合并后的去重汇总**（`metrics.mjs:38-45`）。product.md 记的是「392 点 / 47 文件」（重叠文件只计一次），命令只给分项 43 和 13 个文件，直接相加会得到 56。要补上合计的点数和去重文件数。
+5. **测试把当前仓库里某个生成文件的大小变成了门禁条件**（`tests/infrastructure/metrics.test.mjs:31`）。`verify` 会自动收集这个测试；将来 `animation-map.ts` 合法地缩短、改名或拆分时，门禁会失败，这和「只报告，不进门禁」相冲突。改用合成夹具验证排除逻辑：一个临时 git 仓库，放受跟踪的 1500 行和 1501 行手写文件、一个超限的生成文件、一个未跟踪的文件。脚本需要能接受根目录参数。
+
+**建议修（不影响合并）**
+
+- 第 3、4 条的分组和去重逻辑，抽到 `scripts/arch/lib/` 里，由 `check.mjs --report` 和 `metrics.mjs` 共用。测试就不用再按整行中文去反解析报告（`metrics.test.mjs:16`），两边的口径也不会分叉。另外，模块集合可以直接用扫描结果，不必再读一次 `layers.json`（`metrics.mjs:32`）。
+- R8 总数里，重复关系和裸 `string` 字段分开输出（扫描结果里有 `bare`）。G5 第 2 项的口径本来就分这两类（`docs/product.md:138`）。
+- 测试补上依赖去重和人工记录的断言。现在把手写统计、违规数、依赖数都清空，测试仍然能过。
