@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {withLivingCaller, type RecordCommandEffect} from '../index.js';
 import { createLifeStore, LIFE_STATE_MAX_BYTES, type LifeStore } from '#dsh-world/life/lifeStore';
 import type { CompanionBehavior } from '../body/plugin.js';
-import { PlannedAdmissionWaitError, type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
+import { isPlanBodyAction, PlannedAdmissionWaitError, type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
 import { requirePresentationSlot } from '../body/playback.js';
 import {gardenReceiptText} from '../body/garden-receipt.js';
 
@@ -92,7 +92,7 @@ function parsePlan(raw: unknown, legacy: boolean): PlanDraft {
       step.garden = structuredClone(value.garden);
     }
     if(value.kind==='body') {
-      check(['sleep','wake','water','feed','play'].includes(String(value.action)),'Unsupported bodily activity');
+      check(isPlanBodyAction(String(value.action)),'Unsupported bodily activity');
       step.action=value.action as LifeStep['action'];
     }
     if(value.kind==='economy') {

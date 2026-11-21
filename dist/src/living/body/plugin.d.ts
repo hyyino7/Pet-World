@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../../core/index.js';
-import type { BehaviorChange, BehaviorSnapshot, PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
+import { type BehaviorChange, type BehaviorSnapshot, type PlannedActivity, type PlannedExecution } from '../../contracts/behavior.js';
 import { CompanionRoom } from './room.js';
 import type { CompanionFactSource } from '../../contracts/interaction.js';
 import type { WorldCommands } from '../../contracts/living.js';

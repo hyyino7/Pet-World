@@ -10,7 +10,7 @@ import { applyRoomAction, normalizeRoomState, roomView } from '#feiyu-room/room-
 import type { CompanionEmotion } from '../../emotion/plugin.js';
 import { randomUUID } from 'node:crypto';
 import { initialBodyState } from './initial-state.js';
-import type { PlannedActivity, PlannedExecution, BehaviorAnimationContext } from '../../contracts/behavior.js';
+import { FEEDBACK_ACTIONS, ROLE_ACTIONS, isPlanBodyAction, type PlannedActivity, type PlannedExecution, type BehaviorAnimationContext } from '../../contracts/behavior.js';
 import { PlannedAdmissionWaitError, type PlannedAdmissionWait } from '../../contracts/behavior.js';
 import { requirePresentationSlot, animationSlotAllowed } from './playback.js';
 import { canonical, digest } from '../../core/storage.js';
@@ -82,7 +82,8 @@ function record(input: unknown): Record<string, unknown> {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw Error('动作格式无效');
   return input as Record<string, unknown>;
 }
-const companionActions = new Set(['command', 'pet', 'poke', 'feed', 'water', 'play', 'talk', 'sleep', 'wake', 'lamp']);
+const companionActions = new Set<string>(ROLE_ACTIONS);
+const feedbackActions: readonly string[] = FEEDBACK_ACTIONS;
 
 /** All callers enter through CompanionBehavior's serialized workspace binding.
  * The caretaker checkpoints motion and receipt-bearing garden jobs itself. */
@@ -608,7 +609,7 @@ export class CompanionRoom {
     if (['room','move'].includes(input.kind) && (typeof input.room !== 'string' || typeof input.spot !== 'string' || !HOME_LAYOUT.spots[input.room]?.[input.spot])) throw Error('计划中的房间位置不存在');
     if (input.kind === 'hold' && (input.room !== undefined || input.spot !== undefined)) throw Error('原地活动不能指定移动目标');
     if (input.kind === 'garden' && (!input.garden || !gardenActions.has(String(input.garden.type)))) throw Error('菜园计划须指定一项明确操作');
-    if (input.kind === 'body' && !['sleep','wake','water','feed','play'].includes(input.action ?? '')) throw Error('身体计划须指定已有的身体动作');
+    if (input.kind === 'body' && !isPlanBodyAction(input.action)) throw Error('身体计划须指定已有的身体动作');
     if(input.kind==='economy') {
       const transaction=input.economy;
       if(!transaction || !['buy','sell','consume'].includes(transaction.type) || typeof transaction.itemId!=='string' || !transaction.itemId.trim()
@@ -818,7 +819,7 @@ export class CompanionRoom {
         for(let index=candidates.length-1;index>=0;index--) {
           const fact=candidates[index]?.fact;
           if(fact?.domain!=='body' || fact.actor?.kind!=='owner' || fact.result?.status!=='completed'
-            || !['pet','poke','water','feed','play','talk'].includes(fact.type)
+            || !feedbackActions.includes(fact.type)
             || typeof fact.id!=='string' || Date.parse(fact.occurredAt)!==at)continue;
           const duration=fact.type==='pet'||fact.type==='poke'?HOME_TOUCH_REACTION_MS[fact.type]:Infinity;
           const feedbackUntil=Math.min(until,at+duration);

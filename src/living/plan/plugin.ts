@@ -21,7 +21,7 @@ import { PersistentLifePlan, expiredDispatchDeadline, parsePlanDraft, type Curre
 import { registerPlanTools } from './plan-tools.js';
 import {presentFacts} from '../../core/interaction-presentation.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
-import type { PlannedExecution } from '../../contracts/behavior.js';
+import { isCareAction, type PlannedExecution } from '../../contracts/behavior.js';
 import type { WorldCommands } from '../../contracts/living.js';
 import {integer, reject, text, unavailable} from '../../core/storage.js';
 import { CONTRACT_VERSION } from '../../contracts/version.js';
@@ -46,7 +46,6 @@ interface Native {
 }
 interface Bound { id: string; path: string; directory: string; library: CompanionRecordLibrary; plan: PersistentLifePlan;
   scope: HomeBinding; home: ReturnType<typeof createHomeStore> }
-const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'] as const;
 
 /** The upstream fact layer is the only state writer. World owns scheduling,
  * journal and native home recovery; Core owns every model step and Memory. */
@@ -654,7 +653,7 @@ export class CompanionLife {
     }, {finishOnClose: !enabled});
   }
   act(workspaceId: string, action: string, requestId?:string, channel='settings') {
-    if (!actions.includes(action as typeof actions[number])) return Promise.reject(Error('未知的生活动作'));
+    if (!isCareAction(action)) return Promise.reject(Error('未知的生活动作'));
     return this.forwardToBody(body=>body.act(workspaceId,action,requestId,channel));
   }
   private behavior() {

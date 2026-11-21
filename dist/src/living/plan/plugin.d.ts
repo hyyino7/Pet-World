@@ -5,7 +5,7 @@ import { type LifePreferences } from './library.js';
 import type { RecordOperation } from '../../core/records.js';
 import { type CurrentLifePlan } from './plan.js';
 import type { CompanionFact } from '../../contracts/interaction.js';
-import type { PlannedExecution } from '../../contracts/behavior.js';
+import { type PlannedExecution } from '../../contracts/behavior.js';
 import type { WorldCommands } from '../../contracts/living.js';
 import { type GardenClock } from '../economy/garden-clock.js';
 import { LivingView, type CommandAdmission, type LivingPorts } from '../index.js';

@@ -1,4 +1,95 @@
 import type { CompanionFactActor } from './interaction.js';
+interface ActionMembership {
+    care?: {
+        order: number;
+        label: string;
+    };
+    role?: number;
+    plan?: number;
+    feedback?: true;
+}
+export declare const BODY_ACTIONS: {
+    readonly command: {
+        readonly role: 1;
+    };
+    readonly pet: {
+        readonly role: 2;
+        readonly care: {
+            readonly order: 3;
+            readonly label: "摸摸头";
+        };
+        readonly feedback: true;
+    };
+    readonly poke: {
+        readonly role: 3;
+        readonly feedback: true;
+    };
+    readonly feed: {
+        readonly role: 4;
+        readonly care: {
+            readonly order: 1;
+            readonly label: "免费基础餐食";
+        };
+        readonly plan: 4;
+        readonly feedback: true;
+    };
+    readonly water: {
+        readonly role: 5;
+        readonly care: {
+            readonly order: 2;
+            readonly label: "倒杯水";
+        };
+        readonly plan: 3;
+        readonly feedback: true;
+    };
+    readonly play: {
+        readonly role: 6;
+        readonly care: {
+            readonly order: 4;
+            readonly label: "一起玩";
+        };
+        readonly plan: 5;
+        readonly feedback: true;
+    };
+    readonly talk: {
+        readonly role: 7;
+        readonly feedback: true;
+    };
+    readonly sleep: {
+        readonly role: 8;
+        readonly care: {
+            readonly order: 5;
+            readonly label: "去睡觉";
+        };
+        readonly plan: 1;
+    };
+    readonly wake: {
+        readonly role: 9;
+        readonly care: {
+            readonly order: 6;
+            readonly label: "叫醒";
+        };
+        readonly plan: 2;
+    };
+    readonly lamp: {
+        readonly role: 10;
+    };
+};
+export type BodyAction = keyof typeof BODY_ACTIONS;
+type ActionIn<Group extends keyof ActionMembership> = {
+    [Action in BodyAction]: Group extends keyof (typeof BODY_ACTIONS)[Action] ? Action : never;
+}[BodyAction];
+export type CareAction = ActionIn<'care'>;
+export type RoleAction = ActionIn<'role'>;
+export type PlanBodyAction = ActionIn<'plan'>;
+export type FeedbackAction = ActionIn<'feedback'>;
+export declare const BODY_ACTION_NAMES: readonly BodyAction[];
+export declare const CARE_ACTIONS: readonly ActionIn<"care">[];
+export declare const ROLE_ACTIONS: readonly ActionIn<"role">[];
+export declare const PLAN_BODY_ACTIONS: readonly ActionIn<"plan">[];
+export declare const FEEDBACK_ACTIONS: readonly ActionIn<"feedback">[];
+export declare function isCareAction(action: unknown): action is CareAction;
+export declare function isPlanBodyAction(action: unknown): action is PlanBodyAction;
 /** Read-only media hints grounded in the current accepted operation and facts. */
 export interface BehaviorAnimationContext {
     slotId?: string;
@@ -76,7 +167,7 @@ export interface PlannedActivity {
     room?: string;
     spot?: string;
     garden?: Record<string, unknown>;
-    action?: 'sleep' | 'wake' | 'water' | 'feed' | 'play';
+    action?: PlanBodyAction;
     economy?: {
         type: 'buy' | 'sell' | 'consume';
         itemId: string;
@@ -120,3 +211,4 @@ export interface PlannedExecution {
     /** A temporary owner interaction retains this accepted operation for safe return. */
     resumeAfterInteraction?: boolean;
 }
+export {};

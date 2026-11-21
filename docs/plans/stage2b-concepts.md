@@ -285,6 +285,20 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - 用本次构建产物运行 `pnpm run test:behavior-list`，104 条全部通过。
 - 当前 37 个违规目标、R8 基线 1031 条、kind 287 点、action 105 点，合计 392 点 / 47 文件，手写超限 0 个。模块依赖以同口径复算，M2 为 60 条，2a 搬家后 46 条，2a 收尾和本次均为 40 条。生活模块合并后排除 6 条自环、8 条重复边，`aed7f27` 又移除 4 条边，`6a76e50` 再移除 2 条。第 6 批将复算结果写进 product.md 的 G5 表。
 
+### 第 2 批
+
+- `src/contracts/{behavior,living}.ts` 由带序号的动作基础表派生五组类型和数组。Body、Life、Room 和计划工具共用准入或枚举，Desktop 的入口子集加类型约束。反馈按原条件投射已完成的主人互动。
+- `src/console/{settings.ts,client.js}` 由 `lifeView.careActions` 派生照料按钮，构建重生成 `src/desktop/platform/client.js` 和受影响的 `dist/src` 产物。
+- 新增序号连续性测试、六种主人互动的反馈回归，以及设置页六个按钮经真实 RPC 执行的 `2B2-01`。第 1 批唯一的测试改动是 `2B1-03` 将 `lamp` 输入改为 `on:false`。
+- R8 kind 字符串判断由 287 点到 287 点，运行源码与扫描范围均为 43 文件。
+- R8 action 字符串判断由 105 点到 102 点，运行源码与扫描范围均为 13 文件。
+- `isCareAction` 把 World `care`、Body `act`、Life `act` 和设置页 `lifeAction` 的四处名单判断合成一处。第一组的前三处合并净减 2 点，第二组设置页接入再减 1 点。四个入口各自保留校验和报错顺序。
+- `isPlanBodyAction` 接替 Life `parsePlan` 原有的 1 点，原 Body 的 `??` 表达式未被计点，计划侧净变化 0。
+- 规则基线 37 条，新增和消失各 0。词表基线 1031 → 921 → 915，两组分别收紧 110、6 条，新增均为 0。收紧后 `pnpm run check:arch` 和 `pnpm run check:arch -- --report` 均通过。
+- `pnpm run build && node --test <受影响的测试>` 通过 101 条。首次有 1 条因设置页测试夹具在跨 VM 刷新前读取，等刷新后复跑通过。
+- `pnpm run build && pnpm run test:behavior-list` 通过 11 条索引测试和 118 条行为测试，含第 1 批 13 条、新增 L2 和真实 Memory 召回。
+- `pnpm run verify` 的 Node 测试 1667 条通过、1 条失败。Memory P2 启动服务后调用 `/bin/ps` 被沙箱拒绝（`EPERM`），单跑复现，后续断言环境原因未跑。独立补跑 Python Memory 22 条、`check:release`、`pnpm pack` 和 `check:package` 均通过。
+
 ## 审查结论
 
 ### 第 1 批（Codex 独立审查 + Claude 核实，基于 `724cbb7`）
@@ -343,3 +357,24 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - 测试补上依赖去重和人工记录的断言。现在把手写统计、违规数、依赖数都清空，测试仍然能过。
 
 **复查（基于 `2f4ed19`）**：5 条必须修都已修好（`dd585d1` 把统计抽到 `scripts/arch/lib/counts.mjs`，`check:arch --report` 输出和改前逐字一致；`fc5a804` 修第 1–5 条和三条建议修；`2f4ed19` 补执行结果）。沙箱外 `pnpm run verify` 1652 条全过，包检查也过了；行为清单 104 条全过。剩下一条建议修：第 6 项最新一列写的是「未重算」，命令就原样输出它，看不到最后一次算出的 36/70。
+
+### 第 2 批（Codex 独立审查 + Claude 核实，基于 `0fd6fa7`）
+
+已核实没问题的：
+- 行为等价。四个照料入口的检查仍各自保留，报错码、文案和先后不变（设置页先查绑定和 Life，再报 `INVALID_ARGUMENT`；World 先查请求和绑定；Life「未知的生活动作」；Body「未知的身体动作」）。`startPlanned` 的 `isPlanBodyAction(input.action)` 与原 `includes(input.action ?? '')` 对 `undefined` 和非字符串的结果相同；`parsePlan` 保留 `String(...)` 宽松准入。
+- 三处顺序。设置页按钮 `feed / water / pet / play / sleep / wake`、`room_action` 枚举 `command … lamp`、计划身体枚举 `sleep / wake / water / feed / play` 与原来逐项一致；`BODY_ACTIONS` 写法与细则第 1 条一致。反馈集合与原来同为六项（只做成员判断，顺序无关）。
+- 第 1 批测试只改了 2B1-03 的 `lamp` 为 `on:false`，前后各有一条断言，现在能看出灯从开变关；其余 2B1 断言未动。
+- 点数。用仓库扫描器分别在 `89072ba` 和 `0fd6fa7` 上导出 action 判断点逐条比对：去掉的 5 点是设置页、World `care`、Body `act`、Life `act` 四处照料名单判断和 `parsePlan` 一处；新增 2 点是 `isCareAction`、`isPlanBodyAction` 守卫里各一处；Desktop 的 `['sleep','wake','pet']` 只是拆成变量，1 点持平。净 −3（105 → 102），kind 287 不变，属于把同一条规则收进一个定义处，不是靠改写法躲点。
+- 基线。按 `scripts/arch/lib/ratchet.mjs` 的条目身份（不含行号）比对词表基线：1031 → 915，新增 0、删除 116；规则基线 37，新增和消失各 0。
+- `lifeView.careActions` 由 `console/settings.ts` 在返回值上加，Life `snapshot()` 未改。沙箱外构建后工作区干净，`src/desktop/platform/client.js` 和 `dist/src` 与构建产物一致。
+- 新测试验证真实行为：`2B2-01` 从 `src/console/client.js` 取出真实 `LifePage`，经真实设置 RPC 渲染并逐个点击六个按钮，核对事实 `type` 和 `channel`，再用改写的 `careActions` 证明按钮跟随返回值而非写死；连跑 5 次全过，执行结果里提到的首轮时序问题未复现。反馈回归跑真实 `CompanionRoom`，核对投射的事实 ID。序号测试能拦漏号和撞号。
+- 沙箱外 `pnpm run verify`：Node 测试 1668 条全过（含 Memory P2 的 `/bin/ps` 用例）、`check:arch`、包检查通过；`pnpm run build && pnpm run test:behavior-list`：索引 11 条、行为清单 118 条全过。Codex 把「沙箱外重跑门禁」列为必须修，已由这次重跑消解。
+
+**必须修**：无。
+
+**建议修（不影响合并）**
+- `src/contracts/behavior.ts:10,44-47` 的基础表和派生数组只在类型上只读，照 `contracts/tables.ts:33` 的做法加 `Object.freeze`（表项和四个派生数组），防止哪天有 JS 调用方原地改数组让四个入口一起放行。现在没有写入方。
+- `src/living/body/room.ts:13-14` 两条同模块导入可合并；`FEEDBACK_ACTIONS` 的排序全为 0，可以不排序；`BODY_ACTION_NAMES` 没有模块外使用者，可以不导出。
+- 本方案第 2 批正文「互动反馈子集…不限 actor 是主人」与代码不符（`room.ts:821` 只投射已完成的主人互动，前后一致）；开工细则第 4 条「`lifeView` 失败时整张卡片本来就不显示」只对首次读取成立，已有视图后轮询失败会保留卡片并显示错误（`console/client.js:589-595`）。方案合并时删除，不必改，后续批次引用时注意。
+
+**不采纳**：Codex 提出「旧版服务端响应缺 `careActions` 时新前端 `.map()` 抛错」。设置页前端和 `settings.ts` 在同一个包里一起发，前端由同版本插件提供，不会混用；细则第 4 条也明确不加兜底。

@@ -5,7 +5,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { buildHomePromptLine } from '#feiyu-home';
 import { check, digest, reject, text } from '../../core/storage.js';
 import type { PetCoreHost } from '../../core/index.js';
-import type { BehaviorActivity, BehaviorChange, BehaviorSnapshot, CompanionExpression, PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
+import { isCareAction, type BehaviorActivity, type BehaviorChange, type BehaviorSnapshot, type CompanionExpression, type PlannedActivity, type PlannedExecution } from '../../contracts/behavior.js';
 import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
@@ -22,7 +22,6 @@ interface Binding {
   id: string; path: string; storageId: string; room: CompanionRoom;
   fingerprint?: string; presentationFingerprint?: string; worldFingerprint?: string;
 }
-const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'] as const;
 const owners = new WeakMap<PetCoreHost, CompanionBehavior>();
 
 /** The only home/garden runtime writer. It does not create agents or model turns. */
@@ -322,7 +321,7 @@ export class CompanionBehavior {
   worldSnapshot(workspaceId: string) { return this.living.worldSnapshot(this.host, workspaceId); }
   readonly worldCommands: Pick<WorldCommands, 'care'> = {
     care: ({action, ...request}, options) => this.living.command(this.host, request, options, async ({effect}) => {
-      check(actions.includes(action), '未知的身体动作');
+      check(isCareAction(action), '未知的身体动作');
       text(request.requestId, 'request id', 256);
       try {
         const {changed} = await this.act(request.workspaceId, action, request.requestId, undefined, effect);
@@ -359,7 +358,7 @@ export class CompanionBehavior {
     });
   }
   act(workspaceId: string, action: string, requestId:string = randomUUID(), channel = 'desktop', recordEffect?: RecordCommandEffect) {
-    if (!actions.includes(action as typeof actions[number])) return Promise.reject(Error('未知的身体动作'));
+    if (!isCareAction(action)) return Promise.reject(Error('未知的身体动作'));
     return this.roomAction(workspaceId,{action},'主人',{requestId,actor:{kind:'owner',id:this.host.workspace.runtime?.config?.ownerActorId ?? 'owner',channel}},recordEffect);
   }
   pendingFacts(workspaceId: string) {return this.enqueue(()=>this.checked(workspaceId).room.pendingFacts());}

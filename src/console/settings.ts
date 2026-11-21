@@ -7,6 +7,7 @@ import type { CompanionEmotion } from '../emotion/plugin.js';
 import type { CompanionLife } from '../living/plan/plugin.js';
 import { estimateTokens } from '#dsh-world/console/snapshot';
 import { desktopAppearanceDefaults } from '../desktop/appearance.js';
+import { BODY_ACTIONS, CARE_ACTIONS, isCareAction } from '../contracts/behavior.js';
 export interface EconomyControls {
   snapshot(workspaceId: string, validate?: () => void): Promise<unknown>;
   ownerAction(workspaceId: string, action: unknown, requestId: string, signal: AbortSignal, validate: () => void): Promise<unknown>;
@@ -225,14 +226,17 @@ export function settingsHandler(getHost: () => PetCoreHost | undefined, getWorks
         if (state.state !== 'ready' || state.target?.id !== input.workspaceId) fail('STALE_BINDING');
         const life = getLife?.(); if (!life) fail('UNAVAILABLE');
         if (endpoint === 'lifeControl' && typeof input.enabled !== 'boolean') fail('INVALID_ARGUMENT');
-        if (endpoint === 'lifeAction' && (typeof input.action !== 'string' || !['feed', 'water', 'play', 'pet', 'sleep', 'wake'].includes(input.action))) fail('INVALID_ARGUMENT');
+        if (endpoint === 'lifeAction' && !isCareAction(input.action)) fail('INVALID_ARGUMENT');
         const workspaceId = input.workspaceId as string;
         const value = endpoint === 'lifeView' ? await life.snapshot(workspaceId)
           : endpoint === 'lifeControl' ? await life.control(workspaceId, input.enabled as boolean)
           : await life.act(workspaceId, input.action as string,body.requestId,'settings');
         if (signal.aborted || peer.signal.aborted) fail('CANCELLED');
         if (getLife?.() !== life || host.workspace.status().target?.id !== workspaceId) fail('STALE_BINDING');
-        return {ok: true, value: endpoint === 'lifeView' ? {...value, roomAvailable: Boolean(getRoom?.()), channelsAvailable:Boolean(getChannels?.())} : value};
+        return {ok: true, value: endpoint === 'lifeView' ? {...value,
+          roomAvailable: Boolean(getRoom?.()), channelsAvailable: Boolean(getChannels?.()),
+          careActions: CARE_ACTIONS.map(action => ({action, label: BODY_ACTIONS[action].care.label})),
+        } : value};
       }
       if (endpoint === 'snapshot') {
         object(body.input, []);

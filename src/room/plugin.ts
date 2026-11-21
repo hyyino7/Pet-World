@@ -9,13 +9,13 @@ import { RoomWindow } from './window.js';
 import { digest } from '../core/storage.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../core/native/conversation.js';
 import { isHistoryObject } from '../core/native/history-maintenance.js';
+import { ROLE_ACTIONS } from '../contracts/behavior.js';
 import type { CompanionToolDeclaration } from '../contracts/tables.js';
 import { CONTRACT_VERSION } from '../contracts/version.js';
 import { RoomChat } from './chat.js';
 import { roomPhoto, type PhotoLook, type PhotoView } from './photo.js';
 import { roomAsset, roomPrefix } from './assets.js';
 
-const roleActions = ['command', 'pet', 'poke', 'feed', 'water', 'play', 'talk', 'sleep', 'wake', 'lamp'] as const;
 const output = {schema:{type:'string' as const}, render: (_:unknown, text:string) => [{type:'text' as const, text}]};
 
 export const roomStateDeclaration = {
@@ -119,7 +119,7 @@ export class Room {
         const state=await behavior.roomState(id);
         return JSON.stringify((view??(exec.agent && this.ctx.petCore.native.isAutonomous(exec.agent.id)?'overview':'full'))==='overview'?roomOverview(state):state);}});
     const act = defineTool({name:'room_action',description:'在自己的房间移动到 room_state 里的 room/spot，或进行日常互动。睡着需先 wake，不舒服时不能移动。talk 的 text 是给房间的留言。',parameters:{
-      action:{type:'string',enum:roleActions,required:true}, room:{type:'string'},spot:{type:'string'},text:{type:'string'},on:{type:'boolean'}},output,
+      action:{type:'string',enum:ROLE_ACTIONS,required:true}, room:{type:'string'},spot:{type:'string'},text:{type:'string'},on:{type:'boolean'}},output,
       execute:async (input,exec) => {
         if(exec.agent && this.ctx.petCore.native.isAutonomous(exec.agent.id))throw Error('自主生活请通过 life_plan_update 提交持久活动；普通房间操作仍供主人交互使用');
         const result = await behavior.roomAction(this.checked(exec),input,'大肥鱼',{requestId:digest([exec.agent!.id,exec.callId]),
