@@ -244,4 +244,50 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 
 ## 执行结果
 
+### 第 1 批
+
+- 方案表的照料白名单、角色房间动作、主人房间动作分别对应 `2B1-01`、`2B1-02`、`2B1-03`。计划 kind 与身体动作、菜园与经济计划操作分别对应 `2B1-04`、`2B1-05`。阅读状态、身体阶段、Desktop 吃饭与睡醒素材分别对应 `2B1-06`、`2B1-07`、`2B1-08`。
+- 事实写入、事实读取、Python 识别分别对应 `2B1-09`、`2B1-10`、`2B1-11`。G9 设置页喂食到跨会话召回和重启对应 `2B1-12`。Life 计划从派发到完成的身体阶段与跨重启回执对应 `2B1-13`。登记见 `tests/behavior-list/index.json:1314-1442`。
+- `pnpm run build && node --test tests/behavior-list/{concepts-actions,concepts-facts,concepts-flow,concepts-phases,concepts-plan,native}.test.mjs` 通过 13 条。`pnpm run build && pnpm run test:behavior-list` 通过 11 条索引测试和 117 条行为清单，均为 0 失败。真实 Memory 回环通过。
+- `pnpm run verify` 的 Node 测试 1662 通过、1 失败。既有 Memory P2 用例启动服务成功后遇到 `/bin/ps` 的 `EPERM`，单独复跑同样失败，后续断言环境原因未跑（`tests/memory/memory-process.test.mjs:80-96`）。单独补跑 Python 测试 22 条，以及 `check:release`、`pnpm pack` 和 `check:package`，均通过。
+- `pnpm run check:arch` 和 `pnpm run check:arch -- --report` 均通过。规则基线当前 37 条，词表基线当前 1031 条，两份均新增 0、消失 0。
+  - R8 kind 字符串判断，运行源码 287 点 / 43 文件，扫描范围 287 点 / 43 文件。
+  - R8 action 字符串判断，运行源码 105 点 / 13 文件，扫描范围 105 点 / 13 文件。
+- 差异清单
+  - Core `observeFacts` 接受缺 `type` 的事实，证据 ID 与带 `type` 的记录一致。实现见 `src/core/native/conversation.ts:202-215`，测试见 `tests/behavior-list/concepts-facts.test.mjs:83-91`。
+  - 「睡觉-起来」默认在专用睡觉序列的 `sleep.end`，`/anim` 入口默认返回 `unknown-animation`，将素材加进动画池后才派发 `wake`。配置见 `vendor/dsh-pet/platform/assets/config.jsonc:387-392`，枚举与准入见 `vendor/dsh-pet/platform/runtime.mjs:4168-4193,4258-4263`，派发见 `src/desktop/platform/plugin.ts:668-684`，测试见 `tests/behavior-list/concepts-desktop.test.mjs:62-71`。
+  - `confirmPlannedReading` 同步完成执行并清除阅读投影，公开快照从 `offered` 直接回到 `idle`，跳过 `confirmed` 投影分支。实现见 `src/living/body/room.ts:360-371,490-495,705-716,834-845` 和 `src/living/body/playback.ts:90-94`，测试见 `tests/behavior-list/concepts-phases.test.mjs:23-30`。
+  - Economy Store 重试从 `requests.result` 返回首次事务的视图，事实只在首次事务写入。公开 `ownerAction` 另读当前视图，原事实按 ID 回读。实现见 `src/living/economy/store.ts:182-187,199-219,259-264` 和 `src/living/economy/plugin.ts:240-251,276-277`，公开回包与事实去重的测试见 `tests/behavior-list/concepts-facts.test.mjs:21-32`。
+  - Life `parsePlan` 用 `String(value.action)` 校验，接受并保留 `['feed']`，工具 schema 要求字符串并拒绝该输入。实现见 `src/living/plan/plan.ts:94-97` 和 `src/living/plan/plan-tools.ts:101-104`，测试见 `tests/behavior-list/concepts-plan.test.mjs:37-41,67`。
+
 ## 审查结论
+
+### 第 1 批（Codex 独立审查 + Claude 核实，基于 `724cbb7`）
+
+已核实没问题的：只改了 `tests/behavior-list/` 下 13 个文件，`src/` 无改动；13 条 `2B1-*` 都登记了，测试名一一对应；`native.test.mjs` 的两条旧测试抽到 `native-facts.mjs` 后没有删掉或放宽断言，反而收紧了（日志检查从「整份 JSON 含事实 ID」改为「事实出现在 `chatpet.interactions` 段」，第二条测试补了日志检查、B 不重复读待送达事实、重启后 `readFacts` 回读）；R8 点数 kind 287 / action 105 没变，两份基线新增 0、消失 0；`pnpm run verify` 1663 条全过，`pnpm run build && pnpm run test:behavior-list` 117 条全过，Memory 回环测试真实通过。L1 条目不带重启不算问题：现有 L1 约 35 / 46 条也不带重启，L1 的含义是走插件入口加假原生宿主。
+
+**必须修**
+
+1. **执行结果没写。** 在上面「执行结果」下补「### 第 1 批」：13 条条目和方案表的对应关系、快测和门禁结果、`check:arch -- --report` 的 R8 两行和两份基线的新增数，以及差异清单。差异清单逐条写清现状、`文件:行号` 和证据所在的测试行，至少包括这几条：
+   - Core `observeFacts` 接受缺 `type` 的事实，证据 ID 不变（`concepts-facts.test.mjs:89`）；
+   - 默认动画池里没有「睡觉-起来」，起床素材只有配置加进动画池后才会转成 `wake`（`concepts-desktop.test.mjs:58-63`）；
+   - `confirmPlannedReading` 会立即完成执行并清掉身体快照的阅读投影，公开快照上看不到 `confirmed`，所以 `room.ts:834-845`、`playback.ts:90-94` 里 `confirmed` 的分支在公开路径上走不到；
+   - Economy 同请求重试返回 `requests` 表里存的原结果（视图），不返回原事实，也不重写事实（`living/economy/store.ts:185-187`）。方案第 1 批表里写的「`store.ts:209-219` 返回原事实」不准；
+   - Life `parsePlan` 用 `String(value.action)` 比对动作，非字符串的 `['feed']` 会被接受，而工具 schema 拒绝它（`living/plan/plan.ts:95`）。
+2. **2B1-03 声称的「同请求重试不重复生效」没有被验证**（`concepts-actions.test.mjs:58-62`）。`talk` 重试只比了回执和待确认事实。时钟固定时，Body 即使重新执行一次，事实也会完全相同，而房间里已经多出一条留言。要在首次提交和两次重试（含重启后那次）之后，都从公开房间状态确认同一条留言只存了一份。
+3. **2B1-03 的「原样转发」只核对了事实 `type`**（`concepts-actions.test.mjs:50-56`）。如果 `go`、`place` 的 `pos`，或 `command` 的 `room/spot`、`lamp` 的 `on`、`talk` 的 `text` 在转发时丢了，Body 仍会写同一个 `type` 的事实，测试照样通过。要固定每个动作现在的 `fact.result.status`；有参数的动作，再从公开房间状态核对参数确实生效了。
+4. **2B1-02 只固定了角色动作两份词表中的一份**（`concepts-actions.test.mjs:33-41`）。工具 schema 的十项枚举核对了，但 Body 的角色白名单 `companionActions`（`living/body/room.ts:85`）只验证了 `talk` 接受、`visit` 拒绝。第 2 批要把这两份合成一份；Body 漏掉 `feed` 或 `command` 时，测试仍会通过。要用合法输入和合适的身体状态，经角色路径把十个动作各执行一次，断言都不报「角色不能执行这项房间操作」。
+5. **2B1-01 没有固定 World `care` 的报错先后**（`concepts-actions.test.mjs:19-26`）。`worldCommands.care` 现在先查绑定、后查动作（`living/body/plugin.ts:323-325`），但非法动作只用有效绑定测过。第 2 批要合并照料入口的重复检查，如果把动作校验挪到 `living.command` 外面，测试会发现不了。要补一条绑定错、动作也错的 World 请求，固定它返回 `STALE_BINDING`（这里用代码里实际返回的错误码）。
+6. **2B1-04 没有覆盖各 kind 自己的字段报错**（`concepts-plan.test.mjs:37-67`）。现在 Life 只覆盖了公共字段、`room` 和 `body`，Body 只覆盖了公共字段和 `body`；`room / move / hold / read` 各自字段的报错和先后，在 Life 和 Body 上都没固定。第 3 批要把计划校验改成按 kind 分派，动的正是这些地方。要在 Life `updatePlan` 和 Body `startPlanned` 上，给这四种 kind 各补至少一条非法字段用例，固定现有文案。
+7. **2B1-06 调用内部函数，越出了 L2 的边界**（`concepts-phases.test.mjs:23-24`、`entries.ts:21`）。用例手工把 `readingState` 改成 `confirmed`，再直接调 `resolveActivityPlayback`。这既违反 `levels` 里 L2「不构造内部类、不读取私有状态」，固定的又是公开路径上走不到的状态（见第 1 条的差异）。要删掉这条断言和 `entries.ts` 新加的导出；公开确认后的终态断言（第 31-32 行）保留。
+8. **G9（2B1-12）的召回只查了 Memory 算出的上下文，没查会话是否真的收到**（`native-facts.mjs:23,34`）。如果 Core 漏发召回消息，或者事实摘要是空串，`petMemory.context().includes(...)` 仍会通过。要断言摘要非空；在 B 会话重启前后两轮，从 `f.begin()` 返回的 `injections`（`fixture.mjs:224`）里确认召回消息含原事实摘要。`native.test.mjs` 共用这个辅助函数，一起收紧没问题。
+
+**建议修（不影响合并）**
+
+- 2B1-09 睡眠中投喂重试后，按 `requestId` 断言只有一条事实；现在只按已有 ID 回读，多写一条也发现不了（`concepts-facts.test.mjs:50-52`）。
+- 2B1-10 Life 重读已确认事实之后，补查 Life 自己的送达确认（`concepts-facts.test.mjs:105-114`）。
+- 2B1-11 给 `execFileSync` 加超时，Python 路径改为相对仓库根解析，不依赖当前目录（`concepts-facts.test.mjs:117-120`）。
+- 2B1-12 让夹具记录 flush 尝试次数：失败轮要断言确实尝试过 flush，而不只是没有成功（`concepts-flow.test.mjs:28`）。
+- 夹具 `end()` 固定等 3 ms 再读盘，`warnings` 里收集到的异步错误新用例也没检查；这是已有的写法，可以留给以后单独处理（`fixture.mjs:84,245`）。
+
+**合并时由 Claude 处理**：上面的差异清单并进 `docs/architecture.md` 5.6.1 对应的行（动作的桌面素材、阅读状态、请求身份、事实），同时作为第 2 批（Desktop 素材到命令）、第 3 批（阅读状态和 `parsePlan` 的类型检查）、第 5 批（Core 缺 `type`、Economy 重试）开工细则的输入。改变这些现状属于对外行为变化，按停止条件先回主人这里对齐。第 1 批和 M 批都改了本方案的「执行结果」，后合并的那支要解一次文本冲突。
