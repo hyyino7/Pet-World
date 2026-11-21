@@ -1309,6 +1309,44 @@
       "name": "4 同名重挂后旧迎接回调不能改记录、镜像或通知",
       "l1Stage": "阶段 2",
       "families": []
+    },
+    {
+      "id": "2B1-01",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/concepts-actions.test.mjs",
+      "name": "照料在设置、Life、Body 和 World 保留准入及错误顺序",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-02",
+      "categories": [],
+      "level": "L1",
+      "file": "tests/behavior-list/concepts-actions.test.mjs",
+      "name": "角色房间动作固定工具枚举、留言截断与角色操作拒绝",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-03",
+      "categories": [
+        "同请求重试不重复生效"
+      ],
+      "level": "L1",
+      "file": "tests/behavior-list/concepts-actions.test.mjs",
+      "name": "主人 Room RPC 保留十五个动作、事实类型及请求重试",
+      "l1Stage": "阶段 2",
+      "families": []
+    },
+    {
+      "id": "2B1-08",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-desktop.test.mjs",
+      "name": "Desktop 动画入口按共享身体状态准入吃饭和睡醒素材",
+      "l1Stage": "阶段 2",
+      "families": []
     }
   ]
 }
