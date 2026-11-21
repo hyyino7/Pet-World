@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {fixture, value} from './fixture.mjs';
+import {fixture, until, value} from './fixture.mjs';
 import {confirmBodyFact, interactionFacts, recallBodyFactAcrossRestart} from './native-facts.mjs';
 
 test('设置页喂食经原生日志确认后跨会话召回并跨重启保留', {timeout:30_000}, async t => {
@@ -17,11 +17,13 @@ test('设置页喂食经原生日志确认后跨会话召回并跨重启保留',
   assert.ok((await f.body.snapshot('world')).needs.hunger < before.needs.hunger);
 
   f.flushAllowed = false;
+  const firstFlushAttempt = f.flushAttempts.length;
   const first = await f.begin();
   const [offered] = interactionFacts(first.agent.session.snapshotEvents()).filter(row => row.id === fact.id);
   assert.deepEqual(offered, {id:fact.id, domain:'body', type:'feed', at:fact.occurredAt,
     actor:fact.actor, status:'completed', summary:fact.result.summary});
   await f.end(first);
+  await until(() => f.flushAttempts.slice(firstFlushAttempt).includes('home'), '失败轮实际尝试落盘 home 会话');
   assert.ok(!f.flushes.includes('home'));
   assert.deepEqual(await f.body.pendingFacts('world'), [fact]);
   f.flushAllowed = true;

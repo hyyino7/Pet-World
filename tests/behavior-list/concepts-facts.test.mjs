@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {existsSync, readFileSync, writeFileSync} from 'node:fs';
-import {join, resolve} from 'node:path';
+import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {fileURLToPath} from 'node:url';
 import {fixture, until} from './fixture.mjs';
@@ -26,7 +26,7 @@ test('钱包五类事实及库存餐食事实随原请求只写一次', async t 
     assert.equal(fact.result.status, 'completed');
     if (type === 'sale') await f.restart();
     const before = await f.economy.snapshot('world');
-    await f.ownerAction(action, type);
+    assert.deepEqual(await f.ownerAction(action, type), before);
     assert.deepEqual(await f.economy.snapshot('world'), before);
     assert.deepEqual(await f.economy.readFacts('world', [fact.id]), [fact]);
     assert.deepEqual((await f.economy.pendingFacts('world')).filter(row => row.requestId === type), [fact]);
@@ -53,6 +53,7 @@ test('钱包五类事实及库存餐食事实随原请求只写一次', async t 
   assert.equal(declined.type, 'feed');
   assert.equal(declined.result.status, 'unchanged');
   assert.deepEqual((await f.ownerAction(feed, 'sleeping-feed')).execution, asleep.execution);
+  assert.deepEqual((await f.body.pendingFacts('world')).filter(fact => fact.requestId === 'sleeping-feed'), [declined]);
   assert.deepEqual(await f.body.readFacts('world', [mealFact.id,declined.id]), [mealFact,declined]);
 });
 
@@ -102,21 +103,31 @@ test('新旧事实经 Core、World、原生提示词和 Life 引用读出', asyn
   assert.deepEqual(await world.readFacts('world', ids), facts);
 
   // 另一个原生消费者已确认事实时，Life 仍要恢复停机前已经准备好的引用。
+  const lifeStatePath = join(f.repo,'.chatpet/data/life/life.json');
   await f.restart(() => {
-    const path = join(f.repo,'.chatpet/data/life/life.json');
-    const state = existsSync(path) ? JSON.parse(readFileSync(path,'utf8')) : {version:1};
+    const state = existsSync(lifeStatePath) ? JSON.parse(readFileSync(lifeStatePath,'utf8')) : {version:1};
     state.factBatch = {at:new Date().toISOString(),messageId:'legacy-delivery',
       refs:facts.map(({domain,id}) => ({domain,id}))};
-    writeFileSync(path,JSON.stringify(state));
+    writeFileSync(lifeStatePath,JSON.stringify(state));
   });
   await f.enable();
   await until(() => f.sent.some(row => row.id === 'legacy-delivery'), 'Life 重读已确认事实', 1000);
   const delivery = f.sent.find(row => row.id === 'legacy-delivery');
   assert.deepEqual(delivery.source.facts, facts);
-  await f.end(await f.begin(f.home()?.sessionId ?? 'home', delivery));
+  const sessionId = f.home()?.sessionId ?? 'home';
+  await f.end(await f.begin(sessionId, delivery));
+  await until(() => {
+    const {lastFactAdmission,factAcknowledgement} = JSON.parse(readFileSync(lifeStatePath,'utf8'));
+    return lastFactAdmission?.messageId === delivery.id && lastFactAdmission.sessionId === sessionId
+      && !factAcknowledgement;
+  }, 'Life 完成原事实送达确认', 1000);
+  const lifeLog = JSON.parse(readFileSync(f.logFile(sessionId),'utf8'));
+  const admitted = lifeLog.find(event => event.type === 'user/message' && event.data.id === delivery.id);
+  assert.deepEqual(admitted?.data.source, delivery.source);
 });
 
 test('Python 只把匹配领域、前缀及来源的记录识别为事实', () => {
+  const python = fileURLToPath(new URL('../../.venv/bin/python', import.meta.url));
   const script = fileURLToPath(new URL('./concepts-facts-python.py', import.meta.url));
-  execFileSync(resolve('.venv/bin/python'), ['-B',script], {stdio:'pipe'});
+  execFileSync(python, ['-B',script], {stdio:'pipe',timeout:10_000});
 });

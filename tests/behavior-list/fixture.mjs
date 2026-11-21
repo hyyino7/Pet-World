@@ -24,7 +24,7 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
   const config={dataDir:join(root,'core'),companionId:'fish',scopeId:'owner',ownerActorId:'owner',displayName:'Fixture',character:'Synthetic companion'};
   if(memory)config.memory={python:resolve('.venv/bin/python'),dataDir:join(repo,'.chatpet/data/memory')};
   let services,handlers,effects,agents,ctx,sections,contexts,tools,guards,dsh,guest,routes,flushAllowed=true,sequence=0;
-  const warnings=[],sent=[],flushes=[],cancellations=[],archives=[];
+  const warnings=[],sent=[],flushes=[],flushAttempts=[],cancellations=[],archives=[];
   const logFile=id=>join(root,`native-${id}.json`);
   const workspace={id:'world',path:repo,sessionIds:['home','owner-b','guest'],async attachSession(id){if(!this.sessionIds.includes(id))this.sessionIds.push(id);}};
   const external=new Map();
@@ -91,6 +91,7 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
       inject(names,apply){if(names.every(name=>services.has(name)))apply(ctx);return {dispose(){}};},
       agents:{get:id=>agents.get(id),list:()=>[...agents.values()]},
       sessions:{get:id=>agents.get(id)?.session,async flush(session){
+        flushAttempts.push(session.id);
         if(!flushAllowed)return false;
         writeFileSync(logFile(session.id),JSON.stringify(session.snapshotEvents()));flushes.push(session.id);return true;}},
       tools:{register(tool,options){tools.set(tool.name,{tool,options});return()=>tools.delete(tool.name);},
@@ -293,7 +294,7 @@ export async function fixture(t,{now='2026-11-15T12:00:00Z',economy=true,life=tr
     assert.equal(envelope.type,'server-response');assert.equal(envelope.rpcId,rpcId);
     return envelope.result;
   }
-  return {root,repo,config,workspace,warnings,sent,flushes,cancellations,archives,registry,bind,begin,step,end,tool,prepareTool,emit,middleware,
+  return {root,repo,config,workspace,warnings,sent,flushes,flushAttempts,cancellations,archives,registry,bind,begin,step,end,tool,prepareTool,emit,middleware,
     settings,
     home:()=>resolveCompanionHome(ctx,service('petCore')),
     create:async sessionId=>(await service('sessionController').create({workspaceId:'world',sessionId})).sessionId,

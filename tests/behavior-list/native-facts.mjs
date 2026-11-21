@@ -21,10 +21,19 @@ export async function confirmBodyFact(f, fact) {
 }
 
 export async function recallBodyFactAcrossRestart(f, fact) {
+  const {summary} = fact.result;
+  assert.ok(summary.trim().length > 0, '待召回的原事实摘要非空');
+  const assertRecall = (active, label) => {
+    assert.ok(f.service('petMemory').context('owner-b').includes(summary), label+'：Memory 召回原事实摘要');
+    assert.ok(active.injections.some(message => message.source.kind === 'chatpet-recall'
+      && message.source.form === 'recall'
+      && message.content.some(part => part.type === 'text' && part.text.includes(summary))),
+    label+'：原生会话收到含原事实摘要的召回消息');
+  };
   const ownerB = await f.begin('owner-b', {
     id:'recall-question', role:'user', source:{kind:'user'}, content:[{type:'text', text:'What just happened?'}],
   });
-  assert.ok(f.service('petMemory').context('owner-b').includes(fact.result.summary), 'B 召回 A 已确认送达的事实');
+  assertRecall(ownerB, '重启前 B 会话');
   const events = f.agent('owner-b').session.snapshotEvents();
   const question = events.find(event => event.type === 'user/message' && event.data.id === 'recall-question');
   assert.ok(!question.data.content[0].text.includes(fact.id));
@@ -36,6 +45,6 @@ export async function recallBodyFactAcrossRestart(f, fact) {
   const afterRestart = await f.begin('owner-b', {
     id:'recall-after-restart', role:'user', source:{kind:'user'}, content:[{type:'text', text:'What just happened?'}],
   });
-  assert.ok(f.service('petMemory').context('owner-b').includes(fact.result.summary));
+  assertRecall(afterRestart, '重启后 B 会话');
   await f.end(afterRestart);
 }
