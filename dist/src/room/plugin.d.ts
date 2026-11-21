@@ -3,6 +3,13 @@ import type { Agent } from '@deepseek-ai/dsh-agent';
 import { type ToolDefinition } from '@deepseek-ai/dsh-tools';
 import { RoomWindow } from './window.js';
 import { RoomChat } from './chat.js';
+export declare const roomStateDeclaration: {
+    name: string;
+    sources: readonly ("life" | "owner" | "review")[];
+    historyOverview(_args: unknown, value: unknown): {
+        [x: string]: any;
+    } | undefined;
+};
 export declare const roomHistoryTools: readonly [{
     name: string;
     sources: readonly ("life" | "owner" | "review")[];
