@@ -13,6 +13,7 @@ import { installLifeReview, REVIEW_ALARM_FILE } from './review.js';
 import { PersistentLifePlan, expiredDispatchDeadline, parsePlanDraft } from './plan.js';
 import { registerPlanTools } from './plan-tools.js';
 import { presentFacts } from '../../core/interaction-presentation.js';
+import { FACT_DOMAIN_NAMES } from '../../contracts/interaction.js';
 import { isCareAction } from '../../contracts/behavior.js';
 import { integer, reject, text, unavailable } from '../../core/storage.js';
 import { CONTRACT_VERSION } from '../../contracts/version.js';
@@ -293,13 +294,13 @@ export class CompanionLife {
             facts: {
                 pending: async () => (await this.pendingFacts(bound, active)).map(fact => ({ domain: fact.domain, id: fact.id })),
                 read: async (refs) => {
-                    const sources = { body: this.factSource('body'), economy: this.factSource('economy') };
+                    const sources = new Map(FACT_DOMAIN_NAMES.map(domain => [domain, this.factSource(domain)]));
                     const validate = () => {
                         if (!active())
                             throw Error('互动事实工作区已切换');
                     };
                     const facts = await withLivingCaller(validate, () => readFactReferences(bound.id, refs, domain => {
-                        const source = sources[domain];
+                        const source = sources.get(domain);
                         return source?.isCurrent() ? source.value : undefined;
                     }, validate));
                     return { facts, text: presentFacts(facts) };
@@ -331,7 +332,7 @@ export class CompanionLife {
                     }
                 }),
                 acknowledge: async (refs) => {
-                    for (const domain of ['body', 'economy']) {
+                    for (const domain of FACT_DOMAIN_NAMES) {
                         const ids = refs.filter(ref => ref.domain === domain).map(ref => ref.id);
                         if (!ids.length)
                             continue;
@@ -509,7 +510,7 @@ export class CompanionLife {
     async pendingFacts(bound, active) {
         if (!active())
             throw Error('互动事实工作区已切换');
-        const sources = ['body', 'economy'].map(domain => this.factSource(domain));
+        const sources = FACT_DOMAIN_NAMES.map(domain => this.factSource(domain));
         const results = await Promise.all(sources.map(async (source) => {
             if (!source?.value.pendingFacts)
                 return [];

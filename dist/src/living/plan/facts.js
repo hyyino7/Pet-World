@@ -1,9 +1,10 @@
+import { FACT_DOMAIN_NAMES } from '../../contracts/interaction.js';
 /** Materialize original references even when another native consumer has already
  * acknowledged them. Pending discovery and immutable fact reads are distinct. */
 export async function readFactReferences(workspaceId, refs, sourceFor, validate) {
     validate();
     const result = new Map();
-    await Promise.all(['body', 'economy'].map(async (domain) => {
+    await Promise.all(FACT_DOMAIN_NAMES.map(async (domain) => {
         const ids = refs.filter(ref => ref.domain === domain).map(ref => ref.id);
         if (!ids.length)
             return;

@@ -4,7 +4,7 @@ import type { NativeRunResult } from './result.js';
 import type { UserMessage, SessionEvent } from '@deepseek-ai/dsh-session';
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
 import type { NativeMemory } from './memory.js';
-import type { CompanionFact } from '../../contracts/interaction.js';
+import { type CompanionFact } from '../../contracts/interaction.js';
 import { type CompanionToolDeclaration, type SourceAdmission } from '../../contracts/tables.js';
 import { SourceAdapterTable } from '../tables/sources.js';
 import { CompanionToolTable } from '../tables/tools.js';

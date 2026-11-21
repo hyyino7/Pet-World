@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFactReferences} from '../../src/living/plan/facts.js';
-import type {CompanionFact,CompanionFactSource} from '../../src/contracts/interaction.js';
+import type {CompanionFact,CompanionFactSource,LegacyFactType} from '../../src/contracts/interaction.js';
 
-const fact=(id:string,domain:CompanionFact['domain']):CompanionFact=>({version:1,id,requestId:id,domain,type:'fixture',
+const fact=(id:string,domain:CompanionFact['domain']):CompanionFact=>({version:1,id,requestId:id,domain,type:'fixture' as LegacyFactType,
   occurredAt:'2026-11-13T01:00:00Z',actor:{kind:'owner',id:'owner',channel:'room'},result:{status:'completed',summary:id}});
 
 test('the Life materializer reads acknowledged originals rather than requiring pending membership',async()=>{

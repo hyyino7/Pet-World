@@ -1,6 +1,6 @@
 import type {Context} from '@deepseek-ai/cordis';
 import type {Agent} from '@deepseek-ai/dsh-agent';
-import type {CompanionFact} from '../contracts/interaction.js';
+import {FACT_DOMAIN_NAMES, type CompanionFact} from '../contracts/interaction.js';
 import type {PetCoreHost} from '../core/index.js';
 import type {CompanionBinding} from '../core/tables/companion-ports.js';
 import {acknowledgePromptFacts, type PromptFactSource} from '../core/interaction-context.js';
@@ -67,7 +67,9 @@ export function installLivingPrompt(ctx: Context, host: PetCoreHost, world: Livi
       planText = '当前生活计划暂不可读；保留已有安排，不根据旧聊天猜测执行进度或重新派工。';
       logger.warn('Shared life plan context is unavailable', error);
     }
-    for (const service of [body?.value, economy?.value]) {
+    const services = {body:body?.value, economy:economy?.value};
+    for (const domain of FACT_DOMAIN_NAMES) {
+      const service = services[domain];
       if (!service) continue;
       if (!isCurrent(frame)) return;
       try {

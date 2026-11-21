@@ -4,7 +4,7 @@ import {RegistrationTable} from '../core/tables/registry.js';
 import type {CompanionBinding} from '../core/tables/companion-ports.js';
 import {Rejection, reject, text} from '../core/storage.js';
 import type {CallOptions, ContractError, Result} from '../contracts/common.js';
-import type {CompanionFact, CompanionFactSource} from '../contracts/interaction.js';
+import {FACT_DOMAIN_NAMES, factDomainOf, type CompanionFactSource} from '../contracts/interaction.js';
 import type {WorldChanged, WorldCommandRequest, WorldSnapshot} from '../contracts/living.js';
 import type {RegistrationLease, TableRegistration} from '../contracts/tables.js';
 import type {CompanionBehavior} from './body/plugin.js';
@@ -286,16 +286,15 @@ export class LivingView {
   }
 
   factSource(host: PetCoreHost): CompanionFactSource {
-    const domains = ['body', 'economy'] as const;
     const references = (ids: readonly string[]) => ids.map(id => {
-      const domain = domains.find(candidate => id.startsWith(`${candidate}:`));
+      const domain = factDomainOf(id);
       if (!domain) reject('INVALID_ARGUMENT', '未知互动事实所属区');
       return {domain,id};
     });
     return {
       pendingFacts: async workspaceId => {
         const frame = this.readFrame(host, workspaceId);
-        const facts = await Promise.all(domains.map(domain =>
+        const facts = await Promise.all(FACT_DOMAIN_NAMES.map(domain =>
           withLivingCaller(frame.validate, () => frame[domain]?.value.pendingFacts(workspaceId) ?? [])));
         frame.validate();
         return facts.flat().sort((a,b) => a.occurredAt.localeCompare(b.occurredAt) || a.id.localeCompare(b.id));
@@ -303,11 +302,11 @@ export class LivingView {
       readFacts: async (workspaceId, ids) => {
         const frame = this.readFrame(host, workspaceId);
         return withLivingCaller(frame.validate, () =>
-          readFactReferences(workspaceId, references(ids), (domain: CompanionFact['domain']) => frame[domain]?.value, frame.validate));
+          readFactReferences(workspaceId, references(ids), domain => frame[domain]?.value, frame.validate));
       },
       acknowledgeFacts: async (workspaceId, ids) => {
         const frame = this.readFrame(host, workspaceId), refs = references(ids);
-        const batches = domains.flatMap(domain => {
+        const batches = FACT_DOMAIN_NAMES.flatMap(domain => {
           const batch = refs.filter(ref => ref.domain === domain).map(ref => ref.id);
           if (!batch.length) return [];
           const source = frame[domain]?.value;

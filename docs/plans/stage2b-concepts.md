@@ -382,6 +382,18 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - `pnpm run verify` 的环境、类型、架构和构建通过，Node 测试 1669 条通过、1 条失败。Memory P2 在 `/bin/ps` 被沙箱拒绝（`EPERM`），单跑复现，后续断言环境原因未跑。
 - 门禁中断后的 Python Memory 22 条、`pnpm run check:release`、`pnpm pack` 和 `pnpm run check:package` 已独立补跑并通过。
 
+### 第 5 批
+
+- `src/contracts/interaction.ts` 集中事实领域、类型和参与者声明。Body 三处写入和 Economy 写入用 `NewCompanionFact`；读取用 `CompanionFact`，按领域保留旧 `type` 原文。
+- Core 共用事实信封校验，继续接受缺 `type` 的记录；World 按编号前缀路由，Life 按显式领域保留无前缀编号、顺序和重复。提示词段仍先读 Body 后读 Economy。
+- 新增 vendor 动作集合和原始标签回落、World 编号前缀、Python 运行时准入与 AST 元组双向契约测试。上游 `FactRef` 的领域封闭，新增领域需经 Life 回读适配，留第 6 批补入架构 5.10。
+- R8 kind 字符串判断为 271 → 271 点，运行源码与扫描范围均为 44 → 45 文件，参与者判断移入契约。
+- R8 action 字符串判断为 102 → 102 点，运行源码与扫描范围均为 13 文件。
+- 词表基线 707 → 696 → 690，两组新增均为 0，分别消失 11、6 条；规则基线 37 条，新增和消失均为 0。`pnpm run check:arch` 和 `pnpm run check:arch -- --report` 通过。
+- `pnpm run check:types` 通过；`pnpm run build && node --test <受影响的测试>` 通过 214 条；`pnpm run build && pnpm run test:behavior-list` 通过 11 条索引检查、118 条行为测试。第 1–3 批断言保持原样。
+- `pnpm run test:memory` 的 Python 22 条和 Node 2 条通过、P2 进程测试 1 条失败；`pnpm run verify` 的环境、类型、架构和构建通过，Node 1672 条通过、同一条 P2 失败。
+- P2 服务启动后 `/bin/ps` 被沙箱拒绝（`EPERM`），后续断言环境原因未跑。门禁中断后的 Python Memory、`check:release`、`pnpm pack` 和 `check:package` 已独立运行并通过。
+
 ## 审查结论
 
 ### 第 1 批（Codex 独立审查 + Claude 核实，基于 `724cbb7`）
