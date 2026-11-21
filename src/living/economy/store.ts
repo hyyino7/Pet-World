@@ -8,7 +8,7 @@ import { canonical, check, digest, integer, reject, text, unavailable } from '..
 import { closeSqliteLease, setSqliteMeta } from '../../core/sqlite.js';
 import { effectiveEconomyConfiguration,defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
 import type { BodyUseProof, CatalogItem, EconomyConfiguration, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, InventoryItem, ItemUse, LedgerEntry, ReadingBookmark, ReadingContent, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
-import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
+import type { CompanionFact, CompanionFactActor, EconomyFactType, NewCompanionFact } from '../../contracts/interaction.js';
 import type { ReadingState } from '../../contracts/behavior.js';
 import type { WalletView } from '../../contracts/living.js';
 import { advanceGardenClock, type GardenClock } from './garden-clock.js';
@@ -197,13 +197,13 @@ export class EconomyStore {
   }
   /** Called only inside the existing request transaction, beside its actual result.
    * Historical requests are not replayed or turned into new experiences. */
-  private recordFact(requestId:string,type:string,actor:CompanionFactActor|undefined,summary:string,before:Record<string,number>,after:Record<string,number>) {
+  private recordFact(requestId:string,type:EconomyFactType,actor:CompanionFactActor|undefined,summary:string,before:Record<string,number>,after:Record<string,number>) {
     if(!actor)return;
     check(actor.kind==='owner','Economic owner facts require an owner actor');
     token(actor.id,'fact actor');text(actor.channel,'fact channel',160);
     if(actor.sessionId!==undefined)token(actor.sessionId,'fact session');
     canonical(actor);
-    const fact:CompanionFact={version:1,id:`economy:${digest(requestId).slice(7)}`,requestId,domain:'economy',type,
+    const fact:NewCompanionFact={version:1,id:`economy:${digest(requestId).slice(7)}`,requestId,domain:'economy',type,
       occurredAt:new Date().toISOString(),actor:clone(actor),result:{status:'completed',summary,before,after},operationId:requestId};
     this.db.prepare('INSERT INTO interaction_facts(id,request_id,value) VALUES(?,?,?)').run(fact.id,requestId,canonical(fact));
   }

@@ -3501,13 +3501,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 978
+        "line": 979
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 978,
+      "line": 979,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/console/client.js\",\"scope\":\"factory/EconomyPanel/send\"}",
@@ -6221,13 +6221,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/presentationActivity",
-        "line": 852
+        "line": 853
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 852,
+      "line": 853,
       "column": 47,
       "scope": "CompanionRoom/presentationActivity",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6847,13 +6847,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 944
+        "line": 945
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 944,
+      "line": 945,
       "column": 20,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6892,13 +6892,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 978
+        "line": 979
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 978,
+      "line": 979,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -6937,13 +6937,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1104
+        "line": 1111
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1104,
+      "line": 1111,
       "column": 42,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -7136,49 +7136,6 @@
         "file": "src/contracts/behavior.ts",
         "scope": "<module>",
         "line": 183
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/common.ts",
-      "line": 16,
-      "column": 18,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/contracts/interaction.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"owner\" | \"companion\" | \"system\" | \"external\"",
-      "values": [
-        "companion",
-        "external",
-        "owner",
-        "system"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/interaction.ts",
-        "scope": "<module>",
-        "line": 3
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/interaction.ts",
-      "line": 3,
-      "column": 9,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/contracts/common.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"owner\" | \"companion\" | \"system\"",
-      "values": [
-        "companion",
-        "owner",
-        "system"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/common.ts",
-        "scope": "<module>",
-        "line": 16
       }
     },
     {
@@ -7797,170 +7754,7 @@
     {
       "rule": "R8",
       "file": "src/contracts/interaction.ts",
-      "line": 3,
-      "column": 9,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/core/native/conversation.ts\",\"scope\":\"CoreNative/observeFacts\"}",
-      "expression": "\"owner\" | \"companion\" | \"system\"",
-      "values": [
-        "companion",
-        "owner",
-        "system"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/core/native/conversation.ts",
-        "scope": "CoreNative/observeFacts",
-        "line": 207
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/core/native/conversation.ts",
-      "line": 207,
-      "column": 26,
-      "scope": "CoreNative/observeFacts",
-      "target": "{\"file\":\"src/contracts/interaction.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"owner\" , \"companion\" , \"system\" ]",
-      "values": [
-        "companion",
-        "owner",
-        "system"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/contracts/interaction.ts",
-        "scope": "<module>",
-        "line": 3
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/interaction.ts",
-      "line": 3,
-      "column": 9,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/desktop/platform/plugin.ts\",\"scope\":\"PetPlatform/handle\"}",
-      "expression": "\"owner\" | \"companion\" | \"system\"",
-      "values": [
-        "companion",
-        "owner",
-        "system"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/desktop/platform/plugin.ts",
-        "scope": "PetPlatform/handle",
-        "line": 579
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/desktop/platform/plugin.ts",
-      "line": 579,
-      "column": 88,
-      "scope": "PetPlatform/handle",
-      "target": "{\"file\":\"src/contracts/interaction.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"owner\" | \"companion\"",
-      "values": [
-        "companion",
-        "owner"
-      ],
-      "shape": "union",
-      "relation": "子集",
-      "other": {
-        "file": "src/contracts/interaction.ts",
-        "scope": "<module>",
-        "line": 3
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/interaction.ts",
-      "line": 13,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/core/native/conversation.ts\",\"scope\":\"CoreNative/observeFacts\"}",
-      "expression": "\"body\" | \"economy\"",
-      "values": [
-        "body",
-        "economy"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/core/native/conversation.ts",
-        "scope": "CoreNative/observeFacts",
-        "line": 206
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/core/native/conversation.ts",
-      "line": 206,
-      "column": 98,
-      "scope": "CoreNative/observeFacts",
-      "target": "{\"file\":\"src/contracts/interaction.ts\",\"scope\":\"<module>\"}",
-      "expression": "[ \"body\" , \"economy\" ]",
-      "values": [
-        "body",
-        "economy"
-      ],
-      "shape": "array",
-      "relation": "重复",
-      "other": {
-        "file": "src/contracts/interaction.ts",
-        "scope": "<module>",
-        "line": 13
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/interaction.ts",
-      "line": 13,
-      "column": 11,
-      "scope": "<module>",
-      "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/factSource\"}",
-      "expression": "\"body\" | \"economy\"",
-      "values": [
-        "body",
-        "economy"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/living/plan/plugin.ts",
-        "scope": "CompanionLife/factSource",
-        "line": 439
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/plan/plugin.ts",
-      "line": 439,
-      "column": 29,
-      "scope": "CompanionLife/factSource",
-      "target": "{\"file\":\"src/contracts/interaction.ts\",\"scope\":\"<module>\"}",
-      "expression": "\"body\" | \"economy\"",
-      "values": [
-        "body",
-        "economy"
-      ],
-      "shape": "union",
-      "relation": "重复",
-      "other": {
-        "file": "src/contracts/interaction.ts",
-        "scope": "<module>",
-        "line": 13
-      }
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/interaction.ts",
-      "line": 18,
+      "line": 40,
       "column": 13,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"CompanionRoom/updateExecution\"}",
@@ -7995,7 +7789,7 @@
       "other": {
         "file": "src/contracts/interaction.ts",
         "scope": "<module>",
-        "line": 18
+        "line": 40
       }
     },
     {
@@ -8597,13 +8391,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 978
+        "line": 979
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 978,
+      "line": 979,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/core/native/result.ts\",\"scope\":\"<module>\"}",
@@ -11279,13 +11073,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/act",
-        "line": 1039
+        "line": 1040
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1039,
+      "line": 1040,
       "column": 22,
       "scope": "CompanionRoom/act",
       "target": "{\"file\":\"src/living/body/playback.ts\",\"scope\":\"resolveActivityPlayback\"}",
@@ -11326,13 +11120,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1081
+        "line": 1088
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1081,
+      "line": 1088,
       "column": 21,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/body/plugin.ts\",\"scope\":\"CompanionBehavior/garden\"}",
@@ -12214,7 +12008,7 @@
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 944,
+      "line": 945,
       "column": 20,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
@@ -12250,13 +12044,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 944
+        "line": 945
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 978,
+      "line": 979,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/living/economy/store.ts\",\"scope\":\"<module>\"}",
@@ -12292,13 +12086,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 978
+        "line": 979
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 978,
+      "line": 979,
       "column": 24,
       "scope": "CompanionRoom/tickAvailable",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -12333,13 +12127,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/tickAvailable",
-        "line": 978
+        "line": 979
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1081,
+      "line": 1088,
       "column": 21,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/garden\"}",
@@ -12375,13 +12169,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1081
+        "line": 1088
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1092,
+      "line": 1099,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -12417,13 +12211,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1092
+        "line": 1099
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1092,
+      "line": 1099,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -12459,13 +12253,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1092
+        "line": 1099
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1092,
+      "line": 1099,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/controlPlan\"}",
@@ -12501,13 +12295,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1092
+        "line": 1099
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1092,
+      "line": 1099,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/controlPlan\"}",
@@ -12543,13 +12337,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1092
+        "line": 1099
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1092,
+      "line": 1099,
       "column": 12,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/request\"}",
@@ -12585,13 +12379,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1092
+        "line": 1099
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1104,
+      "line": 1111,
       "column": 42,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance/this . change:callback1\"}",
@@ -12626,13 +12420,13 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1104
+        "line": 1111
       }
     },
     {
       "rule": "R8",
       "file": "src/living/body/room.ts",
-      "line": 1119,
+      "line": 1126,
       "column": 90,
       "scope": "CompanionRoom/garden",
       "target": "{\"file\":\"src/room/plugin.ts\",\"scope\":\"Room/tools\"}",
@@ -12677,7 +12471,7 @@
       "other": {
         "file": "src/living/body/room.ts",
         "scope": "CompanionRoom/garden",
-        "line": 1119
+        "line": 1126
       }
     },
     {
@@ -15360,16 +15154,6 @@
       "scope": "<module>",
       "target": "action",
       "expression": "action : string ;",
-      "shape": "bare string"
-    },
-    {
-      "rule": "R8",
-      "file": "src/contracts/interaction.ts",
-      "line": 14,
-      "column": 3,
-      "scope": "<module>",
-      "target": "type",
-      "expression": "type : string ;",
       "shape": "bare string"
     },
     {

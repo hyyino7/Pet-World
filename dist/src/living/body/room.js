@@ -1011,7 +1011,8 @@ export class CompanionRoom {
                         || !feedbackActions.includes(fact.type)
                         || typeof fact.id !== 'string' || Date.parse(fact.occurredAt) !== at)
                         continue;
-                    const duration = fact.type === 'pet' || fact.type === 'poke' ? HOME_TOUCH_REACTION_MS[fact.type] : Infinity;
+                    const type = fact.type;
+                    const duration = type === 'pet' || type === 'poke' ? HOME_TOUCH_REACTION_MS[type] : Infinity;
                     const feedbackUntil = Math.min(until, at + duration);
                     if (feedbackUntil <= now)
                         continue;
@@ -1302,11 +1303,17 @@ export class CompanionRoom {
         let fact;
         if (interaction) {
             const who = interaction.actor.kind === 'owner' ? '主人' : interaction.actor.kind === 'companion' ? '你自己' : '系统';
-            const labels = { water: interaction.actor.kind === 'companion' ? '喝水' : '喂水', feed: '给予免费基础餐食', pet: '摸摸', poke: '轻戳', play: '陪伴玩耍', sleep: '安排睡觉', wake: '叫醒', talk: '留言', lamp: '调整灯光', visit: '来到房间', command: '安排位置', go: '指定移动', place: '放置角色' };
-            const summary = result.event?.reason === 'sleeping' ? `${who}${labels[action]}未执行：${result.event.text}`
+            const labels = {
+                water: interaction.actor.kind === 'companion' ? '喝水' : '喂水', feed: '给予免费基础餐食', pet: '摸摸', poke: '轻戳', play: '陪伴玩耍',
+                sleep: '安排睡觉', wake: '叫醒', talk: '留言', lamp: '调整灯光', visit: '来到房间', command: '安排位置', go: '指定移动', place: '放置角色',
+                sick: undefined, heal: undefined,
+            };
+            // 上游准入仍由 HOME_ACTIONS 决定，契约测试核对两边的动作集合。
+            const factType = action;
+            const summary = result.event?.reason === 'sleeping' ? `${who}${labels[factType]}未执行：${result.event.text}`
                 : action === 'sleep' && result.state.sleepPending ? `${who}的睡觉安排已接收，正在前往床，尚未入睡。`
-                    : action === 'talk' ? `${who}的留言已保存：${text}` : `${who}${labels[action] || action}${result.changed ? '已完成' : '没有改变当前状态'}。`;
-            fact = { version: 1, id: `body:${key}`, requestId: interaction.requestId, domain: 'body', type: action, occurredAt: new Date(now).toISOString(), actor: structuredClone(interaction.actor),
+                    : action === 'talk' ? `${who}的留言已保存：${text}` : `${who}${labels[factType] || action}${result.changed ? '已完成' : '没有改变当前状态'}。`;
+            fact = { version: 1, id: `body:${key}`, requestId: interaction.requestId, domain: 'body', type: factType, occurredAt: new Date(now).toISOString(), actor: structuredClone(interaction.actor),
                 result: { status: result.changed ? 'completed' : 'unchanged', summary, before, after: structuredClone(result.state.needs) } };
             result.state.interactionReceipts = { ...this.interactions(), [key]: { fingerprint: fingerprint, fact, acknowledged: false, changed: result.changed } };
         }

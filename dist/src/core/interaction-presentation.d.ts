@@ -6,7 +6,7 @@ export declare function presentFact(fact: CompanionFact): {
     operationId?: string | undefined;
     id: string;
     domain: "economy" | "body";
-    type: string;
+    type: "sleep" | "wake" | "command" | "pet" | "poke" | "feed" | "water" | "play" | "talk" | "lamp" | "visit" | "go" | "place" | "sick" | "heal" | "purchase" | "sale" | "money-grant" | "item-gift" | "reading-import" | import("../contracts/interaction.js").LegacyFactType;
     at: string;
     actor: import("../contracts/interaction.js").CompanionFactActor;
     status: "failed" | "completed" | "unchanged";

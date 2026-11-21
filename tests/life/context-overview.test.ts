@@ -73,7 +73,7 @@ test('plan overview keeps full remaining intent and actual reading/transaction r
 });
 
 test('compact interactions retain separate ordered facts and provenance without copying numeric receipts',()=>{
-  const facts=['water','feed','pet'].map((type,index)=>({version:1 as const,id:'fact-'+index,requestId:'request-'+index,domain:'body' as const,type,
+  const facts=(['water','feed','pet'] as const).map((type,index)=>({version:1 as const,id:'fact-'+index,requestId:'request-'+index,domain:'body' as const,type,
     occurredAt:new Date(1000+index).toISOString(),actor:{kind:'owner' as const,id:'owner',channel:'room'},
     result:{status:'completed' as const,summary:type+' actually completed',before:{thirst:.8},after:{thirst:.2}}}));
   const original=JSON.stringify(facts),view=JSON.parse(presentFacts(facts));
