@@ -1,12 +1,17 @@
 import type { Context } from '@deepseek-ai/cordis';
+import { randomUUID } from 'node:crypto';
 import type { PetCoreHost } from '../../core/index.js';
-import { type BehaviorChange, type BehaviorSnapshot, type CurrentActivityId, type PlannedActivity, type PlannedExecution } from '../../contracts/behavior.js';
+import { type BehaviorActivity, type BehaviorChange, type BehaviorSnapshot, type PlannedActivity, type PlannedExecution } from '../../contracts/behavior.js';
 import { CompanionRoom } from './room.js';
 import type { CompanionFactSource } from '../../contracts/interaction.js';
 import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomInteractionContext } from './room.js';
 import { LivingView, type LivingPorts, type RecordCommandEffect } from '../index.js';
 export type { PlannedActivity, PlannedExecution } from '../../contracts/behavior.js';
+type VersionedBehavior = BehaviorActivity & {
+    revision: number;
+    bootId: ReturnType<typeof randomUUID>;
+};
 /** The only home/garden runtime writer. It does not create agents or model turns. */
 export declare class CompanionBehavior {
     private ctx;
@@ -47,6 +52,7 @@ export declare class CompanionBehavior {
     private synchronize;
     private checked;
     private activity;
+    private publicBehavior;
     private presentHome;
     private publish;
     private currentBound;
@@ -62,17 +68,7 @@ export declare class CompanionBehavior {
     roomState(workspaceId: string): Promise<any>;
     roomAction(workspaceId: string, input: unknown, by?: string, interaction?: RoomInteractionContext, recordEffect?: RecordCommandEffect): Promise<{
         home: any;
-        behavior: {
-            revision: number;
-            bootId: `${string}-${string}-${string}-${string}-${string}`;
-            kind: string;
-            phase: import("../../contracts/behavior.js").BodyPhase;
-            startedAt?: number | undefined;
-            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext | undefined;
-            activityId: CurrentActivityId;
-            presentationKind?: "read" | "reading-wait" | "rest" | undefined;
-            readingState?: import("../../contracts/behavior.js").ReadingState | undefined;
-        };
+        behavior: VersionedBehavior;
         ok: boolean;
         changed: boolean;
         event: any;
@@ -81,17 +77,7 @@ export declare class CompanionBehavior {
     }>;
     act(workspaceId: string, action: string, requestId?: string, channel?: string, recordEffect?: RecordCommandEffect): Promise<{
         home: any;
-        behavior: {
-            revision: number;
-            bootId: `${string}-${string}-${string}-${string}-${string}`;
-            kind: string;
-            phase: import("../../contracts/behavior.js").BodyPhase;
-            startedAt?: number | undefined;
-            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext | undefined;
-            activityId: CurrentActivityId;
-            presentationKind?: "read" | "reading-wait" | "rest" | undefined;
-            readingState?: import("../../contracts/behavior.js").ReadingState | undefined;
-        };
+        behavior: VersionedBehavior;
         ok: boolean;
         changed: boolean;
         event: any;
@@ -102,6 +88,7 @@ export declare class CompanionBehavior {
     readFacts(workspaceId: string, ids: readonly string[]): Promise<import("../../contracts/interaction.js").CompanionFact[]>;
     acknowledgeFacts(workspaceId: string, ids: readonly string[]): Promise<void>;
     garden(workspaceId: string, operation: 'state' | 'act' | 'control', input?: unknown): Promise<ReturnType<CompanionRoom['garden']> & {
+        behavior: VersionedBehavior;
         home?: any;
     }>;
     setAutonomy(workspaceId: string, enabled: boolean): Promise<void>;

@@ -153,16 +153,9 @@ export declare class CompanionLife {
     }>;
     act(workspaceId: string, action: string, requestId?: string, channel?: string): Promise<{
         home: any;
-        behavior: {
+        behavior: import("../../contracts/behavior.js").BehaviorActivity & {
             revision: number;
-            bootId: `${string}-${string}-${string}-${string}-${string}`;
-            kind: string;
-            phase: import("../../contracts/behavior.js").BodyPhase;
-            startedAt?: number | undefined;
-            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext | undefined;
-            activityId: import("../../contracts/behavior.js").CurrentActivityId;
-            presentationKind?: "read" | "reading-wait" | "rest" | undefined;
-            readingState?: import("../../contracts/behavior.js").ReadingState | undefined;
+            bootId: ReturnType<typeof import("crypto").randomUUID>;
         };
         ok: boolean;
         changed: boolean;
@@ -175,16 +168,9 @@ export declare class CompanionLife {
     /** Compatibility methods delegate; Behavior remains available after Life unload. */
     roomAction(workspaceId: string, input: unknown, by?: string): Promise<{
         home: any;
-        behavior: {
+        behavior: import("../../contracts/behavior.js").BehaviorActivity & {
             revision: number;
-            bootId: `${string}-${string}-${string}-${string}-${string}`;
-            kind: string;
-            phase: import("../../contracts/behavior.js").BodyPhase;
-            startedAt?: number | undefined;
-            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext | undefined;
-            activityId: import("../../contracts/behavior.js").CurrentActivityId;
-            presentationKind?: "read" | "reading-wait" | "rest" | undefined;
-            readingState?: import("../../contracts/behavior.js").ReadingState | undefined;
+            bootId: ReturnType<typeof import("crypto").randomUUID>;
         };
         ok: boolean;
         changed: boolean;
@@ -212,6 +198,10 @@ export declare class CompanionLife {
         accepted?: boolean;
         status?: string;
     }) & {
+        behavior: import("../../contracts/behavior.js").BehaviorActivity & {
+            revision: number;
+            bootId: ReturnType<typeof import("crypto").randomUUID>;
+        };
         home?: any;
     }>;
     settings(workspaceId: string, expected: unknown, next: unknown): Promise<{

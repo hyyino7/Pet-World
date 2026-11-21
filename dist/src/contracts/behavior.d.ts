@@ -186,7 +186,10 @@ export type OperationId = string;
 export type CurrentActivityId = string | null;
 /** completed 来自身体任务的 completedAt。 */
 export type BodyPhase = 'idle' | 'pending' | 'moving' | 'working' | 'sleeping' | 'completed';
-/** completed 表示执行已结束，结果由 ExecutionStatus 区分，包括失败和取消。 */
+/**
+ * completed 表示执行已结束，结果由 ExecutionStatus 区分，包括失败和取消。
+ * 终态以 status 为准：旧存档有 running + completed，菜园执行失败会写 failed + waiting。
+ */
 export type ExecutionPhase = 'pending' | 'moving' | 'working' | 'waiting' | 'completed';
 export type ExecutionStatus = 'running' | 'paused' | 'completed' | 'cancelled' | 'interrupted' | 'failed';
 /** Read-only media hints grounded in the current accepted operation and facts. */
@@ -217,7 +220,7 @@ export interface BehaviorActivity {
     /** Persisted phase onset when known; zero never claims a historical start. */
     startedAt?: number;
     phase: BodyPhase;
-    /** 共享身体活动是否阻止桌宠发起一次新的吃饭动作。 */
+    /** 为真时桌宠不能发起一次新投喂。已经在吃饭时也为真，吃饭素材仍放行且不再投喂。 */
     busy: boolean;
     /** Derived from accepted execution and real content receipts, never activity prose. */
     presentationKind?: 'read' | 'reading-wait' | 'rest';

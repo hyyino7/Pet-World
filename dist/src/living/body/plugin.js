@@ -322,8 +322,11 @@ export class CompanionBehavior {
             phase: state.route ? 'moving' : state.asleep ? 'sleeping' : state.sleepPending || state.freeTarget || state.command ? 'pending' :
                 state.dwell || state.reactionUntil > Date.now() ? 'working' : task?.completedAt ? 'completed' : 'idle' };
     }
-    presentHome(home, activity = this.activity()) {
-        const projected = { ...home, behavior: { ...activity, revision: this.revision, bootId: this.bootId } };
+    publicBehavior(her) {
+        return { ...this.activity(), busy: companionBusy(her), revision: this.revision, bootId: this.bootId };
+    }
+    presentHome(home, behavior = this.publicBehavior(home.her)) {
+        const projected = { ...home, behavior: { ...behavior } };
         return { ...projected, playback: resolveActivityPlayback(projected) };
     }
     publish(reason = 'transition', notifyFirst = reason === 'transition') {
@@ -428,10 +431,9 @@ export class CompanionBehavior {
             const execution = JSON.stringify(bound.room.plannedState());
             this.advanceRoom(bound);
             this.publish(execution === JSON.stringify(bound.room.plannedState()) ? 'observation' : 'transition');
-            const view = bound.room.view();
-            const behavior = { ...this.activity(), busy: companionBusy(view.her) };
-            const home = this.presentHome(view, behavior);
-            return { workspaceId, storageId: bound.storageId, bootId: this.bootId, revision: this.revision,
+            const home = this.presentHome(bound.room.view());
+            const { revision, bootId, ...behavior } = home.behavior;
+            return { workspaceId, storageId: bound.storageId, bootId, revision,
                 autonomyEnabled: this.autonomous, behavior, home, needs: structuredClone(bound.room.state.needs), presentation: behaviorPresentation(home, this.expression), fault: this.fault ?? this.publicationFault ?? null,
                 ...(bound.room.plannedState() ? { planned: bound.room.plannedState() } : {}) };
         });
@@ -459,7 +461,7 @@ export class CompanionBehavior {
         return this.snapshot(workspaceId).then(value => ({ ...value.home, lifeEnabled: value.autonomyEnabled,
             identity: { displayName: this.host.workspace.runtime.identity().displayName },
             autonomyEnabled: value.autonomyEnabled, presentation: value.presentation,
-            behavior: { ...value.behavior, revision: value.revision, bootId: value.bootId } }));
+            behavior: value.home.behavior }));
     }
     roomAction(workspaceId, input, by = '伙伴', interaction, recordEffect) {
         return this.enqueue(async (validate) => {
@@ -478,8 +480,8 @@ export class CompanionBehavior {
             const result = bound.room.act(input, by, Date.now(), source);
             recordEffect?.('partial');
             this.publish();
-            const behavior = { ...this.activity(), revision: this.revision, bootId: this.bootId };
-            return { ...result, home: { ...this.presentHome(result.home), presentation: behaviorPresentation(result.home, this.expression) }, behavior };
+            const behavior = this.publicBehavior(result.home.her);
+            return { ...result, home: { ...this.presentHome(result.home, behavior), presentation: behaviorPresentation(result.home, this.expression) }, behavior };
         });
     }
     act(workspaceId, action, requestId = randomUUID(), channel = 'desktop', recordEffect) {
@@ -503,8 +505,9 @@ export class CompanionBehavior {
             const execution = JSON.stringify(bound.room.plannedState());
             const result = bound.room.garden(operation, input);
             this.publish(operation === 'state' && execution === JSON.stringify(bound.room.plannedState()) ? 'observation' : 'transition');
-            const behavior = { ...this.activity(), revision: this.revision, bootId: this.bootId };
-            return { ...result, behavior, ...('home' in result && result.home ? { home: this.presentHome(result.home) } : {}) };
+            const home = 'home' in result ? result.home : undefined;
+            const behavior = this.publicBehavior((home || bound.room.view()).her);
+            return { ...result, behavior, ...(home ? { home: this.presentHome(home, behavior) } : {}) };
         });
     }
     setAutonomy(workspaceId, enabled) {
