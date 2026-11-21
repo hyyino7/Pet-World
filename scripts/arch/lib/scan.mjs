@@ -33,5 +33,9 @@ export function scan(root) {
   const ast=project(root,[...paths].sort());
   const rules=scanRules(ast,layers,readJson(join(root,'package.json')).imports??{});
   const vocabulary=scanVocabulary(ast),writers=scanStorage(ast,layers,storage);
-  return {rules:rules.reports,edges:rules.edges,vocabulary:vocabulary.reports,definitions:vocabulary.definitions,bare:vocabulary.bare,judgments:vocabulary.judgments,writers,skipped,skippedVendorSources:[...skippedVendorSources].sort()};
+  return {
+    rules:rules.reports,edges:rules.edges,moduleIds:modules.map(([id])=>id),
+    vocabulary:vocabulary.reports,definitions:vocabulary.definitions,bare:vocabulary.bare,judgments:vocabulary.judgments,
+    writers,skipped,skippedVendorSources:[...skippedVendorSources].sort(),
+  };
 }
