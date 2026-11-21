@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { withLivingCaller } from '../index.js';
 import { createLifeStore, LIFE_STATE_MAX_BYTES } from '#dsh-world/life/lifeStore';
-import { PlannedAdmissionWaitError } from '../../contracts/behavior.js';
+import { isPlanBodyAction, PlannedAdmissionWaitError } from '../../contracts/behavior.js';
 import { requirePresentationSlot } from '../body/playback.js';
 import { gardenReceiptText } from '../body/garden-receipt.js';
 export const expiredDispatchDeadline = 'The activity absolute deadline elapsed before Body admission; revise the original plan explicitly';
@@ -46,7 +46,7 @@ function parsePlan(raw, legacy) {
             step.garden = structuredClone(value.garden);
         }
         if (value.kind === 'body') {
-            check(['sleep', 'wake', 'water', 'feed', 'play'].includes(String(value.action)), 'Unsupported bodily activity');
+            check(isPlanBodyAction(String(value.action)), 'Unsupported bodily activity');
             step.action = value.action;
         }
         if (value.kind === 'economy') {

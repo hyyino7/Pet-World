@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { buildHomePromptLine } from '#feiyu-home';
 import { check, digest, reject, text } from '../../core/storage.js';
+import { isCareAction } from '../../contracts/behavior.js';
 import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
@@ -10,7 +11,6 @@ import { gardenHomeProjection } from './garden-receipt.js';
 import { LifeControlFileError, readLifeControl } from '../plan/control-file.js';
 import { readEconomyFileEvidence, readEconomyJournalEvidence } from '../economy/adoption.js';
 import { LivingView, livingCaller, mountLivingArea, settleCleanup } from '../index.js';
-const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
 const owners = new WeakMap();
 /** The only home/garden runtime writer. It does not create agents or model turns. */
 export class CompanionBehavior {
@@ -435,7 +435,7 @@ export class CompanionBehavior {
     worldSnapshot(workspaceId) { return this.living.worldSnapshot(this.host, workspaceId); }
     worldCommands = {
         care: ({ action, ...request }, options) => this.living.command(this.host, request, options, async ({ effect }) => {
-            check(actions.includes(action), '未知的身体动作');
+            check(isCareAction(action), '未知的身体动作');
             text(request.requestId, 'request id', 256);
             try {
                 const { changed } = await this.act(request.workspaceId, action, request.requestId, undefined, effect);
@@ -479,7 +479,7 @@ export class CompanionBehavior {
         });
     }
     act(workspaceId, action, requestId = randomUUID(), channel = 'desktop', recordEffect) {
-        if (!actions.includes(action))
+        if (!isCareAction(action))
             return Promise.reject(Error('未知的身体动作'));
         return this.roomAction(workspaceId, { action }, '主人', { requestId, actor: { kind: 'owner', id: this.host.workspace.runtime?.config?.ownerActorId ?? 'owner', channel } }, recordEffect);
     }

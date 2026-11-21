@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../core/index.js';
 import {randomUUID} from 'node:crypto';
+import type {CareAction} from '../contracts/behavior.js';
 import type {CompanionFactActor} from '../contracts/interaction.js';
 import {sameBinding, type Binding} from './conversation.js';
 import {DEFAULT_CONVERSATION} from '../core/options.js';
@@ -162,13 +163,14 @@ export class DesktopFeatures {
     if (rest === 'whisper') return this.whisper(url.searchParams.get('image') ?? undefined);
     if (rest === 'balance') return this.balance();
     if (rest === 'sleep' || rest === 'wake' || rest === 'pet') {
+      const action: CareAction = rest;
       const behavior=(this.ctx as any).get('petBehavior');
       if(!behavior)throw Error('身体与行为模块未启用');
       const payload=typeof input.body==='string'?JSON.parse(input.body || '{}'):{};
       const requestId=typeof payload.requestId==='string'?payload.requestId:randomUUID();
       const result = input.actor && behavior.roomAction
-        ? await behavior.roomAction(target.id,{action:rest},input.actor.kind==='owner'?'主人':'大肥鱼',{requestId,actor:input.actor})
-        : await behavior.act(target.id, rest,requestId,'desktop');
+        ? await behavior.roomAction(target.id,{action},input.actor.kind==='owner'?'主人':'大肥鱼',{requestId,actor:input.actor})
+        : await behavior.act(target.id, action,requestId,'desktop');
       this.assertCurrent(target);
       if (rest === 'pet') return {ok:true};
       this.restore(false);

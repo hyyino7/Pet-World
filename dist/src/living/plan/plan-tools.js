@@ -2,6 +2,7 @@ import { planOverview } from './tool-context.js';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
+import { PLAN_BODY_ACTIONS } from '../../contracts/behavior.js';
 import { registerLifeToolPolicy } from './tool-policy.js';
 const output = { schema: { type: 'string' }, render: (_, value) => [{ type: 'text', text: value }] };
 export const lifePlanReadToolDeclaration = {
@@ -100,7 +101,7 @@ export function registerPlanTools(ctx, host, life) {
                                             }, additionalProperties: false },
                                         { type: 'object', properties: { ...activityFields,
                                                 kind: { type: 'string', const: 'body', required: true },
-                                                action: { type: 'string', enum: ['sleep', 'wake', 'water', 'feed', 'play'], required: true, description: 'Existing bodily action. feed and water are free basic food/drinking water; paid catalog foods require kind=economy and type=consume. No durationMinutes/until; completion follows the actual body result.' },
+                                                action: { type: 'string', enum: PLAN_BODY_ACTIONS, required: true, description: 'Existing bodily action. feed and water are free basic food/drinking water; paid catalog foods require kind=economy and type=consume. No durationMinutes/until; completion follows the actual body result.' },
                                             }, additionalProperties: false },
                                         { type: 'object', properties: { ...activityFields,
                                                 kind: { type: 'string', const: 'garden', required: true }, garden: gardenOperation,

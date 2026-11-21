@@ -772,7 +772,8 @@ export class PetPlatform {
             if (!features)
                 return json({ ok: false }, 503);
             const target = new URL(input.path, 'https://pet.local/'), action = target.pathname.slice(1);
-            if (['sleep', 'wake', 'pet'].includes(action)) {
+            const nativeCareActions = ['sleep', 'wake', 'pet'];
+            if (nativeCareActions.includes(action)) {
                 if (!target.searchParams.has('lock') && url.searchParams.has('lock'))
                     target.searchParams.set('lock', url.searchParams.get('lock'));
                 const blocked = this.careBlocked(action, target.searchParams.get('pet') || pet, target.searchParams);

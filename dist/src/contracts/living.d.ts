@@ -1,4 +1,4 @@
-import type { BehaviorSnapshot, PlannedActivity, PlannedExecution } from './behavior.js';
+import type { BehaviorSnapshot, CareAction, PlannedExecution } from './behavior.js';
 import type { CallOptions, RequestContext, Result, Revision } from './common.js';
 export interface InventoryItem {
     itemId: string;
@@ -45,7 +45,7 @@ type TradeRequest = WorldCommandRequest & {
 };
 export interface WorldCommands {
     care(input: WorldCommandRequest & {
-        action: NonNullable<PlannedActivity['action']> | 'pet';
+        action: CareAction;
     }, options?: CommandOptions): Promise<Result<{
         changed: boolean;
     }>>;

@@ -142,6 +142,18 @@ test('companion facts are never promoted to owner touch feedback',t=>{
   assert.deepEqual(f.room.pendingFacts()[0].actor,actor);
 });
 
+test('owner feedback projects the fact for each supported interaction', t => {
+  const {room} = fixture(t);
+  for (const action of ['pet','poke','water','feed','play','talk']) {
+    const result = room.act({action,text:'合成留言'}, '主人', Date.now(), {requestId:action,actor:owner});
+    const feedback = room.presentationActivity().animationContext?.interaction;
+    assert.ok(result.fact, action);
+    assert.equal(feedback?.action, action);
+    assert.equal(feedback?.id, result.fact.id);
+    t.mock.timers.setTime(Date.now() + 1);
+  }
+});
+
 test('catalog food metadata is captured once with actual effects and survives authority-free viewing',t=>{
   const f=fixture(t,true),store=f.economy!.prepare(f.target);
   store.giftItem('gift-meals',meal,2,undefined,owner);

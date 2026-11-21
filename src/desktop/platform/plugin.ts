@@ -14,6 +14,7 @@ import {migratePresentation,resolvePresentationMigration,type PresentationMigrat
 import { companionFeelings } from '../../living/body/presentation.js';
 import type { PlaybackReceipt } from '../../emotion/index.js';
 import type { CompanionFactActor } from '../../contracts/interaction.js';
+import type { CareAction } from '../../contracts/behavior.js';
 
 const load = createRequire(import.meta.url);
 const root = dirname(load.resolve('her-world/package.json'));
@@ -627,7 +628,8 @@ export class PetPlatform {
       const features=this.ctx.petDesktop.features;
       if(!features)return json({ok:false},503);
       const target=new URL(input.path,'https://pet.local/'),action=target.pathname.slice(1);
-      if(['sleep','wake','pet'].includes(action)) {
+      const nativeCareActions: readonly string[] = ['sleep','wake','pet'] satisfies readonly CareAction[];
+      if(nativeCareActions.includes(action)) {
         if(!target.searchParams.has('lock') && url.searchParams.has('lock'))target.searchParams.set('lock',url.searchParams.get('lock')!);
         const blocked=this.careBlocked(action,target.searchParams.get('pet') || pet,target.searchParams);
         if(blocked)return blocked;

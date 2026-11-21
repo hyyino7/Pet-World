@@ -13,6 +13,7 @@ import { installLifeReview, REVIEW_ALARM_FILE } from './review.js';
 import { PersistentLifePlan, expiredDispatchDeadline, parsePlanDraft } from './plan.js';
 import { registerPlanTools } from './plan-tools.js';
 import { presentFacts } from '../../core/interaction-presentation.js';
+import { isCareAction } from '../../contracts/behavior.js';
 import { integer, reject, text, unavailable } from '../../core/storage.js';
 import { CONTRACT_VERSION } from '../../contracts/version.js';
 import { readFactReferences } from './facts.js';
@@ -21,7 +22,6 @@ import { recordGardenPause } from '../economy/garden-clock.js';
 import { lifeDirectories, readLifeControl, readLifeSettings, safeLifeFile } from './control-file.js';
 import { InFlight, LivingView, mountLivingArea, settleCleanup, withLivingCaller } from '../index.js';
 import { lookupLifeOutlet } from '../outlets.js';
-const actions = ['feed', 'water', 'play', 'pet', 'sleep', 'wake'];
 /** The upstream fact layer is the only state writer. World owns scheduling,
  * journal and native home recovery; Core owns every model step and Memory. */
 export class CompanionLife {
@@ -774,7 +774,7 @@ export class CompanionLife {
         }, { finishOnClose: !enabled });
     }
     act(workspaceId, action, requestId, channel = 'settings') {
-        if (!actions.includes(action))
+        if (!isCareAction(action))
             return Promise.reject(Error('未知的生活动作'));
         return this.forwardToBody(body => body.act(workspaceId, action, requestId, channel));
     }

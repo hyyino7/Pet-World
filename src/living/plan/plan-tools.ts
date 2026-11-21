@@ -7,6 +7,7 @@ import type { CompanionLife } from './plugin.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
 import type { CompanionToolDeclaration } from '../../contracts/tables.js';
+import { PLAN_BODY_ACTIONS } from '../../contracts/behavior.js';
 import type { CompanionToolTable } from '../../core/tables/tools.js';
 import { registerLifeToolPolicy } from './tool-policy.js';
 
@@ -100,7 +101,7 @@ export function registerPlanTools(ctx:Context,host:PetCoreHost,life:CompanionLif
           },additionalProperties:false},
           {type:'object',properties:{...activityFields,
             kind:{type:'string',const:'body',required:true},
-            action:{type:'string',enum:['sleep','wake','water','feed','play'],required:true,description:'Existing bodily action. feed and water are free basic food/drinking water; paid catalog foods require kind=economy and type=consume. No durationMinutes/until; completion follows the actual body result.'},
+            action:{type:'string',enum:PLAN_BODY_ACTIONS,required:true,description:'Existing bodily action. feed and water are free basic food/drinking water; paid catalog foods require kind=economy and type=consume. No durationMinutes/until; completion follows the actual body result.'},
           },additionalProperties:false},
           {type:'object',properties:{...activityFields,
             kind:{type:'string',const:'garden',required:true},garden:gardenOperation,
