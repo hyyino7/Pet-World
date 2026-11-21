@@ -161,7 +161,18 @@
 
 **不做**：Room 菜园工具的 12 个操作（`room/plugin.ts:131`）是角色工具的超集，含 `state / auto / careNow` 等非计划操作，属于 Room 入口自己的词表，只把与计划重叠的部分改为从菜园操作表拼出。
 
-**开工细则要定**：校验表的形状；17 个点合并后的去向。
+**开工细则（Claude 补齐，主人过目后开工；行号以第 2 批合并后的 `main`（`f3379cd`）为准）**
+
+1. **计划 kind 表带两项属性，代替四份分组。** `contracts/behavior.ts` 放 `PLAN_KINDS`，每种 kind 标两项：`target`（要指定房间位置：`room / move`）和 `executable`（依据真实回执结束、不接受时长：`move / garden / body / economy / read`）。这两组现在各写了两份：「要目标」在 `plan.ts:87`、`room.ts:609`；「可执行」在 `plan.ts:114`、`room.ts:620`，另有它的补集「持续活动 `room / hold`」在 `plan.ts:127`。三处改读表上的属性。属性值是布尔，表的键顺序就是现有 `oneOf` 以外各处共用的 `hold / room / move / garden / body / economy / read`。
+2. **一个守卫判断是不是计划 kind。** 导出 `isPlanKind(value)`，`plan.ts:85` 用 `isPlanKind(String(value.kind))`（保留 `String(...)` 的宽松准入），`room.ts:598` 用 `isPlanKind(input.kind)`，报错各自不变。
+3. **字段校验按 kind 分派，两边各一张完整映射。** Life 和 Body 的字段校验文案不同（Life 英文、Body 中文），不合成一份；各自写成 `Record<PlanKind, 校验函数>`，TypeScript 要求每种 kind 都有一项，以后加 kind 漏写校验会编译失败。Life 侧承接 `plan.ts:87-112` 的 room/move、garden、body、economy、read 五段；Body 侧承接 `room.ts:609-619` 的 room/move、hold、garden、body、economy、read 六段。分派点放在原来这些段所在的位置，所以各字段报错的先后不变：Life 在公共字段之后、`presentationSlot` 之前；Body 在 `freezeOnPause` 之后、「执行活动不能带 until」之前。没有专门校验的 kind 映射到空函数。
+4. **留在原处的两处 kind 判断**：`room.ts:604`（经济食用时取食物素材槽，是素材准入不是字段校验）和 `room.ts:629`（菜园计划的准入等待），它们各只判断一种 kind，不是分组副本。
+5. **经济和菜园操作各一张表。** `PLAN_ECONOMY_OPERATIONS`（`buy / sell / consume`）替换 `contracts/behavior.ts:113` 的联合、`plan-tools.ts:112` 的枚举、`plan.ts:101`、`room.ts:615`；Body 调 Economy 的 `buy / sell` 子集（`room.ts:41`、`economy/plugin.ts:27`）改成从它排除 `consume` 的类型。`PLAN_GARDEN_OPERATIONS` 替换 `plan.ts:90`、`room.ts:73` 的 `gardenActions` 和 `plan-tools.ts:32-56` 五个分支里的取值；五个分支的结构和每个分支里的枚举顺序不变，每个操作在表里记它属于哪个分支和分支内序号（同第 2 批的序号写法）。Room 工具的 12 个菜园操作（`room/plugin.ts:131`）是主人入口自己的词表，不动。
+6. **阅读状态一张表。** `READING_STATES`（`unread / offered / confirmed`）替换 `contracts/behavior.ts:85`、`economy/types.ts:67`、`room.ts:53,835` 的联合；Economy 存储行只有 `offered / confirmed`（`economy/store.ts:351`），类型写成排除 `unread`。差异清单记的「公开路径上看不到 `confirmed`」不改。
+7. **`plan-tools.ts` 的计划步骤 schema 由一张 `Record<PlanKind, 分支>` 生成。** 分支对象的键顺序照现在的 `oneOf` 顺序（`hold / room / move / body / garden / economy / read`），每个分支的 `kind.const` 从键生成；描述文字逐字不变。第 1 批 `concepts-plan.test.mjs` 按 `const` 找分支，顺序另加一条断言。
+8. **点数预计**：`plan.ts` 去掉 9 个 kind 点（`:85,87,87,88,94,98,107,114,127`），`room.ts` 去掉 8 个（`:598,609-613,618,620`），守卫新增 1 个，kind 预计 287 → 271；action 不变（102）。字段校验改成按表分派后，每一步只判断一次 kind，这是判断次数真实减少；以后加 kind 由编译器提醒补校验，执行结果里照这个口径写。
+9. **提交切分**（`dist/src` 不计）：① 四张表和守卫、`contracts` 类型、Body 侧校验映射、经济和阅读类型替换；② Life 侧校验映射和 `plan-tools.ts` schema 生成，加顺序断言和方案执行结果。
+10. **验收**：第 1 批 13 条和第 2 批测试全绿且断言不改；`check:arch -- --report` 的 kind ≤ 275、action 不升；R8 和规则基线新增 0；`pnpm run verify`（沙箱外）。
 
 ## 第 4 批：活动、阶段和身体状态契约
 
