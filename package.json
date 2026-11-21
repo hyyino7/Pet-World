@@ -123,6 +123,7 @@
     "test:release": "node --test tests/infrastructure/release-flow.test.mjs",
     "test:refresh": "node --test tests/regressions/room-refresh.test.mjs tests/regressions/mapped-refresh-convergence.test.mjs",
     "check:arch": "node scripts/arch/check.mjs",
+    "metrics": "node scripts/arch/metrics.mjs",
     "test:behavior-list": "node --test tests/behavior-list/index.test.mjs && node scripts/checks/run-behavior-list.mjs",
     "verify": "node scripts/checks/verify.mjs",
     "check:published": "node scripts/checks/check-published.mjs"

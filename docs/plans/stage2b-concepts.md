@@ -244,4 +244,11 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 
 ## 执行结果
 
+### M 批
+
+- `scripts/arch/metrics.mjs` 复用架构扫描并统计跟踪的手写文件，提供文本和 JSON 输出。两项人工度量链接到 `docs/product.md` 的对应记录。
+- `package.json` 登记 `metrics` 命令，`docs/development.md` 说明用法。`tests/infrastructure/metrics.test.mjs` 在当前仓库对照架构报告，并验证超过 1500 行的生成文件被排除。
+- `pnpm run metrics` 和 `pnpm run metrics -- --json` 均通过，标准输出可解析为 JSON。快测 1 项通过、0 项失败。`pnpm run check:arch` 通过，规则和词表基线新增及消失均为 0。
+- 当前 37 个违规目标、R8 基线 1031 条、kind 287 点、action 105 点、手写超限 0 个。模块依赖以同口径复算，M2 为 60 条，2a 搬家后 46 条，2a 收尾和本次均为 40 条（生活模块合并后排除 6 条自环、8 条重复边，后续又移除 6 条边）；这段解释第 6 批写进 product.md 的 G5 表，命令只输出当前数。
+
 ## 审查结论
