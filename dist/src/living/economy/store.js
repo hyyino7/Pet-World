@@ -6,7 +6,8 @@ import { pathToFileURL } from 'node:url';
 import { CROPS, GARDEN_RULES, createGarden, normalizeGarden, advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
 import { canonical, check, digest, integer, reject, text, unavailable } from '../../core/storage.js';
 import { closeSqliteLease, setSqliteMeta } from '../../core/sqlite.js';
-import { effectiveEconomyConfiguration, defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
+import { effectiveEconomyConfiguration, defaultEconomyConfiguration, economyCatalog, isWritableCatalogKey, ORIGINAL_READINGS } from './catalog.js';
+import { isBodyMetric } from '../../contracts/behavior.js';
 import { advanceGardenClock } from './garden-clock.js';
 import { ECONOMY_INITIALIZED, economyAdoptionPath, economyFile, economyRecoveryAdvice, ensureAdoptionDirectory, inspectEconomyAdoption, readEconomyDatabaseMarker, readEconomyFileEvidence, syncPath, writeEconomyFile } from './adoption.js';
 const cropRows = CROPS;
@@ -306,7 +307,17 @@ export class EconomyStore {
         return { storageId: this.options.storageId, companionId: this.options.companionId, revision: this.revision(), balance: this.balance(), inventory,
             catalog: this.catalogRows(), configuration: this.configuration(), bookmarks: this.allBookmarks(), pendingUses: this.allUses().filter(row => row.status === 'reserved'), migration: this.requiredMeta('migration') };
     }
-    snapshot(_now = Date.now()) { this.ensure(); return this.snapshotRow(); }
+    snapshot(_now = Date.now()) {
+        this.ensure();
+        const snapshot = this.snapshotRow();
+        const catalogKeys = snapshot.catalog.map(item => item.id).filter(isWritableCatalogKey);
+        // 保留旧配置中已经能编辑的键。这里只补读取视图，SQLite 的请求回执仍使用 snapshotRow()。
+        const writableKeys = {
+            itemPrices: [...new Set([...catalogKeys, ...Object.keys(snapshot.configuration.itemPrices)])],
+            catalogEnabled: [...new Set([...catalogKeys, ...Object.keys(snapshot.configuration.catalogEnabled)])],
+        };
+        return { ...snapshot, writableKeys };
+    }
     catalog() { this.ensure(); return this.catalogRows(); }
     ledger(input = {}) {
         this.ensure();
@@ -459,7 +470,7 @@ export class EconomyStore {
                     check(this.item(itemId).kind === 'food', 'Effects require a food item');
                     check(effects && typeof effects === 'object' && !Array.isArray(effects), 'Invalid food effect');
                     for (const [need, delta] of Object.entries(effects)) {
-                        check(['hunger', 'thirst', 'energy', 'bladder', 'pain'].includes(need), 'Unknown body need');
+                        check(isBodyMetric(need), 'Unknown body need');
                         check(typeof delta === 'number' && Number.isFinite(delta) && delta >= -1 && delta <= 1, 'Body need delta must be between -1 and 1');
                     }
                     config.foodEffects[itemId] = effects;

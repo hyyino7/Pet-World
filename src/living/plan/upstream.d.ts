@@ -7,7 +7,7 @@ declare module '#feiyu-home' {
   export function normalizeHomeState(raw: unknown, now?: number): any;
   export function advanceHomeState(state: any, now?: number, env?: object): {state: any; changed: boolean};
   export function nextHomeBoundary(state:any,now?:number,conditions?:readonly {metric:string;comparison:string;value:number}[],passive?:boolean):number|null;
-  export function applyCatalogFood(state: any, input: {effects: {hunger?: number; thirst?: number; energy?: number; bladder?: number; pain?: number}; label: string; source: string; at: number}): {state: any; changed: boolean; event: any};
+  export function applyCatalogFood(state: any, input: {effects: Partial<Record<import('../../contracts/behavior.js').BodyMetric, number>>; label: string; source: string; at: number}): {state: any; changed: boolean; event: any};
   export function applyHomeAction(state: any, input: object): {state: any; changed: boolean; event: any};
   export function saveHomeState(file: string, state: any, now?: number): any;
   export function homeView(state: any, now?: number, env?: object): any;

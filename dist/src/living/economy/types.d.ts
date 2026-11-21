@@ -1,5 +1,5 @@
 import type { InventoryItem, ReadingBookmark } from '../../contracts/living.js';
-import type { ReadingState } from '../../contracts/behavior.js';
+import type { BodyMetric, ReadingState } from '../../contracts/behavior.js';
 export type { InventoryItem, ReadingBookmark } from '../../contracts/living.js';
 export type ItemKind = 'seed' | 'harvest' | 'compost' | 'food' | 'reading';
 export interface CatalogItem {
@@ -22,7 +22,7 @@ export interface CatalogItem {
         name: string;
     };
 }
-export type BodyNeedDelta = Partial<Record<'hunger' | 'thirst' | 'energy' | 'bladder' | 'pain', number>>;
+export type BodyNeedDelta = Partial<Record<BodyMetric, number>>;
 export interface CropConfiguration {
     growMs: number;
     seedCost: number;
@@ -80,11 +80,18 @@ export interface EconomySnapshot {
         importedAt: number;
     };
 }
+/** 流水的 owner-grant 记录钱包变动，事实的 money-grant 记录主人互动。 */
+export type LedgerKind = 'legacy-import' | 'purchase' | 'sale' | 'owner-grant' | 'owner-gift' | 'owner-configure' | 'owner-import-reading' | 'use-reserve' | 'use-consume' | 'use-cancel' | 'garden' | 'garden-action';
+declare const legacyLedgerKind: unique symbol;
+/** 历史 SQLite 行中的未知 kind 原样读出。 */
+type LegacyLedgerKind = string & {
+    readonly [legacyLedgerKind]: true;
+};
 export interface LedgerEntry {
     sequence: number;
     id: string;
     requestId: string;
-    kind: string;
+    kind: LedgerKind | LegacyLedgerKind;
     at: number;
     moneyDelta: number;
     balance: number;

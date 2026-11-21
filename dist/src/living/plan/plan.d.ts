@@ -1,7 +1,7 @@
 import { type RecordCommandEffect } from '../index.js';
 import { type LifeStore } from '#dsh-world/life/lifeStore';
 import type { CompanionBehavior } from '../body/plugin.js';
-import { type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
+import { type BodyMetric, type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
 export type PlanStatus = 'active' | 'paused' | 'waiting' | 'completed' | 'cancelled';
 export declare const expiredDispatchDeadline = "The activity absolute deadline elapsed before Body admission; revise the original plan explicitly";
 export interface LifeStep {
@@ -19,7 +19,7 @@ export interface LifeStep {
     until?: string;
 }
 export interface LifeCondition {
-    metric: 'hunger' | 'thirst' | 'energy' | 'bladder' | 'pain';
+    metric: BodyMetric;
     comparison: 'gte' | 'lte';
     value: number;
 }

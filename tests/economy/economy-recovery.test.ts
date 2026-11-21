@@ -267,3 +267,21 @@ test('actual economy settings first edits submit writable fields without losing 
     else assert.equal(actual.catalog.find(row=>row.id===meal)!.purchasePrice,5);
   }
 });
+
+test('ledger preserves old kinds and new grants retain distinct ledger and fact types',t=>{
+  const f=fixture(t);
+  f.store.grantMoney('legacy-kind',5);
+  const legacyKind='旧版钱包:特殊入账';
+  const db=new DatabaseSync(f.store.databasePath);
+  try {
+    db.prepare('UPDATE ledger SET kind=? WHERE request_id=?').run(legacyKind,'legacy-kind');
+  } finally {db.close();}
+  f.reopen();
+
+  f.store.grantMoney('current-kind',7,undefined,owner);
+  f.store.grantMoney('current-kind',7,undefined,owner);
+  const entries=f.store.ledger().items;
+  assert.deepEqual(entries.filter(row=>row.requestId==='current-kind').map(row=>row.kind),['owner-grant']);
+  assert.equal(entries.find(row=>row.requestId==='legacy-kind')?.kind,legacyKind);
+  assert.deepEqual(f.store.pendingFacts().map(fact=>fact.type),['money-grant']);
+});

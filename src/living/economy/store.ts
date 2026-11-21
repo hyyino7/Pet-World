@@ -6,10 +6,10 @@ import { pathToFileURL } from 'node:url';
 import { CROPS, GARDEN_RULES, createGarden, normalizeGarden, advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
 import { canonical, check, digest, integer, reject, text, unavailable } from '../../core/storage.js';
 import { closeSqliteLease, setSqliteMeta } from '../../core/sqlite.js';
-import { effectiveEconomyConfiguration,defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
-import type { BodyUseProof, CatalogItem, EconomyConfiguration, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, InventoryItem, ItemUse, LedgerEntry, ReadingBookmark, ReadingContent, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
+import { effectiveEconomyConfiguration,defaultEconomyConfiguration, economyCatalog, isWritableCatalogKey, ORIGINAL_READINGS } from './catalog.js';
+import type { BodyUseProof, CatalogItem, EconomyConfiguration, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, InventoryItem, ItemUse, LedgerEntry, LedgerKind, ReadingBookmark, ReadingContent, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
 import type { CompanionFact, CompanionFactActor, EconomyFactType, NewCompanionFact } from '../../contracts/interaction.js';
-import type { ReadingState } from '../../contracts/behavior.js';
+import { isBodyMetric, type ReadingState } from '../../contracts/behavior.js';
 import type { WalletView } from '../../contracts/living.js';
 import { advanceGardenClock, type GardenClock } from './garden-clock.js';
 import { ECONOMY_INITIALIZED, economyAdoptionPath, economyFile, economyRecoveryAdvice, ensureAdoptionDirectory,
@@ -188,7 +188,7 @@ export class EconomyStore {
       const result=fn();this.db.prepare('INSERT INTO requests VALUES(?,?,?)').run(requestId,hash,canonical(result));return result;
     });
   }
-  private recordLedger(requestId:string,kind:string,moneyDelta:number,itemDeltas:Record<string,number>,note:string,now=Date.now()) {
+  private recordLedger(requestId:string,kind:LedgerKind,moneyDelta:number,itemDeltas:Record<string,number>,note:string,now=Date.now()) {
     check(Number.isSafeInteger(moneyDelta),'Invalid money change');atTime(now);text(note,'ledger note',2000);
     for(const delta of Object.values(itemDeltas))check(Number.isSafeInteger(delta),'Invalid inventory change');
     this.db.prepare('INSERT INTO ledger(id,request_id,kind,at,money_delta,balance,item_deltas,note) VALUES(?,?,?,?,?,?,?,?)')
@@ -229,12 +229,22 @@ export class EconomyStore {
     return {storageId:this.options.storageId,companionId:this.options.companionId,revision:this.revision(),balance:this.balance(),inventory,
       catalog:this.catalogRows(),configuration:this.configuration(),bookmarks:this.allBookmarks(),pendingUses:this.allUses().filter(row=>row.status==='reserved'),migration:this.requiredMeta('migration')};
   }
-  snapshot(_now=Date.now()):EconomySnapshot {this.ensure();return this.snapshotRow();}
+  snapshot(_now=Date.now()):EconomySnapshot & {writableKeys: {itemPrices: string[]; catalogEnabled: string[]}} {
+    this.ensure();
+    const snapshot=this.snapshotRow();
+    const catalogKeys=snapshot.catalog.map(item=>item.id).filter(isWritableCatalogKey);
+    // 保留旧配置中已经能编辑的键。这里只补读取视图，SQLite 的请求回执仍使用 snapshotRow()。
+    const writableKeys={
+      itemPrices:[...new Set([...catalogKeys,...Object.keys(snapshot.configuration.itemPrices)])],
+      catalogEnabled:[...new Set([...catalogKeys,...Object.keys(snapshot.configuration.catalogEnabled)])],
+    };
+    return {...snapshot,writableKeys};
+  }
   catalog():CatalogItem[]{this.ensure();return this.catalogRows();}
   ledger(input:{limit?:number;before?:number}={}):{items:LedgerEntry[];nextBefore:number|null} {
     this.ensure();const limit=input.limit??50;integer(limit,'ledger page size',1,200);if(input.before!==undefined)integer(input.before,'ledger cursor',1);
     const rows=this.db.prepare('SELECT * FROM ledger WHERE sequence<? ORDER BY sequence DESC LIMIT ?').all(input.before??Number.MAX_SAFE_INTEGER,limit+1);
-    const entries=rows.slice(0,limit).map(row=>({sequence:Number(row.sequence),id:String(row.id),requestId:String(row.request_id),kind:String(row.kind),at:Number(row.at),moneyDelta:Number(row.money_delta),balance:Number(row.balance),itemDeltas:json<Record<string,number>>(row.item_deltas),note:String(row.note)}));
+    const entries=rows.slice(0,limit).map(row=>({sequence:Number(row.sequence),id:String(row.id),requestId:String(row.request_id),kind:String(row.kind) as LedgerEntry['kind'],at:Number(row.at),moneyDelta:Number(row.money_delta),balance:Number(row.balance),itemDeltas:json<Record<string,number>>(row.item_deltas),note:String(row.note)}));
     return {items:entries,nextBefore:rows.length>limit?entries.at(-1)!.sequence:null};
   }
   purchase(requestId:string,itemId:string,quantity=1,actor?:CompanionFactActor):EconomySnapshot {
@@ -310,7 +320,7 @@ export class EconomyStore {
         check(patch.foodEffects&&typeof patch.foodEffects==='object'&&!Array.isArray(patch.foodEffects),'Invalid food effects');
         for(const [itemId,effects] of Object.entries(patch.foodEffects)) {
           check(this.item(itemId).kind==='food','Effects require a food item');check(effects&&typeof effects==='object'&&!Array.isArray(effects),'Invalid food effect');
-          for(const [need,delta] of Object.entries(effects)){check(['hunger','thirst','energy','bladder','pain'].includes(need),'Unknown body need');check(typeof delta==='number'&&Number.isFinite(delta)&&delta>=-1&&delta<=1,'Body need delta must be between -1 and 1');}
+          for(const [need,delta] of Object.entries(effects)){check(isBodyMetric(need),'Unknown body need');check(typeof delta==='number'&&Number.isFinite(delta)&&delta>=-1&&delta<=1,'Body need delta must be between -1 and 1');}
           config.foodEffects[itemId]=effects;
         }
       }
@@ -477,7 +487,7 @@ export class EconomyStore {
     const state=advanceGardenClock(raw,now,clock,(garden,at)=>this.advance(garden,at));
     state.economyRevision=raw.economyRevision;state.economyConfig=raw.economyConfig;state.care.receipts=raw.care.receipts;return state;
   }
-  private commitGarden(state:any,expectedRevision:number,requestId:string,kind:string,now:number) {
+  private commitGarden(state:any,expectedRevision:number,requestId:string,kind:LedgerKind,now:number) {
     integer(expectedRevision,'garden expected revision',1);if(expectedRevision!==this.revision())reject('STALE_REVISION','Garden snapshot is stale; reload it before committing');
     this.validateGardenResources(state);const previous=this.projectGarden(),before=this.gardenResources(previous),normalized=this.normalize(state,now),after=this.gardenResources(normalized);
     check(normalized.updatedAt>=previous.updatedAt,'Garden checkpoint would rewind its clock');

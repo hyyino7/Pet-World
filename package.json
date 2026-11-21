@@ -92,7 +92,7 @@
     "build": "node scripts/build/clean-build.mjs && node scripts/build/build-desktop-animation.mjs && node scripts/build/build-animation-map.mjs && node scripts/build/build-pet-platform.mjs && tsc -p tsconfig.build.json",
     "test": "pnpm run build && node --test dist/tests/*/*.test.js tests/world/world-*.test.mjs",
     "test:native-workspace": "pnpm run build && node scripts/checks/check-native-workspace.mjs",
-    "test:memory": "pnpm run build && .venv/bin/python tests/memory/memory_provider_test.py && node --test tests/memory/memory-process.test.mjs",
+    "test:memory": "pnpm run build && .venv/bin/python tests/memory/memory_provider_test.py && node --test tests/memory/memory-process.test.mjs tests/memory/fact-attribution-contract.test.mjs",
     "test:native-desktop": "pnpm run build && node scripts/checks/check-native-desktop.mjs",
     "test:desktop-window": "node scripts/checks/check-desktop-window.mjs",
     "test:native-portability": "pnpm run build && node scripts/checks/check-native-portability.mjs",

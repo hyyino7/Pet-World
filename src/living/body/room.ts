@@ -10,13 +10,16 @@ import { applyRoomAction, normalizeRoomState, roomView } from '#feiyu-room/room-
 import type { CompanionEmotion } from '../../emotion/plugin.js';
 import { randomUUID } from 'node:crypto';
 import { initialBodyState } from './initial-state.js';
-import { FEEDBACK_ACTIONS, ROLE_ACTIONS, PLAN_KINDS, isPlanKind, isPlanBodyAction, isPlanEconomyOperation, isPlanGardenOperation,
+import { BODY_METRICS, BODY_METRIC_NAMES, FEEDBACK_ACTIONS, ROLE_ACTIONS, PLAN_KINDS, isPlanKind, isPlanBodyAction, isPlanEconomyOperation, isPlanGardenOperation,
   PlannedAdmissionWaitError, type PlannedAdmissionWait, type PlannedActivity, type PlannedExecution,
-  type BehaviorAnimationContext, type ExecutionPhase, type ExecutionStatus, type FeedbackAction, type PlanKind, type PlanTradeOperation, type ReadingState } from '../../contracts/behavior.js';
+  type BehaviorAnimationContext, type BodyMetric, type ExecutionPhase, type ExecutionStatus, type FeedbackAction, type PlanKind, type PlanTradeOperation, type ReadingState } from '../../contracts/behavior.js';
 import { requirePresentationSlot, animationSlotAllowed } from './playback.js';
 import { canonical, digest } from '../../core/storage.js';
 import type { BodyFactType, CompanionFact, CompanionFactActor, NewCompanionFact } from '../../contracts/interaction.js';
 import {gardenHomeProjection,gardenReceiptProjection,gardenReceiptText} from './garden-receipt.js';
+
+// 离线时饥饿、口渴和如厕需求有上限，体力有单独的 energyFloor，疼痛不随离线时间变化。
+const offlineNeedMetrics = BODY_METRIC_NAMES.filter(metric => BODY_METRICS[metric] === 'ceiling');
 
 export interface RoomInteractionContext { requestId: string; actor: CompanionFactActor }
 export interface OfflineBodyPolicy { hours: number; needCeiling: number; energyFloor: number }
@@ -24,7 +27,7 @@ interface InteractionReceipt { fingerprint: string; fact: CompanionFact; acknowl
 
 export interface RoomFoodReservation {
   opId: string; status: 'reserved' | 'consumed' | 'cancelled'; itemId: string;
-  effects: {hunger?: number; thirst?: number; energy?: number; bladder?: number; pain?: number}; label: string;
+  effects: Partial<Record<BodyMetric, number>>; label: string;
   /** Trusted catalog portrayal captured with the actual consumption checkpoint. */
   presentationSlot?: string;
 }
@@ -141,7 +144,7 @@ export class CompanionRoom {
       const window=this.state.offlineBodyWindow;
       if(window && (![window.startAt,window.endAt,window.negativeUntil].every(Number.isFinite)
         || window.endAt<window.startAt || window.negativeUntil<window.startAt
-        || ![window.energyFloor,...['hunger','thirst','bladder'].map(key=>window.needCeilings?.[key])]
+        || ![window.energyFloor,...offlineNeedMetrics.map(key=>window.needCeilings?.[key])]
           .every(value=>Number.isFinite(value)&&value>=0&&value<=1)))
         throw Error('离线身体时间窗口无效，原文件已保留');
     } else {
@@ -280,7 +283,7 @@ export class CompanionRoom {
       else {
         const policy=this.offlinePolicy(),startAt=this.state.lastTickAt;
         this.state.offlineBodyWindow={startAt,endAt:now,negativeUntil:startAt+policy.hours*3_600_000,
-          needCeilings:Object.fromEntries(['hunger','thirst','bladder'].map(key=>[key,policy.needCeiling])),
+          needCeilings:Object.fromEntries(offlineNeedMetrics.map(key=>[key,policy.needCeiling])),
           energyFloor:policy.energyFloor};
       }
       // The same durable window survives any later partial checkpoint/restart.

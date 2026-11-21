@@ -3,7 +3,9 @@ import type { WorkspaceTarget } from '../core/preferences.js';
 import type { CompanionEmotion } from '../emotion/plugin.js';
 import type { CompanionLife } from '../living/plan/plugin.js';
 export interface EconomyControls {
-    snapshot(workspaceId: string, validate?: () => void): Promise<unknown>;
+    snapshot(workspaceId: string, validate?: () => void, options?: {
+        includeWritableKeys?: boolean;
+    }): Promise<unknown>;
     ownerAction(workspaceId: string, action: unknown, requestId: string, signal: AbortSignal, validate: () => void): Promise<unknown>;
     settings(workspaceId: string, expectedVersion: string, next: unknown, requestId: string, signal: AbortSignal, validate: () => void): Promise<unknown>;
 }

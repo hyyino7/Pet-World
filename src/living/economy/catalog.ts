@@ -1,6 +1,6 @@
 import { CROPS } from '#feiyu-garden';
 import { digest } from '../../core/storage.js';
-import type { CatalogItem, EconomyConfiguration, ReadingContent } from './types.js';
+import type { BodyNeedDelta, CatalogItem, EconomyConfiguration, ReadingContent } from './types.js';
 
 /** Original texts are products, never preset biography, memories or completed experiences. */
 const originalTexts = [
@@ -19,7 +19,11 @@ export function defaultEconomyConfiguration(): EconomyConfiguration {
     compostCost:8,waterDurationFactor:1.25,fertilizerGrowth:1.2,fertilizerYield:2,
     crops:Object.fromEntries((CROPS as any[]).map((crop,index)=>[crop.id,{
       growMs:(12+index)*60*60*1000,seedCost:Math.round(9-50*(12+index)/24/8),sellPrice:3,yield:3,
-    }])),itemPrices:{},catalogEnabled:{},foodEffects:{'food:improved-meal':{hunger:-0.52,energy:0.08}}};
+    }])),itemPrices:{},catalogEnabled:{},foodEffects:{'food:improved-meal':{hunger:-0.52,energy:0.08} satisfies BodyNeedDelta}};
+}
+
+export function isWritableCatalogKey(id: string): boolean {
+  return !id.startsWith('harvest:');
 }
 
 /** Old owner-entered return values remain in storage until an explicit edit,
@@ -30,9 +34,9 @@ export function effectiveEconomyConfiguration(saved: EconomyConfiguration): Econ
   return {...saved,dailyNetReference:fixed.dailyNetReference,fertilizerYield:fixed.fertilizerYield,
     crops:Object.fromEntries(Object.entries(saved.crops).map(([id,crop])=>[id,{...crop,
       sellPrice:fixed.crops[id]?.sellPrice??crop.sellPrice,yield:fixed.crops[id]?.yield??crop.yield}])),
-    itemPrices:Object.fromEntries(Object.entries(saved.itemPrices).filter(([id])=>!id.startsWith('harvest:'))
+    itemPrices:Object.fromEntries(Object.entries(saved.itemPrices).filter(([id])=>isWritableCatalogKey(id))
       .map(([id,price])=>[id,{purchasePrice:price.purchasePrice,sellPrice:null}])),
-    catalogEnabled:Object.fromEntries(Object.entries(saved.catalogEnabled).filter(([id])=>!id.startsWith('harvest:')))};
+    catalogEnabled:Object.fromEntries(Object.entries(saved.catalogEnabled).filter(([id])=>isWritableCatalogKey(id)))};
 }
 
 export function economyCatalog(configuration: EconomyConfiguration, readings: readonly ReadingContent[] = ORIGINAL_READINGS): CatalogItem[] {

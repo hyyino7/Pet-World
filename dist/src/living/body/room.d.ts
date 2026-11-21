@@ -1,6 +1,6 @@
 import { type GardenClock } from '../economy/garden-clock.js';
 import type { CompanionEmotion } from '../../emotion/plugin.js';
-import { type PlannedActivity, type PlannedExecution, type BehaviorAnimationContext, type PlanTradeOperation, type ReadingState } from '../../contracts/behavior.js';
+import { type PlannedActivity, type PlannedExecution, type BehaviorAnimationContext, type BodyMetric, type PlanTradeOperation, type ReadingState } from '../../contracts/behavior.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
 export interface RoomInteractionContext {
     requestId: string;
@@ -15,13 +15,7 @@ export interface RoomFoodReservation {
     opId: string;
     status: 'reserved' | 'consumed' | 'cancelled';
     itemId: string;
-    effects: {
-        hunger?: number;
-        thirst?: number;
-        energy?: number;
-        bladder?: number;
-        pain?: number;
-    };
+    effects: Partial<Record<BodyMetric, number>>;
     label: string;
     /** Trusted catalog portrayal captured with the actual consumption checkpoint. */
     presentationSlot?: string;
