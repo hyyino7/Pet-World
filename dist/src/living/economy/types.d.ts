@@ -1,4 +1,5 @@
 import type { InventoryItem, ReadingBookmark } from '../../contracts/living.js';
+import type { ReadingState } from '../../contracts/behavior.js';
 export type { InventoryItem, ReadingBookmark } from '../../contracts/living.js';
 export type ItemKind = 'seed' | 'harvest' | 'compost' | 'food' | 'reading';
 export interface CatalogItem {
@@ -142,7 +143,7 @@ export interface ReadingSegment {
     bookmark: ReadingBookmark | null;
 }
 export interface ReadingOperationStatus {
-    status: 'unread' | 'offered' | 'confirmed';
+    status: ReadingState;
     itemId: string;
     segment: number;
 }

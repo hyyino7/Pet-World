@@ -93,6 +93,22 @@ test('incompatible direct Body hint cannot start an effect or replace a plan',t=
   assert.equal(JSON.stringify(f.room.state),before);assert.equal(f.room.plannedState(),undefined);
 });
 
+test('Body checks slots and plan fields before looking up the original execution',t=>{
+  const f=fixture(t);
+  const input={operationId:'drink',kind:'body',activity:'Drink water',action:'water',presentationSlot:'drink.sequence'} as const;
+  const slotError='活动动画配对与当前实际活动不兼容';
+  assert.throws(()=>f.room.startPlanned({...input,action:undefined, presentationSlot:'read.main'}),{message:slotError});
+  const until=new Date(Date.now()+60_000).toISOString();
+  assert.throws(()=>f.room.startPlanned({operationId:'garden',kind:'garden',activity:'Visit',garden:{type:['visit']},until}),
+    {message:'执行活动依据真实回执结束，持续动画请另加原地或房间活动'});
+  const receipt=f.room.startPlanned(input);
+  assert.equal(receipt.status,'completed');
+  f.reopen();
+  assert.deepEqual(f.room.startPlanned(input),receipt);
+  assert.throws(()=>f.room.startPlanned({...input,action:undefined,presentationSlot:'read.main'}),{message:slotError});
+  assert.throws(()=>f.room.startPlanned({...input,activity:'Different drink'}),{message:'同一计划执行编号不能用于不同内容'});
+});
+
 test('accepted route uses its movement hint only until actual arrival',t=>{
   const f=fixture(t);
   f.room.startPlanned({operationId:'route',kind:'room',activity:'Go to kitchen',room:'kitchen',spot:'sink',presentationSlot:'move.right'});

@@ -2,13 +2,12 @@ import { LivingView, type LivingPorts, type RecordCommandEffect } from '../index
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost, WorkspaceTarget } from '../../core/index.js';
 import type { CapabilityRegistration } from '../../contracts/tables.js';
-import type { PlannedActivity } from '../../contracts/behavior.js';
+import type { PlanTradeOperation } from '../../contracts/behavior.js';
 import type { WorldCommands } from '../../contracts/living.js';
 import type { RoomEconomyPort } from '../body/room.js';
 import { EconomyStore } from './store.js';
 import type { EconomyConfigurationPatch, ItemUse } from './types.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
-type TradeKind = Exclude<NonNullable<PlannedActivity['economy']>['type'], 'consume'>;
 export declare const economyStateToolDeclaration: {
     name: string;
     sources: readonly ("life" | "owner" | "review")[];
@@ -75,7 +74,7 @@ export declare class CompanionEconomy {
     }>;
     walletView(workspaceId: string): import("../../contracts/living.js").WalletView;
     worldSnapshot(workspaceId: string): Promise<import("../../contracts/living.js").WorldSnapshot>;
-    readonly worldCommands: Pick<WorldCommands, TradeKind>;
+    readonly worldCommands: Pick<WorldCommands, PlanTradeOperation>;
     private worldTrade;
     pendingFacts(workspaceId: string): Promise<CompanionFact[]>;
     readFacts(workspaceId: string, ids: readonly string[]): Promise<CompanionFact[]>;
@@ -145,4 +144,3 @@ declare module '@deepseek-ai/cordis' {
     }
 }
 export declare function apply(ctx: Context): void;
-export {};

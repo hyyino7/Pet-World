@@ -90,6 +90,94 @@ export declare const PLAN_BODY_ACTIONS: readonly ActionIn<"plan">[];
 export declare const FEEDBACK_ACTIONS: readonly ActionIn<"feedback">[];
 export declare function isCareAction(action: unknown): action is CareAction;
 export declare function isPlanBodyAction(action: unknown): action is PlanBodyAction;
+export declare const PLAN_KINDS: {
+    readonly hold: {
+        readonly target: false;
+        readonly executable: false;
+    };
+    readonly room: {
+        readonly target: true;
+        readonly executable: false;
+    };
+    readonly move: {
+        readonly target: true;
+        readonly executable: true;
+    };
+    readonly garden: {
+        readonly target: false;
+        readonly executable: true;
+    };
+    readonly body: {
+        readonly target: false;
+        readonly executable: true;
+    };
+    readonly economy: {
+        readonly target: false;
+        readonly executable: true;
+    };
+    readonly read: {
+        readonly target: false;
+        readonly executable: true;
+    };
+};
+export type PlanKind = keyof typeof PLAN_KINDS;
+export declare function isPlanKind(kind: unknown): kind is PlanKind;
+export declare const PLAN_ECONOMY_OPERATIONS: {
+    readonly buy: true;
+    readonly sell: true;
+    readonly consume: true;
+};
+export type PlanEconomyOperation = keyof typeof PLAN_ECONOMY_OPERATIONS;
+export type PlanTradeOperation = Exclude<PlanEconomyOperation, 'consume'>;
+export declare const PLAN_ECONOMY_OPERATION_NAMES: readonly PlanEconomyOperation[];
+export declare function isPlanEconomyOperation(value: unknown): value is PlanEconomyOperation;
+export declare const PLAN_GARDEN_OPERATIONS: {
+    readonly visit: {
+        readonly branch: "noFields";
+        readonly order: 1;
+    };
+    readonly till: {
+        readonly branch: "plot";
+        readonly order: 1;
+    };
+    readonly plant: {
+        readonly branch: "plotAndCrop";
+        readonly order: 1;
+    };
+    readonly water: {
+        readonly branch: "plot";
+        readonly order: 2;
+    };
+    readonly fertilize: {
+        readonly branch: "plot";
+        readonly order: 3;
+    };
+    readonly harvest: {
+        readonly branch: "plot";
+        readonly order: 4;
+    };
+    readonly sell: {
+        readonly branch: "cropTrade";
+        readonly order: 1;
+    };
+    readonly buySeed: {
+        readonly branch: "cropTrade";
+        readonly order: 2;
+    };
+    readonly buyCompost: {
+        readonly branch: "quantity";
+        readonly order: 1;
+    };
+};
+export type PlanGardenOperation = keyof typeof PLAN_GARDEN_OPERATIONS;
+export declare const PLAN_GARDEN_OPERATION_NAMES: readonly PlanGardenOperation[];
+export declare function isPlanGardenOperation(value: string): value is PlanGardenOperation;
+export declare const READING_STATES: {
+    readonly unread: true;
+    readonly offered: true;
+    readonly confirmed: true;
+};
+export type ReadingState = keyof typeof READING_STATES;
 /** Read-only media hints grounded in the current accepted operation and facts. */
 export interface BehaviorAnimationContext {
     slotId?: string;
@@ -120,7 +208,7 @@ export interface BehaviorActivity {
     phase: 'idle' | 'pending' | 'moving' | 'working' | 'sleeping' | 'completed';
     /** Derived from accepted execution and real content receipts, never activity prose. */
     presentationKind?: 'read' | 'reading-wait' | 'rest';
-    readingState?: 'unread' | 'offered' | 'confirmed';
+    readingState?: ReadingState;
     animationContext?: BehaviorAnimationContext;
 }
 export interface BehaviorChange {
@@ -160,7 +248,7 @@ export interface BehaviorSnapshot extends BehaviorChange {
 /** A durable program execution receipt; it is not a visual animation receipt. */
 export interface PlannedActivity {
     operationId: string;
-    kind: 'hold' | 'room' | 'move' | 'garden' | 'body' | 'economy' | 'read';
+    kind: PlanKind;
     activity: string;
     /** Optional registered portrayal; never grants an operation, object or effect. */
     presentationSlot?: string;
@@ -169,7 +257,7 @@ export interface PlannedActivity {
     garden?: Record<string, unknown>;
     action?: PlanBodyAction;
     economy?: {
-        type: 'buy' | 'sell' | 'consume';
+        type: PlanEconomyOperation;
         itemId: string;
         quantity: number;
     };
@@ -196,7 +284,7 @@ export declare class PlannedAdmissionWaitError extends Error {
 }
 export interface PlannedExecution {
     operationId: string;
-    kind: PlannedActivity['kind'];
+    kind: PlanKind;
     status: 'running' | 'paused' | 'completed' | 'cancelled' | 'interrupted' | 'failed';
     phase: 'pending' | 'moving' | 'working' | 'waiting' | 'completed';
     activity: string;

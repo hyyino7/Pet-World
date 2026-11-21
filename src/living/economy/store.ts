@@ -9,6 +9,7 @@ import { closeSqliteLease, setSqliteMeta } from '../../core/sqlite.js';
 import { effectiveEconomyConfiguration,defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
 import type { BodyUseProof, CatalogItem, EconomyConfiguration, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, InventoryItem, ItemUse, LedgerEntry, ReadingBookmark, ReadingContent, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
+import type { ReadingState } from '../../contracts/behavior.js';
 import type { WalletView } from '../../contracts/living.js';
 import { advanceGardenClock, type GardenClock } from './garden-clock.js';
 import { ECONOMY_INITIALIZED, economyAdoptionPath, economyFile, economyRecoveryAdvice, ensureAdoptionDirectory,
@@ -348,7 +349,7 @@ export class EconomyStore {
       .run(`${itemId}:${version}`,canonical(bookmark));
     if(this.options.walletChanged && saved.changes && this.readingVersion(itemId)===version)this.walletDirty=true;
   }
-  private readingOperation(operationId:string):{input:{itemId:string;segment:number};offer:ReadingOffer;status:'offered'|'confirmed'}|undefined {
+  private readingOperation(operationId:string):{input:{itemId:string;segment:number};offer:ReadingOffer;status:Exclude<ReadingState,'unread'>}|undefined {
     const row=this.db.prepare('SELECT value FROM reading_operations WHERE id=?').get(operationId);return row?json(row.value):undefined;
   }
   /** Offers and confirmations are durable actual content-delivery receipts;

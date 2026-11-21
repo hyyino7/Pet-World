@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import {withLivingCaller, type RecordCommandEffect} from '../index.js';
 import { createLifeStore, LIFE_STATE_MAX_BYTES, type LifeStore } from '#dsh-world/life/lifeStore';
 import type { CompanionBehavior } from '../body/plugin.js';
-import { isPlanBodyAction, PlannedAdmissionWaitError, type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
+import { PLAN_KINDS, isPlanKind, isPlanBodyAction, isPlanEconomyOperation, isPlanGardenOperation,
+  PlannedAdmissionWaitError, type PlanKind, type PlannedActivity, type PlannedAdmissionWait } from '../../contracts/behavior.js';
 import { requirePresentationSlot } from '../body/playback.js';
 import {gardenReceiptText} from '../body/garden-receipt.js';
 
@@ -69,6 +70,39 @@ function string(value: unknown, label: string): asserts value is string {
 function instant(value: unknown): asserts value is string {
   check(typeof value === 'string' && /(?:Z|[+-]\d\d:\d\d)$/.test(value) && Number.isFinite(Date.parse(value)), 'Use an ISO time with an explicit timezone');
 }
+
+const validateStepFields: Record<PlanKind, (value: Record<string, unknown>, step: LifeStep) => void> = {
+  hold() {},
+  // Room and move only need the shared target check.
+  room() {},
+  move() {},
+  garden(value,step) {
+    check(object(value.garden), 'Garden activity requires an explicit operation');
+    check(isPlanGardenOperation(String(value.garden.type)), 'Unsupported garden operation');
+    // Existing garden validation remains authoritative for quantities, plots and balances.
+    step.garden = structuredClone(value.garden);
+  },
+  body(value,step) {
+    check(isPlanBodyAction(String(value.action)),'Unsupported bodily activity');
+    step.action=value.action as LifeStep['action'];
+  },
+  economy(value,step) {
+    check(object(value.economy), 'Economy activity requires an explicit transaction');
+    const input=value.economy;
+    check(isPlanEconomyOperation(String(input.type)), 'Unsupported economy activity');
+    string(input.itemId,'catalog item');
+    check(Number.isSafeInteger(input.quantity) && Number(input.quantity)>0,'Quantity must be a positive integer');
+    if(input.type==='consume')check(input.quantity===1,'A food activity consumes one item per durable body effect');
+    step.economy={type:input.type as NonNullable<LifeStep['economy']>['type'],itemId:input.itemId,quantity:input.quantity as number};
+  },
+  read(value,step) {
+    check(object(value.reading),'Reading activity requires a book and segment');
+    string(value.reading.itemId,'reading item id');
+    check(Number.isSafeInteger(value.reading.segment) && Number(value.reading.segment)>=0,'Reading segment must be a nonnegative integer');
+    step.reading={itemId:value.reading.itemId,segment:value.reading.segment as number};
+  },
+};
+
 /** Validate executable structure and queue reachability without choosing a routine. */
 export function parsePlanDraft(raw: unknown): PlanDraft { return parsePlan(raw, false); }
 
@@ -82,36 +116,18 @@ function parsePlan(raw: unknown, legacy: boolean): PlanDraft {
     check(/^[\p{L}\p{N}_.-]{1,48}$/u.test(value.id),'Activity id must be a short stable identifier');
     check(value.activity.length<=80,'Use a short activity label; put the explanation in the plan reason');
     check(!ids.has(value.id), 'Activity ids must be unique'); ids.add(value.id);
-    check(['hold','room','move','garden','body','economy','read'].includes(String(value.kind)), 'Unsupported activity kind');
+    check(isPlanKind(String(value.kind)), 'Unsupported activity kind');
     const step: LifeStep = {id:value.id, kind:value.kind as LifeStep['kind'], activity:value.activity};
-    if (value.kind === 'room' || value.kind === 'move') { string(value.room, 'room'); string(value.spot, 'spot'); step.room=value.room; step.spot=value.spot; }
-    if (value.kind === 'garden') {
-      check(object(value.garden), 'Garden activity requires an explicit operation');
-      check(['visit','till','plant','water','fertilize','harvest','sell','buySeed','buyCompost'].includes(String(value.garden.type)), 'Unsupported garden operation');
-      // Existing garden validation remains authoritative for quantities, plots and balances.
-      step.garden = structuredClone(value.garden);
-    }
-    if(value.kind==='body') {
-      check(isPlanBodyAction(String(value.action)),'Unsupported bodily activity');
-      step.action=value.action as LifeStep['action'];
-    }
-    if(value.kind==='economy') {
-      check(object(value.economy), 'Economy activity requires an explicit transaction');
-      const input=value.economy;
-      check(['buy','sell','consume'].includes(String(input.type)), 'Unsupported economy activity');
-      string(input.itemId,'catalog item');
-      check(Number.isSafeInteger(input.quantity) && Number(input.quantity)>0,'Quantity must be a positive integer');
-      if(input.type==='consume')check(input.quantity===1,'A food activity consumes one item per durable body effect');
-      step.economy={type:input.type as NonNullable<LifeStep['economy']>['type'],itemId:input.itemId,quantity:input.quantity as number};
-    }
-    if(value.kind==='read') {
-      check(object(value.reading),'Reading activity requires a book and segment');
-      string(value.reading.itemId,'reading item id');
-      check(Number.isSafeInteger(value.reading.segment) && Number(value.reading.segment)>=0,'Reading segment must be a nonnegative integer');
-      step.reading={itemId:value.reading.itemId,segment:value.reading.segment as number};
+    // Admission and timing coerce kind; field dispatch uses the original string only.
+    const kind = step.kind;
+    if (typeof kind === 'string') {
+      if (PLAN_KINDS[kind].target) {
+        string(value.room, 'room'); string(value.spot, 'spot'); step.room=value.room; step.spot=value.spot;
+      }
+      validateStepFields[kind](value,step);
     }
     if(value.presentationSlot!==undefined)step.presentationSlot=requirePresentationSlot(value.presentationSlot,step);
-    if(['move','garden','body','economy','read'].includes(String(value.kind)))check(value.durationMinutes===undefined && value.until===undefined,
+    if(PLAN_KINDS[String(value.kind) as PlanKind]?.executable)check(value.durationMinutes===undefined && value.until===undefined,
       'Executable activities finish on actual receipts; use a following hold or room step for sustained animation');
     check(value.durationMinutes === undefined || value.until === undefined, 'Choose a duration or an end time');
     if (value.durationMinutes !== undefined) {
@@ -124,7 +140,7 @@ function parsePlan(raw: unknown, legacy: boolean): PlanDraft {
     return step;
   });
   if (!legacy) for (const [index, step] of steps.entries()) {
-    check(!(['room','hold'].includes(step.kind) && step.durationMinutes === undefined && step.until === undefined && index < steps.length - 1),
+    check(!(typeof step.kind === 'string' && PLAN_KINDS[step.kind].executable === false && step.durationMinutes === undefined && step.until === undefined && index < steps.length - 1),
       `Activity ${step.id} waits for explicit control and blocks later steps. Use move for arrival, set durationMinutes/until for a finite stay, or put indefinite waiting last. nextConsiderAt only wakes planning; it does not complete the activity.`);
   }
   check(raw.nextConsiderAt === null || typeof raw.nextConsiderAt === 'string', 'Specify nextConsiderAt, or null to wait for an event');

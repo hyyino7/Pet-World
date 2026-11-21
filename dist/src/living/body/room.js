@@ -9,13 +9,39 @@ import { LifeControlFileError } from '../plan/control-file.js';
 import { applyRoomAction, normalizeRoomState, roomView } from '#feiyu-room/room-state';
 import { randomUUID } from 'node:crypto';
 import { initialBodyState } from './initial-state.js';
-import { FEEDBACK_ACTIONS, ROLE_ACTIONS, isPlanBodyAction } from '../../contracts/behavior.js';
-import { PlannedAdmissionWaitError } from '../../contracts/behavior.js';
+import { FEEDBACK_ACTIONS, ROLE_ACTIONS, PLAN_KINDS, isPlanKind, isPlanBodyAction, isPlanEconomyOperation, isPlanGardenOperation, PlannedAdmissionWaitError } from '../../contracts/behavior.js';
 import { requirePresentationSlot, animationSlotAllowed } from './playback.js';
 import { canonical, digest } from '../../core/storage.js';
 import { gardenHomeProjection, gardenReceiptProjection, gardenReceiptText } from './garden-receipt.js';
 const terminalExecution = new Set(['completed', 'cancelled', 'failed']);
-const gardenActions = new Set(['visit', 'till', 'plant', 'water', 'fertilize', 'harvest', 'sell', 'buySeed', 'buyCompost']);
+const validatePlannedFields = {
+    hold(input) {
+        if (input.room !== undefined || input.spot !== undefined)
+            throw Error('原地活动不能指定移动目标');
+    },
+    // Room and move only need the shared target check.
+    room() { },
+    move() { },
+    garden(input) {
+        if (!input.garden || !isPlanGardenOperation(String(input.garden.type)))
+            throw Error('菜园计划须指定一项明确操作');
+    },
+    body(input) {
+        if (!isPlanBodyAction(input.action))
+            throw Error('身体计划须指定已有的身体动作');
+    },
+    economy(input) {
+        const transaction = input.economy;
+        if (!transaction || !isPlanEconomyOperation(transaction.type) || typeof transaction.itemId !== 'string' || !transaction.itemId.trim()
+            || !Number.isSafeInteger(transaction.quantity) || transaction.quantity <= 0 || transaction.type === 'consume' && transaction.quantity !== 1)
+            throw Error('经济计划须给出有效目录物品、明确操作及整数数量；每次食用一份');
+    },
+    read(input) {
+        if (!input.reading || typeof input.reading.itemId !== 'string' || !input.reading.itemId.trim()
+            || !Number.isSafeInteger(input.reading.segment) || input.reading.segment < 0)
+            throw Error('阅读计划须指定已持有读物及实际片段编号');
+    },
+};
 function safeFile(file) {
     const stat = lstatSync(file, { throwIfNoEntry: false });
     if (stat && (!stat.isFile() || stat.nlink !== 1))
@@ -715,7 +741,7 @@ export class CompanionRoom {
             ...(input.until ? { until: input.until } : {}), input: structuredClone(input), fingerprint: digest(input) };
     }
     startPlanned(input, now = Date.now(), ownerMeal = false) {
-        if (!input || !['hold', 'room', 'move', 'garden', 'body', 'economy', 'read'].includes(input.kind))
+        if (!input || !isPlanKind(input.kind))
             throw Error('未知的计划活动');
         if (typeof input.operationId !== 'string' || !input.operationId || input.operationId.length > 96
             || /[\u0000-\u001f\u007f]/.test(input.operationId) || ['__proto__', 'constructor', 'prototype'].includes(input.operationId))
@@ -731,24 +757,12 @@ export class CompanionRoom {
         }
         if (input.freezeOnPause !== undefined && typeof input.freezeOnPause !== 'boolean')
             throw Error('计划暂停计时方式无效');
-        if (['room', 'move'].includes(input.kind) && (typeof input.room !== 'string' || typeof input.spot !== 'string' || !HOME_LAYOUT.spots[input.room]?.[input.spot]))
+        const kind = input.kind;
+        const { target, executable } = PLAN_KINDS[kind];
+        if (target && (typeof input.room !== 'string' || typeof input.spot !== 'string' || !HOME_LAYOUT.spots[input.room]?.[input.spot]))
             throw Error('计划中的房间位置不存在');
-        if (input.kind === 'hold' && (input.room !== undefined || input.spot !== undefined))
-            throw Error('原地活动不能指定移动目标');
-        if (input.kind === 'garden' && (!input.garden || !gardenActions.has(String(input.garden.type))))
-            throw Error('菜园计划须指定一项明确操作');
-        if (input.kind === 'body' && !isPlanBodyAction(input.action))
-            throw Error('身体计划须指定已有的身体动作');
-        if (input.kind === 'economy') {
-            const transaction = input.economy;
-            if (!transaction || !['buy', 'sell', 'consume'].includes(transaction.type) || typeof transaction.itemId !== 'string' || !transaction.itemId.trim()
-                || !Number.isSafeInteger(transaction.quantity) || transaction.quantity <= 0 || transaction.type === 'consume' && transaction.quantity !== 1)
-                throw Error('经济计划须给出有效目录物品、明确操作及整数数量；每次食用一份');
-        }
-        if (input.kind === 'read' && (!input.reading || typeof input.reading.itemId !== 'string' || !input.reading.itemId.trim()
-            || !Number.isSafeInteger(input.reading.segment) || input.reading.segment < 0))
-            throw Error('阅读计划须指定已持有读物及实际片段编号');
-        if (['move', 'garden', 'body', 'economy', 'read'].includes(input.kind) && input.until !== undefined)
+        validatePlannedFields[kind](input);
+        if (executable && input.until !== undefined)
             throw Error('执行活动依据真实回执结束，持续动画请另加原地或房间活动');
         canonical(input);
         const previous = this.executions()[input.operationId], fingerprint = digest(input);

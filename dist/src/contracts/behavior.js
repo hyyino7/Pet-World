@@ -28,6 +28,40 @@ export function isCareAction(action) {
 export function isPlanBodyAction(action) {
     return typeof action === 'string' && PLAN_BODY_ACTIONS.includes(action);
 }
+export const PLAN_KINDS = {
+    hold: { target: false, executable: false },
+    room: { target: true, executable: false },
+    move: { target: true, executable: true },
+    garden: { target: false, executable: true },
+    body: { target: false, executable: true },
+    economy: { target: false, executable: true },
+    read: { target: false, executable: true },
+};
+const planKindNames = Object.keys(PLAN_KINDS);
+export function isPlanKind(kind) {
+    return typeof kind === 'string' && planKindNames.includes(kind);
+}
+export const PLAN_ECONOMY_OPERATIONS = { buy: true, sell: true, consume: true };
+export const PLAN_ECONOMY_OPERATION_NAMES = Object.keys(PLAN_ECONOMY_OPERATIONS);
+export function isPlanEconomyOperation(value) {
+    return typeof value === 'string' && PLAN_ECONOMY_OPERATION_NAMES.includes(value);
+}
+export const PLAN_GARDEN_OPERATIONS = {
+    visit: { branch: 'noFields', order: 1 },
+    till: { branch: 'plot', order: 1 },
+    plant: { branch: 'plotAndCrop', order: 1 },
+    water: { branch: 'plot', order: 2 },
+    fertilize: { branch: 'plot', order: 3 },
+    harvest: { branch: 'plot', order: 4 },
+    sell: { branch: 'cropTrade', order: 1 },
+    buySeed: { branch: 'cropTrade', order: 2 },
+    buyCompost: { branch: 'quantity', order: 1 },
+};
+export const PLAN_GARDEN_OPERATION_NAMES = Object.keys(PLAN_GARDEN_OPERATIONS);
+export function isPlanGardenOperation(value) {
+    return PLAN_GARDEN_OPERATION_NAMES.includes(value);
+}
+export const READING_STATES = { unread: true, offered: true, confirmed: true };
 export class PlannedAdmissionWaitError extends Error {
     wait;
     constructor(wait) {

@@ -54,6 +54,52 @@ export function isPlanBodyAction(action: unknown): action is PlanBodyAction {
   return typeof action === 'string' && (PLAN_BODY_ACTIONS as readonly string[]).includes(action);
 }
 
+export const PLAN_KINDS = {
+  hold: {target: false, executable: false},
+  room: {target: true, executable: false},
+  move: {target: true, executable: true},
+  garden: {target: false, executable: true},
+  body: {target: false, executable: true},
+  economy: {target: false, executable: true},
+  read: {target: false, executable: true},
+} as const;
+export type PlanKind = keyof typeof PLAN_KINDS;
+const planKindNames = Object.keys(PLAN_KINDS);
+
+export function isPlanKind(kind: unknown): kind is PlanKind {
+  return typeof kind === 'string' && planKindNames.includes(kind);
+}
+
+export const PLAN_ECONOMY_OPERATIONS = {buy: true, sell: true, consume: true} as const;
+export type PlanEconomyOperation = keyof typeof PLAN_ECONOMY_OPERATIONS;
+export type PlanTradeOperation = Exclude<PlanEconomyOperation, 'consume'>;
+export const PLAN_ECONOMY_OPERATION_NAMES = Object.keys(PLAN_ECONOMY_OPERATIONS) as readonly PlanEconomyOperation[];
+
+export function isPlanEconomyOperation(value: unknown): value is PlanEconomyOperation {
+  return typeof value === 'string' && (PLAN_ECONOMY_OPERATION_NAMES as readonly string[]).includes(value);
+}
+
+export const PLAN_GARDEN_OPERATIONS = {
+  visit: {branch: 'noFields', order: 1},
+  till: {branch: 'plot', order: 1},
+  plant: {branch: 'plotAndCrop', order: 1},
+  water: {branch: 'plot', order: 2},
+  fertilize: {branch: 'plot', order: 3},
+  harvest: {branch: 'plot', order: 4},
+  sell: {branch: 'cropTrade', order: 1},
+  buySeed: {branch: 'cropTrade', order: 2},
+  buyCompost: {branch: 'quantity', order: 1},
+} as const;
+export type PlanGardenOperation = keyof typeof PLAN_GARDEN_OPERATIONS;
+export const PLAN_GARDEN_OPERATION_NAMES = Object.keys(PLAN_GARDEN_OPERATIONS) as readonly PlanGardenOperation[];
+
+export function isPlanGardenOperation(value: string): value is PlanGardenOperation {
+  return (PLAN_GARDEN_OPERATION_NAMES as readonly string[]).includes(value);
+}
+
+export const READING_STATES = {unread: true, offered: true, confirmed: true} as const;
+export type ReadingState = keyof typeof READING_STATES;
+
 /** Read-only media hints grounded in the current accepted operation and facts. */
 export interface BehaviorAnimationContext {
   slotId?: string;
@@ -82,7 +128,7 @@ export interface BehaviorActivity {
   phase: 'idle' | 'pending' | 'moving' | 'working' | 'sleeping' | 'completed';
   /** Derived from accepted execution and real content receipts, never activity prose. */
   presentationKind?: 'read' | 'reading-wait' | 'rest';
-  readingState?: 'unread' | 'offered' | 'confirmed';
+  readingState?: ReadingState;
   animationContext?: BehaviorAnimationContext;
 }
 export interface BehaviorChange { workspaceId: string; bootId: string; revision: number; reason?:'observation'|'transition' }
@@ -102,7 +148,7 @@ export interface BehaviorSnapshot extends BehaviorChange {
 /** A durable program execution receipt; it is not a visual animation receipt. */
 export interface PlannedActivity {
   operationId: string;
-  kind: 'hold' | 'room' | 'move' | 'garden' | 'body' | 'economy' | 'read';
+  kind: PlanKind;
   activity: string;
   /** Optional registered portrayal; never grants an operation, object or effect. */
   presentationSlot?: string;
@@ -110,7 +156,7 @@ export interface PlannedActivity {
   spot?: string;
   garden?: Record<string, unknown>;
   action?: PlanBodyAction;
-  economy?: {type: 'buy' | 'sell' | 'consume'; itemId: string; quantity: number};
+  economy?: {type: PlanEconomyOperation; itemId: string; quantity: number};
   reading?: {itemId: string; segment: number};
   until?: string;
   /** Durations freeze while paused; explicit calendar deadlines do not. */
@@ -133,7 +179,7 @@ export class PlannedAdmissionWaitError extends Error {
 }
 export interface PlannedExecution {
   operationId: string;
-  kind: PlannedActivity['kind'];
+  kind: PlanKind;
   status: 'running' | 'paused' | 'completed' | 'cancelled' | 'interrupted' | 'failed';
   phase: 'pending' | 'moving' | 'working' | 'waiting' | 'completed';
   activity: string;

@@ -368,6 +368,20 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - `pnpm run build && pnpm run test:behavior-list` 通过 11 条索引测试和 118 条行为测试，含第 1 批 13 条、新增 L2 和真实 Memory 召回。
 - `pnpm run verify` 的 Node 测试 1667 条通过、1 条失败。Memory P2 启动服务后调用 `/bin/ps` 被沙箱拒绝（`EPERM`），单跑复现，后续断言环境原因未跑。独立补跑 Python Memory 22 条、`check:release`、`pnpm pack` 和 `check:package` 均通过。
 
+### 第 3 批
+
+- `src/contracts/behavior.ts` 集中四张表和准入守卫。`living/body/room.ts` 与 `living/plan/plan.ts` 由 `target` 校验位置、按 kind 分派其余字段校验，再用 `executable` 判定计时。`living/economy/{plugin,types,store}.ts` 引用交易子集和阅读状态。
+- `living/plan/plan-tools.ts` 派生步骤分支和操作枚举。新增菜园、经济枚举顺序断言，实际注册的 `life_plan_update` 描述和完整 schema 与改前逐字节相同。
+- R8 kind 字符串判断由 287 点/43 文件降至 271 点/44 文件，运行源码与扫描范围一致。
+- R8 action 字符串判断为 102 → 102 点，运行源码与扫描范围均为 13 文件。
+- Life 减 9 点，`plan.ts:85` 并入守卫，`:87` 两个目标比较并入 `target`，`:88,94,98,107` 的菜园、身体、经济、阅读条件并入一次字段分派，`:114,127` 的计时与新稿可达性改读 `executable`。
+- Body 减 8 点，`room.ts:598` 并入守卫，`:609` 改读 `target`，`:610–613,618` 的原地、菜园、身体、经济、阅读条件并入一次字段分派，`:620` 改读 `executable`。共用守卫新增 1 点，素材及菜园准入判断保留。减点位置按改前行号。
+- 规则基线 37 条，新增/消失 0/0，生成器刷新旧行号。词表基线 915 → 801 → 707，新增 0，分别消失 114、94 条。`pnpm run check:arch` 和 `pnpm run check:arch -- --report` 均通过。
+- `pnpm run build && node --test <受影响的测试>` 171 条通过。新增回归覆盖 Life 的宽松准入、Life 和 Body 的素材槽报错顺序、Body 重启后回执重放与指纹冲突。
+- `pnpm run build && pnpm run test:behavior-list` 通过 11 条索引检查和 118 条行为测试，含第 1 批 13 条及第 2 批设置页照料流程。原断言全部保留。
+- `pnpm run verify` 的环境、类型、架构和构建通过，Node 测试 1669 条通过、1 条失败。Memory P2 在 `/bin/ps` 被沙箱拒绝（`EPERM`），单跑复现，后续断言环境原因未跑。
+- 门禁中断后的 Python Memory 22 条、`pnpm run check:release`、`pnpm pack` 和 `pnpm run check:package` 已独立补跑并通过。
+
 ## 审查结论
 
 ### 第 1 批（Codex 独立审查 + Claude 核实，基于 `724cbb7`）
@@ -447,3 +461,27 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - 本方案第 2 批正文「互动反馈子集…不限 actor 是主人」与代码不符（`room.ts:821` 只投射已完成的主人互动，前后一致）；开工细则第 4 条「`lifeView` 失败时整张卡片本来就不显示」只对首次读取成立，已有视图后轮询失败会保留卡片并显示错误（`console/client.js:589-595`）。方案合并时删除，不必改，后续批次引用时注意。
 
 **不采纳**：Codex 提出「旧版服务端响应缺 `careActions` 时新前端 `.map()` 抛错」。设置页前端和 `settings.ts` 在同一个包里一起发，前端由同版本插件提供，不会混用；细则第 4 条也明确不加兜底。
+
+### 第 3 批（Codex 独立审查 + Claude 核实，基于 `a4cc63a`）
+
+已核实没问题的：
+- 行为等价。Body `startPlanned`：守卫 `isPlanKind` 与原 `includes` 对非字符串同样拒绝；`target` 校验之后按 kind 分派，各 kind 的条件互斥，报错先后不变；素材槽仍在 `freezeOnPause` 之前、回执查找之前。Life `parsePlan`：准入保留 `String(...)`，字段分派只对字符串 kind 执行，计时判断仍按 `String(value.kind)` 读 `executable`，新稿可达性对非字符串 kind 不触发，与原来的严格比较结果一致（新测试固定了 `['room']`、`['move']`）。新稿与旧存档两条路径、经济与阅读的报错文案逐字未动。
+- `life_plan_update` 注册出的 schema：分别用 `main` 和本分支的行为清单夹具导出实际注册的工具 schema，11805 字节，逐字节相同。
+- 两张 `Record<PlanKind, 校验函数>` 完整（Life `plan.ts:74`、Body `room.ts:75`），分派点在原段落位置。`room.ts` 留下的两处单 kind 判断是食物素材槽（`economy`）和菜园准入等待（`garden`），与细则第 4 条一致。
+- 点数。`check:arch -- --report` 在 `main` 为 kind 287、action 102，本分支 kind 271、action 102。对照 diff 逐条：Life 去掉 `:85` 守卫、`:87` 两处、`:88,94,98,107` 四段条件、`:114,127` 两处分组共 9 点，Body 去掉 `:598`、`:609-613`、`:618`、`:620` 共 8 点，共用守卫加 1 点。去掉的都是改成查表（`target`、`executable`）或一次分派，每一步只判断一次 kind；Life 新增的 `typeof kind === 'string'` 用来保住数组 kind 的现状，不是换写法躲点。
+- 基线。按 `scripts/arch/lib/ratchet.mjs` 的条目身份比对：规则基线 37 → 37，新增和消失都是 0，diff 只有行号顺移；词表基线 915 → 707，新增 0，删除 208。
+- 经济、菜园、阅读各收成一份；剩下的 `buyCompost` 等字面量在 `body/playback.ts`、`desktop/platform/activity.ts` 的呈现映射里（拍板点 2 延到阶段 3），`room/plugin.ts:131` 的 12 个操作没动。
+- 测试只新增、不改：三个测试文件共 +33 行，0 行删除；第 1、2 批断言原样保留。
+- 沙箱外门禁：`pnpm run verify` Node 测试 1670 条全过（含 Memory P2 的 `/bin/ps` 用例）；`pnpm run build && pnpm run test:behavior-list` 索引 11 条、行为清单 118 条全过。构建后工作区干净，`dist/src` 与源码一致。
+
+**必须修**：无。
+
+**建议修（不影响合并）**
+- `src/living/plan/plan-tools.ts:44,50,60` 三个单值菜园分支用 `gardenOperationsFor(...)[0]` 取 `const`；以后往同一分支加第二项，守卫会放行，schema 却会漏掉。生成时断言单值分支恰好一项。
+- `src/living/plan/plan-tools.ts` 七个分支各自重复写 `kind:{type:'string',required:true}`，可以在生成处统一补；`[firstStep, secondStep, ...remainingSteps]` 的解构可以注明是为了满足 `oneOf` 的类型。`plan.ts` 里 `PLAN_KINDS[...]?.executable` 的 `?.` 在守卫之后多余。
+- 方案正文「只把与计划重叠的部分改为从菜园操作表拼出」与细则第 5 条「Room 工具的 12 个操作不动」措辞相反；按细则执行是对的，方案合并时删除，不必改。
+
+**不采纳**：
+- Codex 列为必须修的两条「`kind` 是会变值的 getter 时，Body/Life 校验和写入读到不同的 kind」。真实入口只有工具 JSON 参数（`plan-tools.ts:142`）、Life 按已解析步骤拼出的普通对象（`plan.ts:413`）和 Body 内部调用（`room.ts:711`），都带不了 getter；原代码同样多次重读 `input.kind`，不是本批引入的。
+- Codex 列为必须修的「沙箱外门禁未通过」：已由上面的重跑消解。
+- Body `room/spot` 用普通属性查找、继承属性可能通过初检：`main` 同样存在，不属于本批，另记。
