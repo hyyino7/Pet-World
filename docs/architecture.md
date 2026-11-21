@@ -267,15 +267,15 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 #### 5.6.1 第一批概念细表（阶段 2a 前）
 
-行号已按 2a 收尾时的代码重核。R8 报告用来定位重复集合，逐份按源码核对。「词表重复基线」里的几组（六种照料动作 3 份、十种角色动作 2 份、五种计划身体动作 4 份、七种计划 kind 4 份、阅读状态 4 份）都在细表里列出定义处。
+行号已按 2a 收尾时的代码重核。R8 报告用来定位重复集合，逐份按源码核对。「词表重复基线」里的几组都在细表里列出定义处：六种照料动作、十种角色动作、五种计划身体动作已由 2b 第 2 批收成一张基础表；七种计划 kind 4 份、阅读状态 4 份待 2b 第 3 批收拢。
 
 ##### 动作 `action`
 
 | 定义处 | 取值 | 转换点及损失 | 同名不同义 |
 | --- | --- | --- | --- |
-| 六种照料动作，3 份。`living/body/plugin.ts:25`、`living/plan/plugin.ts:49`、`console/settings.ts:228` | `feed / water / play / pet / sleep / wake` | Console → `life.act` → `behavior.act` → `roomAction({action}, …)`，动作值沿用，补请求标识及主人身份（`console/settings.ts:221-234`、`living/plan/plugin.ts:656-659`、`living/body/plugin.ts:346-364`）。 | 这是简化照料入口。`pet` 在此集合内，计划身体动作集没有 `pet`（`contracts/behavior.ts:58`）。 |
-| 十种角色房间动作，2 份。`room/plugin.ts:18,121-126`、`living/body/room.ts:85,992-1003` | `command / pet / poke / feed / water / play / talk / sleep / wake / lamp` | 工具传动作和参数，Body 再按上游 `HOME_ACTIONS` 和角色白名单核验。`talk` 文本修剪为最多 120 字符后传给实际动作（`living/body/room.ts:992-1003,1022-1032`）。 | 上游 `HOME_ACTIONS` 另含 `visit / go / place / sick / heal`（`vendor/feiyu-room-template/home-state.js:23-25`）。 |
-| 五种计划身体动作，4 份。`contracts/behavior.ts:58`、`living/plan/plan-tools.ts:103`、`living/plan/plan.ts:94-97`、`living/body/room.ts:611` | `sleep / wake / water / feed / play` | `LifeStep.action` 经 `PlannedActivity` 转到上游 `applyHomeAction`。执行器按原回执处理，计划中的 `feed` 是免费基础餐食（`living/plan/plan.ts:397-400`、`living/body/room.ts:529-547`、`living/plan/plan-tools.ts:103`）。Life 草稿校验用 `String(value.action)` 比对，非字符串的 `['feed']` 也会被接受并原样保留；工具 schema 只收字符串（`living/plan/plan.ts:94-97`、`living/plan/plan-tools.ts:101-104`，2B1-04 固定）。 | 库存 `feed` 从经济入口转为 `consumeFood`。身体存档写 `catalog-food`，互动事实仍可用 `type:'feed'`（`living/economy/plugin.ts:264-272`、`living/body/room.ts:454-465`）。 |
+| 六种照料动作，1 份。`contracts/behavior.ts:10-21` 基础表的 `care` 标记（带序号和按钮文案）派生 `CARE_ACTIONS` 和守卫 `isCareAction`（`:44,49-51`） | `feed / water / pet / play / sleep / wake`（按钮顺序） | Console → `life.act` → `behavior.act` → `roomAction({action}, …)`，动作值沿用，补请求标识及主人身份。设置页、Life `act`、World `care`、Body `act` 四个入口各自调用 `isCareAction`，报错各自保留（`console/settings.ts:229`、`living/plan/plugin.ts:655-657`、`living/body/plugin.ts:324,360-362`）。设置页按钮按 `lifeView.careActions` 渲染（`console/settings.ts:236-239`、`console/client.js:656`）。 | 这是简化照料入口。`pet` 在此集合内，计划身体动作集没有 `pet`。Desktop 自己开放的 `sleep / wake / pet` 是桌宠入口的子集，只受 `CareAction` 类型约束（`desktop/platform/plugin.ts:631`、`desktop/features.ts:165-166`）。 |
+| 十种角色房间动作，1 份。基础表的 `role` 序号派生 `ROLE_ACTIONS`（`contracts/behavior.ts:45`），用于 `room_action` 枚举和 Body 角色白名单（`room/plugin.ts:122`、`living/body/room.ts:85,995-1003`） | `command / pet / poke / feed / water / play / talk / sleep / wake / lamp` | 工具传动作和参数，Body 再按上游 `HOME_ACTIONS` 和角色白名单核验。`talk` 文本修剪为最多 120 字符后传给实际动作（`living/body/room.ts:992-1003,1022-1032`）。 | 上游 `HOME_ACTIONS` 另含 `visit / go / place / sick / heal`（`vendor/feiyu-room-template/home-state.js:23-25`）。 |
+| 五种计划身体动作，1 份。基础表的 `plan` 序号派生 `PlanBodyAction`、`PLAN_BODY_ACTIONS` 和 `isPlanBodyAction`（`contracts/behavior.ts:46,53-55`），用于计划类型、计划 schema、Life 校验和 Body 校验（`contracts/behavior.ts:112`、`living/plan/plan-tools.ts:104`、`living/plan/plan.ts:95`、`living/body/room.ts:612`） | `sleep / wake / water / feed / play` | `LifeStep.action` 经 `PlannedActivity` 转到上游 `applyHomeAction`。执行器按原回执处理，计划中的 `feed` 是免费基础餐食（`living/plan/plan.ts:397-400`、`living/body/room.ts:529-547`、`living/plan/plan-tools.ts:103`）。Life 草稿校验用 `String(value.action)` 比对，非字符串的 `['feed']` 也会被接受并原样保留；工具 schema 只收字符串（`living/plan/plan.ts:94-97`、`living/plan/plan-tools.ts:101-104`，2B1-04 固定）。 | 库存 `feed` 从经济入口转为 `consumeFood`。身体存档写 `catalog-food`，互动事实仍可用 `type:'feed'`（`living/economy/plugin.ts:264-272`、`living/body/room.ts:454-465`）。 |
 | 表达意图、呈现分类及桌面素材。`emotion/index.ts:7-10,32-47`、`contracts/behavior.ts:35-39`、`desktop/platform/plugin.ts:671-690` | footer `action` 是目录名字符串。`BehaviorPresentation.action` 是 `sleep / walk / activity / expression / emotion/...` 等分类。桌面选择素材用名称或 URL。 | Emotion 按目录保留可识别的动作，未知动作不进入事件。Body 把状态和表情投影成展示分类。Desktop 的特定睡眠、起床、吃饭素材转换为 `sleep / wake / feed`，命令不带原素材选择（`emotion/index.ts:54-64`、`living/body/presentation.ts:12-23`、`desktop/platform/plugin.ts:671-689`）。「睡觉-起来」默认只出现在睡觉序列的 `sleep.end` 里，不在动画池中，所以 `/anim` 默认返回 `unknown-animation`；配置把它加进动画池后，才会派发 `wake`（`vendor/dsh-pet/platform/assets/config.jsonc:387-392`、`desktop/platform/plugin.ts:681-682`，2B1-08 固定）。 | 同名 `action` 分别可能是身体命令、表达选择、素材名或展示分类。 |
 
 **拥有者**沿用 5.6，身体命令属第二层、表达意图属第一层、素材 ID 与桌面命令属第三层。**统一方式**沿用 `BodyAction / PresentationIntent / ExpressionAssetId / DesktopCommand` 及基础词表派生的结论。现行 `BehaviorPresentation.action` 仍归在第二层契约里且为裸 `string`（5.6 总表、`contracts/behavior.ts:35-39`）。
@@ -510,7 +510,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 | 新增上下文段 | 在模块入口用 `registerWorldPrompt` 登记（缩小后不做段声明，5.9） | 无；顺序、可见性由登记处自己写 |
 | 新增设置项 | 一份字段声明（阶段 3，按收益再评估） | 页面控件、保存键集合、校验、实际消费的接线 |
 | 新增设置页操作 | 运维操作表的一条登记（阶段 3） | 路由清单、处理分支、客户端调用 |
-| 新增照料动作 | 第二层的 `BodyAction` 基础表（阶段 2b） | 主人入口、角色工具枚举、计划类型与校验、计划 schema、设置页白名单、按钮 |
+| 新增照料动作 | 第二层的 `BodyAction` 基础表（`contracts/behavior.ts:10`，2b 第 2 批已落地） | 主人入口、角色工具枚举、计划类型与校验、计划 schema、设置页白名单、按钮 |
 | 新增事实领域 | 一份事实领域声明（阶段 2b） | 类型、提示词投影、Life 读取、Python 侧识别清单 |
 
 重构前的基线和 M2 后的复测见 [product.md](product.md) 的「典型修改前后对比」。
