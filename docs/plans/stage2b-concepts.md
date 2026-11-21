@@ -357,3 +357,24 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - 测试补上依赖去重和人工记录的断言。现在把手写统计、违规数、依赖数都清空，测试仍然能过。
 
 **复查（基于 `2f4ed19`）**：5 条必须修都已修好（`dd585d1` 把统计抽到 `scripts/arch/lib/counts.mjs`，`check:arch --report` 输出和改前逐字一致；`fc5a804` 修第 1–5 条和三条建议修；`2f4ed19` 补执行结果）。沙箱外 `pnpm run verify` 1652 条全过，包检查也过了；行为清单 104 条全过。剩下一条建议修：第 6 项最新一列写的是「未重算」，命令就原样输出它，看不到最后一次算出的 36/70。
+
+### 第 2 批（Codex 独立审查 + Claude 核实，基于 `0fd6fa7`）
+
+已核实没问题的：
+- 行为等价。四个照料入口的检查仍各自保留，报错码、文案和先后不变（设置页先查绑定和 Life，再报 `INVALID_ARGUMENT`；World 先查请求和绑定；Life「未知的生活动作」；Body「未知的身体动作」）。`startPlanned` 的 `isPlanBodyAction(input.action)` 与原 `includes(input.action ?? '')` 对 `undefined` 和非字符串的结果相同；`parsePlan` 保留 `String(...)` 宽松准入。
+- 三处顺序。设置页按钮 `feed / water / pet / play / sleep / wake`、`room_action` 枚举 `command … lamp`、计划身体枚举 `sleep / wake / water / feed / play` 与原来逐项一致；`BODY_ACTIONS` 写法与细则第 1 条一致。反馈集合与原来同为六项（只做成员判断，顺序无关）。
+- 第 1 批测试只改了 2B1-03 的 `lamp` 为 `on:false`，前后各有一条断言，现在能看出灯从开变关；其余 2B1 断言未动。
+- 点数。用仓库扫描器分别在 `89072ba` 和 `0fd6fa7` 上导出 action 判断点逐条比对：去掉的 5 点是设置页、World `care`、Body `act`、Life `act` 四处照料名单判断和 `parsePlan` 一处；新增 2 点是 `isCareAction`、`isPlanBodyAction` 守卫里各一处；Desktop 的 `['sleep','wake','pet']` 只是拆成变量，1 点持平。净 −3（105 → 102），kind 287 不变，属于把同一条规则收进一个定义处，不是靠改写法躲点。
+- 基线。按 `scripts/arch/lib/ratchet.mjs` 的条目身份（不含行号）比对词表基线：1031 → 915，新增 0、删除 116；规则基线 37，新增和消失各 0。
+- `lifeView.careActions` 由 `console/settings.ts` 在返回值上加，Life `snapshot()` 未改。沙箱外构建后工作区干净，`src/desktop/platform/client.js` 和 `dist/src` 与构建产物一致。
+- 新测试验证真实行为：`2B2-01` 从 `src/console/client.js` 取出真实 `LifePage`，经真实设置 RPC 渲染并逐个点击六个按钮，核对事实 `type` 和 `channel`，再用改写的 `careActions` 证明按钮跟随返回值而非写死；连跑 5 次全过，执行结果里提到的首轮时序问题未复现。反馈回归跑真实 `CompanionRoom`，核对投射的事实 ID。序号测试能拦漏号和撞号。
+- 沙箱外 `pnpm run verify`：Node 测试 1668 条全过（含 Memory P2 的 `/bin/ps` 用例）、`check:arch`、包检查通过；`pnpm run build && pnpm run test:behavior-list`：索引 11 条、行为清单 118 条全过。Codex 把「沙箱外重跑门禁」列为必须修，已由这次重跑消解。
+
+**必须修**：无。
+
+**建议修（不影响合并）**
+- `src/contracts/behavior.ts:10,44-47` 的基础表和派生数组只在类型上只读，照 `contracts/tables.ts:33` 的做法加 `Object.freeze`（表项和四个派生数组），防止哪天有 JS 调用方原地改数组让四个入口一起放行。现在没有写入方。
+- `src/living/body/room.ts:13-14` 两条同模块导入可合并；`FEEDBACK_ACTIONS` 的排序全为 0，可以不排序；`BODY_ACTION_NAMES` 没有模块外使用者，可以不导出。
+- 本方案第 2 批正文「互动反馈子集…不限 actor 是主人」与代码不符（`room.ts:821` 只投射已完成的主人互动，前后一致）；开工细则第 4 条「`lifeView` 失败时整张卡片本来就不显示」只对首次读取成立，已有视图后轮询失败会保留卡片并显示错误（`console/client.js:589-595`）。方案合并时删除，不必改，后续批次引用时注意。
+
+**不采纳**：Codex 提出「旧版服务端响应缺 `careActions` 时新前端 `.map()` 抛错」。设置页前端和 `settings.ts` 在同一个包里一起发，前端由同版本插件提供，不会混用；细则第 4 条也明确不加兜底。
