@@ -592,7 +592,7 @@ Desktop（含 PetPlatform）、Room、Channels、Voice、Console。两条规则�
 
 ### 7.4 第一次迁移的定位
 
-阶段 1 只做「存储清单加版本号和迁移日志」，数据格式其余不变。2a 登记了三步：`0001-storage-manifest` 写存储清单，`0002-home-identity` 把共享 home 身份从 `life.json` 复制进 Core，`0003-economy-marker` 把 `economy.initialized` 从 Core 搬进钱包库并写独立证据，存储版本随之升到 v3。`0003` 是第一次跨数据库搬迁，合成副本上已演练崩溃续做、结算守恒和用 v0.2.0 代码回退；真实副本演练和已装环境升级回退由主人在 2a 第 6 批做，做完前**不宣告迁移链路已通过**（[product.md](product.md) 2a 完成标准）。换包后新版本遇到未迁移的数据进入「需要迁移」模式，只开普通聊天、拒绝伙伴数据写入；离线迁移器接不住的绑定形状另报 `binding-not-migratable`，提示换回旧版理顺。
+阶段 1 只做「存储清单加版本号和迁移日志」，数据格式其余不变。2a 登记了三步：`0001-storage-manifest` 写存储清单，`0002-home-identity` 把共享 home 身份从 `life.json` 复制进 Core，`0003-economy-marker` 把 `economy.initialized` 从 Core 搬进钱包库并写独立证据，存储版本随之升到 v3。`0003` 是第一次跨数据库搬迁，合成副本上已演练崩溃续做、结算守恒和用 v0.2.0 代码回退；主人随后在隔离环境做了升级、迁移和回退，在独立设备上做了真实副本演练，0.3.0 已发布并在日常机器上迁移通过，迁移链路按 [product.md](product.md) 2a 完成标准验收。换包后新版本遇到未迁移的数据进入「需要迁移」模式，只开普通聊天、拒绝伙伴数据写入；离线迁移器接不住的绑定形状另报 `binding-not-migratable`，提示换回旧版理顺。
 
 版本号和日志放在 `.chatpet/data/storage-manifest.json` 和 `.chatpet/data/migrations.jsonl`，迁移锁是同目录的 `migration.lock`（`scripts/migrate/context.mjs:21-22`）。它们不放进 `.chatpet/manifest.json`：那个文件算进绑定指纹（`src/core/workspace.ts:309-311,324-327`），还会被 Core 改写（`src/core/workspace.ts:443-445`）。三个文件都在 `.chatpet/` 里，现有备份自然覆盖。
 

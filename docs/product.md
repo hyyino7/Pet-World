@@ -209,7 +209,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 种地时钟 | 3 批。第 3 批修的是「暂停或恢复那一刻 Body、Economy 不在场，暂停时间被算成生长」（2A1A-12、2A1A-13，断言 2/12；`G3-GARDEN-01`–`17`），验收返工 1 轮（区间文件无效时不能挡住身体操作）。G3 复盘结论：三批的共同根因是「哪段时间算启用」没有被记录，只靠当前开关加菜园 `updatedAt` 在边界那一刻折算，换一种装卸组合或处理顺序就会多算或少算；现在暂停区间记在 Life 的 `control.json`，每次推进菜园都按区间扣，不依赖谁在场、谁先处理（[architecture.md 第 4 节](architecture.md#4-状态拥有者表)、6.2）。再失守即第 4 批，修之前先复盘 |
 | 计划推进与完成契约 | 2 轮；2a 3E 验收返工 1 轮：执行计划步骤的新命令把派工失败、转入重新考虑报成成功，改成按推进后的计划状态报 `unknown/reconcile`、`none/never`、`none/refresh`（`tests/living/living-lifecycle.test.mjs`） |
 | 关闭后晚到的录音与取消 | 多个入口 |
-| 换包后 Core 配置仍在 | 失守 2 次（M3 C 批隔离机、E 批 Mac mini），修复 1 批。第 1 批即 2a 第 2 批：setup 改为经 DSH 安装 npm 包，Core 配置写进 profile 层覆盖，并新增 `dafeiyu-setup migrate-core-config` 给已装机器搬配置；L1 行为测试 `2A2-01`。验收返工 2 轮：第 1 轮修 setup 失败只报 `setup-failed`、`--offline` 误传给 `pnpm remove`；第 2 轮修第 1 轮带出的 `audit-r3` 夹具缺函数。代码已修，待主人隔离实机验收后结束这一轮（已知问题 8） |
+| 换包后 Core 配置仍在 | 失守 2 次（M3 C 批隔离机、E 批 Mac mini），修复 1 批。第 1 批即 2a 第 2 批：setup 改为经 DSH 安装 npm 包，Core 配置写进 profile 层覆盖，并新增 `dafeiyu-setup migrate-core-config` 给已装机器搬配置；L1 行为测试 `2A2-01`。验收返工 2 轮：第 1 轮修 setup 失败只报 `setup-failed`、`--offline` 误传给 `pnpm remove`；第 2 轮修第 1 轮带出的 `audit-r3` 夹具缺函数。主人在 0.3.0-rc.1 隔离演练中实机验收通过（`migrate-core-config` 返回 `checked`，换包前后 profile 覆盖哈希一致），这一轮结束 |
 | 需要迁移的判定和离线迁移器同口径（运行时锁住的数据一定能离线解开，不该锁的不锁） | 修复 1 批，没有发布前失守。2a 第 4 批验收返工 1 轮（09e55e5）：运行时会锁住离线迁移器接不了的形状（选了 B 没初始化、`--resume-repo` 搬了没迁移的 Repo、删了 `.chatpet/`、0.2.0 的旧格式初始化标记），改成和 `inspectRepoBinding` 同口径判定，接不了的报 `binding-not-migratable`；新装存档的镜像一滞后，`0002` 就误报冲突并锁死，改成清单已过这一步时以 Core 为准。同一轮还修了本批引入的「拒写导出被当成功删掉」（`docs/portability.md` 的导出不丢）。测试 `tests/migrate/binding.test.mjs`、`tests/migrate/home-flow.test.mjs` |
 | 缺库拒绝、不让旧钱包复活（钱包问题只隔离钱包） | 修复 1 批，没有发布前失守。2a 第 5 批验收返工 1 轮（480c23a）：钱包证据文件内容坏了会让整个工作区不可用，改成工作区清单只看文件在不在、内容校验留给钱包；首次初始化留下空壳库时指引走不通，补上「移存库文件再重试」；迁移删掉 Core 旧键后钱包目录和 `data/living/` 同时丢失会重建钱包，加迁移日志作第五种采用证据（主人拍板）。测试 `2A5-01`–`07`、`tests/infrastructure/first-install.test.mjs` |
 
@@ -218,7 +218,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 - 共同根因：旧版 `dafeiyu-setup` 把 Core 配置写进本地重打的安装包自己的 `cordis.patch.yml`；npm 包里的 patch 没有 `config`，所以一换包，配置就随旧包消失。
 - 受影响的其他入口：所有用旧 setup 装过的机器；[portability.md](portability.md) 的新设备步骤也走 setup。
 - 修法：setup 不再重打包，让 DSH 自己装 npm 包；Core 配置只放在 profile 层覆盖里，换包不影响（决定见 [decisions.md](decisions.md)「setup 经 DSH 装 npm 包，Core 配置只放 profile 层覆盖」）。
-- 怎样算结束这一轮：行为测试 `2A2-01` 已证明换包后 Core 配置仍在；还差主人在隔离环境实机走一次「setup 安装 → 版本页换包 → `migrate-core-config` 核对」。
+- 结束：行为测试 `2A2-01` 证明换包后 Core 配置仍在，主人在隔离环境实机走过「setup 安装 → 版本页换包 → `migrate-core-config` 核对」，已通过。
 
 ---
 
@@ -233,7 +233,6 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 3. 错误码及设置回复的恢复语义不一致 | `src/contracts/common.ts:21` 有 `EXPIRED_USE`，`src/core/storage.ts:10` 的辅助联合没有；`src/console/settings.ts:17,400,402` 只保留 `code/message/details` | 辅助函数无法按声明类型表达该拒绝；设置调用者丢失 `effect/retry`，不能据此判断核对或重试 | 已复现：丢弃式 TypeScript 调用产生 TS2345；真实设置处理器收到 `partial/reconcile` 后，回复均无这两个字段 | 阶段 3 并入设置 RPC 声明（阶段 1 缩小方案） |
 | 4. 两套呈现分类器对混合情绪结论不同 | `src/living/body/presentation.ts:21`；`src/living/body/playback.ts:95,109` | 空闲且 `feelings=[anger,calm]` 时，语义呈现为 `emotion/anger`，播放槽为 `rest.calm` | 已复现：同一个合成 home 调用两个真实函数得到上述不同结果 | 待主人决定 |
 | 6. 新装环境里桌宠外观编辑器没加载 | 已安装的 0.1.8 桌宠外观编辑器；源码位置在本仓库还没定位 | 新设备上界面固定提示 `EDITOR_NOT_LOADED`，没有添加形象的入口；桌宠服务本身可用 | 已在 Mac mini 新装 DSH + 0.1.8 上观察到（M1 D 批）。当时的 Codex 怀疑是可选命令依赖挡住了编辑器加载，并写了候选补丁，但补丁没有装上，修复效果没验证；默认独立桌宠的 Electron 路径缺失也是同时观察到的环境缺口，是不是原因还没确定 | 已观察到，原因未确认，待主人安排 |
-| 8. setup 安装的伙伴改用版本页换包会丢 Core 配置 | 旧版 setup 把 Core 配置写进本地重打的安装包里的 `cordis.patch.yml`，npm 包里的这份 patch 没有 `config`。现在 `scripts/install-dsh.mjs` 改为经 DSH 安装 npm 包，并把配置写进 profile 的 `cordis.patch.yml` 覆盖；已装机器用 `dafeiyu-setup migrate-core-config` 搬配置（见 [portability.md](portability.md)） | 旧 setup 装的伙伴，在版本页换成任何 npm 版本（同版本 0.1.8 也一样）后，`00-Core` 报 `Invalid companionId`，无法启动；profile 配置和数据不变。日常机器已是 npm 包加 profile 层覆盖，不受影响 | 已复现：M3 C 批隔离环境，setup 版 0.1.8 换成 npm 版 0.1.8 即出现。修后由行为测试 `2A2-01` 覆盖（合成 profile） | **代码已修，待主人隔离实机验收**（「setup 安装 → 版本页换包 → `migrate-core-config` 核对」）。还没验收的旧 setup 机器先退出 DSH，运行 `dafeiyu-setup migrate-core-config --apply` 后再换包 |
 | 9. 迁移兼容测试的 legacy 变体在 CI 偶发失败 | `tests/migrate/compatibility.test.mjs` 的 `legacy` 变体；失败的断言在 `scripts/fixtures/synthetic-companion.mjs:104`（刚写入的合成记忆召回不到） | 发布门禁偶发失败，重跑能过；0.2.0 正式版的发布运行一次通过 | 0.2.0-rc.1 的发布运行第 1 次尝试失败、第 3 次通过；本机单跑 15 次、加负载并行 30 次都没复现，召回前加 0–3 秒延迟也通过 | 原因未查，主人判断是 GitHub 侧问题。2a 期间又见两次同类偶发，都在 Codex 沙箱的整套并行运行里、复跑即过：第 4 批行为清单 B10「B 必须真实召回 A 已确认送达的事实」首跑失败；第 5 批返工 Memory 盘点用例首跑返回 422。2a 收尾在沙箱外把这两条各单跑 8 次，全部通过，没复现。现有证据不足以判定是同一个不变量（「已确认写入的记忆一定能召回」）第二次失守；再出现时先保留首个失败的入口、操作名、状态码和合成日志，确认是同一不变量就按 G3 提前复盘 |
 | 10. 付费 Memory 实测脚本还依赖旧回执的 `archive` 字段 | `scripts/checks/check-native-memory-live.mjs:176` 读 `installedReceipt.archive` 并对它算哈希 | 改为经 DSH 安装 npm 包之后，新回执里没有 `archive`，这个检查会在算哈希时失败；日常运行不受影响，只影响这条手动付费检查 | 读代码确认，没有运行（会调用付费模型） | 待定。以后还要用这个检查，需要另定按 npm 包核对的方式（例如回执里的 `packageVersion`） |
 
@@ -370,7 +369,7 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 
 缩小（B）之后：第一层停在 M2 的登记口，不再新建初始化表、提示词表，也不把现有目录搬进 `kernel/`；第二层照原计划合并，这是唯一保留的重写；第三层原地治理，不重写模块。检查、棘轮、行为清单、迁移骨架、G1–G9 全部保留，G8 每个阶段末照旧复盘。
 
-#### 阶段 2：第二层「生活世界」（P3）（当前：2a 收尾，第 6 批）
+#### 阶段 2：第二层「生活世界」（P3）（当前：2a 已完成，2b 待开工）
 
 把身体、计划与回顾、钱包背包合并成一个实例，旧服务名以门面提供。先搬后改，分 2a 和 2b，各发一个版本。开始前交付三个旧入口语义表、第一批概念表和上下文段清单。第二层的目录名在 2a 方案里定；第一层、第三层不改目录。
 
@@ -394,8 +393,10 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 - [x] 第二层对外只有世界快照、命令、事实流、`world.changed`，R1–R4 对第二层全绿（包括原来 Life 读 `petDesktop`、`petChannels` 的 4 条）。第三层往下登记的生活出口和 Desktop 读的启用意图读口见 [architecture.md 5.2](architecture.md#52-第二层对外)。
 - [x] 典型修改 1（调种地规则）在 2a 合并后的 `main` 上开独立度量分支实做，只动第二层。（`codex/m4-measure-1-garden`：3 文件 / 1 层 / 1 模块，只动钱包区，和 M1 基线同为 3 文件）
 - [x] 一条真实流程通过（G9，L1）：计划步骤 → 身体 → 经济结算 → 重启恢复。（`2A1A-18`，第 4、5 批迁移后在同一合成绑定上复跑原断言通过）
-- [ ] 已知问题 8 作为 2a 里单独的常规批次修掉：setup 改装 npm 包、Core 配置走 profile 层覆盖，已装机器有正式的搬配置命令，有一条「换包后 Core 配置仍在」的行为测试，并在隔离环境实机走一次「setup 安装 → 版本页换包」（结束故障家族「换包后 Core 配置仍在」这一轮）。
-- [ ] 真实数据副本演练通过，已装环境升级和回退通过，发布 0.3.0。
+- [x] 已知问题 8 作为 2a 里单独的常规批次修掉：setup 改装 npm 包、Core 配置走 profile 层覆盖，已装机器有正式的搬配置命令，有一条「换包后 Core 配置仍在」的行为测试，并在隔离环境实机走一次「setup 安装 → 版本页换包」（结束故障家族「换包后 Core 配置仍在」这一轮）。
+- [x] 真实数据副本演练通过，已装环境升级和回退通过，发布 0.3.0。
+
+**2a 结果**：发布 0.3.0（预发布 `0.3.0-rc.1` 为 `db1b8cf`，正式版 `8c083e0`）。主人在隔离环境从 0.2.0 做回退备份、换到 RC 看到「需要迁移」、离线迁移三步 `settled`、启动核对、四条原生检查（`test:native-life` 修过一次检查夹具后通过）和回退；在独立设备上做了真实副本演练；日常机器升级到 0.3.0 并迁移通过。kind/action 词表点数的偏差带进 2b（见下面 2b 完成标准）。
 
 停止条件：合并后的第二层手写代码超过评估线（单文件 1500 行），且无法拆成内部清晰的区：停下来重新讨论切分；经济或身体相关行为清单两轮修不好：止损；home 记录或 `economy.initialized` 的迁移演练失败两轮：不进入 2b；同一个不变量第二次失守：按 G3 提前复盘。
 
