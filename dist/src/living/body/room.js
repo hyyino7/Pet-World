@@ -746,7 +746,8 @@ export class CompanionRoom {
         if (typeof input.operationId !== 'string' || !input.operationId || input.operationId.length > 96
             || /[\u0000-\u001f\u007f]/.test(input.operationId) || ['__proto__', 'constructor', 'prototype'].includes(input.operationId))
             throw Error('计划执行编号无效');
-        if (typeof input.activity !== 'string' || !input.activity.trim() || input.activity.length > 80)
+        const { activity: label } = input;
+        if (typeof label !== 'string' || !label.trim() || label.length > 80)
             throw Error('计划活动描述须为1到80字');
         if (input.until !== undefined && (typeof input.until !== 'string' || !Number.isFinite(Date.parse(input.until))))
             throw Error('计划结束时间无效');

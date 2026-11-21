@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto';
 import { initialBodyState } from './initial-state.js';
 import { FEEDBACK_ACTIONS, ROLE_ACTIONS, PLAN_KINDS, isPlanKind, isPlanBodyAction, isPlanEconomyOperation, isPlanGardenOperation,
   PlannedAdmissionWaitError, type PlannedAdmissionWait, type PlannedActivity, type PlannedExecution,
-  type BehaviorAnimationContext, type PlanKind, type PlanTradeOperation, type ReadingState } from '../../contracts/behavior.js';
+  type BehaviorAnimationContext, type ExecutionPhase, type ExecutionStatus, type PlanKind, type PlanTradeOperation, type ReadingState } from '../../contracts/behavior.js';
 import { requirePresentationSlot, animationSlotAllowed } from './playback.js';
 import { canonical, digest } from '../../core/storage.js';
 import type { CompanionFact, CompanionFactActor } from '../../contracts/interaction.js';
@@ -70,7 +70,7 @@ interface ExecutionRecord extends PlannedExecution {
   presentationFreeze?: BehaviorAnimationContext['presentationFreeze'];
   interaction?: RoomInteractionContext;
 }
-const terminalExecution = new Set<PlannedExecution['status']>(['completed','cancelled','failed']);
+const terminalExecution = new Set<ExecutionStatus>(['completed','cancelled','failed']);
 
 const validatePlannedFields: Record<PlanKind, (input: PlannedActivity) => void> = {
   hold(input) {
@@ -236,7 +236,7 @@ export class CompanionRoom {
       if(current.kind==='move' && this.completeMove(current,now)) {
         // Arrival owns completion even when Economy is unavailable.
       } else if(active?.plannedOperationId===current.operationId) {
-        const phase=this.state.route?'moving':'working',arrival=this.roomArrival(current,arrivalRoute);
+        const phase: ExecutionPhase = this.state.route?'moving':'working',arrival=this.roomArrival(current,arrivalRoute);
         if(current.phase!==phase || Object.keys(arrival).length)this.updateExecution(current,{phase,...arrival},now);
       } else this.updateExecution(current,current.until && now>=Date.parse(current.until)
         ? {status:'completed',phase:'completed'} : {status:'interrupted',phase:'waiting',reason:'身体活动已被其他安排接手'},now);
@@ -622,7 +622,8 @@ export class CompanionRoom {
     if (!input || !isPlanKind(input.kind)) throw Error('未知的计划活动');
     if (typeof input.operationId !== 'string' || !input.operationId || input.operationId.length > 96
       || /[\u0000-\u001f\u007f]/.test(input.operationId) || ['__proto__','constructor','prototype'].includes(input.operationId)) throw Error('计划执行编号无效');
-    if (typeof input.activity !== 'string' || !input.activity.trim() || input.activity.length > 80) throw Error('计划活动描述须为1到80字');
+    const {activity:label} = input;
+    if (typeof label !== 'string' || !label.trim() || label.length > 80) throw Error('计划活动描述须为1到80字');
     if (input.until !== undefined && (typeof input.until !== 'string' || !Number.isFinite(Date.parse(input.until)))) throw Error('计划结束时间无效');
     if(input.presentationSlot!==undefined) {
       const foodSlot=input.kind==='economy' && input.economy?.type==='consume'
@@ -970,7 +971,7 @@ export class CompanionRoom {
           this.updateExecution(planned,{status:'completed',phase:'completed'},now);
         else if (planned.input.action==='sleep') {
           if (target?.effect==='sleep') target.plannedOperationId=planned.operationId;
-          const phase=this.state.route?'moving':'pending';
+          const phase: ExecutionPhase = this.state.route?'moving':'pending';
           if (phase!==planned.phase)this.updateExecution(planned,{phase},now);
         }
       } else if (planned.kind==='garden') {
@@ -979,13 +980,13 @@ export class CompanionRoom {
           this.updateExecution(planned,{status:receipt.status==='completed'?'completed':receipt.status==='cancelled'?'interrupted':'failed',phase:receipt.status==='completed'?'completed':'waiting',reason:receipt.message},now);
         else {
           const rawPhase=result.garden.care.task?.requestId===planned.operationId ? result.garden.care.task.phase : 'pending';
-          const phase=rawPhase==='walking'?'moving':rawPhase==='working'?'working':'pending';
+          const phase: ExecutionPhase = rawPhase==='walking'?'moving':rawPhase==='working'?'working':'pending';
           if(phase!==planned.phase)this.updateExecution(planned,{phase},now);
         }
       } else if (planned.kind==='move' && this.completeMove(planned,now)) {
         // Actual physical arrival, never an animation or elapsed-time guess.
       } else if (target?.plannedOperationId===planned.operationId) {
-        const phase=this.state.route?'moving':'working',arrival=this.roomArrival(planned,arrivalRoute);
+        const phase: ExecutionPhase = this.state.route?'moving':'working',arrival=this.roomArrival(planned,arrivalRoute);
         if(planned.phase!==phase || Object.keys(arrival).length)this.updateExecution(planned,{phase,...arrival},now);
       } else this.updateExecution(planned,planned.until && now>=Date.parse(planned.until)
         ? {status:'completed',phase:'completed'} : {status:'interrupted',phase:'waiting',reason:'身体活动已被其他安排接手'},now);

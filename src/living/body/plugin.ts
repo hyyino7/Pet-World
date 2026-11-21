@@ -5,7 +5,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { buildHomePromptLine } from '#feiyu-home';
 import { check, digest, reject, text } from '../../core/storage.js';
 import type { PetCoreHost } from '../../core/index.js';
-import { isCareAction, type BehaviorActivity, type BehaviorChange, type BehaviorSnapshot, type CompanionExpression, type PlannedActivity, type PlannedExecution } from '../../contracts/behavior.js';
+import { isCareAction, type BehaviorActivity, type BehaviorChange, type BehaviorSnapshot, type CompanionExpression, type CurrentActivityId, type PlannedActivity, type PlannedExecution } from '../../contracts/behavior.js';
+import { bodyPhaseOf, companionBusy } from './activity.js';
 import { CompanionRoom } from './room.js';
 import { behaviorPresentation } from './presentation.js';
 import { resolveActivityPlayback } from './playback.js';
@@ -206,7 +207,7 @@ export class CompanionBehavior {
     if (this.closed || !this.binding || this.binding.id !== workspaceId) throw Error('身体工作区已切换或组件已停止');
     return this.binding;
   }
-  private activity(): BehaviorActivity {
+  private activity(): Omit<BehaviorActivity, 'busy'> {
     const state = this.binding?.room.state;
     if (!state) return {activityId:null, kind:'idle', phase:'idle'};
     const planned = this.binding?.room.plannedState();
@@ -219,11 +220,12 @@ export class CompanionBehavior {
       state.kind?.startsWith('react_') && state.reactionUntil>0 ? state.lastInteractionAt : 0);
     const startedAt=Number.isFinite(onset) && onset>0 ? onset : 0;
     if (planned?.status==='running') return {activityId:planned.operationId,kind:state.kind,startedAt,...animation,
-      phase:planned.phase==='moving'?'moving':planned.phase==='working'?'working':'pending'};
+      phase:bodyPhaseOf(planned.phase)};
     const requested=task&&(!task.completedAt||(state.asleep&&task.action==='sleep'))?task.id:undefined;
     const automatic=state.route ? 'body:'+digest([state.route.departAt,state.route.arriveAt,state.route.target]) :
       state.dwell ? 'body:'+digest([state.dwell.until,state.dwell.target]) : state.asleep ? 'sleep:'+String(state.sleepStartedAt||'unknown') : null;
-    return {activityId:state.route?.target?.gardenJobId ?? state.dwell?.target?.gardenJobId ?? requested ?? automatic,
+    const currentActivityId: CurrentActivityId = state.route?.target?.gardenJobId ?? state.dwell?.target?.gardenJobId ?? requested ?? automatic;
+    return {activityId:currentActivityId,
       kind:state.kind,startedAt,...animation,
       phase:state.route ? 'moving' : state.asleep ? 'sleeping' : state.sleepPending || state.freeTarget || state.command ? 'pending' :
         state.dwell || state.reactionUntil > Date.now() ? 'working' : task?.completedAt ? 'completed' : 'idle'};
@@ -312,9 +314,11 @@ export class CompanionBehavior {
       const bound=this.checked(workspaceId);if(bound!==before)throw Error('身体工作区已切换');
       const execution=JSON.stringify(bound.room.plannedState());this.advanceRoom(bound);
       this.publish(execution===JSON.stringify(bound.room.plannedState())?'observation':'transition');
-      const home=this.presentHome(bound.room.view());
+      const view=bound.room.view();
+      const behavior: BehaviorActivity = {...this.activity(),busy:companionBusy(view.her)};
+      const home=this.presentHome(view,behavior);
       return {workspaceId,storageId:bound.storageId,bootId:this.bootId,revision:this.revision,
-        autonomyEnabled:this.autonomous,behavior:this.activity(),home,needs:structuredClone(bound.room.state.needs),presentation:behaviorPresentation(home,this.expression),fault:this.fault ?? this.publicationFault ?? null,
+        autonomyEnabled:this.autonomous,behavior,home,needs:structuredClone(bound.room.state.needs),presentation:behaviorPresentation(home,this.expression),fault:this.fault ?? this.publicationFault ?? null,
         ...(bound.room.plannedState() ? {planned:bound.room.plannedState()} : {})};
     });
   }

@@ -100,6 +100,19 @@ export function isPlanGardenOperation(value: string): value is PlanGardenOperati
 export const READING_STATES = {unread: true, offered: true, confirmed: true} as const;
 export type ReadingState = keyof typeof READING_STATES;
 
+/** 自然语言活动标签，沿用序列化字段 activity。 */
+export type ActivityLabel = string;
+/** 已派发操作的编号。 */
+export type OperationId = string;
+/** 快照中的当前活动编号，来自执行、菜园任务、照料任务或自动生成的摘要。 */
+export type CurrentActivityId = string | null;
+
+/** completed 来自身体任务的 completedAt。 */
+export type BodyPhase = 'idle' | 'pending' | 'moving' | 'working' | 'sleeping' | 'completed';
+/** completed 表示执行已结束，结果由 ExecutionStatus 区分，包括失败和取消。 */
+export type ExecutionPhase = 'pending' | 'moving' | 'working' | 'waiting' | 'completed';
+export type ExecutionStatus = 'running' | 'paused' | 'completed' | 'cancelled' | 'interrupted' | 'failed';
+
 /** Read-only media hints grounded in the current accepted operation and facts. */
 export interface BehaviorAnimationContext {
   slotId?: string;
@@ -121,11 +134,13 @@ export interface BehaviorAnimationContext {
 
 /** Actual semantic activity is distinct from a surface's animation receipt. */
 export interface BehaviorActivity {
-  activityId: string | null;
+  activityId: CurrentActivityId;
   kind: string;
   /** Persisted phase onset when known; zero never claims a historical start. */
   startedAt?: number;
-  phase: 'idle' | 'pending' | 'moving' | 'working' | 'sleeping' | 'completed';
+  phase: BodyPhase;
+  /** 共享身体活动是否阻止桌宠发起一次新的吃饭动作。 */
+  busy: boolean;
   /** Derived from accepted execution and real content receipts, never activity prose. */
   presentationKind?: 'read' | 'reading-wait' | 'rest';
   readingState?: ReadingState;
@@ -147,9 +162,9 @@ export interface BehaviorSnapshot extends BehaviorChange {
 
 /** A durable program execution receipt; it is not a visual animation receipt. */
 export interface PlannedActivity {
-  operationId: string;
+  operationId: OperationId;
   kind: PlanKind;
-  activity: string;
+  activity: ActivityLabel;
   /** Optional registered portrayal; never grants an operation, object or effect. */
   presentationSlot?: string;
   room?: string;
@@ -178,11 +193,11 @@ export class PlannedAdmissionWaitError extends Error {
   }
 }
 export interface PlannedExecution {
-  operationId: string;
+  operationId: OperationId;
   kind: PlanKind;
-  status: 'running' | 'paused' | 'completed' | 'cancelled' | 'interrupted' | 'failed';
-  phase: 'pending' | 'moving' | 'working' | 'waiting' | 'completed';
-  activity: string;
+  status: ExecutionStatus;
+  phase: ExecutionPhase;
+  activity: ActivityLabel;
   startedAt: string;
   updatedAt: string;
   until?: string;

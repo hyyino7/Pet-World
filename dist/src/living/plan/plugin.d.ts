@@ -156,13 +156,13 @@ export declare class CompanionLife {
         behavior: {
             revision: number;
             bootId: `${string}-${string}-${string}-${string}-${string}`;
-            activityId: string | null;
             kind: string;
-            startedAt?: number;
-            phase: "idle" | "pending" | "moving" | "working" | "sleeping" | "completed";
-            presentationKind?: "read" | "reading-wait" | "rest";
-            readingState?: import("../../contracts/behavior.js").ReadingState;
-            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext;
+            phase: import("../../contracts/behavior.js").BodyPhase;
+            startedAt?: number | undefined;
+            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext | undefined;
+            activityId: import("../../contracts/behavior.js").CurrentActivityId;
+            presentationKind?: "read" | "reading-wait" | "rest" | undefined;
+            readingState?: import("../../contracts/behavior.js").ReadingState | undefined;
         };
         ok: boolean;
         changed: boolean;
@@ -178,13 +178,13 @@ export declare class CompanionLife {
         behavior: {
             revision: number;
             bootId: `${string}-${string}-${string}-${string}-${string}`;
-            activityId: string | null;
             kind: string;
-            startedAt?: number;
-            phase: "idle" | "pending" | "moving" | "working" | "sleeping" | "completed";
-            presentationKind?: "read" | "reading-wait" | "rest";
-            readingState?: import("../../contracts/behavior.js").ReadingState;
-            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext;
+            phase: import("../../contracts/behavior.js").BodyPhase;
+            startedAt?: number | undefined;
+            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext | undefined;
+            activityId: import("../../contracts/behavior.js").CurrentActivityId;
+            presentationKind?: "read" | "reading-wait" | "rest" | undefined;
+            readingState?: import("../../contracts/behavior.js").ReadingState | undefined;
         };
         ok: boolean;
         changed: boolean;

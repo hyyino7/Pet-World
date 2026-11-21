@@ -1449,6 +1449,15 @@
       "name": "设置页照料按钮按 lifeView 顺序和文案渲染并逐个执行",
       "l1Stage": "阶段 2",
       "families": []
+    },
+    {
+      "id": "2B4-01",
+      "categories": [],
+      "level": "L2",
+      "file": "tests/behavior-list/concepts-desktop.test.mjs",
+      "name": "公开身体快照的忙碌状态与 Desktop 吃饭准入一致",
+      "l1Stage": "阶段 2",
+      "families": []
     }
   ]
 }

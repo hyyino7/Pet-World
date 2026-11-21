@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type { PetCoreHost } from '../../core/index.js';
-import { type BehaviorChange, type BehaviorSnapshot, type PlannedActivity, type PlannedExecution } from '../../contracts/behavior.js';
+import { type BehaviorChange, type BehaviorSnapshot, type CurrentActivityId, type PlannedActivity, type PlannedExecution } from '../../contracts/behavior.js';
 import { CompanionRoom } from './room.js';
 import type { CompanionFactSource } from '../../contracts/interaction.js';
 import type { WorldCommands } from '../../contracts/living.js';
@@ -65,13 +65,13 @@ export declare class CompanionBehavior {
         behavior: {
             revision: number;
             bootId: `${string}-${string}-${string}-${string}-${string}`;
-            activityId: string | null;
             kind: string;
-            startedAt?: number;
-            phase: "idle" | "pending" | "moving" | "working" | "sleeping" | "completed";
-            presentationKind?: "read" | "reading-wait" | "rest";
-            readingState?: import("../../contracts/behavior.js").ReadingState;
-            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext;
+            phase: import("../../contracts/behavior.js").BodyPhase;
+            startedAt?: number | undefined;
+            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext | undefined;
+            activityId: CurrentActivityId;
+            presentationKind?: "read" | "reading-wait" | "rest" | undefined;
+            readingState?: import("../../contracts/behavior.js").ReadingState | undefined;
         };
         ok: boolean;
         changed: boolean;
@@ -84,13 +84,13 @@ export declare class CompanionBehavior {
         behavior: {
             revision: number;
             bootId: `${string}-${string}-${string}-${string}-${string}`;
-            activityId: string | null;
             kind: string;
-            startedAt?: number;
-            phase: "idle" | "pending" | "moving" | "working" | "sleeping" | "completed";
-            presentationKind?: "read" | "reading-wait" | "rest";
-            readingState?: import("../../contracts/behavior.js").ReadingState;
-            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext;
+            phase: import("../../contracts/behavior.js").BodyPhase;
+            startedAt?: number | undefined;
+            animationContext?: import("../../contracts/behavior.js").BehaviorAnimationContext | undefined;
+            activityId: CurrentActivityId;
+            presentationKind?: "read" | "reading-wait" | "rest" | undefined;
+            readingState?: import("../../contracts/behavior.js").ReadingState | undefined;
         };
         ok: boolean;
         changed: boolean;
