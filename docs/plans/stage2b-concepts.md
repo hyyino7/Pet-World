@@ -411,6 +411,18 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - `pnpm run test:memory` 的 Python 22 条和 Node 2 条通过、P2 进程测试 1 条失败；`pnpm run verify` 的环境、类型、架构和构建通过，Node 1672 条通过、同一条 P2 失败。
 - P2 服务启动后 `/bin/ps` 被沙箱拒绝（`EPERM`），后续断言环境原因未跑。门禁中断后的 Python Memory、`check:release`、`pnpm pack` 和 `check:package` 已独立运行并通过。
 
+### 第 6 批 · 6A
+
+- `src/contracts/behavior.ts` 用扫描器可识别的字符串值表集中五项指标。Body 从标记派生离线上限项，Life 与 Economy 复用同一指标校验。Console 标签表仍由渲染和保存测试核对键及顺序。
+- Economy 按原规则向 `economyView` 提供配置外的可写键。设置页按键保存，L2 验证收获物价格不写入、种子和堆肥价格与上架状态照常保存、同请求只生效一次。
+- `src/living/economy/types.ts` 的 `LedgerKind` 以扫描器可识别的 12 项联合收窄写入，旧 SQLite kind 原样读出。`package.json` 的 `test:memory` 接入事实归属契约测试。
+- R8 kind 字符串判断 270 → 270 点，运行源码和扫描范围均为 46 文件。
+- R8 action 字符串判断 102 → 102 点，运行源码和扫描范围均为 13 文件。
+- 规则基线 37 → 37，新增 0、消失 0。词表基线 690 → 638 → 637，新增 0，身体指标消失 52 条，账本裸 kind 消失 1 条。两次使用 `--write-baseline` 收紧，`check:arch` 和 `check:arch -- --report` 均通过。
+- `pnpm run build && node --test <受影响的测试>` 195 条通过。`pnpm run build && pnpm run test:behavior-list` 通过索引检查 11 条、行为测试 121 条。第 1–5 批断言保持原样。
+- `pnpm run test:memory` 通过 Python 22 条、Node 3 条（含跨语言契约），P2 失败 1 条。`pnpm run verify` 的环境、类型、架构和构建通过，Node 1677 条通过、同一 P2 失败。
+- P2 服务启动后，沙箱拒绝 `/bin/ps`（`EPERM`），后续断言环境原因未跑。本环境无法执行沙箱外门禁。`check:release`、`pnpm pack`、`check:package` 已独立通过。
+
 ## 审查结论
 
 ### 第 1 批（Codex 独立审查 + Claude 核实，基于 `724cbb7`）

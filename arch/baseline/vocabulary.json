@@ -3769,7 +3769,7 @@
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 636,
+      "line": 643,
       "column": 26,
       "scope": "factory/LifePage",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"<module>\"}",
@@ -3809,13 +3809,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/LifePage",
-        "line": 636
+        "line": 643
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 636,
+      "line": 643,
       "column": 26,
       "scope": "factory/LifePage",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/decode\"}",
@@ -3855,13 +3855,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/LifePage",
-        "line": 636
+        "line": 643
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 636,
+      "line": 643,
       "column": 26,
       "scope": "factory/LifePage",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/change/this . store . update:callback0\"}",
@@ -3898,13 +3898,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/LifePage",
-        "line": 636
+        "line": 643
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 636,
+      "line": 643,
       "column": 26,
       "scope": "factory/LifePage",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/retryAt\"}",
@@ -3941,13 +3941,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/LifePage",
-        "line": 636
+        "line": 643
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 636,
+      "line": 643,
       "column": 26,
       "scope": "factory/LifePage",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/keep/this . change:callback1\"}",
@@ -3984,13 +3984,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/LifePage",
-        "line": 636
+        "line": 643
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 636,
+      "line": 643,
       "column": 26,
       "scope": "factory/LifePage",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/control\"}",
@@ -4027,13 +4027,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/LifePage",
-        "line": 636
+        "line": 643
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 636,
+      "line": 643,
       "column": 26,
       "scope": "factory/LifePage",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/reconsider\"}",
@@ -4070,13 +4070,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/LifePage",
-        "line": 636
+        "line": 643
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 636,
+      "line": 643,
       "column": 26,
       "scope": "factory/LifePage",
       "target": "{\"file\":\"src/living/plan/plan.ts\",\"scope\":\"PersistentLifePlan/advance\"}",
@@ -4113,13 +4113,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/LifePage",
-        "line": 636
+        "line": 643
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 636,
+      "line": 643,
       "column": 26,
       "scope": "factory/LifePage",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/stopRuntime\"}",
@@ -4156,13 +4156,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/LifePage",
-        "line": 636
+        "line": 643
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 636,
+      "line": 643,
       "column": 26,
       "scope": "factory/LifePage",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"CompanionLife/checkReadingPlan\"}",
@@ -4199,13 +4199,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/LifePage",
-        "line": 636
+        "line": 643
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 638,
+      "line": 645,
       "column": 39,
       "scope": "factory/LifePage",
       "target": "{\"file\":\"src/contracts/behavior.ts\",\"scope\":\"<module>\"}",
@@ -4245,13 +4245,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/LifePage",
-        "line": 638
+        "line": 645
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 779,
+      "line": 786,
       "column": 84,
       "scope": "factory/EmotionEditor",
       "target": "{\"file\":\"src/contracts/emotion.ts\",\"scope\":\"<module>\"}",
@@ -4287,13 +4287,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/EmotionEditor",
-        "line": 779
+        "line": 786
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 1214,
+      "line": 1221,
       "column": 43,
       "scope": "factory/apply/request",
       "target": "{\"file\":\"src/console/plugin.ts\",\"scope\":\"apply\"}",
@@ -4381,13 +4381,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/apply/request",
-        "line": 1214
+        "line": 1221
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 1214,
+      "line": 1221,
       "column": 43,
       "scope": "factory/apply/request",
       "target": "{\"file\":\"src/console/settings.ts\",\"scope\":\"settingsHandler/<callback>\"}",
@@ -4428,13 +4428,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/apply/request",
-        "line": 1214
+        "line": 1221
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 1214,
+      "line": 1221,
       "column": 43,
       "scope": "factory/apply/request",
       "target": "{\"file\":\"src/room/window-main.cjs\",\"scope\":\"<module>\"}",
@@ -4475,13 +4475,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/apply/request",
-        "line": 1214
+        "line": 1221
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 1214,
+      "line": 1221,
       "column": 43,
       "scope": "factory/apply/request",
       "target": "{\"file\":\"src/room/window-preload.cjs\",\"scope\":\"<module>\"}",
@@ -4522,13 +4522,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/apply/request",
-        "line": 1214
+        "line": 1221
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 1214,
+      "line": 1221,
       "column": 43,
       "scope": "factory/apply/request",
       "target": "{\"file\":\"src/room/window.ts\",\"scope\":\"<module>\"}",
@@ -4569,13 +4569,13 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/apply/request",
-        "line": 1214
+        "line": 1221
       }
     },
     {
       "rule": "R8",
       "file": "src/console/client.js",
-      "line": 1222,
+      "line": 1229,
       "column": 17,
       "scope": "factory/apply/request",
       "target": "{\"file\":\"src/console/plugin.ts\",\"scope\":\"apply\"}",
@@ -4664,7 +4664,7 @@
       "other": {
         "file": "src/console/client.js",
         "scope": "factory/apply/request",
-        "line": 1222
+        "line": 1229
       }
     },
     {
@@ -7729,13 +7729,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "<module>",
-        "line": 301
+        "line": 302
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 301,
+      "line": 302,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/core/native/agent.ts\",\"scope\":\"<module>\"}",
@@ -10257,13 +10257,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "<module>",
-        "line": 301
+        "line": 302
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 301,
+      "line": 302,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/emotion/plugin.ts\",\"scope\":\"<module>\"}",
@@ -10762,13 +10762,13 @@
       "other": {
         "file": "src/living/economy/types.ts",
         "scope": "<module>",
-        "line": 45
+        "line": 55
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/types.ts",
-      "line": 45,
+      "line": 55,
       "column": 11,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/body/room.ts\",\"scope\":\"<module>\"}",
@@ -11595,7 +11595,7 @@
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 301,
+      "line": 302,
       "column": 21,
       "scope": "<module>",
       "target": "{\"file\":\"src/living/plan/plugin.ts\",\"scope\":\"<module>\"}",
@@ -11636,13 +11636,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "<module>",
-        "line": 301
+        "line": 302
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 309,
+      "line": 310,
       "column": 51,
       "scope": "apply",
       "target": "{\"file\":\"src/living/plan/plan-tools.ts\",\"scope\":\"registerPlanTools\"}",
@@ -11676,13 +11676,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "apply",
-        "line": 309
+        "line": 310
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 309,
+      "line": 310,
       "column": 51,
       "scope": "apply",
       "target": "{\"file\":\"src/room/tool-context.ts\",\"scope\":\"<module>\"}",
@@ -11716,13 +11716,13 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "apply",
-        "line": 309
+        "line": 310
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/plugin.ts",
-      "line": 311,
+      "line": 312,
       "column": 33,
       "scope": "apply",
       "target": "{\"file\":\"src/living/economy/tool-context.ts\",\"scope\":\"economyPage\"}",
@@ -11756,7 +11756,7 @@
       "other": {
         "file": "src/living/economy/plugin.ts",
         "scope": "apply",
-        "line": 311
+        "line": 312
       }
     },
     {
@@ -11803,7 +11803,7 @@
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 289,
+      "line": 299,
       "column": 66,
       "scope": "EconomyStore/configure/this . mutate:callback3",
       "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
@@ -11837,13 +11837,13 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/configure/this . mutate:callback3",
-        "line": 289
+        "line": 299
       }
     },
     {
       "rule": "R8",
       "file": "src/living/economy/store.ts",
-      "line": 322,
+      "line": 332,
       "column": 100,
       "scope": "EconomyStore/importBook",
       "target": "{\"file\":\"src/living/economy/types.ts\",\"scope\":\"<module>\"}",
@@ -11877,7 +11877,7 @@
       "other": {
         "file": "src/living/economy/store.ts",
         "scope": "EconomyStore/importBook",
-        "line": 322
+        "line": 332
       }
     },
     {
@@ -14055,16 +14055,6 @@
       "file": "src/living/body/room.ts",
       "line": 37,
       "column": 62,
-      "scope": "<module>",
-      "target": "kind",
-      "expression": "kind : string ;",
-      "shape": "bare string"
-    },
-    {
-      "rule": "R8",
-      "file": "src/living/economy/types.ts",
-      "line": 40,
-      "column": 52,
       "scope": "<module>",
       "target": "kind",
       "expression": "kind : string ;",

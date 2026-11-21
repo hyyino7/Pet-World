@@ -36,8 +36,18 @@ export interface EconomySnapshot {
   bookmarks: ReadingBookmark[]; pendingUses: ItemUse[];
   migration: {kind: 'new' | 'legacy-garden'; sourcePath?: string; sourceHash?: string; importedAt: number};
 }
+/** 流水的 owner-grant 记录钱包变动，事实的 money-grant 记录主人互动。 */
+export type LedgerKind =
+  | 'legacy-import' | 'purchase' | 'sale'
+  | 'owner-grant' | 'owner-gift' | 'owner-configure' | 'owner-import-reading'
+  | 'use-reserve' | 'use-consume' | 'use-cancel' | 'garden' | 'garden-action';
+
+declare const legacyLedgerKind: unique symbol;
+/** 历史 SQLite 行中的未知 kind 原样读出。 */
+type LegacyLedgerKind = string & {readonly [legacyLedgerKind]: true};
+
 export interface LedgerEntry {
-  sequence: number; id: string; requestId: string; kind: string; at: number;
+  sequence: number; id: string; requestId: string; kind: LedgerKind | LegacyLedgerKind; at: number;
   moneyDelta: number; balance: number; itemDeltas: Record<string, number>; note: string;
 }
 export interface ItemUse {
