@@ -463,3 +463,13 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - 方案和类型注释把 `busy` 的语义写准：它管的是能不能发起一次新投喂；已经在吃饭时 `busy` 为真，但吃饭素材仍然放行、也不会再投喂。「概念与扩展检查」里「是否正在进行一项共享活动」可以收窄成这个意思。`ExecutionPhase` 注释可以补一句：终态以 `status` 为准，旧存档里有 `running + completed`，菜园失败会写出 `failed + waiting`（`room.ts:980`）。
 - 既有问题，本批只是沿用原来的读写时序，不在本批范围：两个不同 `requestId` 的 `/anim` 共用一次空闲刷新时会投喂两次；初次刷新挂起时取消或换绑，投喂仍可能落地，甚至落到新工作区；`roomState` 读取失败时 Desktop 保留旧快照或空快照，继续放行。都是 Codex 用编译后方法和合成依赖复现的，Claude 没有另外复现。需要的话，记进 inbox，留到阶段 3 和「能否被打断」一起处理。
 - 第 2、3 批在 `contracts/behavior.ts` 里的基础表也用的是布尔对象加 `Object.keys`，扫描器同样看不见。它们是唯一定义处，删掉的副本是真实减少；但它们和剩下副本（呈现表、界面标签等）之间的重叠，基线没有跟踪。第 6 批收点数前要先说明口径。
+
+### 第 4 批复查（Claude，基于 `52e3ec0`）
+
+- 必须修 1 已修好。`publicBehavior(her)`（`living/body/plugin.ts:234-236`）是唯一组装处：`snapshot()` 的顶层 `behavior` 由 `home.behavior` 去掉 `revision/bootId` 得到，`roomState()` 直接转发 `home.behavior`，`roomAction`/`act` 和 `garden` 用同一份 `behavior` 填顶层和 `home`。`room.act` 每条返回路径都带 `home`（`room.ts:1011` 签名必填），读 `result.home.her` 不会抛错；菜园 `'home' in result ? result.home : undefined` 加 `home ?` 与原条件等价，无 `home` 时用当前画面算。`2B4-01` 新增的断言覆盖 `act`、`roomAction`、菜园 `state`（无 `home`）和 `control`（有 `home`），原断言保留。
+- 必须修 2 按 A 修好。白名单恢复为数组字面量，顺序同原 Desktop。基线按条目身份比对：相对 `c3f68fb` 正好消失 Desktop 的 4 条、新增 `activity.ts` 的 4 条；相对 `1c982ef` 只新增这 4 条，文件只增 94 行，其余字节不变。手工改键是主人经「2b 概念统一」会话破例批准的（转达原话「A：写回数组并改键」），合并前请主人在这里再确认一次。
+- 两个返工提交各自检出跑扫描器都通过：`076729c` 词表 703、`52e3ec0` 词表 707，新增/消失都是 0/0；kind 270、action 102，规则基线 37。
+- 建议修 1 已采纳（`busy` 和 `ExecutionPhase` 注释、概念检查的措辞）。
+- 沙箱外 `pnpm run verify`：Node 测试 1672 条全过（含 Memory P2），Python 22 条、`check:arch`、包检查通过；`pnpm run test:behavior-list`：索引 11 条、行为清单 119 条全过。构建后工作区干净。
+
+**结论**：没有遗留的必须修，可以合并。合并要排在第 3 批之后；和第 5 批谁后合并，谁解 `living/body/room.ts` 和本方案「执行结果」的文本冲突。
