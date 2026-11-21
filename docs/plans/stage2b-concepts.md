@@ -241,6 +241,42 @@
 - **阶段 2 收尾**：G8 规则复盘，结论写进 product.md；主人验收体验后决定继续、调整还是停下。
 - **发版**：主人在 GitHub Actions 发预发布版，隔离环境在版本页更新到预发布版，设置页点一遍照料按钮、桌宠选一次吃饭和睡觉素材、聊天里确认伙伴记得刚才的照料；发正式版后同样先在隔离环境用版本页更新一次，再升级日常机器（拍板点 7）。
 
+
+**开工细则（Claude 补齐，主人过目后开工）**
+
+第 6 批分四段，由不同的人做，按顺序推进。第 3、4、5 批合并进 `main` 之后才开 6A；下面的行号取自第 4、5 批分支，合并后开工前重核，同时写出符号名，行号变了按符号找。
+
+**6A 代码（Codex，分支 `codex/2b-6a-closeout`，基于第 3–5 批合并后的 `main`）**
+
+1. **身体指标一张表。** `contracts/behavior.ts` 放 `BODY_METRICS`（`hunger / thirst / energy / bladder / pain`，写法同第 2 批，扫描器要能看见，见第 9 条），派生 `BodyMetric`。替换：`BehaviorSnapshot.needs`（`contracts/behavior.ts`）、`BodyNeedDelta`（`living/economy/types.ts:15`）、食物效果校验（`living/economy/store.ts:313`）、`reconsiderWhen.metric` 的 schema 枚举（`living/plan/plan-tools.ts:140`）、`LifeCondition.metric`（`living/plan/plan.ts:27`）和它的校验（`plan.ts:150`）、`upstream.d.ts:10` 的 `applyCatalogFood` 入参、`RoomFoodReservation.effects`（`living/body/room.ts:27`）。`room.ts:144,283` 只取 `hunger / thirst / bladder` 三项，改成从表里按标记挑，注释写明为什么没有 `energy`（它有单独的下限 `energyFloor`）和 `pain`。`initial-state.ts:11` 的默认值、`catalog.ts:22` 的食物效果是取值，改成以 `BodyMetric` 为键的类型约束。设置页 `console/client.js:575` 的标签表加契约测试（键和 `BODY_METRICS` 一致、顺序不变）。枚举和校验的顺序、报错文案不变。
+2. **商品可写键由 Economy 给出。** Economy 快照（`living/economy/store.ts:230` 的 `snapshot()`）在 `configuration` **之外**加一个字段，列出可写的价格键和上架键（复用 `effectiveEconomyConfiguration` 的同一条规则，`catalog.ts:28-35`）；设置页保存时按它挑（`console/client.js:505`），不再自己 `startsWith('harvest:')`。不放进 `configuration`，因为旧页面的 `...writable` 会原样提交回去、被服务端当未知设置拒绝。服务端准入（`store.ts` 的 `configure`）不改。补 L2 测试：设置页保存后收获物价格没有被写入、种子和堆肥价格照常保存、同请求重试不重复生效。
+3. **账本 kind 一个联合。** `living/economy/types.ts` 定义 `LedgerKind`（12 种：`legacy-import / purchase / sale / owner-grant / owner-gift / owner-configure / owner-import-reading / use-reserve / use-consume / use-cancel / garden / garden-action`），写入口 `recordLedger`（`store.ts:191`）和 `commitGarden`（`store.ts:480`）的 `kind` 参数收窄到它；读出的 `LedgerEntry.kind` 保持宽松（旧 SQLite 行以 `String(row.kind)` 读出），写成「已知值 | 带标记的旧字符串」，同第 5 批的读取类型写法，不新增 R8 裸字段。注释写明账本 `owner-grant` 和事实 `money-grant` 是两件事。
+4. **把第 5 批的跨语言契约测试接进 `test:memory`**（第 5 批验收的建议修）：`package.json` 的 `scripts.test:memory` 末尾加上 `tests/memory/fact-attribution-contract.test.mjs`。只改这一个脚本，不碰 `exports / files / imports`。
+5. **点数复核。** 第 3–5 批合并后预计 kind 270、action 102，已在目标以下；6A 不追求再降，只要求不升。
+6. **提交切分**：身体指标 1 个；商品可写键 1 个（含生成的桌宠客户端）；账本 kind 和 `test:memory` 1 个；方案执行结果随最后一个。
+7. **验收**：第 1–5 批测试全绿且断言不改；kind ≤ 270、action ≤ 102；R8 和规则基线新增 0；`pnpm run test:memory`；`pnpm run verify`（沙箱外）。
+
+**6B 典型修改第 8 类度量（Codex，两个只度量不合并的分支，基于 6A 合并后的 `main`）**
+
+8. **题目照 M1 基线的口径定**（product.md「典型修改前后对比」第 8 行和读码下限表）：
+   - `codex/2b-measure-8-care`：把已有的上游动作 `poke`（轻戳）加进照料动作，接入设置页按钮、Life、World `care`，复用现有执行和素材；同一分支第二个提交再把它加进计划身体动作。分别记两次提交的文件数、层数、模块数（源码、测试、构建产物分开记）。
+   - `codex/2b-measure-8-fact`：新增一个事实领域 `garden`，由 Economy 在菜园收获时写一条事实，接通提示词段、Life 回读和 Python 识别。上游 `FactRef` 的领域是封闭的（`vendor/dsh-world/lib/life/types.d.ts:27`），vendor 不能改，需要的适配照实计入。
+   - 判法按拍板点 10：文件数照常判减半；层数按物理归层如实记，`contracts` 算第一层。还要验证「漏改能被检查发现」：故意漏掉一处，确认类型检查或测试会失败，把失败输出记下来。
+
+**6C 文档（Claude，在 `main` 上直接提交，每份文档一个提交）**
+
+9. **R8 看不见基础表的口径说明。** 第 2、3、5 批和 6A 的基础表都是「值为对象」的表，扫描器不当词表定义：删掉的副本是真实减少，但表和仍留着的副本（界面标签表、呈现表等）之间的重叠，R8 基线没有跟踪。第 4 批验收已在一处遇到（选 A 修回）。处理：product.md「词表重复基线」表按概念逐行人工核对份数并附 `文件:行号`，作为 2b 的权威度量；R8 基线只作辅助，并在 G5 一节写明这个口径。要不要让扫描器认基础表（认了会让现有重叠变成「新增」，需要再破例改基线），留给阶段末 G8 复盘时决定（第 6 批拍板点 1，主人选推荐）。
+10. **architecture.md**：5.6.1 五张细表改成 2b 后的定义处；5.7 写明 `busy` 的语义（能不能发起一次新投喂）和「能否被打断」延到阶段 3；5.10「新增照料动作」「新增事实领域」两行改成实际落地的声明处，「新增事实领域」补上游 `FactRef` 边界（第 5 批细则第 5 条）。
+11. **product.md**：词表重复基线按第 9 条更新（照料、角色、计划身体动作、计划 kind、阅读状态五行到 1 份；九种 feeling、Room 七维、呈现分类器、`roomClip / desktopClip` 四行注明归阶段 3）；阶段 3 草案补这四行的验收线和「能否被打断」；阶段 4 草案补「`contracts/` 按层拆分，按收益再定」；G5 手工度量表加 2b 一列（`pnpm run metrics` 输出）；典型修改第 8 行填 6B 的结果；2b 完成标准逐项打勾并写结果。
+12. **已知问题**：第 4 批验收里 Codex 复现的三个旧问题（两个不同 `requestId` 的 `/anim` 共用一次刷新会投喂两次；初次刷新挂起时取消或换绑，投喂仍可能落地；`roomState` 读取失败时 Desktop 沿用旧快照继续放行），由 Claude 在合成环境复现。复现成立的登记进「已知问题」，状态写「阶段 3 随『能否被打断』处理」；复现不了的照实写「Codex 复现、Claude 未复现」（第 6 批拍板点 2，主人选推荐）。2b 不修。
+13. **decisions.md**：记 2b 的拍板（11 条按推荐、第 4 批 A 方案的一次性改键破例、第 6 批的拍板）。
+
+**6D 发版与阶段 2 收尾（主人 + Claude）**
+
+14. **推送**：本地 `main` 推到 `origin`（推送前告诉主人会推哪些提交、能不能撤回，等主人确认）。
+15. **发版**：主人在 GitHub Actions 发 `0.4.0-rc.1`；隔离环境在版本页更新到 RC，设置页逐个点照料按钮、桌宠选一次吃饭和睡觉素材、聊天里确认伙伴记得刚才的照料；通过后发 `0.4.0`，同样先在隔离环境用版本页更新一次，再升级日常机器。没有数据迁移，不做真实数据副本演练。
+16. **阶段收尾**：用 skill-govern-stage 做阶段 2 体检和 G8 规则复盘（含第 6 批拍板点 1）；主人验收体验，决定继续、调整还是停下；方案文件 `docs/plans/stage2b-concepts.md` 在收尾提交里删除，长期有用的内容已在 6C 并入正式文档。
+
 ## 特殊情况
 
 - **旧数据**：2b 不改任何持久数据的格式。计划文件里的 `kind`、`action`，Body 存档里的动作值，事实库里的 `domain`、`type`，账本的 `kind` 都照旧读写。收窄只发生在新写入的事实和账本行，读取保持宽松（第 5、6 批），由合成旧记录测试锁住。
