@@ -251,7 +251,7 @@
 
 ## 概念与扩展检查
 
-- **新增或修改的概念**：`BodyAction` 及 `CareAction / RoleAction / PlanBodyAction / FeedbackAction`；计划 kind、计划经济操作、计划菜园操作、`ReadingState`；`BodyPhase`、`ExecutionPhase`、`ExecutionStatus`；`label / operationId / currentActivityId` 三种职责（只是内部命名）；`busy`（新的公开语义：是否正在进行一项共享活动，口径照搬 Desktop）；事实领域声明及新写入/历史读取两种类型；账本 kind 联合；Economy 的可写配置键；身体指标表。除 `busy` 和可写键外，都是把现有多份收成一份，没有新含义。
+- **新增或修改的概念**：`BodyAction` 及 `CareAction / RoleAction / PlanBodyAction / FeedbackAction`；计划 kind、计划经济操作、计划菜园操作、`ReadingState`；`BodyPhase`、`ExecutionPhase`、`ExecutionStatus`；`label / operationId / currentActivityId` 三种职责（只是内部命名）；`busy`（桌宠能不能发起一次新投喂。已经在吃饭时 `busy` 为真，吃饭素材仍放行且不再投喂）；事实领域声明及新写入/历史读取两种类型；账本 kind 联合；Economy 的可写配置键；身体指标表。除 `busy` 和可写键外，都是把现有多份收成一份，没有新含义。
 - **拥有者**：动作、计划命令、阅读状态、阶段、`busy`、身体指标是第二层（类型和常量放在 `contracts`，沿用 architecture.md 5.2 的做法）；Body 事实的 `type` 集合由上游 `HOME_ACTIONS` 决定、Body 声明，Economy 事实的 `type` 由 Economy 声明；商品类别、可写键、账本 kind 归第二层·钱包区；照料按钮文案随基础表，拥有者第二层，Console 只渲染。
 - **新增词表**：没有新词表。R8 和规则基线每批新增为零。
 - **复用的已有声明**：`contracts/living.ts` 的契约位置；`scan()` 和 `vocabulary.mjs` 的口径；`requirePresentationSlot`；`effectiveEconomyConfiguration` 和 Store 的配置准入；第 1 批复用 `native.test.mjs` 末端断言和 `2A1A-18` 夹具。
@@ -348,16 +348,20 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 
 ### 第 4 批
 
-- `src/contracts/behavior.ts` 和 `src/living/body/{activity,plugin,room}.ts` 明确活动标签、操作编号和当前活动编号，集中执行阶段到身体阶段的投影，并用同一份 `homeView.her` 计算快照的 `behavior.busy`。
-- `src/desktop/platform/plugin.ts` 改读快照的 `busy`，同一份状态只判断一次是否正在吃饭，投喂刷新后再判断。第 1–3 批测试断言全部保留。
-- R8 kind 字符串判断 271 点 / 44 文件 → 270 点 / 45 文件，运行源码与扫描范围一致。
-- R8 action 字符串判断 102 点 / 13 文件 → 102 点 / 13 文件，运行源码与扫描范围一致。
-- 第 1 组加入 Body 白名单判断，暂为 272 点。第 2 组撤下 Desktop 白名单判断并合并两处 `eat` 判断，本批净减 1 点。
-- 规则基线 37 条，新增/消失 0/0。词表基线 707 → 703，新增 0、消失 4，均为 Desktop 旧白名单与播放表、呈现表的双向子集关系，在第 2 组收紧。`pnpm run check:arch` 和 `pnpm run check:arch -- --report` 均通过。
-- `pnpm run build && node --test <受影响的测试>` 239 条通过，含五种身体状态与 `/anim` 的准入、投喂事实及设置页阶段标签契约。
+- 本批统一活动标签、操作编号、当前活动编号与执行阶段到身体阶段的投影。Desktop 改读 `busy`，同一份状态只判断一次是否正在吃饭，投喂刷新后再判断。
+- 必须修 1 已修。`src/living/body/plugin.ts` 用同一份画面的 `her` 组装 `snapshot()`、`roomState()`、`act`、`roomAction`、`garden` 的公开 `behavior`，顶层和 `home` 共用该次计算。菜园无 `home` 时取当前画面。`2B4-01` 补回执与紧接着读快照的一致性断言，覆盖菜园有、无 `home`，原断言保留。
+- 必须修 2 已修。`src/living/body/activity.ts` 按原顺序恢复七项数组，仍用一次 `.includes`。以第 4 批开工前 `c3f68fb` 的 707 条为起点，四条子集关系从 Desktop 搬到 Body，消失 4、新增 4，总数 707。`arch/baseline/vocabulary.json` 其余字节逐一核对一致。
+- `pnpm run check:arch -- --report` 改前为 703 条、改后为 707 条，两次均通过。恢复数组、补基线前的扫描仅报新增下列 4 键。最终 `pnpm run check:arch` 通过，规则基线 37 条，规则与词表均新增 0、消失 0。
+- `["R8","src/desktop/platform/plugin.ts","PetPlatform/handle","array","src/living/body/playback.ts","resolveActivityPlayback"]` → `["R8","src/living/body/activity.ts","<module>","array","src/living/body/playback.ts","resolveActivityPlayback"]`
+- `["R8","src/living/body/playback.ts","resolveActivityPlayback","labels","src/desktop/platform/plugin.ts","PetPlatform/handle"]` → `["R8","src/living/body/playback.ts","resolveActivityPlayback","labels","src/living/body/activity.ts","<module>"]`
+- `["R8","src/desktop/platform/plugin.ts","PetPlatform/handle","array","src/living/body/presentation.ts","behaviorPresentation"]` → `["R8","src/living/body/activity.ts","<module>","array","src/living/body/presentation.ts","behaviorPresentation"]`
+- `["R8","src/living/body/presentation.ts","behaviorPresentation","array","src/desktop/platform/plugin.ts","PetPlatform/handle"]` → `["R8","src/living/body/presentation.ts","behaviorPresentation","array","src/living/body/activity.ts","<module>"]`
+- 建议修 1 已修。`src/contracts/behavior.ts` 与「概念与扩展检查」明确 `busy` 对新投喂的含义和在吃饭时的素材处理，`ExecutionPhase` 注明终态以 `status` 为准。
+- R8 kind 271 → 272 → 270 点（44 → 45 文件），净减来自合并 Desktop 的两次 `eat` 判断。action 为 102 点 / 13 文件。返工前后点数相同，运行源码与扫描范围一致。
+- `pnpm run build && node --test <受影响的测试>` 123 条通过。修前新增回执断言复现 `undefined`。首轮门禁暴露 `presentHome` 单参数调用丢播放上下文，恢复单参数组装后原 26 条播放回归全过。
 - `pnpm run build && pnpm run test:behavior-list` 通过 11 条索引检查和 119 条行为测试，含 `2B4-01` 和第 1 批 13 条。
-- `pnpm run verify` 的环境、类型、架构和构建通过，Node 测试 1671 条通过、1 条失败。Memory P2 启动服务后调用 `/bin/ps` 被沙箱拒绝（`EPERM`），单跑复现，后续断言环境原因未跑。
-- 独立补跑 Python Memory 22 条、`pnpm run check:release`、`pnpm pack` 和 `pnpm run check:package`，均通过。
+- `pnpm run verify` 复跑的环境、类型、架构和构建通过，Node 测试 1671 条通过、1 条失败。Memory P2 启动服务后调用 `/bin/ps` 被沙箱拒绝（`EPERM`），后续断言环境原因未跑。
+- 独立补跑 `.venv/bin/python tests/memory/memory_provider_test.py` 的 22 条测试、`pnpm run check:release`、`pnpm pack` 和 `pnpm run check:package`，均通过。
 
 ## 审查结论
 
@@ -438,3 +442,24 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - 本方案第 2 批正文「互动反馈子集…不限 actor 是主人」与代码不符（`room.ts:821` 只投射已完成的主人互动，前后一致）；开工细则第 4 条「`lifeView` 失败时整张卡片本来就不显示」只对首次读取成立，已有视图后轮询失败会保留卡片并显示错误（`console/client.js:589-595`）。方案合并时删除，不必改，后续批次引用时注意。
 
 **不采纳**：Codex 提出「旧版服务端响应缺 `careActions` 时新前端 `.map()` 抛错」。设置页前端和 `settings.ts` 在同一个包里一起发，前端由同版本插件提供，不会混用；细则第 4 条也明确不加兜底。
+
+### 第 4 批（Codex 独立审查 + Claude 核实，基于 `1c982ef`）
+
+已核实没问题的：
+- `busy` 口径等价。`presentHome` 只给画面加 `behavior` 和 `playback`，不动 `her`（`living/body/plugin.ts:233-235`），所以快照里算 `busy` 用的 `view.her` 就是 Desktop 原来从 `roomState()` 读到的那份 `her`。`companionBusy` 的睡着、走路、七项白名单与 `c3f68fb:src/desktop/platform/plugin.ts:682` 逐项一致。没有 `her` 时为 `false`；Body 服务缺席时 Desktop 读到 `undefined`，而吃饭分支本来就要求 `behavior` 在场，结果同为放行到下一步。
+- `/anim` 等价。`isEating()` 在投喂刷新后重算，与原来第二处 `her.kind==='eat'` 读的是同一份刷新后的 `her`；第一处 `!eating` 与原 `her?.kind!=='eat'` 相同。睡醒优先、`activity-busy`、`activity-required`、素材同一性四步的先后和文案不变。第 1 批 2B1-07、2B1-08 断言未改。新加的 `2B4-01` 在空闲、喝水、`react_shy`、走路、睡着五种状态下，同时断言快照、`home.behavior`、`roomState()` 的 `busy`，以及 `/anim` 的状态码、报错体和是否真的产生 `feed` 事实。
+- 类型。三个职责别名和 `BodyPhase / ExecutionPhase / ExecutionStatus` 只换了引用，字段名和取值都没变；`bodyPhaseOf` 与原三元投影等价。`room.ts` 的 `label` 只是解构出的局部名，报错文案不变。
+- 点数。在 `c3f68fb`、`621e95e`、`1c982ef` 三处各自检出跑扫描器：kind 271 → 272 → 270，action 都是 102，规则基线 37、新增/消失 0/0。减少的 1 点是 Desktop 两处 `eat` 判断收成 `isEating` 一处，是真实合并；Body 的 `.includes(her.kind)` 照计 1 点。
+- 沙箱外 `pnpm run verify`：Node 测试 1672 条全过（含 Memory P2 的 `/bin/ps` 用例），Python 22 条、`check:arch`、包检查通过；`pnpm run test:behavior-list`：索引 11 条、行为清单 119 条全过（含 `2B4-01`）。构建后工作区干净。
+
+**必须修**
+
+1. **其余公开回执里的 `behavior` 缺 `busy`。** `BehaviorActivity.busy` 是必填字段（`contracts/behavior.ts:143`），但只有 `snapshot()`/`roomState()` 带上了（`living/body/plugin.ts:318`）。`roomAction`/`act` 的顶层 `behavior` 和 `home.behavior`（`plugin.ts:359-361`）、`garden` 的顶层 `behavior` 和带 `home` 时的 `home.behavior`（`plugin.ts:379-381`）都还是 `activity()` 的结果，没有 `busy`。这些回执经 Room RPC 原样返回（`room/plugin.ts:93-96`），Desktop `/anim` 睡醒分支返回的 `home` 也是这一份（`desktop/platform/plugin.ts:683-685`）。同名对象有时有、有时没有这个字段，以后哪个读取方从回执里读 `busy`，会把 `undefined` 当成「不忙」，错的方向正好是放行。修法：公开 `behavior` 统一由一处组装，每份回执用同一份画面里的 `her` 算一次 `busy`；`2B4-01` 或新测试补一条断言：`act`、`roomAction`、`garden` 回执的 `behavior.busy` 与紧接着读快照的值一致。
+2. **词表基线 707 → 703 是失扫，不是收紧。** 七项白名单搬到 Body 时写成了布尔对象加 `Object.keys`（`living/body/activity.ts:8-11`），而扫描器只认数组字面量和值全是字符串的对象（`scripts/arch/lib/vocabulary.mjs:16,29`）。把它换成等价数组后重扫，词表回到 707、新增 4：正是 `activity.ts` 与 `playback.ts:188`、`presentation.ts:19` 的双向子集关系，也就是原来 Desktop 那 4 条换了位置。所以执行结果里「4 条在第 2 组收紧」不属实。完成标准写明，换成扫描器不认的写法不算减少，验收要逐条对照。这里的 R8 点数没受影响，但基线少了 4 条仍然存在的重叠，第 6 批收尾时口径会偏。修法要主人先拍板（`--write-baseline` 拒绝新增，`--move` 只能整文件对照）：
+   - A（推荐）：白名单写回数组字面量；主人破例批准这一次手工改键，把 Desktop 的 4 条换成 `activity.ts` 的 4 条，词表总数 707 不变；执行结果如实写「消失 4、新增 4，同样 4 对关系从 Desktop 搬到 Body」。
+   - B：保留对象写法，只把执行结果改成「4 条是失扫」；「扫描器认布尔表」记进 inbox 或第 6 批。缺点是 Body 里留着一份扫描器看不见的词表。
+
+**建议修（不影响合并）**
+- 方案和类型注释把 `busy` 的语义写准：它管的是能不能发起一次新投喂；已经在吃饭时 `busy` 为真，但吃饭素材仍然放行、也不会再投喂。「概念与扩展检查」里「是否正在进行一项共享活动」可以收窄成这个意思。`ExecutionPhase` 注释可以补一句：终态以 `status` 为准，旧存档里有 `running + completed`，菜园失败会写出 `failed + waiting`（`room.ts:980`）。
+- 既有问题，本批只是沿用原来的读写时序，不在本批范围：两个不同 `requestId` 的 `/anim` 共用一次空闲刷新时会投喂两次；初次刷新挂起时取消或换绑，投喂仍可能落地，甚至落到新工作区；`roomState` 读取失败时 Desktop 保留旧快照或空快照，继续放行。都是 Codex 用编译后方法和合成依赖复现的，Claude 没有另外复现。需要的话，记进 inbox，留到阶段 3 和「能否被打断」一起处理。
+- 第 2、3 批在 `contracts/behavior.ts` 里的基础表也用的是布尔对象加 `Object.keys`，扫描器同样看不见。它们是唯一定义处，删掉的副本是真实减少；但它们和剩下副本（呈现表、界面标签等）之间的重叠，基线没有跟踪。第 6 批收点数前要先说明口径。

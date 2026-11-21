@@ -10319,6 +10319,100 @@
     },
     {
       "rule": "R8",
+      "file": "src/living/body/activity.ts",
+      "line": 8,
+      "column": 28,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/playback.ts\",\"scope\":\"resolveActivityPlayback\"}",
+      "expression": "[ \"idle\" , \"play\" , \"idle_look\" , \"react_happy\" , \"react_pout\" , \"react_shy\" , \"react_scare\" ]",
+      "values": [
+        "idle",
+        "idle_look",
+        "play",
+        "react_happy",
+        "react_pout",
+        "react_scare",
+        "react_shy"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/playback.ts",
+        "scope": "resolveActivityPlayback",
+        "line": 188
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/playback.ts",
+      "line": 188,
+      "column": 40,
+      "scope": "resolveActivityPlayback",
+      "target": "{\"file\":\"src/living/body/activity.ts\",\"scope\":\"<module>\"}",
+      "expression": "{ play : \"dance\" , idle_look : \"look\" , react_happy : \"点击回应-开心跃动\" , react_pout : \"点击回应-傲娇生气\" , react_shy : \"点击回应-害羞惊讶\" , react_scare : \"被吓一跳\" }",
+      "values": [
+        "idle_look",
+        "play",
+        "react_happy",
+        "react_pout",
+        "react_scare",
+        "react_shy"
+      ],
+      "shape": "labels",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/activity.ts",
+        "scope": "<module>",
+        "line": 8
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/activity.ts",
+      "line": 8,
+      "column": 28,
+      "scope": "<module>",
+      "target": "{\"file\":\"src/living/body/presentation.ts\",\"scope\":\"behaviorPresentation\"}",
+      "expression": "[ \"idle\" , \"play\" , \"idle_look\" , \"react_happy\" , \"react_pout\" , \"react_shy\" , \"react_scare\" ]",
+      "values": [
+        "idle",
+        "idle_look",
+        "play",
+        "react_happy",
+        "react_pout",
+        "react_scare",
+        "react_shy"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/presentation.ts",
+        "scope": "behaviorPresentation",
+        "line": 19
+      }
+    },
+    {
+      "rule": "R8",
+      "file": "src/living/body/presentation.ts",
+      "line": 19,
+      "column": 8,
+      "scope": "behaviorPresentation",
+      "target": "{\"file\":\"src/living/body/activity.ts\",\"scope\":\"<module>\"}",
+      "expression": "[ \"idle\" , \"play\" ]",
+      "values": [
+        "idle",
+        "play"
+      ],
+      "shape": "array",
+      "relation": "子集",
+      "other": {
+        "file": "src/living/body/activity.ts",
+        "scope": "<module>",
+        "line": 8
+      }
+    },
+    {
+      "rule": "R8",
       "file": "src/desktop/platform/plugin.ts",
       "line": 700,
       "column": 20,
