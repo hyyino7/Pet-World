@@ -33,6 +33,11 @@ test('计划工具、Life 和 Body 固定计划种类、动作和报错顺序', 
   const variants = f.toolSchema(active,'life_plan_update').parameters.properties.plan.properties.steps.items.oneOf;
   assert.deepEqual(variants.map(row => row.properties.kind.const), ['hold','room','move','body','garden','economy','read']);
   assert.deepEqual(variants.find(row => row.properties.kind.const === 'body').properties.action.enum, bodies);
+  const gardenBranches = variants.find(row => row.properties.kind.const === 'garden').properties.garden.oneOf;
+  assert.deepEqual(gardenBranches.map(row => row.properties.type.enum ?? row.properties.type.const),
+    ['visit',['till','water','fertilize','harvest'],'plant',['sell','buySeed'],'buyCompost']);
+  assert.deepEqual(variants.find(row => row.properties.kind.const === 'economy').properties.economy.properties.type.enum,
+    ['buy','sell','consume']);
   assert.deepEqual((await submit(f,active,steps)).plan.steps, steps);
   const invalidBranch = 'invalid arguments: "plan.steps[0]" must match exactly one oneOf branch (matched 0)';
   const arrayAction = step('body',{action:['feed']});

@@ -310,6 +310,20 @@ Codex 只读挑刺一轮。采纳的：第 4 批 `busy` 只照搬 Desktop 吃饭
 - `pnpm run build && pnpm run test:behavior-list` 通过 11 条索引测试和 118 条行为测试，含第 1 批 13 条、新增 L2 和真实 Memory 召回。
 - `pnpm run verify` 的 Node 测试 1667 条通过、1 条失败。Memory P2 启动服务后调用 `/bin/ps` 被沙箱拒绝（`EPERM`），单跑复现，后续断言环境原因未跑。独立补跑 Python Memory 22 条、`check:release`、`pnpm pack` 和 `check:package` 均通过。
 
+### 第 3 批
+
+- `src/contracts/behavior.ts` 集中四张表和准入守卫。`living/body/room.ts` 与 `living/plan/plan.ts` 由 `target` 校验位置、按 kind 分派其余字段校验，再用 `executable` 判定计时。`living/economy/{plugin,types,store}.ts` 引用交易子集和阅读状态。
+- `living/plan/plan-tools.ts` 派生步骤分支和操作枚举。新增菜园、经济枚举顺序断言，实际注册的 `life_plan_update` 描述和完整 schema 与改前逐字节相同。
+- R8 kind 字符串判断由 287 点/43 文件降至 271 点/44 文件，运行源码与扫描范围一致。
+- R8 action 字符串判断为 102 → 102 点，运行源码与扫描范围均为 13 文件。
+- Life 减 9 点，`plan.ts:85` 并入守卫，`:87` 两个目标比较并入 `target`，`:88,94,98,107` 的菜园、身体、经济、阅读条件并入一次字段分派，`:114,127` 的计时与新稿可达性改读 `executable`。
+- Body 减 8 点，`room.ts:598` 并入守卫，`:609` 改读 `target`，`:610–613,618` 的原地、菜园、身体、经济、阅读条件并入一次字段分派，`:620` 改读 `executable`。共用守卫新增 1 点，素材及菜园准入判断保留。减点位置按改前行号。
+- 规则基线 37 条，新增/消失 0/0，生成器刷新旧行号。词表基线 915 → 801 → 707，新增 0，分别消失 114、94 条。`pnpm run check:arch` 和 `pnpm run check:arch -- --report` 均通过。
+- `pnpm run build && node --test <受影响的测试>` 171 条通过。新增回归覆盖 Life 的宽松准入、Life 和 Body 的素材槽报错顺序、Body 重启后回执重放与指纹冲突。
+- `pnpm run build && pnpm run test:behavior-list` 通过 11 条索引检查和 118 条行为测试，含第 1 批 13 条及第 2 批设置页照料流程。原断言全部保留。
+- `pnpm run verify` 的环境、类型、架构和构建通过，Node 测试 1669 条通过、1 条失败。Memory P2 在 `/bin/ps` 被沙箱拒绝（`EPERM`），单跑复现，后续断言环境原因未跑。
+- 门禁中断后的 Python Memory 22 条、`pnpm run check:release`、`pnpm pack` 和 `pnpm run check:package` 已独立补跑并通过。
+
 ## 审查结论
 
 ### 第 1 批（Codex 独立审查 + Claude 核实，基于 `724cbb7`）

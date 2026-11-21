@@ -34,6 +34,18 @@ test('plan admission distinguishes arrival, finite stays and terminal indefinite
     assert.throws(()=>parsePlanDraft(draft([{...travel,...timed},breakfast])),/actual receipts/);
   assert.throws(()=>parsePlanDraft(draft([{...travel,spot:undefined}])),/spot/);
 });
+
+test('Life preserves string-coercible plan values and checks fields before slots and timing',()=>{
+  const room={id:'stay',kind:['room'],activity:'Stay'};
+  const economy={id:'eat',kind:'economy',activity:'Eat',economy:{type:['consume'],itemId:'food:improved-meal',quantity:2}};
+  assert.deepEqual(parsePlanDraft(draft([{...room,room:0,spot:0},economy])).steps,[room,economy]);
+  const executableError='Executable activities finish on actual receipts; use a following hold or room step for sustained animation';
+  assert.throws(()=>parsePlanDraft(draft([{...room,kind:['move'],durationMinutes:1}])),{message:executableError});
+  const invalidSlot={...breakfast,presentationSlot:'read.main',durationMinutes:1};
+  assert.throws(()=>parsePlanDraft(draft([{...invalidSlot,action:'pet'}])),{message:'Unsupported bodily activity'});
+  assert.throws(()=>parsePlanDraft(draft([invalidSlot])),{message:'活动动画配对与当前实际活动不兼容'});
+});
+
 function fixture(t:{after(fn:()=>void):void;mock:{timers:{enable(options:any):void}}},economy?:RoomEconomyPort) {
   const root=mkdtempSync(join(tmpdir(),'autonomous-life-code-'));
   t.after(()=>rmSync(root,{recursive:true,force:true}));

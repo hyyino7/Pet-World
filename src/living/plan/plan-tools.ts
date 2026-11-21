@@ -1,13 +1,14 @@
 import {planOverview} from './tool-context.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
-import { defineTool, type ToolDefinition } from '@deepseek-ai/dsh-tools';
+import { defineTool, type ParameterSchemaSpec, type ToolDefinition } from '@deepseek-ai/dsh-tools';
 import type { PetCoreHost } from '../../core/index.js';
 import type { CompanionLife } from './plugin.js';
 import { OWNER_LIFE_TOOL_SOURCES } from '../../core/native/conversation.js';
 import { isHistoryObject } from '../../core/native/history-maintenance.js';
 import type { CompanionToolDeclaration } from '../../contracts/tables.js';
-import { PLAN_BODY_ACTIONS } from '../../contracts/behavior.js';
+import { PLAN_BODY_ACTIONS, PLAN_ECONOMY_OPERATION_NAMES, PLAN_GARDEN_OPERATIONS, PLAN_GARDEN_OPERATION_NAMES,
+  type PlanGardenOperation, type PlanKind } from '../../contracts/behavior.js';
 import type { CompanionToolTable } from '../../core/tables/tools.js';
 import { registerLifeToolPolicy } from './tool-policy.js';
 
@@ -30,31 +31,83 @@ const timedActivityFields={
   durationMinutes:{type:'number',description:'Positive duration for hold/room only. Choose durationMinutes or until, or omit both for explicit-control waiting, allowed only as the last step. nextConsiderAt does not finish a step.'},
   until:{type:'string',description:'ISO end time with an explicit timezone, for hold/room only. Do not combine with durationMinutes.'},
 } as const;
+
+function gardenOperationsFor(branch:(typeof PLAN_GARDEN_OPERATIONS)[PlanGardenOperation]['branch']) {
+  return PLAN_GARDEN_OPERATION_NAMES.filter(operation=>PLAN_GARDEN_OPERATIONS[operation].branch===branch)
+    .sort((a,b)=>PLAN_GARDEN_OPERATIONS[a].order-PLAN_GARDEN_OPERATIONS[b].order);
+}
+
 const gardenOperation={
   required:true,
   description:'One explicit existing garden operation, using type (never operation). Read room_garden with type=state for current plots, crops, seeds, inventory, coins and tasks. The program validates availability and balances and settles only against actual execution receipts.',
   oneOf:[
-    {type:'object',properties:{type:{type:'string',const:'visit',required:true}},additionalProperties:false},
+    {type:'object',properties:{type:{type:'string',const:gardenOperationsFor('noFields')[0],required:true}},additionalProperties:false},
     {type:'object',properties:{
-      type:{type:'string',enum:['till','water','fertilize','harvest'],required:true},
+      type:{type:'string',enum:gardenOperationsFor('plot'),required:true},
       plotId:{type:'integer',required:true,description:'Existing plot id returned by room_garden state.'},
     },additionalProperties:false},
     {type:'object',properties:{
-      type:{type:'string',const:'plant',required:true},
+      type:{type:'string',const:gardenOperationsFor('plotAndCrop')[0],required:true},
       plotId:{type:'integer',required:true,description:'Existing plot id returned by room_garden state.'},
       cropId:{type:'string',required:true,description:'Existing crop id returned by room_garden state; planting consumes an available seed.'},
     },additionalProperties:false},
     {type:'object',properties:{
-      type:{type:'string',enum:['sell','buySeed'],required:true},
+      type:{type:'string',enum:gardenOperationsFor('cropTrade'),required:true},
       cropId:{type:'string',required:true,description:'Existing crop id returned by room_garden state.'},
       quantity:{type:'integer',description:'Transaction quantity. Omit for the existing garden default of one; available funds, inventory and quantity limits are checked by the garden program.'},
     },additionalProperties:false},
     {type:'object',properties:{
-      type:{type:'string',const:'buyCompost',required:true},
+      type:{type:'string',const:gardenOperationsFor('quantity')[0],required:true},
       quantity:{type:'integer',description:'Transaction quantity. Omit for the existing garden default of one; available funds and quantity limits are checked by the garden program.'},
     },additionalProperties:false},
   ],
 } as const;
+
+const planStepBranches = {
+  hold: {
+    kind:{type:'string',required:true,description:'Continue an activity at the current position without a new body/garden operation.'},
+    ...timedActivityFields,
+  },
+  room: {
+    kind:{type:'string',required:true,description:'Stay at the target position until duration/until, or explicit control when last. For arrival-only travel use move.'},
+    room:{type:'string',required:true,description:'Exact existing room identifier from room_state; do not invent a location.'},
+    spot:{type:'string',required:true,description:'Exact spot identifier belonging to the selected room in room_state.'},
+    ...timedActivityFields,
+  },
+  move: {
+    kind:{type:'string',required:true,description:'Travel to room/spot and finish on actual arrival, including when already there. No durationMinutes/until.'},
+    room:{type:'string',required:true,description:'Exact existing room identifier from room_state.'},
+    spot:{type:'string',required:true,description:'Exact existing spot in the selected room.'},
+  },
+  body: {
+    kind:{type:'string',required:true},
+    action:{type:'string',enum:PLAN_BODY_ACTIONS,required:true,description:'Existing bodily action. feed and water are free basic food/drinking water; paid catalog foods require kind=economy and type=consume. No durationMinutes/until; completion follows the actual body result.'},
+  },
+  garden: {
+    kind:{type:'string',required:true},garden:gardenOperation,
+  },
+  economy: {
+    kind:{type:'string',required:true},
+    economy:{type:'object',required:true,properties:{
+      type:{type:'string',enum:PLAN_ECONOMY_OPERATION_NAMES,required:true},
+      itemId:{type:'string',required:true,description:'Stable item id returned by the economy catalog. Actual holdings, configured prices and quantities are validated by the program.'},
+      quantity:{type:'integer',required:true,description:'Positive whole-item count. consume requires exactly one food item; a stable operation receipt prevents duplicate effects or payment.'},
+    },additionalProperties:false},
+  },
+  read: {
+    kind:{type:'string',required:true},
+    reading:{type:'object',required:true,properties:{
+      itemId:{type:'string',required:true,description:'Owned reading item id from the economy library.'},
+      segment:{type:'integer',required:true,description:'Nonnegative actual segment number from the reading catalog. The step waits for the model to read returned text and explicitly confirm that segment; an animation cannot finish it.'},
+    },additionalProperties:false},
+  },
+} as const satisfies Record<PlanKind, ParameterSchemaSpec>;
+
+const [firstStep, secondStep, ...remainingSteps] = Object.entries(planStepBranches)
+  .map(([kind,{kind:{type,...kindFields},...fields}])=>({
+    type:'object',properties:{...activityFields,kind:{type,const:kind,...kindFields},...fields},additionalProperties:false,
+  } as const));
+const planStepSchema = {oneOf:[firstStep,secondStep,...remainingSteps]} as const;
 
 /** Normal owner conversations use the same Life authority, never a per-chat plan. */
 export function registerPlanTools(ctx:Context,host:PetCoreHost,life:CompanionLife) {
@@ -83,45 +136,7 @@ export function registerPlanTools(ctx:Context,host:PetCoreHost,life:CompanionLif
       expectedRevision:{type:'integer',required:true},
       plan:{type:'object',required:true,properties:{
         goal:{type:'string',required:true},reason:{type:'string',required:true},nextConsiderAt:{oneOf:[{type:'string'},{type:'null'}],required:true,description:'ISO time with timezone, or null to wait for an explicit event. Finishing the last finite activity is one such event. Empty steps with null explicitly choose quiet waiting. No fixed interval.'},
-        steps:{type:'array',required:true,description:'Ordered explicit activities. Empty steps are valid quiet waiting. Each kind has its own required fields; labels alone cannot execute an activity.',items:{oneOf:[
-          {type:'object',properties:{...activityFields,
-            kind:{type:'string',const:'hold',required:true,description:'Continue an activity at the current position without a new body/garden operation.'},
-            ...timedActivityFields,
-          },additionalProperties:false},
-          {type:'object',properties:{...activityFields,
-            kind:{type:'string',const:'room',required:true,description:'Stay at the target position until duration/until, or explicit control when last. For arrival-only travel use move.'},
-            room:{type:'string',required:true,description:'Exact existing room identifier from room_state; do not invent a location.'},
-            spot:{type:'string',required:true,description:'Exact spot identifier belonging to the selected room in room_state.'},
-            ...timedActivityFields,
-          },additionalProperties:false},
-          {type:'object',properties:{...activityFields,
-            kind:{type:'string',const:'move',required:true,description:'Travel to room/spot and finish on actual arrival, including when already there. No durationMinutes/until.'},
-            room:{type:'string',required:true,description:'Exact existing room identifier from room_state.'},
-            spot:{type:'string',required:true,description:'Exact existing spot in the selected room.'},
-          },additionalProperties:false},
-          {type:'object',properties:{...activityFields,
-            kind:{type:'string',const:'body',required:true},
-            action:{type:'string',enum:PLAN_BODY_ACTIONS,required:true,description:'Existing bodily action. feed and water are free basic food/drinking water; paid catalog foods require kind=economy and type=consume. No durationMinutes/until; completion follows the actual body result.'},
-          },additionalProperties:false},
-          {type:'object',properties:{...activityFields,
-            kind:{type:'string',const:'garden',required:true},garden:gardenOperation,
-          },additionalProperties:false},
-          {type:'object',properties:{...activityFields,
-            kind:{type:'string',const:'economy',required:true},
-            economy:{type:'object',required:true,properties:{
-              type:{type:'string',enum:['buy','sell','consume'],required:true},
-              itemId:{type:'string',required:true,description:'Stable item id returned by the economy catalog. Actual holdings, configured prices and quantities are validated by the program.'},
-              quantity:{type:'integer',required:true,description:'Positive whole-item count. consume requires exactly one food item; a stable operation receipt prevents duplicate effects or payment.'},
-            },additionalProperties:false},
-          },additionalProperties:false},
-          {type:'object',properties:{...activityFields,
-            kind:{type:'string',const:'read',required:true},
-            reading:{type:'object',required:true,properties:{
-              itemId:{type:'string',required:true,description:'Owned reading item id from the economy library.'},
-              segment:{type:'integer',required:true,description:'Nonnegative actual segment number from the reading catalog. The step waits for the model to read returned text and explicitly confirm that segment; an animation cannot finish it.'},
-            },additionalProperties:false},
-          },additionalProperties:false},
-        ]}},
+        steps:{type:'array',required:true,description:'Ordered explicit activities. Empty steps are valid quiet waiting. Each kind has its own required fields; labels alone cannot execute an activity.',items:planStepSchema},
         reconsiderWhen:{type:'array',items:{type:'object',properties:{metric:{type:'string',enum:['hunger','thirst','energy','bladder','pain'],required:true},comparison:{type:'string',enum:['gte','lte'],required:true},value:{type:'number',required:true}},additionalProperties:false}},
       },additionalProperties:false},
     },output,execute:async(args,exec)=>{const guard=admission(exec.agent,exec.signal);return JSON.stringify(await life.updatePlan(guard.id,args.expectedRevision,args.plan,guard.validate));}})},
