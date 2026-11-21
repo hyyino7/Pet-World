@@ -83,7 +83,7 @@ export function settingsHandler(getHost, getWorkspaces, getDesktop, getWorldModu
                     fail('NOT_FOUND');
                 validate();
                 const combinedSignal = AbortSignal.any([signal, peer.signal]);
-                const value = endpoint === 'economyView' ? await economy.snapshot(workspaceId, validate)
+                const value = endpoint === 'economyView' ? await economy.snapshot(workspaceId, validate, { includeWritableKeys: true })
                     : endpoint === 'economyAction' ? await economy.ownerAction(workspaceId, input.action, body.requestId, combinedSignal, validate)
                         : await economy.settings(workspaceId, requiredText(input.expectedVersion, 256), input.next, body.requestId, combinedSignal, validate);
                 validate();

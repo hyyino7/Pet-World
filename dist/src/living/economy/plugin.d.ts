@@ -48,7 +48,13 @@ export declare class CompanionEconomy {
     private gardenClock;
     committedGardenAt(workspaceId: string): number | undefined;
     gardenPort(workspaceId: string, legacyFile?: string, recordReadingEffect?: RecordCommandEffect): RoomEconomyPort;
-    snapshot(workspaceId: string, validate?: () => void): Promise<{
+    snapshot(workspaceId: string, validate?: () => void, options?: {
+        includeWritableKeys?: boolean;
+    }): Promise<{
+        writableKeys?: {
+            itemPrices: string[];
+            catalogEnabled: string[];
+        } | undefined;
         workspaceId: string;
         ledger: import("./types.js").LedgerEntry[];
         configurationVersion: string;
@@ -82,6 +88,10 @@ export declare class CompanionEconomy {
     private notifyFacts;
     ownerAction(workspaceId: string, action: any, requestId: string, signal: AbortSignal, validate?: () => void, trustedActor?: CompanionFactActor, recordEffect?: RecordCommandEffect): Promise<{
         execution?: import("../../contracts/behavior.js").PlannedExecution | undefined;
+        writableKeys?: {
+            itemPrices: string[];
+            catalogEnabled: string[];
+        } | undefined;
         workspaceId: string;
         ledger: import("./types.js").LedgerEntry[];
         configurationVersion: string;
@@ -106,6 +116,10 @@ export declare class CompanionEconomy {
         };
     }>;
     settings(workspaceId: string, expectedVersion: string, next: EconomyConfigurationPatch, requestId: string, signal: AbortSignal, validate?: () => void): Promise<{
+        writableKeys?: {
+            itemPrices: string[];
+            catalogEnabled: string[];
+        } | undefined;
         workspaceId: string;
         ledger: import("./types.js").LedgerEntry[];
         configurationVersion: string;

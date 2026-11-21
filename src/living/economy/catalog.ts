@@ -22,6 +22,10 @@ export function defaultEconomyConfiguration(): EconomyConfiguration {
     }])),itemPrices:{},catalogEnabled:{},foodEffects:{'food:improved-meal':{hunger:-0.52,energy:0.08} satisfies BodyNeedDelta}};
 }
 
+export function isWritableCatalogKey(id: string): boolean {
+  return !id.startsWith('harvest:');
+}
+
 /** Old owner-entered return values remain in storage until an explicit edit,
  * but only game rules price sales and new crop yields. Existing cropProfile
  * receipts remain in Garden and are deliberately not rewritten here. */
@@ -30,9 +34,9 @@ export function effectiveEconomyConfiguration(saved: EconomyConfiguration): Econ
   return {...saved,dailyNetReference:fixed.dailyNetReference,fertilizerYield:fixed.fertilizerYield,
     crops:Object.fromEntries(Object.entries(saved.crops).map(([id,crop])=>[id,{...crop,
       sellPrice:fixed.crops[id]?.sellPrice??crop.sellPrice,yield:fixed.crops[id]?.yield??crop.yield}])),
-    itemPrices:Object.fromEntries(Object.entries(saved.itemPrices).filter(([id])=>!id.startsWith('harvest:'))
+    itemPrices:Object.fromEntries(Object.entries(saved.itemPrices).filter(([id])=>isWritableCatalogKey(id))
       .map(([id,price])=>[id,{purchasePrice:price.purchasePrice,sellPrice:null}])),
-    catalogEnabled:Object.fromEntries(Object.entries(saved.catalogEnabled).filter(([id])=>!id.startsWith('harvest:')))};
+    catalogEnabled:Object.fromEntries(Object.entries(saved.catalogEnabled).filter(([id])=>isWritableCatalogKey(id)))};
 }
 
 export function economyCatalog(configuration: EconomyConfiguration, readings: readonly ReadingContent[] = ORIGINAL_READINGS): CatalogItem[] {

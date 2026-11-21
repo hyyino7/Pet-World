@@ -52,7 +52,12 @@ export declare class EconomyStore {
     readFacts(ids: readonly string[]): CompanionFact[];
     acknowledgeFacts(ids: readonly string[]): void;
     private snapshotRow;
-    snapshot(_now?: number): EconomySnapshot;
+    snapshot(_now?: number): EconomySnapshot & {
+        writableKeys: {
+            itemPrices: string[];
+            catalogEnabled: string[];
+        };
+    };
     catalog(): CatalogItem[];
     ledger(input?: {
         limit?: number;

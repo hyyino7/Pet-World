@@ -502,8 +502,15 @@ window.__ModuleLoader__.load({
       const mutate=(endpoint,input)=>send({endpoint,input:{workspaceId,...input},requestId:crypto.randomUUID()});
       const act=action=>mutate('economyAction',{action});
       const button=(label,onClick,disabled=false)=>h('button',{type:'button',className:'cp-save',disabled:busy||disabled,onClick},label);
-      const changed=(key,value)=>setEdit(old=>{const {version:_schema,revision:_revision,dailyNetReference:_income,fertilizerYield:_yield,crops,itemPrices,catalogEnabled,...writable}=view.configuration;const saved={...writable,crops:Object.fromEntries(Object.entries(crops).map(([id,value])=>[id,{growMs:value.growMs,seedCost:value.seedCost}])),itemPrices:Object.fromEntries(Object.entries(itemPrices).filter(([id])=>!id.startsWith('harvest:'))),catalogEnabled:Object.fromEntries(Object.entries(catalogEnabled).filter(([id])=>!id.startsWith('harvest:')))};return {expectedVersion:old?.expectedVersion||String(view.configurationVersion),
-        next:{...(old?.next||saved),[key]:value}};});
+      const changed=(key,value)=>setEdit(old=>{
+        const {version:_schema,revision:_revision,dailyNetReference:_income,fertilizerYield:_yield,crops,itemPrices,catalogEnabled,...writable}=view.configuration;
+        const saved={...writable,crops:Object.fromEntries(Object.entries(crops).map(([id,crop])=>[id,{growMs:crop.growMs,seedCost:crop.seedCost}])),itemPrices,catalogEnabled};
+        const next={...(old?.next||saved),[key]:value};
+        const pickWritable=(entries,keys)=>Object.fromEntries(Object.entries(entries).filter(([id])=>keys.includes(id)));
+        next.itemPrices=pickWritable(next.itemPrices,view.writableKeys.itemPrices);
+        next.catalogEnabled=pickWritable(next.catalogEnabled,view.writableKeys.catalogEnabled);
+        return {expectedVersion:old?.expectedVersion||String(view.configurationVersion),next};
+      });
       const config=edit?.next||view?.configuration, catalog=view?.catalog||[], inventory=view?.inventory||[];
       const names=new Map(catalog.map(item=>[item.id,item.name]));
       const hasPending=Boolean(pending), available=inventory.filter(item=>item.available>0);

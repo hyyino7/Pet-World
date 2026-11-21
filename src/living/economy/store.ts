@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { CROPS, GARDEN_RULES, createGarden, normalizeGarden, advanceGarden, applyGardenAction, gardenView } from '#feiyu-garden';
 import { canonical, check, digest, integer, reject, text, unavailable } from '../../core/storage.js';
 import { closeSqliteLease, setSqliteMeta } from '../../core/sqlite.js';
-import { effectiveEconomyConfiguration,defaultEconomyConfiguration, economyCatalog, ORIGINAL_READINGS } from './catalog.js';
+import { effectiveEconomyConfiguration,defaultEconomyConfiguration, economyCatalog, isWritableCatalogKey, ORIGINAL_READINGS } from './catalog.js';
 import type { BodyUseProof, CatalogItem, EconomyConfiguration, EconomyConfigurationPatch, EconomySnapshot, EconomyStoreOptions, InventoryItem, ItemUse, LedgerEntry, ReadingBookmark, ReadingContent, ReadingOffer, ReadingOperationStatus, ReadingSegment } from './types.js';
 import type { CompanionFact, CompanionFactActor, EconomyFactType, NewCompanionFact } from '../../contracts/interaction.js';
 import { isBodyMetric, type ReadingState } from '../../contracts/behavior.js';
@@ -229,7 +229,17 @@ export class EconomyStore {
     return {storageId:this.options.storageId,companionId:this.options.companionId,revision:this.revision(),balance:this.balance(),inventory,
       catalog:this.catalogRows(),configuration:this.configuration(),bookmarks:this.allBookmarks(),pendingUses:this.allUses().filter(row=>row.status==='reserved'),migration:this.requiredMeta('migration')};
   }
-  snapshot(_now=Date.now()):EconomySnapshot {this.ensure();return this.snapshotRow();}
+  snapshot(_now=Date.now()):EconomySnapshot & {writableKeys: {itemPrices: string[]; catalogEnabled: string[]}} {
+    this.ensure();
+    const snapshot=this.snapshotRow();
+    const catalogKeys=snapshot.catalog.map(item=>item.id).filter(isWritableCatalogKey);
+    // 保留旧配置中已经能编辑的键。这里只补读取视图，SQLite 的请求回执仍使用 snapshotRow()。
+    const writableKeys={
+      itemPrices:[...new Set([...catalogKeys,...Object.keys(snapshot.configuration.itemPrices)])],
+      catalogEnabled:[...new Set([...catalogKeys,...Object.keys(snapshot.configuration.catalogEnabled)])],
+    };
+    return {...snapshot,writableKeys};
+  }
   catalog():CatalogItem[]{this.ensure();return this.catalogRows();}
   ledger(input:{limit?:number;before?:number}={}):{items:LedgerEntry[];nextBefore:number|null} {
     this.ensure();const limit=input.limit??50;integer(limit,'ledger page size',1,200);if(input.before!==undefined)integer(input.before,'ledger cursor',1);

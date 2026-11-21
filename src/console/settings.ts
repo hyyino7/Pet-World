@@ -9,7 +9,7 @@ import { estimateTokens } from '#dsh-world/console/snapshot';
 import { desktopAppearanceDefaults } from '../desktop/appearance.js';
 import { BODY_ACTIONS, CARE_ACTIONS, isCareAction } from '../contracts/behavior.js';
 export interface EconomyControls {
-  snapshot(workspaceId: string, validate?: () => void): Promise<unknown>;
+  snapshot(workspaceId: string, validate?: () => void, options?: {includeWritableKeys?: boolean}): Promise<unknown>;
   ownerAction(workspaceId: string, action: unknown, requestId: string, signal: AbortSignal, validate: () => void): Promise<unknown>;
   settings(workspaceId: string, expectedVersion: string, next: unknown, requestId: string, signal: AbortSignal, validate: () => void): Promise<unknown>;
 }
@@ -98,7 +98,7 @@ export function settingsHandler(getHost: () => PetCoreHost | undefined, getWorks
         if (await registered.status() !== 'ok') fail('NOT_FOUND');
         validate();
         const combinedSignal = AbortSignal.any([signal, peer.signal]);
-        const value = endpoint === 'economyView' ? await economy.snapshot(workspaceId, validate)
+        const value = endpoint === 'economyView' ? await economy.snapshot(workspaceId, validate, {includeWritableKeys:true})
           : endpoint === 'economyAction' ? await economy.ownerAction(workspaceId, input.action, body.requestId, combinedSignal, validate)
           : await economy.settings(workspaceId, requiredText(input.expectedVersion, 256), input.next, body.requestId, combinedSignal, validate);
         validate();

@@ -199,9 +199,10 @@ export class CompanionEconomy {
       readingStatus:(operationId,input)=>checked().readingStatus(operationId,input),
     };
   }
-  async snapshot(workspaceId:string,validate:()=>void=()=>{}) {
-    validate();const store=this.bound(workspaceId),snapshot=store.snapshot();validate();
-    return {...snapshot,workspaceId,ledger:store.ledger({limit:80}).items,configurationVersion:String(snapshot.configuration.revision),access};
+  async snapshot(workspaceId:string,validate:()=>void=()=>{},options:{includeWritableKeys?:boolean}={}) {
+    validate();const store=this.bound(workspaceId),{writableKeys,...snapshot}=store.snapshot();validate();
+    return {...snapshot,workspaceId,ledger:store.ledger({limit:80}).items,configurationVersion:String(snapshot.configuration.revision),access,
+      ...(options.includeWritableKeys?{writableKeys}:{})};
   }
   walletView(workspaceId: string) { return projectWallet(this.bound(workspaceId).snapshot()); }
   worldSnapshot(workspaceId: string) { return this.living.worldSnapshot(this.host, workspaceId); }

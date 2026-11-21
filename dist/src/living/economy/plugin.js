@@ -214,11 +214,12 @@ export class CompanionEconomy {
             readingStatus: (operationId, input) => checked().readingStatus(operationId, input),
         };
     }
-    async snapshot(workspaceId, validate = () => { }) {
+    async snapshot(workspaceId, validate = () => { }, options = {}) {
         validate();
-        const store = this.bound(workspaceId), snapshot = store.snapshot();
+        const store = this.bound(workspaceId), { writableKeys, ...snapshot } = store.snapshot();
         validate();
-        return { ...snapshot, workspaceId, ledger: store.ledger({ limit: 80 }).items, configurationVersion: String(snapshot.configuration.revision), access };
+        return { ...snapshot, workspaceId, ledger: store.ledger({ limit: 80 }).items, configurationVersion: String(snapshot.configuration.revision), access,
+            ...(options.includeWritableKeys ? { writableKeys } : {}) };
     }
     walletView(workspaceId) { return projectWallet(this.bound(workspaceId).snapshot()); }
     worldSnapshot(workspaceId) { return this.living.worldSnapshot(this.host, workspaceId); }
