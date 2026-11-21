@@ -162,15 +162,17 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 项 | 基线 | 目标 |
 | --- | --- | --- |
 | 运行源码 `src/` 里按字符串写死的 kind、action 判断 | 381 个，涉及 45 个文件（kind 277、action 104）；口径与下方 G5 的现有 AST 扫描一致，其中有些字段已是封闭类型 | 逐阶段下降，目标数字在阶段 1 测完基线后定 |
-| 六种照料动作的词表 | 3 份 | 1 份 |
-| 十种角色房间动作的词表 | 2 份 | 由基础表导出，1 份 |
-| 五种计划身体动作的词表 | 4 份 | 由基础表导出，1 份 |
-| 七种计划 kind 的完整集合 | 4 份 | 1 份 |
-| 阅读状态联合 | 4 份 | 1 份 |
-| 九种 feeling 的集合 | 2 份（外加标签表 1 份） | 1 份 |
-| Room 七维情绪集合 | 2 份 | 1 份 |
-| 把身体状态分类成呈现的分类器 | 2 套（`living/body/presentation.ts`、`living/body/playback.ts`），对同一情绪结果不同 | 1 套 |
-| 第二层里出现 `roomClip / desktopClip` | 有（`ActivityClip`） | 0 处 |
+| 六种照料动作的词表 | 3 份 | 1 份。**2b 后 1 份**：`contracts/behavior.ts` 的 `BODY_ACTIONS` 基础表，设置页按钮也由它派生 |
+| 十种角色房间动作的词表 | 2 份 | 由基础表导出，1 份。**2b 后 1 份**（同一张基础表） |
+| 五种计划身体动作的词表 | 4 份 | 由基础表导出，1 份。**2b 后 1 份**（同一张基础表） |
+| 七种计划 kind 的完整集合 | 4 份 | 1 份。**2b 后 1 份**：`PLAN_KINDS`，工具 schema 和 Life、Body 校验由它派生 |
+| 阅读状态联合 | 4 份 | 1 份。**2b 后 1 份**：`READING_STATES` |
+| 九种 feeling 的集合 | 2 份（外加标签表 1 份） | 1 份。阶段 3 |
+| Room 七维情绪集合 | 2 份 | 1 份。阶段 3 |
+| 把身体状态分类成呈现的分类器 | 2 套（`living/body/presentation.ts`、`living/body/playback.ts`），对同一情绪结果不同 | 1 套。阶段 3（已知问题 4） |
+| 第二层里出现 `roomClip / desktopClip` | 有（`ActivityClip`） | 0 处。阶段 3 |
+
+**2b 之后的口径**：2b 把各词表收成「值为对象的表 + 派生数组和守卫」，R8 扫描器只认数组字面量和值全是字符串的对象，看不见值为对象或布尔的表（`BODY_ACTIONS`、`PLAN_KINDS`、计划经济和菜园操作表、`READING_STATES`、`FACT_DOMAINS`）。删掉的副本是真实减少，但这些表和仍留着的副本（界面标签表、呈现表）之间的重叠不在 R8 基线里。所以上表的份数按概念逐行人工核对（定义处见 [architecture.md 5.6.1](architecture.md#561-第一批概念细表)），是 2b 的权威度量；R8 基线和 `pnpm run metrics` 只作辅助。要不要让扫描器认识这种表，留给阶段末 G8 复盘。
 
 ### 防止越做越乱的机制
 
@@ -231,10 +233,11 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 | 1. guest 和电视回复 footer 会改共享情绪 | `src/core/native/agent.ts:46` 给 guest 作用域；`src/room/chat.ts:130` 产生 `chatpet-room-tv` 来源；`src/room/plugin.ts:149` 阻止电视工具；`src/emotion/plugin.ts:166` 的作用域解析、`:273-278` 的流处理和 `:269` 的完成处理未排除两者 | 没有主人工具权限也能经回复 footer 更新同一个情绪文件 | 已复现：在合成绑定上向真实 Emotion 流及完成处理分别送 guest 与 TV 来源原生事件，两者均落盘；guest 的原有断言另见 `scripts/checks/check-native-services.mjs:104`。未验证已安装 DSH 的电视完整入口 | **现有行为，是否改变待主人决定** |
 | 2. 发给 Memory provider 的 `workspaceId` 实际是 `storageId` | TS 侧 M2 后已改名：`MemoryScope` 的第三个字段是 `bankId`（`src/memory/client.ts:11`，取值见 `src/core/native/memory.ts:53`）；发给 Python provider 的兼容形状仍叫 `workspaceId`（`src/memory/client.ts:12,57`） | provider 边界的字段名仍混淆原生工作区和可搬迁 Bank 身份；本项不证明串库 | 已复现：合成工作区设置不同的两种 ID，经公开 `findForOwner` 驱动、仅在 provider 启动边界捕获 scope，收到的是 `storageId` | 待主人决定 |
 | 3. 错误码及设置回复的恢复语义不一致 | `src/contracts/common.ts:21` 有 `EXPIRED_USE`，`src/core/storage.ts:10` 的辅助联合没有；`src/console/settings.ts:17,400,402` 只保留 `code/message/details` | 辅助函数无法按声明类型表达该拒绝；设置调用者丢失 `effect/retry`，不能据此判断核对或重试 | 已复现：丢弃式 TypeScript 调用产生 TS2345；真实设置处理器收到 `partial/reconcile` 后，回复均无这两个字段 | 阶段 3 并入设置 RPC 声明（阶段 1 缩小方案） |
-| 4. 两套呈现分类器对混合情绪结论不同 | `src/living/body/presentation.ts:21`；`src/living/body/playback.ts:95,109` | 空闲且 `feelings=[anger,calm]` 时，语义呈现为 `emotion/anger`，播放槽为 `rest.calm` | 已复现：同一个合成 home 调用两个真实函数得到上述不同结果 | 待主人决定 |
+| 4. 两套呈现分类器对混合情绪结论不同 | `src/living/body/presentation.ts:21`；`src/living/body/playback.ts:95,109` | 空闲且 `feelings=[anger,calm]` 时，语义呈现为 `emotion/anger`，播放槽为 `rest.calm` | 已复现：同一个合成 home 调用两个真实函数得到上述不同结果 | 阶段 3 合并分类器时处理（2b 明确延到阶段 3） |
 | 6. 新装环境里桌宠外观编辑器没加载 | 已安装的 0.1.8 桌宠外观编辑器；源码位置在本仓库还没定位 | 新设备上界面固定提示 `EDITOR_NOT_LOADED`，没有添加形象的入口；桌宠服务本身可用 | 已在 Mac mini 新装 DSH + 0.1.8 上观察到（M1 D 批）。当时的 Codex 怀疑是可选命令依赖挡住了编辑器加载，并写了候选补丁，但补丁没有装上，修复效果没验证；默认独立桌宠的 Electron 路径缺失也是同时观察到的环境缺口，是不是原因还没确定 | 已观察到，原因未确认，待主人安排 |
 | 9. 迁移兼容测试的 legacy 变体在 CI 偶发失败 | `tests/migrate/compatibility.test.mjs` 的 `legacy` 变体；失败的断言在 `scripts/fixtures/synthetic-companion.mjs:104`（刚写入的合成记忆召回不到） | 发布门禁偶发失败，重跑能过；0.2.0 正式版的发布运行一次通过 | 0.2.0-rc.1 的发布运行第 1 次尝试失败、第 3 次通过；本机单跑 15 次、加负载并行 30 次都没复现，召回前加 0–3 秒延迟也通过 | 原因未查，主人判断是 GitHub 侧问题。2a 期间又见两次同类偶发，都在 Codex 沙箱的整套并行运行里、复跑即过：第 4 批行为清单 B10「B 必须真实召回 A 已确认送达的事实」首跑失败；第 5 批返工 Memory 盘点用例首跑返回 422。2a 收尾在沙箱外把这两条各单跑 8 次，全部通过，没复现。现有证据不足以判定是同一个不变量（「已确认写入的记忆一定能召回」）第二次失守；再出现时先保留首个失败的入口、操作名、状态码和合成日志，确认是同一不变量就按 G3 提前复盘 |
 | 10. 付费 Memory 实测脚本还依赖旧回执的 `archive` 字段 | `scripts/checks/check-native-memory-live.mjs:176` 读 `installedReceipt.archive` 并对它算哈希 | 改为经 DSH 安装 npm 包之后，新回执里没有 `archive`，这个检查会在算哈希时失败；日常运行不受影响，只影响这条手动付费检查 | 读代码确认，没有运行（会调用付费模型） | 待定。以后还要用这个检查，需要另定按 npm 包核对的方式（例如回执里的 `packageVersion`） |
+| 11. 桌宠吃饭素材入口在并发、取消、读快照失败时会多投喂或误投喂 | `desktop/platform/plugin.ts` 的 `/anim` 分支：先 `refreshBehavior()` 读 Body 快照，再按 `behavior.busy` 和「是否正在吃饭」决定是否 `bodyAction('feed')`；`bodyAction` 用的是读完快照之后的 `this.bound`，取消信号只在最后检查 | ① 两个请求号不同的 `/anim` 同时到达，共用一次空闲快照，各投喂一次；② 刷新挂起时请求被取消，投喂照样落地并返回 200；③ `roomState` 读取失败时沿用旧的空闲快照，伙伴实际在忙也照样投喂，最后却返回 409，回复和效果对不上 | 2b 收尾由 Claude 在合成环境经真实插件入口复现了①②（取消）③；② 的「刷新期间换绑、投喂落到新工作区」只有 Codex 用编译后方法复现过，Claude 未复现 | 阶段 3 随「能否被打断」处理；2b 不修 |
 
 ## 阶段
 
@@ -405,14 +408,14 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 完成标准（已经主人确认）：
 
 - [x] 动作基础表：`BodyAction` 基础表落地，六种照料动作、十种角色动作、五种计划身体动作由它派生，「词表重复基线」里这三行达到目标；设置页照料按钮由基础表派生。（`src/contracts/behavior.ts` 的 `BODY_ACTIONS`，2b 第 2 批；action 点数 105 → 102）
-- [ ] 计划命令：七种计划 kind、阅读状态、计划经济操作、计划菜园操作各一份。
-- [ ] 活动与阶段：内部明确 `label / operationId / currentActivityId`（序列化字段不改名）；`BodyPhase`、`ExecutionPhase` 各自命名，执行阶段到身体阶段的有损转换集中成一个函数。
-- [ ] 身体状态契约：第二层输出「忙不忙、当前活动」，Desktop 的吃饭素材守卫改读它；「能否被打断」延到阶段 3。
-- [ ] 事实：`domain` 与 `type` 有关联类型和统一解码器；新写入按声明收窄，历史事实不因 `type` 未知而读不出；Python 侧的领域和 actor 清单与 TS 声明有正反双向契约测试。
-- [ ] 全仓三项：五种身体指标只定义一次（常量放在 `contracts`，拥有者第二层）；商品类别由 Economy 输出，消费方不解析 ID 前缀；账本 kind 集中一处。
+- [x] 计划命令：七种计划 kind、阅读状态、计划经济操作、计划菜园操作各一份。（`PLAN_KINDS`、`READING_STATES`、计划经济和菜园操作表；Life、Body 校验按 kind 一次分派，工具 schema 注册结果逐字节不变；2b 第 3 批，kind 287 → 271）
+- [x] 活动与阶段：内部明确 `label / operationId / currentActivityId`（序列化字段不改名）；`BodyPhase`、`ExecutionPhase` 各自命名，执行阶段到身体阶段的有损转换集中成一个函数。（职责别名 `ActivityLabel / OperationId / CurrentActivityId`，`bodyPhaseOf`；2b 第 4 批）
+- [x] 身体状态契约：第二层输出「忙不忙、当前活动」，Desktop 的吃饭素材守卫改读它；「能否被打断」延到阶段 3。（`behavior.busy` 由 `publicBehavior` 一处组装；2b 第 4 批，kind 271 → 270）
+- [x] 事实：`domain` 与 `type` 有关联类型和统一解码器；新写入按声明收窄，历史事实不因 `type` 未知而读不出；Python 侧的领域和 actor 清单与 TS 声明有正反双向契约测试。（`FACT_DOMAINS`、`NewCompanionFact` / `CompanionFact`、`isValidFactEnvelope`；2b 第 5 批）
+- [x] 全仓三项：五种身体指标只定义一次（常量放在 `contracts`，拥有者第二层）；商品类别由 Economy 输出，消费方不解析 ID 前缀；账本 kind 集中一处。（`BODY_METRICS`、Economy 快照的 `writableKeys`、`LedgerKind`；2b 第 6 批 6A）
 - [ ] 典型修改第 8 类在 2b 合并后的 `main` 上开独立度量分支实做，文件数照常判；层数按物理归层如实记录，声明在 `contracts`（第一层）时层数判未达标，阶段 4 拆分 `contracts` 后复测。
-- [ ] kind/action 字符串判断回到 283 / 104 以下（含等于），只靠合并重复判断减少，不碰 `src/core/workspace.ts`。2a 收尾实测 287 / 105（`04bff94`），按主人拍板带进 2b 回收（[decisions.md](decisions.md)「2a 词表点数偏差带进 2b」）。
-- [ ] R8 和规则基线新增条目为零。
+- [x] kind/action 字符串判断回到 283 / 104 以下（含等于），只靠合并重复判断减少，不碰 `src/core/workspace.ts`。2b 收尾 **270 / 102**（`b24c381`），每批减少的点在方案执行结果里逐条对照过。2a 收尾实测 287 / 105（`04bff94`），按主人拍板带进 2b 回收（[decisions.md](decisions.md)「2a 词表点数偏差带进 2b」）。
+- [x] R8 和规则基线新增条目为零。（规则基线 37 条不变；词表基线 1031 → 637，只删不增，第 4 批 4 条改键是主人批准的一次性搬家，见 [decisions.md](decisions.md)。R8 看不见值为对象的表，份数以「词表重复基线」人工核对为准）
 - [x] 一条真实流程（G9，L1）：设置页照料入口 → Life → Body → 事实落库 → 提示词段带出并在原生日志落盘后确认 → 另一会话召回 → 重启后仍在。（`2B1-12`，2b 第 1 批）
 - [x] G5 度量命令：自动输出规则违规、词表重复、kind/action 点数、1500 行文件数、模块依赖数；修复批次占比和典型修改基线标「人工」。（`pnpm run metrics`，2b M 批）
 - [ ] 阶段 2 收尾：与阶段 2 相关的行为清单条目和门禁全绿，G8 复盘，主人验收体验后决定继续、调整还是停下；预发布版和正式版都先在隔离环境用版本页更新验收，再升日常机器。
@@ -433,6 +436,8 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 - 典型修改 2、3 实测达标。
 - Room 传输契约一份；`lifeDates` 一类端点名保留为兼容适配。
 - 槽位与素材分离、Desktop 的命令与通知协议、`WorkStage`、桌面设置键映射、Channels 状态命名：保留为草案，阶段 3 方案时按收益逐项定。
+- 情绪与呈现（2b 明确延到这里）：九种 feeling 的集合、Room 七维情绪集合各收成 1 份；两套呈现分类器合成 1 套（已知问题 4）；`ActivityClip`、`ActivityPlayback` 搬出第二层，第二层不再出现 `roomClip / desktopClip`。阶段 3 方案时为这四项分别写验收线。
+- 身体状态的「能否被打断」：现有行为按动作而异，2b 只落了「忙不忙、当前活动」；第三层改读身体状态时一起定这项输出，连同 Desktop 吃饭入口的旧问题（已知问题 11）。
 - 整份行为清单全绿。
 
 停止条件：某个第三层模块（尤其 Desktop 的生成文件链路）无法在不改行为的前提下治理：停下来，把它的违规记为长期例外并说明理由；真实数据搬迁演练失败两轮：不进入下一个模块。
@@ -444,4 +449,5 @@ Core 向上读取是 R2 中的 22 个目标、21 个调用点（7 条有向模�
 - 删除已不用的旧适配；以已安装环境的配置实际不再引用为前提才删旧入口和旧服务名，否则保留并写明理由（兜底要先说明、主人同意才留）。
 - [architecture.md](architecture.md) 改写成重构完成后的结构；方案文件在合并时删除。
 - 前后对比总表照实记录：第 4 类达标、第 5 类未达标、第 6 类不设目标，其余按各自目标判；词表重复数达到目标，基线里的旧重复清理到目标数。
+- `contracts/` 按层拆分（architecture.md 2.1 的目标）：2b 没做，新常量照 2a 的做法放在 `contracts`；阶段 4 按收益再定，拆了之后复测典型修改第 8 类的层数。
 - 一次完整的阶段体检（skill-govern-stage）：文档、测试、代码、分支和规则；按 G8 复盘各条检查和长期例外，删除或放宽没起作用的。
