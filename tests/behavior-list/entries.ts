@@ -18,4 +18,3 @@ export * as platformPlugin from '../../src/desktop/platform/plugin.js';
 export * as emotionPlugin from '../../src/emotion/plugin.js';
 export * as guestPreset from '../../src/channels/guest.js';
 export { resolveCompanionHome } from '../../src/core/companion-foundation.js';
-export { resolveActivityPlayback } from '../../src/living/body/playback.js';

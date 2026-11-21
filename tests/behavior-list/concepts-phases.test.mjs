@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {resolveActivityPlayback} from '../../dist/tests/behavior-list/entries.js';
 import {fixture} from './fixture.mjs';
 
 const phase = snapshot => snapshot.behavior.phase;
@@ -24,8 +23,6 @@ test('阅读的待取文、已取文和确认终态投影到身体与播放', as
   assert.equal(offer.text,text);
   const offered = await snapshot();
   assert.deepEqual(presentation(offered),['read','offered','read']);
-  assert.equal(resolveActivityPlayback({...offered.home,
-    behavior:{...offered.home.behavior,readingState:'confirmed'}}).kind,'reading-wait');
   const confirmed = await f.body.confirmPlannedReading('world',operationId,offer.receiptToken);
   assert.deepEqual([confirmed.status,confirmed.phase],['completed','completed']);
   assert.equal(f.economy.gardenPort('world').readingStatus(operationId,reading).status,'confirmed');

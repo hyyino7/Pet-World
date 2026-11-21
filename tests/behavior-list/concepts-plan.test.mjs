@@ -35,24 +35,36 @@ test('计划工具、Life 和 Body 固定计划种类、动作和报错顺序', 
   assert.deepEqual(variants.find(row => row.properties.kind.const === 'body').properties.action.enum, bodies);
   assert.deepEqual((await submit(f,active,steps)).plan.steps, steps);
   const invalidBranch = 'invalid arguments: "plan.steps[0]" must match exactly one oneOf branch (matched 0)';
-  for (const invalid of [step('unknown'),step('body',{action:'pet'})]) {
+  const arrayAction = step('body',{action:['feed']});
+  for (const invalid of [step('unknown'),step('body',{action:'pet'}),arrayAction]) {
     await assert.rejects(submit(f,active,[invalid]), {code:'INVALID_ARGS',message:invalidBranch});
   }
   await assert.rejects(f.tool(active,'life_plan_update',{expectedRevision:'bad',plan:draft([step('unknown')])}), {
     code:'INVALID_ARGS',message:'invalid arguments: "expectedRevision" must be an integer; "plan.steps[0]" must match exactly one oneOf branch (matched 0)',
   });
   const {revision} = await f.life.readPlan('world');
+  const durationError = 'Duration must be positive; no fixed activity duration is imposed';
+  const executableError = 'Executable activities finish on actual receipts; use a following hold or room step for sustained animation';
   for (const [input,message] of [
     [{id:0,activity:0,kind:'unknown'},'Invalid step id'],
     [{id:'a',activity:0,kind:'unknown'},'Invalid activity'],
     [step('unknown'),'Unsupported activity kind'],
-    [step('room',{room:'',spot:''}),'Invalid room'],
-    [step('room',{room:'living',spot:''}),'Invalid spot'],
+    [step('room',{room:'',spot:'',durationMinutes:0}),'Invalid room'],
+    [step('room',{room:'living',spot:'',durationMinutes:0}),'Invalid spot'],
+    [step('room',{room:'living',spot:'sofa',durationMinutes:0}),durationError],
+    [step('move',{room:'living',spot:'',until:'bad'}),'Invalid spot'],
+    [step('move',{room:'living',spot:'sofa',until:'bad'}),executableError],
+    [step('hold',{durationMinutes:0,until:'bad'}),'Choose a duration or an end time'],
+    [step('hold',{durationMinutes:0}),durationError],
+    [step('read',{reading:{itemId:'',segment:-1},until:'bad'}),'Invalid reading item id'],
+    [step('read',{reading:{itemId:book,segment:-1},until:'bad'}),'Reading segment must be a nonnegative integer'],
+    [step('read',{reading:{itemId:book,segment:0},until:'bad'}),executableError],
     [step('body',{action:'pet',until:'bad'}),'Unsupported bodily activity'],
-    [step('body',{action:'feed',until:'bad'}),'Executable activities finish on actual receipts; use a following hold or room step for sustained animation'],
+    [step('body',{action:'feed',until:'bad'}),executableError],
   ]) {
-    assert.throws(() => f.life.updatePlan('world',revision,draft([input])), {message});
+    assert.throws(() => f.life.updatePlan('world',revision,draft([input])), {message}, JSON.stringify(input));
   }
+  assert.deepEqual((await f.life.updatePlan('world',revision,draft([arrayAction]))).plan.steps, [arrayAction]);
   await f.end(active);
 
   for (const [input,message] of [
@@ -65,6 +77,20 @@ test('计划工具、Life 和 Body 固定计划种类、动作和报错顺序', 
     [{kind:'body',operationId:'a',activity:'合成活动',until:new Date().toISOString(),action:'feed'},'执行活动依据真实回执结束，持续动画请另加原地或房间活动'],
   ]) {
     await assert.rejects(f.body.startPlanned('world',input), {message});
+  }
+  const until = new Date().toISOString();
+  const executableUntilError = '执行活动依据真实回执结束，持续动画请另加原地或房间活动';
+  for (const [input,message] of [
+    [step('room',{room:'living',spot:'',freezeOnPause:0}),'计划暂停计时方式无效'],
+    [step('room',{room:'living',spot:''}),'计划中的房间位置不存在'],
+    [step('move',{room:'living',spot:'',until}),'计划中的房间位置不存在'],
+    [step('move',{room:'living',spot:'sofa',until}),executableUntilError],
+    [step('hold',{room:'living',until:'bad'}),'计划结束时间无效'],
+    [step('hold',{room:'living'}),'原地活动不能指定移动目标'],
+    [step('read',{reading:{itemId:book,segment:-1},until}),'阅读计划须指定已持有读物及实际片段编号'],
+    [step('read',{reading:{itemId:book,segment:0},until}),executableUntilError],
+  ]) {
+    await assert.rejects(execute(f,input), {message}, JSON.stringify(input));
   }
   for (const input of steps) {
     const receipt = await execute(f,input);
